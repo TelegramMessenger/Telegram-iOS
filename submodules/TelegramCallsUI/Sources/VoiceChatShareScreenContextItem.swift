@@ -168,6 +168,14 @@ private final class VoiceChatShareScreenContextItemNode: ASDisplayNode, ContextM
         self.performAction()
     }
     
+    func canBeHighlighted() -> Bool {
+        return true
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+    
     func performAction() {
         guard let controller = self.getController() else {
             return

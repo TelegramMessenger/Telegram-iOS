@@ -565,7 +565,26 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                         
-                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, message, associatedData, chatLocation, attributes, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, false, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, nil, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(ChatMessageInteractiveFileNode.Arguments(
+                            context: context,
+                            presentationData: presentationData,
+                            message: message,
+                            topMessage: message,
+                            associatedData: associatedData,
+                            chatLocation: chatLocation,
+                            attributes: attributes,
+                            isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
+                            forcedIsEdited: false,
+                            file: file,
+                            automaticDownload: automaticDownload,
+                            incoming: message.effectivelyIncoming(context.account.peerId),
+                            isRecentActions: false,
+                            forcedResourceStatus: associatedData.forcedResourceStatus,
+                            dateAndStatusType: statusType,
+                            displayReactions: false,
+                            messageSelection: nil,
+                            constrainedSize: CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)
+                        ))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = media as? TelegramMediaImage {

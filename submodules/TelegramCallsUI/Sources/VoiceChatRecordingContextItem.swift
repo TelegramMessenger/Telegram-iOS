@@ -266,6 +266,14 @@ private final class VoiceChatRecordingContextItemNode: ASDisplayNode, ContextMen
         self.performAction()
     }
     
+    func canBeHighlighted() -> Bool {
+        return true
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+    
     func performAction() {
         guard let controller = self.getController() else {
             return

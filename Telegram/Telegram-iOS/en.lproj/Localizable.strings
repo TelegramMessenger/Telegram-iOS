@@ -7149,3 +7149,5 @@ Sorry for the inconvenience.";
 "Conversation.ContextMenuTranslate" = "Translate";
 
 "ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"ChatSettings.StickersAndReactions" = "Stickers and Emoji";

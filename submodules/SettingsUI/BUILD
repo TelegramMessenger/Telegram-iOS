@@ -91,6 +91,7 @@ swift_library(
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
         "//submodules/DebugSettingsUI:DebugSettingsUI",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
+        "//submodules/WebPBinding:WebPBinding",
     ],
     visibility = [
         "//visibility:public",

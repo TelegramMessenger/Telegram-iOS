@@ -17,6 +17,8 @@ public enum ItemListCheckboxItemColor {
 
 public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
+    let icon: UIImage?
+    let iconSize: CGSize?
     let title: String
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
@@ -25,8 +27,10 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    public init(presentationData: ItemListPresentationData, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.presentationData = presentationData
+        self.icon = icon
+        self.iconSize = iconSize
         self.title = title
         self.style = style
         self.color = color
@@ -86,6 +90,7 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
     
     private let activateArea: AccessibilityAreaNode
     
+    private let imageNode: ASImageNode
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
@@ -102,6 +107,11 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.isLayerBacked = true
+        self.imageNode.displayWithoutProcessing = true
+        self.imageNode.displaysAsynchronously = false
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -120,6 +130,7 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.imageNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.activateArea)
@@ -143,6 +154,11 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                 leftInset += 44.0
             case .right:
                 leftInset += 16.0
+            }
+            
+            let iconInset: CGFloat = 44.0
+            if item.icon != nil {
+                leftInset += iconInset
             }
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
@@ -252,6 +268,12 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
+                    
+                    if let icon = item.icon {
+                        let iconSize = item.iconSize ?? icon.size
+                        strongSelf.imageNode.image = icon
+                        strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))
                 }

@@ -716,7 +716,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     } else {
         stickersLabel = ""
     }
-    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 5, label: .badge(stickersLabel, presentationData.theme.list.itemAccentColor), text: presentationData.strings.ChatSettings_Stickers, icon: PresentationResourcesSettings.stickers, action: {
+    items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 5, label: .badge(stickersLabel, presentationData.theme.list.itemAccentColor), text: presentationData.strings.ChatSettings_StickersAndReactions, icon: PresentationResourcesSettings.stickers, action: {
         interaction.openSettings(.stickers)
     }))
     

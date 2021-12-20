@@ -70,7 +70,7 @@ private final class StatusReactionNode: ASDisplayNode {
         if self.value != value {
             self.value = value
             
-            let defaultImageSize = CGSize(width: 19.0, height: 19.0)
+            let defaultImageSize = CGSize(width: 17.0, height: 17.0)
             let imageSize: CGSize
             if let file = file {
                 self.iconImageDisposable.set((context.account.postbox.mediaBox.resourceData(file.resource)
@@ -576,7 +576,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
 
             var replyCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             
-            let reactionSize: CGFloat = 19.0
+            let reactionSize: CGFloat = 17.0
             var reactionCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             let reactionSpacing: CGFloat = 2.0
             let reactionTrailingSpacing: CGFloat = 6.0

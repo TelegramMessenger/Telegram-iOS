@@ -1106,7 +1106,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 var dismissController: ((@escaping () -> Void) -> Void)?
                 
-                let items = ContextController.Items(content: .custom(ReactionListContextMenuContent(context: strongSelf.context, availableReactions: availableReactions, message: EngineMessage(message), reaction: value, back: nil, openPeer: { id in
+                let items = ContextController.Items(content: .custom(ReactionListContextMenuContent(context: strongSelf.context, availableReactions: availableReactions, message: EngineMessage(message), reaction: value, readStats: nil, back: nil, openPeer: { id in
                     dismissController?({
                         guard let strongSelf = self else {
                             return
@@ -1148,8 +1148,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                
-                let _ = allowedReactions
                 
                 strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                     guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item else {
