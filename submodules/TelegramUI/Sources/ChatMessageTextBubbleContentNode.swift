@@ -405,7 +405,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
                                 }
                                 dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                                dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                                dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                             } else if let spoilerTextNode = strongSelf.spoilerTextNode {
                                 strongSelf.spoilerTextNode = nil
                                 spoilerTextNode.removeFromSupernode()
@@ -667,20 +667,36 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
                 })
+                textSelectionNode.updateRange = { [weak self] selectionRange in
+                    if let strongSelf = self, let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.cachedLayout, !textLayout.spoilers.isEmpty, let selectionRange = selectionRange {
+                        for (spoilerRange, _) in textLayout.spoilers {
+                            if let intersection = selectionRange.intersection(spoilerRange), intersection.length > 0 {
+                                dustNode.update(revealed: true)
+                                return
+                            }
+                        }
+                    }
+                }
                 self.textSelectionNode = textSelectionNode
                 self.addSubnode(textSelectionNode)
                 self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
                 textSelectionNode.frame = self.textNode.frame
                 textSelectionNode.highlightAreaNode.frame = self.textNode.frame
             }
-        } else if let textSelectionNode = self.textSelectionNode {
-            self.textSelectionNode = nil
-            self.updateIsTextSelectionActive?(false)
-            textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
-                textSelectionNode?.highlightAreaNode.removeFromSupernode()
-                textSelectionNode?.removeFromSupernode()
-            })
+        } else {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                self.updateIsTextSelectionActive?(false)
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+            
+            if let dustNode = self.dustNode, dustNode.isRevealed {
+                dustNode.update(revealed: false)
+            }
         }
     }
     

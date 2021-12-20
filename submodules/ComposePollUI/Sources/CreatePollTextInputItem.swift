@@ -316,7 +316,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                 rightInset += inlineAction.icon.size.width + 8.0
             }
             
-            let itemText = textAttributedStringForStateText(item.text, fontSize: 17.0, textColor: item.presentationData.theme.chat.inputPanel.primaryTextColor, accentTextColor: item.presentationData.theme.chat.inputPanel.panelControlAccentColor, writingDirection: nil)
+            let itemText = textAttributedStringForStateText(item.text, fontSize: 17.0, textColor: item.presentationData.theme.chat.inputPanel.primaryTextColor, accentTextColor: item.presentationData.theme.chat.inputPanel.panelControlAccentColor, writingDirection: nil, spoilersRevealed: false)
             let measureText = NSMutableAttributedString(attributedString: itemText)
             let measureRawString = measureText.string
             if measureRawString.hasSuffix("\n") || measureRawString.isEmpty {

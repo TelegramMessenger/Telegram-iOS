@@ -760,7 +760,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     f(.default)
                 })))
                 
-                if #available(iOS 15.0, *) {
+                if #available(iOS 15.0, *), !message.text.isEmpty {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
