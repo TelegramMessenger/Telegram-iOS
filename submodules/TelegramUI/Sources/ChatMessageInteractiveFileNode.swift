@@ -1146,6 +1146,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
         return super.hitTest(point, with: event)
     }
+    
+    func hasTapAction(at point: CGPoint) -> Bool {
+        if let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
+            return true
+        }
+        return false
+    }
 }
 
 

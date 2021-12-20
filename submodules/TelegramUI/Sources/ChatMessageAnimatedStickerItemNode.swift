@@ -945,8 +945,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var dateReplies = 0
             let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
             for attribute in item.message.attributes {
-                if let _ = attribute as? EditedMessageAttribute, isEmoji {
-                    edited = true
+                if let attribute = attribute as? EditedMessageAttribute, isEmoji {
+                    edited = !attribute.isHidden
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {

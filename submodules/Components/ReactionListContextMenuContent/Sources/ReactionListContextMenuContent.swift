@@ -187,6 +187,11 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private let selectionHighlightNode: ASDisplayNode
         private let itemNodes: [ItemNode]
         
+        private struct ScrollToTabReaction {
+            var value: String?
+        }
+        private var scrollToTabReaction: ScrollToTabReaction?
+        
         var action: ((String?) -> Void)?
         
         init(context: AccountContext, availableReactions: AvailableReactions?, reactions: [(String?, Int)], message: EngineMessage) {
@@ -217,6 +222,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     guard let strongSelf = self else {
                         return
                     }
+                    strongSelf.scrollToTabReaction = ScrollToTabReaction(value: reaction)
                     strongSelf.action?(reaction)
                 }
             }
@@ -255,6 +261,16 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             let contentSize = CGSize(width: contentWidth, height: size.height)
             if self.scrollNode.view.contentSize != contentSize {
                 self.scrollNode.view.contentSize = contentSize
+            }
+            
+            if let scrollToTabReaction = self.scrollToTabReaction {
+                self.scrollToTabReaction = nil
+                for itemNode in self.itemNodes {
+                    if itemNode.reaction == scrollToTabReaction.value {
+                        self.scrollNode.view.scrollRectToVisible(itemNode.frame.insetBy(dx: -sideInset, dy: 0.0), animated: transition.isAnimated)
+                        break
+                    }
+                }
             }
         }
     }
@@ -494,7 +510,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         
                         itemNode.update(size: itemFrame.size, presentationData: presentationData, item: self.state.items[index], isLast: index == self.state.items.count - 1, syncronousLoad: syncronousLoad)
                         itemNode.frame = itemFrame
-                    } else {
+                    } else if index < self.state.totalCount {
                         validPlaceholderIds.insert(index)
                         
                         let placeholderLayer: SimpleLayer

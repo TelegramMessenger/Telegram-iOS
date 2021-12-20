@@ -55,7 +55,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
     }
     

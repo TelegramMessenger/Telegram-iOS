@@ -791,7 +791,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         var reactionButtonPosition = CGPoint(x: -1.0, y: verticalReactionsInset)
                         for item in reactionButtons.items {
                             if reactionButtonPosition.x + item.size.width > boundingWidth {
-                                reactionButtonPosition.x = 0.0
+                                reactionButtonPosition.x = -1.0
                                 reactionButtonPosition.y += item.size.height + 6.0
                             }
                                 

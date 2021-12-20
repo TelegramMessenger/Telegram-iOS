@@ -70,7 +70,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
     }
     
@@ -179,6 +179,9 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
+            return .ignore
+        }
+        if self.interactiveFileNode.hasTapAction(at: self.view.convert(point, to: self.interactiveFileNode.view)) {
             return .ignore
         }
         return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)

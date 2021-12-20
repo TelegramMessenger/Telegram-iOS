@@ -250,10 +250,18 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             incoming: chat.message.incoming.withUpdated(
                 bubble: chat.message.incoming.bubble.withUpdated(
                     withWallpaper: chat.message.incoming.bubble.withWallpaper.withUpdated(
-                        stroke: incomingBubbleStrokeColor
+                        stroke: incomingBubbleStrokeColor,
+                        reactionInactiveBackground: accentColor?.withMultipliedAlpha(0.1),
+                        reactionInactiveForeground: accentColor,
+                        reactionActiveBackground: accentColor,
+                        reactionActiveForeground: .clear
                     ),
                     withoutWallpaper: chat.message.incoming.bubble.withoutWallpaper.withUpdated(
-                        stroke: incomingBubbleStrokeColor
+                        stroke: incomingBubbleStrokeColor,
+                        reactionInactiveBackground: accentColor?.withMultipliedAlpha(0.1),
+                        reactionInactiveForeground: accentColor,
+                        reactionActiveBackground: accentColor,
+                        reactionActiveForeground: .clear
                     )
                 ),
                 linkHighlightColor: accentColor?.withAlphaComponent(0.3),
@@ -278,12 +286,20 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                     withWallpaper: chat.message.outgoing.bubble.withWallpaper.withUpdated(
                         fill: outgoingBubbleFillColors,
                         highlightedFill: outgoingBubbleHighlightedFill,
-                        stroke: outgoingBubbleStrokeColor
+                        stroke: outgoingBubbleStrokeColor,
+                        reactionInactiveBackground: outgoingControlColor?.withMultipliedAlpha(0.1),
+                        reactionInactiveForeground: outgoingControlColor,
+                        reactionActiveBackground: outgoingControlColor,
+                        reactionActiveForeground: .clear
                     ),
                     withoutWallpaper: chat.message.outgoing.bubble.withoutWallpaper.withUpdated(
                         fill: outgoingBubbleFillColors,
                         highlightedFill: outgoingBubbleHighlightedFill,
-                        stroke: outgoingBubbleStrokeColor
+                        stroke: outgoingBubbleStrokeColor,
+                        reactionInactiveBackground: outgoingControlColor?.withMultipliedAlpha(0.1),
+                        reactionInactiveForeground: outgoingControlColor,
+                        reactionActiveBackground: outgoingControlColor,
+                        reactionActiveForeground: .clear
                     )
                 ),
                 primaryTextColor: outgoingPrimaryTextColor,
