@@ -143,6 +143,24 @@ public class InvisibleInkDustNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap(_:))))
     }
     
+    public func update(revealed: Bool) {
+        guard self.isRevealed != revealed, let textNode = self.textNode else {
+            return
+        }
+        
+        self.isRevealed = revealed
+        
+        if revealed {
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+            transition.updateAlpha(node: self, alpha: 0.0)
+            transition.updateAlpha(node: textNode, alpha: 1.0)
+        } else {
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
+            transition.updateAlpha(node: self, alpha: 1.0)
+            transition.updateAlpha(node: textNode, alpha: 0.0)
+        }
+    }
+    
     @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
         guard let (size, _, _) = self.currentParams, let textNode = self.textNode, !self.isRevealed else {
             return

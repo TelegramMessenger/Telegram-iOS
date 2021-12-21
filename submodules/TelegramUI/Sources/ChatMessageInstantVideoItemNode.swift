@@ -1241,14 +1241,20 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         let animationProgress: CGFloat = (currentValue - initialHeight) / (targetHeight - initialHeight)
         let scaleProgress: CGFloat
         var effectiveAvatarInset = avatarInset
-        if currentValue < targetHeight {
-            initialSize = displaySize
-            targetSize = maximumDisplaySize
-            scaleProgress = animationProgress
-        } else if currentValue > targetHeight {
-            initialSize = maximumDisplaySize
-            targetSize = displaySize
-            scaleProgress = 1.0 - animationProgress
+        if abs(targetHeight - initialHeight) > 100.0 {
+            if currentValue < targetHeight {
+                initialSize = displaySize
+                targetSize = maximumDisplaySize
+                scaleProgress = animationProgress
+            } else if currentValue > targetHeight {
+                initialSize = maximumDisplaySize
+                targetSize = displaySize
+                scaleProgress = 1.0 - animationProgress
+            } else {
+                initialSize = isPlaying ? maximumDisplaySize : displaySize
+                targetSize = initialSize
+                scaleProgress = isPlaying ? 1.0 : 0.0
+            }
         } else {
             initialSize = isPlaying ? maximumDisplaySize : displaySize
             targetSize = initialSize
@@ -1316,6 +1322,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             let actionButtonsSize = actionButtonsNode.frame.size
             let actionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY), size: actionButtonsSize)
             actionButtonsNode.frame = actionButtonsFrame
+        }
+        
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            let reactionButtonsSize = reactionButtonsNode.frame.size
+            let reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSize)
+            reactionButtonsNode.frame = reactionButtonsFrame
         }
     }
     

@@ -173,7 +173,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let textStroke: (UIColor, CGFloat)?
     fileprivate let displaySpoilers: Bool
     public let hasRTL: Bool
-    public let spoilers: [CGRect]
+    public let spoilers: [(NSRange, CGRect)]
     
     fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) {
         self.attributedString = attributedString
@@ -198,12 +198,12 @@ public final class TextNodeLayout: NSObject {
         self.textStroke = textStroke
         self.displaySpoilers = displaySpoilers
         var hasRTL = false
-        var spoilers: [CGRect] = []
+        var spoilers: [(NSRange, CGRect)] = []
         for line in lines {
             if line.isRTL {
                 hasRTL = true
             }
-            spoilers.append(contentsOf: line.spoilers.map { $0.frame.offsetBy(dx: line.frame.minX, dy: line.frame.minY) })
+            spoilers.append(contentsOf: line.spoilers.map { ( $0.range, $0.frame.offsetBy(dx: line.frame.minX, dy: line.frame.minY)) })
         }
         self.hasRTL = hasRTL
         self.spoilers = spoilers

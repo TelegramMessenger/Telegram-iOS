@@ -73,6 +73,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
+            let dustColor: UIColor
                 
             switch type {
                 case let .bubble(incoming):
@@ -83,6 +84,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     } else {
                         textColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
                     }
+                    dustColor = incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
@@ -90,6 +92,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
                     lineImage = graphics.chatServiceVerticalLineImage
                     textColor = titleColor
+                    dustColor = titleColor
             }
             
             
@@ -251,7 +254,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode)
                     }
                     dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                    dustNode.update(size: dustNode.frame.size, color: titleColor, rects: textLayout.spoilers.map { $0.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                    dustNode.update(size: dustNode.frame.size, color: dustColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                 } else if let dustNode = node.dustNode {
                     dustNode.removeFromSupernode()
                     node.dustNode = nil
