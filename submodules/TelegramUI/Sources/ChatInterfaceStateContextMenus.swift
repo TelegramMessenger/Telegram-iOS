@@ -82,7 +82,11 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             }
         }
     } else if let author = message.author, message.author?.id != message.id.peerId, author.id.namespace == Namespaces.Peer.CloudChannel && message.id.peerId.namespace == Namespaces.Peer.CloudChannel, !message.flags.contains(.Incoming) {
-        hasEditRights = true
+        if message.media.contains(where: { $0 is TelegramMediaInvoice }) {
+            hasEditRights = false
+        } else {
+            hasEditRights = true
+        }
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
             switch peer.info {
