@@ -296,7 +296,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     var isMediaDeleted: Bool = false
     
-    private let inputMenu = ChatTextInputMenu()
+    private let inputMenu: ChatTextInputMenu
     
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
@@ -451,6 +451,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
 
+        var hasSpoilers = true
+        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+            hasSpoilers = false
+        }
+        self.inputMenu = ChatTextInputMenu(hasSpoilers: hasSpoilers)
+        
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
         

@@ -17,6 +17,8 @@ final class ChatTextInputMenu {
     private var stringUnderline: String = "Underline"
     private var stringSpoiler: String = "Spoiler"
     
+    private let hasSpoilers: Bool
+    
     private(set) var state: ChatTextInputMenuState = .inactive {
         didSet {
             if self.state != oldValue {
@@ -26,8 +28,7 @@ final class ChatTextInputMenu {
                     case .general:
                         UIMenuController.shared.menuItems = []
                     case .format:
-                        UIMenuController.shared.menuItems = [
-                            UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))),
+                        var menuItems: [UIMenuItem] = [
                             UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
                             UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
                             UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
@@ -35,6 +36,10 @@ final class ChatTextInputMenu {
                             UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
                             UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
                         ]
+                        if self.hasSpoilers {
+                            menuItems.insert(UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))), at: 0)
+                        }
+                        UIMenuController.shared.menuItems = menuItems
                 }
                 
             }
@@ -43,7 +48,8 @@ final class ChatTextInputMenu {
     
     private var observer: NSObjectProtocol?
     
-    init() {
+    init(hasSpoilers: Bool = false) {
+        self.hasSpoilers = hasSpoilers
         self.observer = NotificationCenter.default.addObserver(forName: UIMenuController.didHideMenuNotification, object: nil, queue: nil, using: { [weak self] _ in
             self?.back()
         })

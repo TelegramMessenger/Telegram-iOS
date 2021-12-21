@@ -141,7 +141,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var initializedPlaceholder = false
         
-    private let inputMenu = ChatTextInputMenu()
+    private let inputMenu: ChatTextInputMenu
     
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
@@ -240,6 +240,12 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     init(presentationInterfaceState: ChatPresentationInterfaceState, isCaption: Bool = false, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
         self.isCaption = isCaption
+        
+        var hasSpoilers = true
+        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+            hasSpoilers = false
+        }
+        self.inputMenu = ChatTextInputMenu(hasSpoilers: hasSpoilers)
         
         self.textInputContainerBackgroundNode = ASImageNode()
         self.textInputContainerBackgroundNode.isUserInteractionEnabled = false
