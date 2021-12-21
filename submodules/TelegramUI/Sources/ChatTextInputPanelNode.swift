@@ -352,10 +352,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    private var currentState: ChatTextInputState?
     func updateInputTextState(_ state: ChatTextInputState, keepSendButtonEnabled: Bool, extendedSearchLayout: Bool, accessoryItems: [ChatTextInputAccessoryItem], animated: Bool) {
-        self.currentState = state
-        
         if state.inputText.length != 0 && self.textInputNode == nil {
             self.loadTextInputNode()
         }
@@ -1870,7 +1867,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    private func updateSpoilersRevealed() {
+    private func updateSpoilersRevealed(animated: Bool = true) {
         guard let textInputNode = self.textInputNode else {
             return
         }
@@ -1894,15 +1891,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.spoilersRevealed = revealed
         
         if revealed {
-            self.updateInternalSpoilersRevealed(true)
+            self.updateInternalSpoilersRevealed(true, animated: animated)
         } else {
             Queue.mainQueue().after(1.5, {
-                self.updateInternalSpoilersRevealed(false)
+                self.updateInternalSpoilersRevealed(false, animated: true)
             })
         }
     }
     
-    private func updateInternalSpoilersRevealed(_ revealed: Bool) {
+    private func updateInternalSpoilersRevealed(_ revealed: Bool, animated: Bool) {
         guard self.spoilersRevealed == revealed, let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState else {
             return
         }
@@ -1913,11 +1910,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed)
         
-        if let state = self.currentState {
-            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
-        }
-  
-        if textInputNode.textView.subviews.count > 1 {
+        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
+        
+        if textInputNode.textView.subviews.count > 1, animated {
             let containerView = textInputNode.textView.subviews[1]
             if let canvasView = containerView.subviews.first {
                 if let snapshotView = canvasView.snapshotView(afterScreenUpdates: false) {
@@ -1930,16 +1925,20 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
     
-        if revealed {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
-            if let dustNode = self.dustNode {
-                transition.updateAlpha(node: dustNode, alpha: 0.0)
+        if animated {
+            if revealed {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+                if let dustNode = self.dustNode {
+                    transition.updateAlpha(node: dustNode, alpha: 0.0)
+                }
+            } else {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+                if let dustNode = self.dustNode {
+                    transition.updateAlpha(node: dustNode, alpha: 1.0)
+                }
             }
-        } else {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
-            if let dustNode = self.dustNode {
-                transition.updateAlpha(node: dustNode, alpha: 1.0)
-            }
+        } else if let dustNode = self.dustNode {
+            dustNode.alpha = revealed ? 0.0 : 1.0
         }
     }
     
@@ -2336,10 +2335,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func formatAttributesSpoiler(_ sender: Any) {
         self.inputMenu.back()
+        
+        var animated = false
+        if let attributedText = self.textInputNode?.attributedText {
+            attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
+                if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                    animated = true
+                }
+            })
+        }
+        
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler), inputMode)
         }
-        self.updateSpoilersRevealed()
+        
+        self.updateSpoilersRevealed(animated: animated)
     }
     
     @objc func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
