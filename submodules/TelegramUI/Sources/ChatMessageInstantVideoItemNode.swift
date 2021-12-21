@@ -558,7 +558,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             if !reactions.reactions.isEmpty {
                 let totalInset = params.leftInset + layoutConstants.bubble.edgeInset * 2.0 + avatarInset + layoutConstants.bubble.contentInsets.left + params.rightInset + layoutConstants.bubble.contentInsets.right
                 
-                let maxReactionsWidth = params.width - totalInset
+                let maxReactionsWidth = params.width - totalInset - 8.0
                 let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
                     context: item.context,
                     presentationData: item.presentationData,

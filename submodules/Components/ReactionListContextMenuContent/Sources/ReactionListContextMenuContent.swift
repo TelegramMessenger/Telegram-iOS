@@ -741,7 +741,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 reactions.insert((nil, totalCount), at: 0)
             }
             
-            if reactions.count > 2 {
+            if reactions.count > 2 && totalCount > 10 {
                 self.tabListNode = ReactionTabListNode(context: context, availableReactions: availableReactions, reactions: reactions, message: message)
             }
             
