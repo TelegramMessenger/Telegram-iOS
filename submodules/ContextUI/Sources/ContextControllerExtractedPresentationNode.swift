@@ -334,7 +334,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     reactionContextNodeTransition = .immediate
                 }
                 reactionContextNodeTransition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
-                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: contentRect, transition: reactionContextNodeTransition)
+                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: 0.0, right: 0.0), anchorRect: contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0), transition: reactionContextNodeTransition)
             }
             if let removedReactionContextNode = removedReactionContextNode {
                 removedReactionContextNode.animateOut(to: contentRect, animatingOutToReaction: false)
@@ -418,7 +418,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             
             if let animateClippingFromContentAreaInScreenSpace = contentNode.animateClippingFromContentAreaInScreenSpace {
-                self.clippingNode.layer.animateFrame(from: animateClippingFromContentAreaInScreenSpace, to: CGRect(origin: CGPoint(), size: layout.size), duration: 0.2)
+                self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(x: 0.0, y: animateClippingFromContentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: animateClippingFromContentAreaInScreenSpace.height)), to: CGRect(origin: CGPoint(), size: layout.size), duration: 0.2)
                 self.clippingNode.layer.animateBoundsOriginYAdditive(from: animateClippingFromContentAreaInScreenSpace.minY, to: 0.0, duration: 0.2)
             }
             
@@ -528,7 +528,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             let putBackInfo = self.source.putBack()
             
             if let putBackInfo = putBackInfo {
-                self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(), size: layout.size), to: putBackInfo.contentAreaInScreenSpace, duration: duration, removeOnCompletion: false)
+                self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(), size: layout.size), to: CGRect(origin: CGPoint(x: 0.0, y: putBackInfo.contentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: putBackInfo.contentAreaInScreenSpace.height)), duration: duration, removeOnCompletion: false)
                 self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: duration, removeOnCompletion: false)
             }
             
