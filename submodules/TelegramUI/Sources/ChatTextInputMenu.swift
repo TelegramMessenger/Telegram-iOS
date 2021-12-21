@@ -27,11 +27,11 @@ final class ChatTextInputMenu {
                         UIMenuController.shared.menuItems = []
                     case .format:
                         UIMenuController.shared.menuItems = [
+                            UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))),
                             UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
                             UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
                             UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
                             UIMenuItem(title: self.stringLink, action: Selector(("formatAttributesLink:"))),
-                            UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))),
                             UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
                             UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
                         ]

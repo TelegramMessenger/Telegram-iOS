@@ -15,6 +15,8 @@ import AnimatedCountLabelNode
 import AnimatedNavigationStripeNode
 import ContextUI
 import RadialStatusNode
+import InvisibleInkDustNode
+import TextFormat
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -50,6 +52,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let lineNode: AnimatedNavigationStripeNode
     private let titleNode: AnimatedCountLabelNode
     private let textNode: TextNode
+    private var dustNode: InvisibleInkDustNode?
     
     private let imageNode: TransformImageNode
     private let imageNodeContainer: ASDisplayNode
@@ -451,7 +454,25 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), titleStrings)
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: foldLineBreaks(descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId).0), font: Font.regular(15.0), textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
+            
+            let messageText: NSAttributedString
+            let textFont = Font.regular(15.0)
+            if isText {
+                let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                    if case .Spoiler = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                let textColor = theme.chat.inputPanel.primaryTextColor
+                messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+            } else {
+                messageText = NSAttributedString(string: foldLineBreaks(textString), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
+            }
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
             
             Queue.mainQueue().async {
                 if let strongSelf = self {
@@ -463,7 +484,26 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     animationTransition.updateFrameAdditive(node: strongSelf.contentTextContainer, frame: CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 0.0), size: CGSize()))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
+                    
+                    let textFrame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
+                    strongSelf.textNode.frame = textFrame
+                    
+                    if !textLayout.spoilers.isEmpty {
+                        let dustNode: InvisibleInkDustNode
+                        if let current = strongSelf.dustNode {
+                            dustNode = current
+                        } else {
+                            dustNode = InvisibleInkDustNode(textNode: nil)
+                            dustNode.isUserInteractionEnabled = false
+                            strongSelf.dustNode = dustNode
+                            strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode)
+                        }
+                        dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                        dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                    } else if let dustNode = strongSelf.dustNode {
+                        dustNode.removeFromSupernode()
+                        strongSelf.dustNode = nil
+                    }
                     
                     let lineFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: 0.0), size: CGSize(width: 2.0, height: panelHeight))
                     animationTransition.updateFrame(node: strongSelf.lineNode, frame: lineFrame)
