@@ -689,7 +689,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutSize.height += dateAndStatusSize.height
             }
             if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
-                layoutSize.height += reactionButtonsSizeAndApply.0.height
+                layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
             }
             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
@@ -986,7 +986,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                         let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                        let reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 10.0), size: reactionButtonsSizeAndApply.0)
+                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 10.0), size: reactionButtonsSizeAndApply.0)
+                        if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                            reactionButtonsFrame.origin.y += 4.0 + actionButtonsSizeAndApply.0.height
+                        }
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
                             reactionButtonsNode.reactionSelected = { value in
