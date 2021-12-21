@@ -153,7 +153,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             }
             
             var counterComponents: [String] = []
-            for character in "\(spec.component.count)" {
+            for character in countString(Int64(spec.component.count)) {
                 counterComponents.append(String(character))
             }
             
@@ -164,12 +164,12 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             var previousDisplayCounter: String?
             if let currentLayout = currentLayout {
                 if currentLayout.spec.component.avatarPeers.isEmpty {
-                    previousDisplayCounter = "\(spec.component.count)"
+                    previousDisplayCounter = countString(Int64(spec.component.count))
                 }
             }
             var currentDisplayCounter: String?
             if spec.component.avatarPeers.isEmpty {
-                currentDisplayCounter = "\(spec.component.count)"
+                currentDisplayCounter = countString(Int64(spec.component.count))
             }
             
             let backgroundImage: UIImage
@@ -669,7 +669,7 @@ public final class ReactionButtonComponent: Component {
             
             self.iconView.frame = CGRect(origin: CGPoint(x: sideInsets, y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
             
-            let text = "\(component.count)"
+            let text = countString(Int64(component.count))
             var measureText = ""
             for _ in 0 ..< text.count {
                 measureText.append("0")

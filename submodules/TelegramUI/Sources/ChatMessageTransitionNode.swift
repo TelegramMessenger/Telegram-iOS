@@ -775,11 +775,14 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         }
     }
     
-    func dismissMessageReactionContexts() {
-        for messageReactionContext in self.messageReactionContexts {
-            messageReactionContext.dismiss()
+    func dismissMessageReactionContexts(itemNode: ListViewItemNode? = nil) {
+        for i in (0 ..< self.messageReactionContexts.count).reversed() {
+            let messageReactionContext = self.messageReactionContexts[i]
+            if itemNode == nil || messageReactionContext.itemNode === itemNode {
+                self.messageReactionContexts.remove(at: i)
+                messageReactionContext.dismiss()
+            }
         }
-        self.messageReactionContexts.removeAll()
     }
     
     func addMessageContextController(messageId: MessageId, contextController: ContextController) {

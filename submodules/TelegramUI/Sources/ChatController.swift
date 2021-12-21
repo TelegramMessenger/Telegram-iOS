@@ -1265,23 +1265,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         })
-                    } else if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message) {
-                        var hideRemovedReaction: Bool = false
-                        if let reactions = mergedMessageReactions(attributes: message.attributes) {
-                            for reaction in reactions.reactions {
-                                if reaction.value == removedReaction {
-                                    hideRemovedReaction = reaction.count == 1
-                                    break
+                    } else {
+                        strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts(itemNode: itemNode)
+                        
+                        if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message) {
+                            var hideRemovedReaction: Bool = false
+                            if let reactions = mergedMessageReactions(attributes: message.attributes) {
+                                for reaction in reactions.reactions {
+                                    if reaction.value == removedReaction {
+                                        hideRemovedReaction = reaction.count == 1
+                                        break
+                                    }
                                 }
                             }
+                            
+                            let standaloneDismissAnimation = StandaloneDismissReactionAnimation()
+                            standaloneDismissAnimation.frame = strongSelf.chatDisplayNode.bounds
+                            strongSelf.chatDisplayNode.addSubnode(standaloneDismissAnimation)
+                            standaloneDismissAnimation.animateReactionDismiss(sourceView: targetView, hideNode: hideRemovedReaction, completion: { [weak standaloneDismissAnimation] in
+                                standaloneDismissAnimation?.removeFromSupernode()
+                            })
                         }
-                        
-                        let standaloneDismissAnimation = StandaloneDismissReactionAnimation()
-                        standaloneDismissAnimation.frame = strongSelf.chatDisplayNode.bounds
-                        strongSelf.chatDisplayNode.addSubnode(standaloneDismissAnimation)
-                        standaloneDismissAnimation.animateReactionDismiss(sourceView: targetView, hideNode: hideRemovedReaction, completion: { [weak standaloneDismissAnimation] in
-                            standaloneDismissAnimation?.removeFromSupernode()
-                        })
                     }
                     
                     let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reaction: updatedReaction).start()
