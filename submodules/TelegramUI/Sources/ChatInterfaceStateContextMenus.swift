@@ -150,7 +150,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
     return false
 }
 
-private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
+private func canViewReadStats(message: Message, cachedData: CachedPeerData?, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
     guard let peer = message.peers[message.id.peerId] else {
         return false
     }
@@ -198,6 +198,16 @@ private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: 
     switch peer {
     case let channel as TelegramChannel:
         if case .broadcast = channel.info {
+            return false
+        } else if let cachedData = cachedData as? CachedChannelData {
+            if let memberCount = cachedData.participantsSummary.memberCount {
+                if Int(memberCount) > maxParticipantCount {
+                    return false
+                }
+            } else {
+                return false
+            }
+        } else {
             return false
         }
     case let group as TelegramGroup:
@@ -1207,7 +1217,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        let canViewStats = canViewReadStats(message: message, isMessageRead: isMessageRead, appConfig: appConfig)
+        let canViewStats = canViewReadStats(message: message, cachedData: cachedData, isMessageRead: isMessageRead, appConfig: appConfig)
         var reactionCount = 0
         for reaction in mergedMessageReactionsAndPeers(message: message).reactions {
             reactionCount += Int(reaction.count)

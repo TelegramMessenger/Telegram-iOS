@@ -8,7 +8,7 @@ import TelegramCore
 import SwiftSignalKit
 import ReactionSelectionNode
 
-final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextControllerPresentationNode {
+final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextControllerPresentationNode, UIScrollViewDelegate {
     private final class ContentNode: ASDisplayNode {
         let offsetContainerNode: ASDisplayNode
         let containingNode: ContextExtractedContentContainingNode
@@ -126,6 +126,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.scrollNode.addSubnode(self.contentRectDebugNode)
         #endif*/
         
+        self.scrollNode.view.delegate = self
+        
         self.dismissTapNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dismissTapGesture(_:))))
     }
     
@@ -159,6 +161,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             return self.scrollNode.hitTest(self.view.convert(point, to: self.scrollNode.view), with: event)
         } else {
             return nil
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if let reactionContextNode = self.reactionContextNode {
+            let isIntersectingContent = scrollView.contentOffset.y >= 10.0
+            reactionContextNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: .animated(duration: 0.25, curve: .easeInOut))
         }
     }
     
