@@ -371,6 +371,54 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
+        private struct ItemsState {
+            let listState: EngineMessageReactionListContext.State
+            let readStats: MessageReadStats?
+            
+            let mergedItems: [EngineMessageReactionListContext.Item]
+            
+            init(listState: EngineMessageReactionListContext.State, readStats: MessageReadStats?) {
+                self.listState = listState
+                self.readStats = readStats
+                
+                var mergedItems: [EngineMessageReactionListContext.Item] = listState.items
+                if !listState.canLoadMore, let readStats = readStats {
+                    var existingPeers = Set(mergedItems.map(\.peer.id))
+                    for peer in readStats.peers {
+                        if !existingPeers.contains(peer.id) {
+                            existingPeers.insert(peer.id)
+                            mergedItems.append(EngineMessageReactionListContext.Item(peer: peer, reaction: nil))
+                        }
+                    }
+                }
+                self.mergedItems = mergedItems
+            }
+            
+            var totalCount: Int {
+                if !self.listState.canLoadMore {
+                    return self.mergedItems.count
+                } else {
+                    var value = self.listState.totalCount
+                    if let readStats = self.readStats {
+                        value = max(value, readStats.peers.count)
+                    }
+                    return value
+                }
+            }
+            
+            var canLoadMore: Bool {
+                return self.listState.canLoadMore
+            }
+            
+            func item(at index: Int) -> EngineMessageReactionListContext.Item? {
+                if index < self.mergedItems.count {
+                    return self.mergedItems[index]
+                } else {
+                    return nil
+                }
+            }
+        }
+        
         private let context: AccountContext
         private let availableReactions: AvailableReactions?
         let reaction: String?
@@ -388,7 +436,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private var apparentHeight: CGFloat = 0.0
         
         private let listContext: EngineMessageReactionListContext
-        private var state: EngineMessageReactionListContext.State
+        private var state: ItemsState
         private var stateDisposable: Disposable?
         
         private var itemNodes: [Int: ItemNode] = [:]
@@ -401,6 +449,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             availableReactions: AvailableReactions?,
             message: EngineMessage,
             reaction: String?,
+            readStats: MessageReadStats?,
             requestUpdate: @escaping (ReactionsTabNode, ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ReactionsTabNode, ContainedViewLayoutTransition) -> Void,
             openPeer: @escaping (PeerId) -> Void
@@ -413,7 +462,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.openPeer = openPeer
             
             self.listContext = context.engine.messages.messageReactionList(message: message, reaction: reaction)
-            self.state = EngineMessageReactionListContext.State(message: message, reaction: reaction)
+            self.state = ItemsState(listState: EngineMessageReactionListContext.State(message: message, reaction: reaction), readStats: readStats)
             
             self.scrollNode = ASScrollNode()
             self.scrollNode.canCancelAllTouchesInViews = true
@@ -436,11 +485,12 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 guard let strongSelf = self else {
                     return
                 }
+                let updatedState = ItemsState(listState: state, readStats: strongSelf.state.readStats)
                 var animateIn = false
-                if strongSelf.state.items.isEmpty && !state.items.isEmpty {
+                if strongSelf.state.item(at: 0) == nil && updatedState.item(at: 0) != nil {
                     animateIn = true
                 }
-                strongSelf.state = state
+                strongSelf.state = updatedState
                 strongSelf.requestUpdate(strongSelf, animateIn ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
                 if animateIn {
                     for (_, itemNode) in strongSelf.itemNodes {
@@ -492,7 +542,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 for index in minVisibleIndex ... maxVisibleIndex {
                     let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: CGFloat(index) * itemHeight), size: CGSize(width: size.width, height: itemHeight))
                     
-                    if index < self.state.items.count {
+                    if let item = self.state.item(at: index) {
                         validIds.insert(index)
                         
                         let itemNode: ItemNode
@@ -500,7 +550,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             itemNode = current
                         } else {
                             let openPeer = self.openPeer
-                            let peerId = self.state.items[index].peer.id
+                            let peerId = item.peer.id
                             itemNode = ItemNode(context: self.context, availableReactions: self.availableReactions, action: {
                                 openPeer(peerId)
                             })
@@ -508,7 +558,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             self.scrollNode.addSubnode(itemNode)
                         }
                         
-                        itemNode.update(size: itemFrame.size, presentationData: presentationData, item: self.state.items[index], isLast: index == self.state.items.count - 1, syncronousLoad: syncronousLoad)
+                        itemNode.update(size: itemFrame.size, presentationData: presentationData, item: item, isLast: self.state.item(at: index + 1) == nil, syncronousLoad: syncronousLoad)
                         itemNode.frame = itemFrame
                     } else if index < self.state.totalCount {
                         validPlaceholderIds.insert(index)
@@ -558,7 +608,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.placeholderLayers.removeValue(forKey: id)
             }
             
-            if self.state.canLoadMore && maxVisibleIndex >= self.state.items.count - 16 {
+            if self.state.canLoadMore && maxVisibleIndex >= self.state.listState.items.count - 16 {
                 self.listContext.loadMore()
             }
         }
@@ -653,6 +703,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             availableReactions: AvailableReactions?,
             message: EngineMessage,
             reaction: String?,
+            readStats: MessageReadStats?,
             requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
             back: (() -> Void)?,
@@ -701,6 +752,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 availableReactions: availableReactions,
                 message: message,
                 reaction: reaction,
+                readStats: readStats,
                 requestUpdate: { tab, transition in
                     requestUpdateTab?(tab, transition)
                 },
@@ -740,6 +792,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         availableReactions: availableReactions,
                         message: message,
                         reaction: reaction,
+                        readStats: nil,
                         requestUpdate: { tab, transition in
                             requestUpdateTab?(tab, transition)
                         },
@@ -833,14 +886,24 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
     let availableReactions: AvailableReactions?
     let message: EngineMessage
     let reaction: String?
+    let readStats: MessageReadStats?
     let back: (() -> Void)?
     let openPeer: (PeerId) -> Void
     
-    public init(context: AccountContext, availableReactions: AvailableReactions?, message: EngineMessage, reaction: String?, back: (() -> Void)?, openPeer: @escaping (PeerId) -> Void) {
+    public init(
+        context: AccountContext,
+        availableReactions: AvailableReactions?,
+        message: EngineMessage,
+        reaction: String?,
+        readStats: MessageReadStats?,
+        back: (() -> Void)?,
+        openPeer: @escaping (PeerId) -> Void
+    ) {
         self.context = context
         self.availableReactions = availableReactions
         self.message = message
         self.reaction = reaction
+        self.readStats = readStats
         self.back = back
         self.openPeer = openPeer
     }
@@ -854,6 +917,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             availableReactions: self.availableReactions,
             message: self.message,
             reaction: self.reaction,
+            readStats: self.readStats,
             requestUpdate: requestUpdate,
             requestUpdateApparentHeight: requestUpdateApparentHeight,
             back: self.back,

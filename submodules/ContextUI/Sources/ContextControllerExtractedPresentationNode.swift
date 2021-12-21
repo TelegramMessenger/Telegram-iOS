@@ -157,6 +157,22 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
+    func highlightGestureMoved(location: CGPoint) {
+        self.actionsStackNode.highlightGestureMoved(location: self.view.convert(location, to: self.actionsStackNode.view))
+        
+        if let reactionContextNode = self.reactionContextNode {
+            reactionContextNode.highlightGestureMoved(location: self.view.convert(location, to: reactionContextNode.view))
+        }
+    }
+    
+    func highlightGestureFinished(performAction: Bool) {
+        self.actionsStackNode.highlightGestureFinished(performAction: performAction)
+        
+        if let reactionContextNode = self.reactionContextNode {
+            reactionContextNode.highlightGestureFinished(performAction: performAction)
+        }
+    }
+    
     func replaceItems(items: ContextController.Items, animated: Bool) {
         self.actionsStackNode.replace(item: makeContextControllerActionsStackItem(items: items), animated: animated)
     }
@@ -471,7 +487,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                         animatingOutState.currentContentScreenFrame = updatedContentScreenFrame
                     }*/
                 } else {
-                    //strongSelf.requestUpdate(animation.transition)
+                    strongSelf.requestUpdate(animation.transition)
                     
                     /*let updatedContentScreenFrame = convertFrame(contentNode.containingNode.contentRect, from: contentNode.containingNode.view, to: strongSelf.view)
                     if let storedGlobalFrame = contentNode.storedGlobalFrame {

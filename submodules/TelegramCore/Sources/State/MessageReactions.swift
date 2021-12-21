@@ -242,7 +242,7 @@ public extension EngineMessageReactionListContext.State {
         self.init(
             totalCount: totalCount,
             items: [],
-            canLoadMore: true
+            canLoadMore: totalCount != 0
         )
     }
 }
@@ -250,11 +250,11 @@ public extension EngineMessageReactionListContext.State {
 public final class EngineMessageReactionListContext {
     public final class Item: Equatable {
         public let peer: EnginePeer
-        public let reaction: String
+        public let reaction: String?
         
-        init(
+        public init(
             peer: EnginePeer,
-            reaction: String
+            reaction: String?
         ) {
             self.peer = peer
             self.reaction = reaction
@@ -317,7 +317,9 @@ public final class EngineMessageReactionListContext {
             let initialState = EngineMessageReactionListContext.State(message: message, reaction: reaction)
             self.state = InternalState(totalCount: initialState.totalCount, items: initialState.items, canLoadMore: true, nextOffset: nil)
             
-            self.loadMore()
+            if initialState.canLoadMore {
+                self.loadMore()
+            }
         }
         
         deinit {

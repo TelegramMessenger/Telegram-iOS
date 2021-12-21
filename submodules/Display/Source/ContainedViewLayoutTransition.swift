@@ -105,7 +105,7 @@ public extension CGRect {
 }
 
 public extension ContainedViewLayoutTransition {
-    func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+    func updateFrame(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = true, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         if frame.origin.x.isNaN {
             return
         }
@@ -157,7 +157,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateFrameAsPositionAndBounds(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func updateFrameAsPositionAndBounds(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = true, completion: ((Bool) -> Void)? = nil) {
         if node.frame.equalTo(frame) && !force {
             completion?(true)
         } else {
@@ -190,7 +190,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateFrameAsPositionAndBounds(layer: CALayer, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func updateFrameAsPositionAndBounds(layer: CALayer, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = true, completion: ((Bool) -> Void)? = nil) {
         if layer.frame.equalTo(frame) && !force {
             completion?(true)
         } else {
@@ -305,7 +305,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updatePosition(node: ASDisplayNode, position: CGPoint, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func updatePosition(node: ASDisplayNode, position: CGPoint, beginWithCurrentState: Bool = true, completion: ((Bool) -> Void)? = nil) {
         if node.position.equalTo(position) {
             completion?(true)
         } else {

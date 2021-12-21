@@ -222,6 +222,7 @@ private enum PreferencesKeyValues: Int32 {
     case peersNearby = 21
     case chatListFiltersFeaturedState = 22
     case secretChatSettings = 23
+    case reactionSettings = 24
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -342,6 +343,12 @@ public struct PreferencesKeys {
     public static let chatListFiltersFeaturedState: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.chatListFiltersFeaturedState.rawValue)
+        return key
+    }()
+    
+    public static let reactionSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.reactionSettings.rawValue)
         return key
     }()
 }

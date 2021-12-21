@@ -97,4 +97,14 @@ private final class VoiceChatInfoContextItemNode: ASDisplayNode, ContextMenuCust
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
     }
+    
+    func canBeHighlighted() -> Bool {
+        return false
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+    }
+    
+    func performAction() {
+    }
 }

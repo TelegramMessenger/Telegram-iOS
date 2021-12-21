@@ -1043,7 +1043,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     return state
                 }, animated: true)
             }, clickThroughMessage: {
-            }, backgroundNode: self.backgroundNode)
+            }, backgroundNode: self.backgroundNode, availableReactions: nil)
             return item
         }
         
