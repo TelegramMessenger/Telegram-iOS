@@ -37,68 +37,11 @@ public final class ReactionContextItem {
 private let largeCircleSize: CGFloat = 16.0
 private let smallCircleSize: CGFloat = 8.0
 
-private func generateBackgroundImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
-    return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(foreground.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-    })?.stretchableImage(withLeftCapWidth: Int(shadowBlur + diameter / 2.0), topCapHeight: Int(shadowBlur + diameter / 2.0))
-}
-
-private func generateBackgroundShadowImage(shadow: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
-    return generateImage(CGSize(width: diameter * 2.0 + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(shadow.cgColor)
-        context.setShadow(offset: CGSize(), blur: shadowBlur, color: shadow.cgColor)
-        
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur + diameter, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.fill(CGRect(origin: CGPoint(x: shadowBlur + diameter / 2.0, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        
-        context.setFillColor(UIColor.clear.cgColor)
-        context.setBlendMode(.copy)
-        
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur + diameter, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.fill(CGRect(origin: CGPoint(x: shadowBlur + diameter / 2.0, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-    })?.stretchableImage(withLeftCapWidth: Int(diameter + shadowBlur / 2.0), topCapHeight: Int(diameter / 2.0 + shadowBlur / 2.0))
-}
-
-private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
-    return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(foreground.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-    })?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0 + shadowBlur / 2.0), topCapHeight: Int(diameter / 2.0 + shadowBlur / 2.0))
-}
-
-private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
-    return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(shadow.cgColor)
-        context.setShadow(offset: CGSize(), blur: shadowBlur, color: shadow.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.setShadow(offset: CGSize(), blur: 1.0, color: shadow.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-        context.setFillColor(UIColor.clear.cgColor)
-        context.setBlendMode(.copy)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))
-    })?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0 + shadowBlur / 2.0), topCapHeight: Int(diameter / 2.0 + shadowBlur / 2.0))
-}
-
 public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let theme: PresentationTheme
     private let items: [ReactionContextItem]
     
-    private let backgroundNode: ASImageNode
-    private let backgroundShadowNode: ASImageNode
-    private let backgroundContainerNode: ASDisplayNode
-    
-    private let largeCircleNode: ASImageNode
-    private let largeCircleShadowNode: ASImageNode
-    
-    private let smallCircleNode: ASImageNode
-    private let smallCircleShadowNode: ASImageNode
+    private let backgroundNode: ReactionContextBackgroundNode
     
     private let contentContainer: ASDisplayNode
     private let contentContainerMask: UIImageView
@@ -122,44 +65,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.theme = theme
         self.items = items
         
-        let shadowBlur: CGFloat = 5.0
-        
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
-        
-        self.backgroundShadowNode = ASImageNode()
-        self.backgroundShadowNode.displayWithoutProcessing = true
-        self.backgroundShadowNode.displaysAsynchronously = false
-        
-        self.backgroundContainerNode = ASDisplayNode()
-        self.backgroundContainerNode.allowsGroupOpacity = true
-        
-        self.largeCircleNode = ASImageNode()
-        self.largeCircleNode.displayWithoutProcessing = true
-        self.largeCircleNode.displaysAsynchronously = false
-        
-        self.largeCircleShadowNode = ASImageNode()
-        self.largeCircleShadowNode.displayWithoutProcessing = true
-        self.largeCircleShadowNode.displaysAsynchronously = false
-        
-        self.smallCircleNode = ASImageNode()
-        self.smallCircleNode.displayWithoutProcessing = true
-        self.smallCircleNode.displaysAsynchronously = false
-        
-        self.smallCircleShadowNode = ASImageNode()
-        self.smallCircleShadowNode.displayWithoutProcessing = true
-        self.smallCircleShadowNode.displaysAsynchronously = false
-        
-        self.backgroundNode.image = generateBackgroundImage(foreground: theme.contextMenu.backgroundColor.withAlphaComponent(1.0), diameter: 52.0, shadowBlur: shadowBlur)
-        
-        self.backgroundShadowNode.image = generateBackgroundShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: 52.0, shadowBlur: shadowBlur)
-        
-        self.largeCircleNode.image = generateBubbleImage(foreground: theme.contextMenu.backgroundColor.withAlphaComponent(1.0), diameter: largeCircleSize, shadowBlur: shadowBlur)
-        self.smallCircleNode.image = generateBubbleImage(foreground: theme.contextMenu.backgroundColor.withAlphaComponent(1.0), diameter: smallCircleSize, shadowBlur: shadowBlur)
-        
-        self.largeCircleShadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: largeCircleSize, shadowBlur: shadowBlur)
-        self.smallCircleShadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: smallCircleSize, shadowBlur: shadowBlur)
+        self.backgroundNode = ReactionContextBackgroundNode(largeCircleSize: largeCircleSize, smallCircleSize: smallCircleSize)
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -200,18 +106,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             context.fill(CGRect(origin: CGPoint(x: maskGradientWidth, y: 0.0), size: CGSize(width: 1.0, height: size.height)))
         })?.stretchableImage(withLeftCapWidth: Int(maskGradientWidth), topCapHeight: 0)
         self.contentContainer.view.mask = self.contentContainerMask
-        //self.contentContainer.view.addSubview(self.contentContainerMask)
         
         super.init()
         
-        self.addSubnode(self.smallCircleShadowNode)
-        self.addSubnode(self.largeCircleShadowNode)
-        self.addSubnode(self.backgroundShadowNode)
-        
-        self.backgroundContainerNode.addSubnode(self.smallCircleNode)
-        self.backgroundContainerNode.addSubnode(self.largeCircleNode)
-        self.backgroundContainerNode.addSubnode(self.backgroundNode)
-        self.addSubnode(self.backgroundContainerNode)
+        self.addSubnode(self.backgroundNode)
         
         self.scrollNode.view.delegate = self
         
@@ -231,6 +129,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, transition: ContainedViewLayoutTransition) {
         self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+    }
+    
+    public func updateIsIntersectingContent(isIntersectingContent: Bool, transition: ContainedViewLayoutTransition) {
+        self.backgroundNode.updateIsIntersectingContent(isIntersectingContent: isIntersectingContent, transition: transition)
     }
     
     private func calculateBackgroundFrame(containerSize: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, contentSize: CGSize) -> (backgroundFrame: CGRect, isLeftAligned: Bool, cloudSourcePoint: CGFloat) {
@@ -308,7 +210,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let sideInset: CGFloat = 11.0
         let itemSpacing: CGFloat = 9.0
         let itemSize: CGFloat = 40.0
-        let shadowBlur: CGFloat = 5.0
         let verticalInset: CGFloat = 13.0
         let rowHeight: CGFloat = 30.0
         
@@ -350,34 +251,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.updateScrolling(transition: transition)
-     
-        let isInOverflow = backgroundFrame.maxY > anchorRect.minY
-        let backgroundAlpha: CGFloat = isInOverflow ? 1.0 : 0.8
-        let shadowAlpha: CGFloat = isInOverflow ? 1.0 : 0.0
-        transition.updateAlpha(node: self.backgroundContainerNode, alpha: backgroundAlpha)
-        transition.updateAlpha(node: self.backgroundShadowNode, alpha: shadowAlpha)
-        transition.updateAlpha(node: self.largeCircleShadowNode, alpha: shadowAlpha)
-        transition.updateAlpha(node: self.smallCircleShadowNode, alpha: shadowAlpha)
         
-        transition.updateFrame(node: self.backgroundContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
-        
-        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame.insetBy(dx: -shadowBlur, dy: -shadowBlur))
-        transition.updateFrame(node: self.backgroundShadowNode, frame: backgroundFrame.insetBy(dx: -shadowBlur, dy: -shadowBlur))
-        
-        let largeCircleFrame: CGRect
-        let smallCircleFrame: CGRect
-        if isLeftAligned {
-            largeCircleFrame = CGRect(origin: CGPoint(x: cloudSourcePoint - floor(largeCircleSize / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
-            smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.maxX - 3.0, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
-        } else {
-            largeCircleFrame = CGRect(origin: CGPoint(x: cloudSourcePoint - floor(largeCircleSize / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
-            smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.minX + 3.0 - smallCircleSize, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
-        }
-        
-        transition.updateFrame(node: self.largeCircleNode, frame: largeCircleFrame.insetBy(dx: -shadowBlur, dy: -shadowBlur))
-        transition.updateFrame(node: self.largeCircleShadowNode, frame: largeCircleFrame.insetBy(dx: -shadowBlur, dy: -shadowBlur))
-        transition.updateFrame(node: self.smallCircleNode, frame: smallCircleFrame.insetBy(dx: -shadowBlur, dy: -shadowBlur))
-        transition.updateFrame(node: self.smallCircleShadowNode, frame: smallCircleFrame.insetBy(dx: -shadowBlur, dy: -shadowBlur))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(
+            theme: self.theme,
+            size: backgroundFrame.size,
+            cloudSourcePoint: cloudSourcePoint - backgroundFrame.minX,
+            isLeftAligned: isLeftAligned,
+            transition: transition
+        )
         
         if let animateInFromAnchorRect = animateInFromAnchorRect {
             let springDuration: Double = 0.42
@@ -386,14 +268,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: backgroundFrame.height, height: contentHeight)).0
             
-            self.backgroundNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - backgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
-            self.backgroundNode.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size).insetBy(dx: -shadowBlur, dy: -shadowBlur)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: backgroundFrame.size).insetBy(dx: -shadowBlur, dy: -shadowBlur)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
+            self.backgroundNode.animateInFromAnchorRect(size: backgroundFrame.size, sourceBackgroundFrame: sourceBackgroundFrame.offsetBy(dx: -backgroundFrame.minX, dy: -backgroundFrame.minY))
             
             self.contentContainer.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - backgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
             self.contentContainer.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: backgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
-            
-            //self.contentContainerMask.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - backgroundFrame.midX, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
-            //self.contentContainerMask.layer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: backgroundFrame.size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
             let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: backgroundInsets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight)).0
             
@@ -410,22 +288,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
         }
         
-        let smallCircleDuration: Double = 0.5
-        let largeCircleDuration: Double = 0.5
-        let largeCircleDelay: Double = 0.08
         let mainCircleDuration: Double = 0.5
         let mainCircleDelay: Double = 0.1
         
-        self.smallCircleNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration)
-        self.smallCircleShadowNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration)
-        
-        self.largeCircleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: largeCircleDelay)
-        self.largeCircleNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
-        self.largeCircleShadowNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
-        
-        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: mainCircleDelay)
-        self.backgroundNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
-        self.backgroundShadowNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
+        self.backgroundNode.animateIn()
         
         for i in 0 ..< self.itemNodes.count {
             let itemNode = self.itemNodes[i]
@@ -433,22 +299,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: itemDelay)
             itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: itemDelay, initialVelocity: 0.0)
         }
-        
-        /*if let itemNode = self.itemNodes.first {
-            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: mainCircleDelay)
-            itemNode.didAppear()
-            itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay, completion: { _ in
-            })
-        }*/
     }
     
     public func animateOut(to targetAnchorRect: CGRect?, animatingOutToReaction: Bool) {
-        self.backgroundNode.layer.animateAlpha(from: self.backgroundNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        self.backgroundShadowNode.layer.animateAlpha(from: self.backgroundShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        self.largeCircleNode.layer.animateAlpha(from: self.largeCircleNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        self.largeCircleShadowNode.layer.animateAlpha(from: self.largeCircleShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        self.smallCircleNode.layer.animateAlpha(from: self.smallCircleNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        self.smallCircleShadowNode.layer.animateAlpha(from: self.smallCircleShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.backgroundNode.animateOut()
+        
         for itemNode in self.itemNodes {
             if itemNode.isExtracted {
                 continue
