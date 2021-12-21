@@ -1412,14 +1412,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let presentationNode = self.presentationNode {
             transition.updateFrame(node: presentationNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-            var updatedTransition = transition
-            if case .animateIn = presentationStateTransition {
-                updatedTransition = .immediate
-            }
             presentationNode.update(
                 presentationData: self.presentationData,
                 layout: layout,
-                transition: updatedTransition,
+                transition: transition,
                 stateTransition: presentationStateTransition
             )
             return
