@@ -35,6 +35,7 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case contactSynchronizationSettings = 15
     case webBrowserSettings = 16
     case intentsSettings = 17
+    case translationSettings = 18
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -56,6 +57,7 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.contactSynchronizationSettings.rawValue)
     public static let webBrowserSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.webBrowserSettings.rawValue)
     public static let intentsSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.intentsSettings.rawValue)
+    public static let translationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.translationSettings.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {

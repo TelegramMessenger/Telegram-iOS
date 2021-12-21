@@ -7149,3 +7149,14 @@ Sorry for the inconvenience.";
 "Conversation.ContextMenuTranslate" = "Translate";
 
 "ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"Localization.TranslateMessages" = "Translate Messages";
+"Localization.ShowTranslate" = "Show Translate Button";
+"Localization.ShowTranslateInfo" = "Show 'Translate' button in the message action menu.";
+"Localization.DoNotTranslate" = "Do Not Translate";
+"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language";
+"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages";
+
+"Localization.InterfaceLanguage" = "Interface Language";
+
+"DoNotTranslate.Title" = "Do Not Translate";
