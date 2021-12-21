@@ -1229,9 +1229,18 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        if let presentationNode = self.presentationNode {
+            presentationNode.addRelativeContentOffset(offset, transition: transition)
+        }
         if self.reactionContextNodeIsAnimatingOut, let reactionContextNode = self.reactionContextNode {
             reactionContextNode.bounds = reactionContextNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
             transition.animateOffsetAdditive(node: reactionContextNode, offset: -offset.y)
+        }
+    }
+    
+    func cancelReactionAnimation() {
+        if let presentationNode = self.presentationNode {
+            presentationNode.cancelReactionAnimation()
         }
     }
     
@@ -2370,6 +2379,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
             })
             self.dismissed?()
         }
+    }
+    
+    public func cancelReactionAnimation() {
+        self.controllerNode.cancelReactionAnimation()
     }
     
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {

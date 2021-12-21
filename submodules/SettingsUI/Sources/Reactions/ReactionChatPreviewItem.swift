@@ -132,6 +132,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             for reaction in availableReactions.reactions {
                                 if reaction.value == updatedReaction {
                                     if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                        standaloneReactionAnimation.cancel()
                                         standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
                                             standaloneReactionAnimation?.removeFromSupernode()
                                         })
@@ -139,19 +140,24 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                                     }
                                     
                                     if let supernode = self.supernode {
-                                        let standaloneReactionAnimation = StandaloneReactionAnimation(context: item.context, theme: item.theme, reaction: ReactionContextItem(
-                                            reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
-                                            stillAnimation: reaction.selectAnimation,
-                                            listAnimation: reaction.activateAnimation,
-                                            applicationAnimation: reaction.effectAnimation
-                                        ))
+                                        let standaloneReactionAnimation = StandaloneReactionAnimation()
                                         self.standaloneReactionAnimation = standaloneReactionAnimation
                                         
                                         supernode.addSubnode(standaloneReactionAnimation)
                                         standaloneReactionAnimation.frame = supernode.bounds
-                                        standaloneReactionAnimation.animateReactionSelection(targetView: targetView, hideNode: true, completion: { [weak standaloneReactionAnimation] in
+                                        standaloneReactionAnimation.animateReactionSelection(
+                                            context: item.context, theme: item.theme, reaction: ReactionContextItem(
+                                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                                stillAnimation: reaction.selectAnimation,
+                                                listAnimation: reaction.activateAnimation,
+                                                applicationAnimation: reaction.effectAnimation
+                                            ),
+                                            targetView: targetView,
+                                            hideNode: true,
+                                            completion: { [weak standaloneReactionAnimation] in
                                             standaloneReactionAnimation?.removeFromSupernode()
-                                        })
+                                            }
+                                        )
                                     }
                                     
                                     break

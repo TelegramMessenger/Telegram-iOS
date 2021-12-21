@@ -95,3 +95,31 @@ public func dataSizeString(_ size: Int64, forceDecimal: Bool = false, formatting
         return formatting.byte("\(size)").string
     }
 }
+
+public func countString(_ count: Int64, forceDecimal: Bool = false) -> String {
+    let decimalSeparator = "."
+    if count >= 1000 * 1000 * 1000 {
+        let remainder = Int64((Double(count % (1000 * 1000 * 1000)) / (1000 * 1000 * 100.0)).rounded(.down))
+        if remainder != 0 || forceDecimal {
+            return "\(count / (1000 * 1000 * 1000))\(decimalSeparator)\(remainder)T"
+        } else {
+            return "\(count / (1000 * 1000 * 1000))T"
+        }
+    } else if count >= 1000 * 1000 {
+        let remainder = Int64((Double(count % (1000 * 1000)) / (1000.0 * 100.0)).rounded(.down))
+        if remainder != 0 || forceDecimal {
+            return "\(count / (1000 * 1000))\(decimalSeparator)\(remainder)M"
+        } else {
+            return "\(count / (1000 * 1000))M"
+        }
+    } else if count >= 1000 {
+        let remainder = (count % (1000)) / (102)
+        if remainder != 0 || forceDecimal {
+            return "\(count / 1000)\(decimalSeparator)\(remainder)K"
+        } else {
+            return "\(count / 1000)K"
+        }
+    } else {
+        return "\(count)"
+    }
+}
