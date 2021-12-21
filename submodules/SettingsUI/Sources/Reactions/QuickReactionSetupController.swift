@@ -326,6 +326,18 @@ public func quickReactionSetupController(
     }
     
     let controller = ItemListController(context: context, state: signal)
+    
+    controller.didScrollWithOffset = { [weak controller] offset, transition, _ in
+        guard let controller = controller else {
+            return
+        }
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ReactionChatPreviewItemNode {
+                itemNode.standaloneReactionAnimation?.addRelativeContentOffset(CGPoint(x: 0.0, y: offset), transition: transition)
+            }
+        }
+    }
+    
     dismissImpl = { [weak controller] in
         guard let controller = controller else {
             return

@@ -551,3 +551,7 @@ public enum FileMediaResourceMediaStatus: Equatable {
     case fetchStatus(MediaResourceStatus)
     case playbackStatus(FileMediaResourcePlaybackStatus)
 }
+
+public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
+    func targetReactionView(value: String) -> UIView?
+}

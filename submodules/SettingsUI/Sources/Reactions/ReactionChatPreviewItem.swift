@@ -12,6 +12,7 @@ import PresentationDataUtils
 import AccountContext
 import WallpaperBackgroundNode
 import AvatarNode
+import ReactionSelectionNode
 
 class ReactionChatPreviewItem: ListViewItem, ItemListItem {
     let context: AccountContext
@@ -86,6 +87,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
     private var messageNode: ListViewItemNode?
     
     private var item: ReactionChatPreviewItem?
+    private(set) weak var standaloneReactionAnimation: StandaloneReactionAnimation?
     
     init() {
         self.topStripeNode = ASDisplayNode()
@@ -107,6 +109,63 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         
         self.addSubnode(self.avatarNode)
         self.addSubnode(self.containerNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForDoubleTap
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .doubleTap:
+                    if let item = self.item, let updatedReaction = item.reaction, let availableReactions = item.availableReactions, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
+                        if let targetView = messageNode.targetReactionView(value: updatedReaction) {
+                            for reaction in availableReactions.reactions {
+                                if reaction.value == updatedReaction {
+                                    if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                                        standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                                            standaloneReactionAnimation?.removeFromSupernode()
+                                        })
+                                        self.standaloneReactionAnimation = nil
+                                    }
+                                    
+                                    if let supernode = self.supernode {
+                                        let standaloneReactionAnimation = StandaloneReactionAnimation(context: item.context, theme: item.theme, reaction: ReactionContextItem(
+                                            reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                            stillAnimation: reaction.selectAnimation,
+                                            listAnimation: reaction.activateAnimation,
+                                            applicationAnimation: reaction.effectAnimation
+                                        ))
+                                        self.standaloneReactionAnimation = standaloneReactionAnimation
+                                        
+                                        supernode.addSubnode(standaloneReactionAnimation)
+                                        standaloneReactionAnimation.frame = supernode.bounds
+                                        standaloneReactionAnimation.animateReactionSelection(targetView: targetView, hideNode: true, completion: { [weak standaloneReactionAnimation] in
+                                            standaloneReactionAnimation?.removeFromSupernode()
+                                        })
+                                    }
+                                    
+                                    break
+                                }
+                            }
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
     }
     
     func asyncLayout() -> (_ item: ReactionChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -161,6 +220,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     node = messageNode
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
+                node?.isUserInteractionEnabled = false
             }
             
             var contentSize = CGSize(width: params.width, height: 8.0 + 8.0)
@@ -174,6 +234,15 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    if let previousItem = strongSelf.item, previousItem.reaction != item.reaction {
+                        if let standaloneReactionAnimation = strongSelf.standaloneReactionAnimation {
+                            standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                                standaloneReactionAnimation?.removeFromSupernode()
+                            })
+                            strongSelf.standaloneReactionAnimation = nil
+                        }
+                    }
+                       
                     strongSelf.item = item
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
