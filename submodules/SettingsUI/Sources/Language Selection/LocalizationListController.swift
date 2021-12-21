@@ -29,6 +29,8 @@ public class LocalizationListController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
+    private var previousContentOffset: ListViewVisibleContentOffset?
+    
     public init(context: AccountContext) {
         self.context = context
         
@@ -125,8 +127,29 @@ public class LocalizationListController: ViewController {
         })
         
         self.controllerNode.listNode.visibleContentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                searchContentNode.updateListVisibleContentOffset(offset)
+            if let strongSelf = self {
+                if let searchContentNode = strongSelf.searchContentNode {
+                    searchContentNode.updateListVisibleContentOffset(offset)
+                }
+                
+                var previousContentOffsetValue: CGFloat?
+                if let previousContentOffset = strongSelf.previousContentOffset, case let .known(value) = previousContentOffset {
+                    previousContentOffsetValue = value
+                }
+                switch offset {
+                    case let .known(value):
+                        let transition: ContainedViewLayoutTransition
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
+                            transition = .animated(duration: 0.2, curve: .easeInOut)
+                        } else {
+                            transition = .immediate
+                        }
+                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, max(0.0, value - 54.0)) / 30.0, transition: transition)
+                    case .unknown, .none:
+                        strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                }
+                
+                strongSelf.previousContentOffset = offset
             }
         }
         
@@ -137,6 +160,8 @@ public class LocalizationListController: ViewController {
         }
         
         self._ready.set(self.controllerNode._ready.get())
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         
         self.displayNodeDidLoad()
     }

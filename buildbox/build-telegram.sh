@@ -5,7 +5,7 @@ set -e
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="11"
-XCODE_VERSION="13.0"
+XCODE_VERSION="13.1"
 GUEST_SHELL="bash"
 
 VM_BASE_NAME="macos$(echo $MACOS_VERSION | sed -e 's/\.'/_/g)_Xcode$(echo $XCODE_VERSION | sed -e 's/\.'/_/g)"

@@ -202,7 +202,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.resetWallpapers = resetWallpapers
         
         self.gridNode = GridNode()
-        self.gridNode.showVerticalScrollIndicator = true
+        self.gridNode.showVerticalScrollIndicator = false
         self.leftOverlayNode = ASDisplayNode()
         self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode = ASDisplayNode()
@@ -609,6 +609,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         insets.left = layout.safeInsets.left
         insets.right = layout.safeInsets.right
+        
         var scrollIndicatorInsets = insets
         
         let minSpacing: CGFloat = 8.0
@@ -628,8 +629,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let makeDescriptionLayout = self.descriptionItemNode.asyncLayout()
         
         var listInsets = insets
-        if layout.size.width > 480.0 {
-            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+        if layout.size.width >= 375.0 {
+            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
             listInsets.left += inset
             listInsets.right += inset
             

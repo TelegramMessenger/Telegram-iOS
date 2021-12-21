@@ -89,7 +89,7 @@ open class HighlightableButtonNode: HighlightTrackingButtonNode {
         super.init(pointerStyle: pointerStyle)
         
         self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
+            if let strongSelf = self, !strongSelf.isImplicitlyDisabled {
                 if highlighted {
                     strongSelf.layer.removeAnimation(forKey: "opacity")
                     strongSelf.alpha = 0.4

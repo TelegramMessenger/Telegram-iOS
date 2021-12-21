@@ -112,7 +112,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenMemberItem else {
             return 10.0
         }
@@ -226,7 +226,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
         
         
-        let hasCorners = safeInsets.left > 0.0 && (topItem == nil || bottomItem == nil)
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
         let hasTopCorners = hasCorners && topItem == nil
         let hasBottomCorners = hasCorners && bottomItem == nil
         

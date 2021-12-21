@@ -812,6 +812,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                                 Namespaces.Message.Cloud: holes
                             ]
                         )),
+                        ignoreMessagesInTimestampRange: nil,
                         count: 40,
                         clipHoles: true,
                         anchor: inputAnchor,

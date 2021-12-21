@@ -154,6 +154,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -195,7 +196,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }
@@ -362,5 +363,12 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
         }
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.dateAndStatusNode.isHidden {
+            return self.dateAndStatusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

@@ -298,8 +298,9 @@ open class ASButtonNode: ASControlNode {
     
     override open var isHighlighted: Bool {
         didSet {
-            if self.isHighlighted != oldValue {
-                if self.isHighlighted {
+            if self.isHighlighted != oldValue && !self.isImplicitlyDisabled {
+                let isHighlighted = self.isHighlighted
+                if isHighlighted {
                     if self.highlightedTitleNode.attributedText != nil {
                         self.highlightedTitleNode.isHidden = false
                         self.titleNode.isHidden = true
@@ -349,25 +350,39 @@ open class ASButtonNode: ASControlNode {
         }
     }
     
+    open var isImplicitlyDisabled: Bool = false {
+        didSet {
+            if self.isImplicitlyDisabled != oldValue {
+                self.updateIsEnabled()
+            }
+        }
+    }
+    
     override open var isEnabled: Bool {
         didSet {
             if self.isEnabled != oldValue {
-                if self.isEnabled || self.disabledTitleNode.attributedText == nil {
-                    self.titleNode.isHidden = false
-                    self.disabledTitleNode.isHidden = true
-                } else {
-                    self.titleNode.isHidden = true
-                    self.disabledTitleNode.isHidden = false
-                }
-                
-                if self.isEnabled || self.disabledImageNode.image == nil {
-                    self.imageNode.isHidden = false
-                    self.disabledImageNode.isHidden = true
-                } else {
-                    self.imageNode.isHidden = true
-                    self.disabledImageNode.isHidden = false
-                }
+                self.updateIsEnabled()
             }
+        }
+    }
+    
+    private func updateIsEnabled() {
+        let isEnabled = self.isEnabled && !self.isImplicitlyDisabled
+        
+        if isEnabled || self.disabledTitleNode.attributedText == nil {
+            self.titleNode.isHidden = false
+            self.disabledTitleNode.isHidden = true
+        } else {
+            self.titleNode.isHidden = true
+            self.disabledTitleNode.isHidden = false
+        }
+        
+        if isEnabled || self.disabledImageNode.image == nil {
+            self.imageNode.isHidden = false
+            self.disabledImageNode.isHidden = true
+        } else {
+            self.imageNode.isHidden = true
+            self.disabledImageNode.isHidden = false
         }
     }
     

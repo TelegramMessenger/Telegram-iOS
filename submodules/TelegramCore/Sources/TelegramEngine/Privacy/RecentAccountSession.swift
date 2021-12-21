@@ -14,6 +14,8 @@ public struct AccountSessionFlags: OptionSet {
     
     public static let isOfficial = AccountSessionFlags(rawValue: (1 << 1))
     public static let passwordPending = AccountSessionFlags(rawValue: (1 << 2))
+    public static let acceptsSecretChats = AccountSessionFlags(rawValue: (1 << 3))
+    public static let acceptsIncomingCalls = AccountSessionFlags(rawValue: (1 << 4))
 }
 
 public struct RecentAccountSession: Equatable {
@@ -77,6 +79,26 @@ public struct RecentAccountSession: Equatable {
         }
         return true
     }
+    
+    func withUpdatedAcceptsSecretChats(_ accepts: Bool) -> RecentAccountSession {
+        var flags = self.flags
+        if accepts {
+            flags.insert(.acceptsSecretChats)
+        } else {
+            flags.remove(.acceptsSecretChats)
+        }
+        return RecentAccountSession(hash: self.hash, deviceModel: self.deviceModel, platform: self.platform, systemVersion: self.systemVersion, apiId: self.apiId, appName: self.appName, appVersion: self.appVersion, creationDate: self.creationDate, activityDate: self.activityDate, ip: self.ip, country: self.country, region: self.region, flags: flags)
+    }
+    
+    func withUpdatedAcceptsIncomingCalls(_ accepts: Bool) -> RecentAccountSession {
+        var flags = self.flags
+        if accepts {
+            flags.insert(.acceptsIncomingCalls)
+        } else {
+            flags.remove(.acceptsIncomingCalls)
+        }
+        return RecentAccountSession(hash: self.hash, deviceModel: self.deviceModel, platform: self.platform, systemVersion: self.systemVersion, apiId: self.apiId, appName: self.appName, appVersion: self.appVersion, creationDate: self.creationDate, activityDate: self.activityDate, ip: self.ip, country: self.country, region: self.region, flags: flags)
+    }
 }
 
 extension RecentAccountSession {
@@ -89,6 +111,12 @@ extension RecentAccountSession {
                 }
                 if (flags & (1 << 2)) != 0 {
                     accountSessionFlags.insert(.passwordPending)
+                }
+                if (flags & (1 << 3)) == 0 {
+                    accountSessionFlags.insert(.acceptsSecretChats)
+                }
+                if (flags & (1 << 4)) == 0 {
+                    accountSessionFlags.insert(.acceptsIncomingCalls)
                 }
                 self.init(hash: hash, deviceModel: deviceModel, platform: platform, systemVersion: systemVersion, apiId: apiId, appName: appName, appVersion: appVersion, creationDate: dateCreated, activityDate: dateActive, ip: ip, country: country, region: region, flags: accountSessionFlags)
         }

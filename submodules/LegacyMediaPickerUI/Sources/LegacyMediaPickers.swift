@@ -13,13 +13,17 @@ import ImageCompression
 import MimeTypes
 import LocalMediaResources
 import LegacyUI
+import TextFormat
 
 public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, chatLocation: ChatLocation, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, chatLocation: ChatLocation, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: NSAttributedString, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?) {
     let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
     paintStickersContext.presentStickersController = { completion in
         return presentStickers({ file, animated, view, rect in
             let coder = PostboxEncoder()
@@ -60,8 +64,8 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     controller.shouldShowFileTipIfNeeded = showFileTooltip
     controller.requestSearchController = presentWebSearch
     
-    if !initialCaption.isEmpty {
-        controller.editingContext.setForcedCaption(initialCaption, entities: [])
+    if !initialCaption.string.isEmpty {
+        controller.editingContext.setForcedCaption(initialCaption)
     }
 }
 
@@ -120,9 +124,9 @@ private enum LegacyAssetVideoData {
 }
 
 private enum LegacyAssetItem {
-    case image(data: LegacyAssetImageData, thumbnail: UIImage?, caption: String?, stickers: [FileMediaReference])
-    case file(data: LegacyAssetImageData, thumbnail: UIImage?, mimeType: String, name: String, caption: String?)
-    case video(data: LegacyAssetVideoData, thumbnail: UIImage?, adjustments: TGVideoEditAdjustments?, caption: String?, asFile: Bool, asAnimation: Bool, stickers: [FileMediaReference])
+    case image(data: LegacyAssetImageData, thumbnail: UIImage?, caption: NSAttributedString?, stickers: [FileMediaReference])
+    case file(data: LegacyAssetImageData, thumbnail: UIImage?, mimeType: String, name: String, caption: NSAttributedString?)
+    case video(data: LegacyAssetVideoData, thumbnail: UIImage?, adjustments: TGVideoEditAdjustments?, caption: NSAttributedString?, asFile: Bool, asAnimation: Bool, stickers: [FileMediaReference])
 }
 
 private final class LegacyAssetItemWrapper: NSObject {
@@ -141,8 +145,8 @@ private final class LegacyAssetItemWrapper: NSObject {
     }
 }
 
-public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?, String?) -> [AnyHashable : Any]?) {
-    return { anyDict, caption, entities, hash, uniqueId in
+public func legacyAssetPickerItemGenerator() -> ((Any?, NSAttributedString?, String?, String?) -> [AnyHashable : Any]?) {
+    return { anyDict, caption, hash, uniqueId in
         let dict = anyDict as! NSDictionary
         let stickers = (dict["stickers"] as? [Data])?.compactMap { data -> FileMediaReference? in
             let decoder = PostboxDecoder(buffer: MemoryBuffer(data: data))
@@ -395,9 +399,14 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
+                                                                                        
+                                            let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                            if !entities.isEmpty {
+                                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                            }
                                             
-                                            let text = caption ?? ""                                            
-                                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                                         }
                                     }
                                 case let .asset(asset):
@@ -413,7 +422,14 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     if let timer = item.timer, timer > 0 && timer <= 60 {
                                         attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                     }
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                    
+                                    let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                    let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                    if !entities.isEmpty {
+                                        attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                    }
+                                    
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                                 case .tempFile:
                                     break
                             }
@@ -435,13 +451,29 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                                     arc4random_buf(&randomId, 8)
                                     let resource = LocalFileReferenceMediaResource(localFilePath: path, randomId: randomId)
                                     let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                    
+                                    var attributes: [MessageAttribute] = []
+                                    let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                    let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                    if !entities.isEmpty {
+                                        attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                    }
+                                    
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                                 case let .asset(asset):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
                                     let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max))
                                     let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: nil, attributes: [.FileName(fileName: name)])
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: caption ?? "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                                    
+                                    var attributes: [MessageAttribute] = []
+                                    let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                    let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                    if !entities.isEmpty {
+                                        attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                    }
+                                    
+                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                                 default:
                                     break
                             }
@@ -569,7 +601,14 @@ public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -
                             if let timer = item.timer, timer > 0 && timer <= 60 {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                             }
-                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: caption ?? "", attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
+                            
+                            let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                            if !entities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                            }
+                            
+                            messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: item.groupedId, correlationId: nil), uniqueId: item.uniqueId))
                     }
                 }
             }

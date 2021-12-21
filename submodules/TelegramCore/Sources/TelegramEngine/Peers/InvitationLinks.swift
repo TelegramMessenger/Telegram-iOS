@@ -20,6 +20,25 @@ private func _internal_updateInvitationRequest(account: Account, peerId: PeerId,
     } |> switchToLatest
 }
 
+private func _internal_updateAllInvitationRequests(account: Account, peerId: PeerId, link: String?, approve: Bool) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            var flags: Int32 = 0
+            if approve {
+                flags |= (1 << 0)
+            }
+            if let _ = link {
+                flags |= (1 << 1)
+            }
+            return account.network.request(Api.functions.messages.hideAllChatJoinRequests(flags: flags, peer: inputPeer, link: link))
+            |> retryRequest
+            |> ignoreValues
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
 func _internal_revokePersistentPeerExportedInvitation(account: Account, peerId: PeerId) -> Signal<ExportedInvitation?, NoError> {
     return account.postbox.transaction { transaction -> Signal<ExportedInvitation?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
@@ -1025,6 +1044,16 @@ private final class PeerInvitationImportersContextImpl {
         }
     }
     
+    func updateAll(action: PeerInvitationImportersContext.UpdateAction) {
+        self.actionDisposables.add(_internal_updateAllInvitationRequests(account: self.account, peerId: self.peerId, link: nil, approve: action == .approve).start())
+        
+        self.results = []
+        self.count = 0
+        
+        self.updateState()
+        self.updateCache()
+    }
+    
     private func updateCache() {
         guard self.hasLoadedOnce && !self.isLoadingMore && self.query == nil else {
             return
@@ -1094,6 +1123,12 @@ public final class PeerInvitationImportersContext {
     public func update(_ peerId: EnginePeer.Id, action: UpdateAction) {
         self.impl.with { impl in
             impl.update(peerId, action: action)
+        }
+    }
+    
+    public func updateAll(action: UpdateAction) {
+        self.impl.with { impl in
+            impl.updateAll(action: action)
         }
     }
 }

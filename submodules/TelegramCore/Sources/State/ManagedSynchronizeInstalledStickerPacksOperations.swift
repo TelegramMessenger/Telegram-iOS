@@ -139,11 +139,13 @@ private enum SynchronizeInstalledStickerPacksError {
 }
 
 private func fetchStickerPack(network: Network, info: StickerPackCollectionInfo) -> Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError> {
-    return network.request(Api.functions.messages.getStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash)))
+    return network.request(Api.functions.messages.getStickerSet(stickerset: .inputStickerSetID(id: info.id.id, accessHash: info.accessHash), hash: 0))
     |> map { result -> (StickerPackCollectionInfo, [ItemCollectionItem]) in
         var items: [ItemCollectionItem] = []
         var updatedInfo = info
         switch result {
+        case .stickerSetNotModified:
+            break
         case let .stickerSet(stickerSet, packs, documents):
             updatedInfo = StickerPackCollectionInfo(apiSet: stickerSet, namespace: info.id.namespace)
             var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]

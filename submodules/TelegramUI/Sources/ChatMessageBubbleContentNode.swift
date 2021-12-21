@@ -97,6 +97,7 @@ enum ChatMessageBubbleContentTapAction {
     case ignore
     case openPollResults(Data)
     case copy(String)
+    case largeEmoji(String, String?, TelegramMediaFile)
 }
 
 final class ChatMessageBubbleContentItem {
@@ -208,6 +209,10 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
 
     func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+    }
+    
+    func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        return nil
     }
     
     func getStatusNode() -> ASDisplayNode? {

@@ -383,6 +383,7 @@ private final class PeerInfoPendingPane {
         chatControllerInteraction: ChatControllerInteraction,
         data: PeerInfoScreenData,
         openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void,
+        openAddMemberAction: @escaping () -> Void,
         requestPerformPeerMemberAction: @escaping (PeerInfoMember, PeerMembersListAction) -> Void,
         peerId: PeerId,
         key: PeerInfoPaneKey,
@@ -391,10 +392,11 @@ private final class PeerInfoPendingPane {
         openMediaCalendar: @escaping () -> Void,
         paneDidScroll: @escaping () -> Void
     ) {
+        let captureProtected = data.peer?.isCopyProtectionEnabled ?? false
         let paneNode: PeerInfoPaneNode
         switch key {
         case .media:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .photoOrVideo)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .photoOrVideo, captureProtected: captureProtected)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
@@ -403,17 +405,17 @@ private final class PeerInfoPendingPane {
                 paneDidScroll()
             }
         case .files:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .files)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .files, captureProtected: captureProtected)
             paneNode = visualPaneNode
             //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .file)
         case .links:
             paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .webPage)
         case .voice:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .voiceAndVideoMessages)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .voiceAndVideoMessages, captureProtected: captureProtected)
             paneNode = visualPaneNode
             //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .voiceOrInstantVideo)
         case .music:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .music)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .music, captureProtected: captureProtected)
             paneNode = visualPaneNode
             //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .music)
         case .gifs:
@@ -423,7 +425,9 @@ private final class PeerInfoPendingPane {
             paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
         case .members:
             if case let .longList(membersContext) = data.members {
-                paneNode = PeerInfoMembersPaneNode(context: context, peerId: peerId, membersContext: membersContext, action: { member, action in
+                paneNode = PeerInfoMembersPaneNode(context: context, peerId: peerId, membersContext: membersContext, addMemberAction: {
+                    openAddMemberAction()
+                }, action: { member, action in
                     requestPerformPeerMemberAction(member, action)
                 })
             } else {
@@ -487,6 +491,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     var chatControllerInteraction: ChatControllerInteraction?
     var openPeerContextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+    var openAddMemberAction: (() -> Void)?
     var requestPerformPeerMemberAction: ((PeerInfoMember, PeerMembersListAction) -> Void)?
     
     var currentPaneUpdated: ((Bool) -> Void)?
@@ -517,7 +522,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         
         super.init()
         
-        self.addSubnode(self.separatorNode)
+//        self.addSubnode(self.separatorNode)
         self.addSubnode(self.coveringBackgroundNode)
         self.addSubnode(self.tabsContainerNode)
         self.addSubnode(self.tabsSeparatorNode)
@@ -771,6 +776,9 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     data: data!,
                     openPeerContextAction: { [weak self] peer, node, gesture in
                         self?.openPeerContextAction?(peer, node, gesture)
+                    },
+                    openAddMemberAction: { [weak self] in
+                        self?.openAddMemberAction?()
                     },
                     requestPerformPeerMemberAction: { [weak self] member, action in
                         self?.requestPerformPeerMemberAction?(member, action)

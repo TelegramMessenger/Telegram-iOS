@@ -65,13 +65,15 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
                         break
                 }
                 if let fetchReference = fetchReference {
-                    return network.request(Api.functions.messages.getStickerSet(stickerset: fetchReference.apiInputStickerSet))
+                    return network.request(Api.functions.messages.getStickerSet(stickerset: fetchReference.apiInputStickerSet, hash: 0))
                         |> mapError { _ -> AddSavedStickerError in
                             return .generic
                         }
                         |> mapToSignal { result -> Signal<Void, AddSavedStickerError> in
                             var stickerStringRepresentations: [String]?
                             switch result {
+                                case .stickerSetNotModified:
+                                    break
                                 case let .stickerSet(_, packs, _):
                                     var stringRepresentationsByFile: [MediaId: [String]] = [:]
                                     for pack in packs {

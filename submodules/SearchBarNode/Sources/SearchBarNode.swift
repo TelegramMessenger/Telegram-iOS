@@ -43,12 +43,14 @@ public struct SearchBarToken {
     public let icon: UIImage?
     public let title: String
     public let style: Style?
+    public let permanent: Bool
     
-    public init(id: AnyHashable, icon: UIImage?, title: String, style: Style? = nil) {
+    public init(id: AnyHashable, icon: UIImage?, title: String, style: Style? = nil, permanent: Bool) {
         self.id = id
         self.icon = icon
         self.title = title
         self.style = style
+        self.permanent = permanent
     }
 }
 
@@ -106,6 +108,7 @@ private final class TokenNode: ASDisplayNode {
     }
     
     @objc private func tapGesture() {
+        
         self.tapped?()
     }
     
@@ -264,7 +267,7 @@ private class SearchBarTextField: UITextField, UIScrollViewDelegate {
             if i < self.tokens.count - 1 && isSelected {
                 hasSelected = true
             }
-            let isCollapsed = !isSelected && (i < self.tokens.count - 1 || hasSelected)
+            let isCollapsed = !isSelected && (token.permanent || (i < self.tokens.count - 1 || hasSelected))
             tokenNode.update(theme: self.theme, token: token, isSelected: isSelected, isCollapsed: isCollapsed)
         }
         var removeKeys: [AnyHashable] = []
@@ -863,8 +866,10 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
                 return false
             }
             if let index = strongSelf.textField.selectedTokenIndex {
-                strongSelf.tokens.remove(at: index)
-                strongSelf.tokensUpdated?(strongSelf.tokens)
+                if !strongSelf.tokens[index].permanent {
+                    strongSelf.tokens.remove(at: index)
+                    strongSelf.tokensUpdated?(strongSelf.tokens)
+                }
                 return true
             } else if strongSelf.text.isEmpty {
                 strongSelf.clearPressed()

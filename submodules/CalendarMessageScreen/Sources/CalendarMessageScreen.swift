@@ -11,14 +11,35 @@ import ComponentFlow
 import PhotoResources
 import DirectMediaImageCache
 import TelegramStringFormatting
+import TooltipUI
 
-private final class MediaPreviewView: UIView {
+private final class NullActionClass: NSObject, CAAction {
+    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+    }
+}
+
+private let nullAction = NullActionClass()
+
+private class SimpleLayer: CALayer {
+    override func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+
+    func update(size: CGSize) {
+    }
+}
+
+private enum SelectionTransition {
+    case begin
+    case change
+    case end
+}
+
+private final class MediaPreviewView: SimpleLayer {
     private let context: AccountContext
     private let message: EngineMessage
     private let media: EngineMedia
     private let imageCache: DirectMediaImageCache
-
-    private let imageView: UIImageView
 
     private var requestedImage: Bool = false
     private var disposable: Disposable?
@@ -29,12 +50,9 @@ private final class MediaPreviewView: UIView {
         self.media = media
         self.imageCache = imageCache
 
-        self.imageView = UIImageView()
-        self.imageView.contentMode = .scaleToFill
+        super.init()
 
-        super.init(frame: CGRect())
-
-        self.addSubview(self.imageView)
+        self.contentsGravity = .resize
     }
 
     required init?(coder: NSCoder) {
@@ -62,7 +80,7 @@ private final class MediaPreviewView: UIView {
             self.requestedImage = true
             if let result = self.imageCache.getImage(message: self.message._asMessage(), media: self.media._asMedia(), width: 100, possibleWidths: [100], synchronous: false) {
                 if let image = result.image {
-                    self.imageView.image = processImage(image)
+                    self.contents = processImage(image).cgImage
                 }
                 if let signal = result.loadSignal {
                     self.disposable = (signal
@@ -74,49 +92,22 @@ private final class MediaPreviewView: UIView {
                             return
                         }
                         if let image = image {
-                            if strongSelf.imageView.image != nil {
-                                let tempView = UIImageView()
-                                tempView.image = strongSelf.imageView.image
-                                tempView.frame = strongSelf.imageView.frame
-                                tempView.contentMode = strongSelf.imageView.contentMode
-                                strongSelf.addSubview(tempView)
-                                tempView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak tempView] _ in
-                                    tempView?.removeFromSuperview()
+                            if strongSelf.contents != nil {
+                                let tempView = SimpleLayer()
+                                tempView.contents = strongSelf.contents
+                                tempView.frame = strongSelf.bounds
+                                tempView.contentsGravity = strongSelf.contentsGravity
+                                strongSelf.addSublayer(tempView)
+                                tempView.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak tempView] _ in
+                                    tempView?.removeFromSuperlayer()
                                 })
                             }
-                            strongSelf.imageView.image = image
+                            strongSelf.contents = image.cgImage
                         }
                     })
                 }
             }
         }
-
-        self.imageView.frame = CGRect(origin: CGPoint(), size: size)
-        /*var dimensions = CGSize(width: 100.0, height: 100.0)
-        if case let .image(image) = self.media {
-            if let largest = largestImageRepresentation(image.representations) {
-                dimensions = largest.dimensions.cgSize
-                if !self.requestedImage {
-                    self.requestedImage = true
-                    let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
-                    self.imageView.setSignal(signal, attemptSynchronously: synchronousLoads)
-                }
-            }
-        } else if case let .file(file) = self.media {
-            if let mediaDimensions = file.dimensions {
-                dimensions = mediaDimensions.cgSize
-                if !self.requestedImage {
-                    self.requestedImage = true
-                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: .message(message: MessageReference(self.message._asMessage()), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true)
-                    self.imageView.setSignal(signal, attemptSynchronously: synchronousLoads)
-                }
-            }
-        }
-
-        let makeLayout = self.imageView.asyncLayout()
-        self.imageView.frame = CGRect(origin: CGPoint(), size: size)
-        let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
-        apply()*/
     }
 }
 
@@ -298,6 +289,7 @@ private final class ImageCache: Equatable {
 private final class DayEnvironment: Equatable {
     let imageCache: ImageCache
     let directImageCache: DirectMediaImageCache
+    var selectionDelayCoordination: Int = 0
 
     init(imageCache: ImageCache, directImageCache: DirectMediaImageCache) {
         self.imageCache = imageCache
@@ -425,45 +417,39 @@ private final class DayComponent: Component {
         return true
     }
 
-    final class View: UIView {
-        private let button: HighlightTrackingButton
-
-        private let highlightView: UIImageView
-        private var selectionView: UIImageView?
-        private let titleView: UIImageView
+    final class View: HighlightTrackingButton {
+        private let highlightView: SimpleLayer
+        private var selectionView: SimpleLayer?
+        private let titleView: SimpleLayer
         private var mediaPreviewView: MediaPreviewView?
 
         private var action: (() -> Void)?
         private var currentMedia: DayMedia?
+        private var currentSelection: DaySelection?
 
         private(set) var timestamp: Int32?
         private(set) var index: MessageIndex?
         private var isHighlightingEnabled: Bool = false
 
         init() {
-            self.button = HighlightTrackingButton()
-            self.highlightView = UIImageView()
-            self.highlightView.isUserInteractionEnabled = false
-            self.titleView = UIImageView()
-            self.titleView.isUserInteractionEnabled = false
+            self.highlightView = SimpleLayer()
+            self.titleView = SimpleLayer()
 
             super.init(frame: CGRect())
 
-            self.button.addSubview(self.highlightView)
-            self.button.addSubview(self.titleView)
+            self.layer.addSublayer(self.highlightView)
+            self.layer.addSublayer(self.titleView)
 
-            self.addSubview(self.button)
-
-            self.button.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-            self.button.highligthedChanged = { [weak self] highligthed in
+            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            self.highligthedChanged = { [weak self] highligthed in
                 guard let strongSelf = self, let mediaPreviewView = strongSelf.mediaPreviewView else {
                     return
                 }
                 if strongSelf.isHighlightingEnabled && highligthed {
-                    mediaPreviewView.alpha = 0.8
+                    mediaPreviewView.opacity = 0.8
                 } else {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
-                    transition.updateAlpha(layer: mediaPreviewView.layer, alpha: 1.0)
+                    transition.updateAlpha(layer: mediaPreviewView, alpha: 1.0)
                 }
             }
         }
@@ -483,33 +469,38 @@ private final class DayComponent: Component {
             self.timestamp = component.timestamp
             self.index = component.media?.message.index
             self.isHighlightingEnabled = component.isEnabled && component.media != nil && !component.isSelecting
+            
+            let previousSelection = self.currentSelection ?? component.selection
+            let previousSelected = previousSelection != .none
+            let isSelected = component.selection != .none
+            self.currentSelection = component.selection
 
             let diameter = min(availableSize.width, availableSize.height)
             let contentFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - diameter) / 2.0), y: floor((availableSize.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter))
 
             let dayEnvironment = environment[DayEnvironment.self].value
             if component.media != nil {
-                self.highlightView.image = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: nil, color: UIColor(white: 0.0, alpha: 0.2))
+                self.highlightView.contents = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: nil, color: UIColor(white: 0.0, alpha: 0.2)).cgImage
             } else {
-                self.highlightView.image = nil
+                self.highlightView.contents = nil
             }
 
+            var animateTitle = false
             var animateMediaIn = false
             if self.currentMedia != component.media {
                 self.currentMedia = component.media
 
                 if let mediaPreviewView = self.mediaPreviewView {
                     self.mediaPreviewView = nil
-                    mediaPreviewView.removeFromSuperview()
+                    mediaPreviewView.removeFromSuperlayer()
                 } else {
                     animateMediaIn = !isFirstTime
                 }
 
                 if let media = component.media {
                     let mediaPreviewView = MediaPreviewView(context: component.context, message: media.message, media: media.media, imageCache: dayEnvironment.directImageCache)
-                    mediaPreviewView.isUserInteractionEnabled = false
                     self.mediaPreviewView = mediaPreviewView
-                    self.button.insertSubview(mediaPreviewView, belowSubview: self.highlightView)
+                    self.layer.insertSublayer(mediaPreviewView, below: self.highlightView)
                 }
             }
 
@@ -552,65 +543,125 @@ private final class DayComponent: Component {
 
             switch component.selection {
             case .edge:
-                let selectionView: UIImageView
+                let selectionView: SimpleLayer
                 if let current = self.selectionView {
                     selectionView = current
                 } else {
-                    selectionView = UIImageView()
+                    selectionView = SimpleLayer()
                     self.selectionView = selectionView
-                    self.button.insertSubview(selectionView, belowSubview: self.titleView)
+                    self.layer.insertSublayer(selectionView, below: self.titleView)
                 }
                 selectionView.frame = contentFrame
                 if self.mediaPreviewView != nil {
-                    selectionView.image = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: diameter - 2.0 * 2.0, color: component.theme.list.itemCheckColors.fillColor)
+                    selectionView.contents = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: diameter - 2.0 * 2.0, color: component.theme.list.itemCheckColors.fillColor).cgImage
                 } else {
-                    selectionView.image = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: nil, color: component.theme.list.itemCheckColors.fillColor)
+                    selectionView.contents = dayEnvironment.imageCache.filledCircle(diameter: diameter, innerDiameter: nil, color: component.theme.list.itemCheckColors.fillColor).cgImage
                 }
             case .middle, .none:
                 if let selectionView = self.selectionView {
                     self.selectionView = nil
-                    selectionView.removeFromSuperview()
+                    if let _ = transition.userData(SelectionTransition.self), previousSelected != isSelected {
+                        selectionView.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak selectionView] _ in
+                            selectionView?.removeFromSuperlayer()
+                        })
+                    } else {
+                        selectionView.removeFromSuperlayer()
+                    }
                 }
             }
 
+            let minimizedContentScale: CGFloat = (contentFrame.width - 8.0) / contentFrame.width
             let contentScale: CGFloat
             switch component.selection {
             case .edge, .middle:
-                contentScale = (contentFrame.width - 8.0) / contentFrame.width
+                contentScale = minimizedContentScale
             case .none:
                 contentScale = 1.0
             }
 
             let titleImage = dayEnvironment.imageCache.text(fontSize: titleFontSize, isSemibold: titleFontIsSemibold, color: titleColor, string: component.title)
             if animateMediaIn {
-                let previousTitleView = UIImageView(image: self.titleView.image)
-                previousTitleView.frame = self.titleView.frame
-                self.titleView.superview?.insertSubview(previousTitleView, aboveSubview: self.titleView)
-                previousTitleView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousTitleView] _ in
-                    previousTitleView?.removeFromSuperview()
-                })
-                self.titleView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.16)
+                animateTitle = true
             }
-            self.titleView.image = titleImage
-            let titleSize = titleImage.size
-
-            transition.setFrame(view: self.highlightView, frame: CGRect(origin: CGPoint(x: contentFrame.midX - contentFrame.width * contentScale / 2.0, y: contentFrame.midY - contentFrame.width * contentScale / 2.0), size: CGSize(width: contentFrame.width * contentScale, height: contentFrame.height * contentScale)))
-
-            self.titleView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
-
-            self.button.frame = CGRect(origin: CGPoint(), size: availableSize)
+            
+            self.highlightView.bounds = CGRect(origin: CGPoint(), size: contentFrame.size)
+            self.highlightView.position = CGPoint(x: contentFrame.midX, y: contentFrame.midY)
 
             if let mediaPreviewView = self.mediaPreviewView {
-                mediaPreviewView.frame = contentFrame
+                mediaPreviewView.bounds = CGRect(origin: CGPoint(), size: contentFrame.size)
+                mediaPreviewView.position = CGPoint(x: contentFrame.midX, y: contentFrame.midY)
                 mediaPreviewView.updateLayout(size: contentFrame.size, synchronousLoads: false)
 
-                mediaPreviewView.layer.sublayerTransform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
+                mediaPreviewView.transform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
 
                 if animateMediaIn {
-                    mediaPreviewView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    self.highlightView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    mediaPreviewView.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.highlightView.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
+            
+            self.highlightView.transform = CATransform3DMakeScale(contentScale, contentScale, 1.0)
+            
+            if let _ = transition.userData(SelectionTransition.self), previousSelected != isSelected {
+                if self.mediaPreviewView == nil {
+                    animateTitle = true
+                }
+                if isSelected {
+                    if component.selection == .edge {
+                        let scaleIn = self.layer.makeAnimation(from: 1.0 as NSNumber, to: 0.75 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.1)
+                        let scaleOut = self.layer.springAnimation(from: 0.75 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                        self.layer.animateGroup([scaleIn, scaleOut], key: "selection")
+                        if let selectionView = self.selectionView {
+                            if self.mediaPreviewView != nil {
+                                let shapeLayer = CAShapeLayer()
+                                let lineWidth: CGFloat = 2.0
+                                shapeLayer.path = UIBezierPath(arcCenter: CGPoint(x: diameter / 2.0, y: diameter / 2.0), radius: diameter / 2.0 - lineWidth / 2.0, startAngle: -CGFloat.pi / 2.0, endAngle: 2 * CGFloat.pi - CGFloat.pi / 2.0, clockwise: true).cgPath
+                                shapeLayer.frame = selectionView.frame
+                                shapeLayer.strokeColor = component.theme.list.itemCheckColors.fillColor.cgColor
+                                shapeLayer.fillColor = UIColor.clear.cgColor
+                                shapeLayer.lineWidth = lineWidth
+                                shapeLayer.lineCap = .round
+                                selectionView.isHidden = true
+                                self.layer.insertSublayer(shapeLayer, above: selectionView)
+                                shapeLayer.animate(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "strokeEnd", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.25, delay: 0.1, completion: { [weak selectionView, weak shapeLayer] _ in
+                                    shapeLayer?.removeFromSuperlayer()
+                                    selectionView?.isHidden = false
+                                })
+                            } else {
+                                selectionView.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
+                        }
+                    } else {
+                        if let mediaPreviewView = self.mediaPreviewView {
+                            mediaPreviewView.animateScale(from: 1.0, to: contentScale, duration: 0.2)
+                        }
+                        self.highlightView.animateScale(from: 1.0, to: contentScale, duration: 0.2)
+                    }
+                } else {
+                    if let mediaPreviewView = self.mediaPreviewView {
+                        mediaPreviewView.animateScale(from: minimizedContentScale, to: contentScale, duration: 0.2)
+                    }
+                    self.highlightView.animateScale(from: minimizedContentScale, to: contentScale, duration: 0.2)
+                }
+            }
+            
+            if animateTitle {
+                let previousTitleView = SimpleLayer()
+                previousTitleView.contents = self.titleView.contents
+                previousTitleView.frame = self.titleView.frame
+                self.titleView.superlayer?.insertSublayer(previousTitleView, above: self.titleView)
+                previousTitleView.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousTitleView] _ in
+                    previousTitleView?.removeFromSuperlayer()
+                })
+                self.titleView.animateAlpha(from: 0.0, to: 1.0, duration: 0.16)
+            }
+            
+            self.titleView.contents = titleImage.cgImage
+            let titleSize = titleImage.size
+
+            self.highlightView.frame = CGRect(origin: CGPoint(x: contentFrame.midX - contentFrame.width * contentScale / 2.0, y: contentFrame.midY - contentFrame.width * contentScale / 2.0), size: CGSize(width: contentFrame.width * contentScale, height: contentFrame.height * contentScale))
+
+            self.titleView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - titleSize.height) / 2.0)), size: titleSize)
 
             return availableSize
         }
@@ -634,6 +685,7 @@ private final class MonthComponent: CombinedComponent {
     let strings: PresentationStrings
     let theme: PresentationTheme
     let dayAction: (Int32) -> Void
+    let monthAction: (ClosedRange<Int32>) -> Void
     let selectedDays: ClosedRange<Int32>?
 
     init(
@@ -643,6 +695,7 @@ private final class MonthComponent: CombinedComponent {
         strings: PresentationStrings,
         theme: PresentationTheme,
         dayAction: @escaping (Int32) -> Void,
+        monthAction: @escaping (ClosedRange<Int32>) -> Void,
         selectedDays: ClosedRange<Int32>?
     ) {
         self.context = context
@@ -651,6 +704,7 @@ private final class MonthComponent: CombinedComponent {
         self.strings = strings
         self.theme = theme
         self.dayAction = dayAction
+        self.monthAction = monthAction
         self.selectedDays = selectedDays
     }
 
@@ -758,21 +812,30 @@ private final class MonthComponent: CombinedComponent {
                         selection: daySelection,
                         isSelecting: context.component.selectedDays != nil,
                         action: {
-                            dayAction(dayTimestamp)
+                            if isEnabled {
+                                dayAction(dayTimestamp)
+                            }
                         }
                     )),
                     environment: {
                         context.environment[DayEnvironment.self]
                     },
                     availableSize: CGSize(width: usableWeekdayWidth, height: weekdaySize),
-                    transition: .immediate
+                    transition: context.transition
                 )
             }
 
             let titleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - title.size.width) / 2.0), y: 0.0), size: title.size)
 
+            let monthAction = context.component.monthAction
+            let firstDayStart = Int32(context.component.model.firstDay.timeIntervalSince1970)
+            let lastDayStart = firstDayStart + 24 * 60 * 60 * Int32(context.component.model.numberOfDays - 1)
+            
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
+                .gesture(.tap {
+                    monthAction(firstDayStart ... lastDayStart)
+                })
             )
 
             let baseWeekdayTitleY = titleFrame.maxY + titleWeekdaysSpacing
@@ -827,41 +890,52 @@ private final class MonthComponent: CombinedComponent {
             }
 
             if let selectedDays = context.component.selectedDays {
-                for (lineIndex, selection) in selectionsByLine {
+                for (lineIndex, selection) in selectionsByLine.sorted(by: { $0.key < $1.key }) {
+                    if selection.leftTimestamp == selection.rightTimestamp && selection.leftTimestamp == selectedDays.lowerBound && selection.rightTimestamp == selectedDays.upperBound {
+                        continue
+                    }
                     let dayEnvironment = context.environment[DayEnvironment.self].value
 
                     let dayItemSize = updatedDays[0].size
-                    let deltaWidth = floor((weekdayWidth - dayItemSize.width) / 2.0)
-                    let deltaHeight = floor((weekdaySize - dayItemSize.width) / 2.0)
+                    let selectionRadius: CGFloat = min(dayItemSize.width, dayItemSize.height)
+
+                    let deltaWidth = floor((weekdayWidth - selectionRadius) / 2.0)
+                    let deltaHeight = floor((weekdaySize - selectionRadius) / 2.0)
                     let minX = sideInset + CGFloat(selection.range.lowerBound) * weekdayWidth + deltaWidth
                     let maxX = sideInset + CGFloat(selection.range.upperBound + 1) * weekdayWidth - deltaWidth
                     let minY = baseDayY + CGFloat(lineIndex) * (weekdaySize + weekdaySpacing) + deltaHeight
-                    let maxY = minY + dayItemSize.width
-
-                    let leftRadius: CGFloat
-                    if selectedDays.lowerBound == selection.leftTimestamp {
-                        leftRadius = dayItemSize.width
-                    } else {
-                        leftRadius = 10.0
-                    }
-                    let rightRadius: CGFloat
-                    if selectedDays.upperBound == selection.rightTimestamp {
-                        rightRadius = dayItemSize.width
-                    } else {
-                        rightRadius = 10.0
-                    }
+                    let maxY = minY + selectionRadius
 
                     let monthSelectionColor = context.component.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.1)
 
                     let selectionRect = CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
                     let selection = selections[lineIndex].update(
-                        component: AnyComponent(ImageComponent(image: dayEnvironment.imageCache.monthSelection(leftRadius: leftRadius, rightRadius: rightRadius, maxRadius: dayItemSize.width, color: monthSelectionColor))),
+                        component: AnyComponent(ImageComponent(image: dayEnvironment.imageCache.monthSelection(leftRadius: selectionRadius, rightRadius: selectionRadius, maxRadius: selectionRadius, color: monthSelectionColor))),
                         availableSize: selectionRect.size,
                         transition: .immediate
                     )
+                    let delayIndex = dayEnvironment.selectionDelayCoordination
                     context.add(selection
                         .position(CGPoint(x: selectionRect.midX, y: selectionRect.midY))
+                        .appear(Transition.Appear { _, view, transition in
+                            if case .none = transition.animation {
+                                return
+                            }
+                            let delay = Double(min(delayIndex, 6)) * 0.1
+                            view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.05, delay: delay)
+                            view.layer.animateFrame(from: CGRect(origin: view.frame.origin, size: CGSize(width: selectionRadius, height: view.frame.height)), to: view.frame, duration: 0.25, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                        })
+                        .disappear(Transition.Disappear { view, transition, completion in
+                            if case .none = transition.animation {
+                                completion()
+                                return
+                            }
+                            view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                completion()
+                            })
+                        })
                     )
+                    dayEnvironment.selectionDelayCoordination += 1
                 }
             }
 
@@ -1054,7 +1128,7 @@ public final class CalendarMessageScreen: ViewController {
                     return false
                 }
 
-                guard let dayView = result.superview as? DayComponent.View else {
+                guard let dayView = result as? DayComponent.View else {
                     return false
                 }
 
@@ -1187,26 +1261,31 @@ public final class CalendarMessageScreen: ViewController {
         }
 
         func toggleSelectionMode() {
+            var transition: Transition = .immediate
             if self.selectionState == nil {
                 self.selectionState = SelectionState(dayRange: nil)
             } else {
                 self.selectionState = nil
+                transition = Transition(animation: .curve(duration: 0.25, curve: .easeInOut))
+                transition = transition.withUserData(SelectionTransition.end)
             }
 
             self.contextGestureContainerNode.isGestureEnabled = self.selectionState == nil
-
-            if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
-            }
+            
+            self.updateSelectionState(transition: transition)
         }
 
         func selectDay(timestamp: Int32) {
-            self.selectionState = SelectionState(dayRange: timestamp ... timestamp)
+            if let selectionState = self.selectionState, selectionState.dayRange == timestamp ... timestamp {
+                self.selectionState = SelectionState(dayRange: nil)
+            } else {
+                self.selectionState = SelectionState(dayRange: timestamp ... timestamp)
+            }
 
             self.contextGestureContainerNode.isGestureEnabled = self.selectionState == nil
 
             if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring), componentsTransition: .immediate)
             }
         }
 
@@ -1215,7 +1294,7 @@ public final class CalendarMessageScreen: ViewController {
             self.selectionToolbarActionSelected()
         }
 
-        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition, componentsTransition: Transition) {
             let isFirstLayout = self.validLayout == nil
             self.validLayout = (layout, navigationHeight)
 
@@ -1233,13 +1312,38 @@ public final class CalendarMessageScreen: ViewController {
 
             let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
 
-            if let _ = self.selectionState {
+            if let selectionState = self.selectionState {
                 let selectionToolbarNode: ToolbarNode
+                let toolbarText: String
+                
+                var selectedCount = 0
+                if let dayRange = selectionState.dayRange {
+                    for i in 0 ..< self.months.count {
+                        let firstDayTimestamp = Int32(self.months[i].firstDay.timeIntervalSince1970)
+
+                        for day in 0 ..< self.months[i].numberOfDays {
+                            let dayTimestamp = firstDayTimestamp + 24 * 60 * 60 * Int32(day)
+
+                            if dayRange.contains(dayTimestamp) {
+                                selectedCount += 1
+                            }
+                        }
+                    }
+                }
+                
+                if selectedCount == 0 {
+                    toolbarText = self.presentationData.strings.DialogList_ClearHistoryConfirmation
+                } else if selectedCount == 1 {
+                    toolbarText = self.presentationData.strings.MessageCalendar_ClearHistoryForThisDay
+                } else {
+                    toolbarText = self.presentationData.strings.MessageCalendar_ClearHistoryForTheseDays
+                }
+                
                 if let currrent = self.selectionToolbarNode {
                     selectionToolbarNode = currrent
-
+                    
                     transition.updateFrame(node: selectionToolbarNode, frame: tabBarFrame)
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: self.presentationData.strings.DialogList_ClearHistoryConfirmation, isEnabled: self.selectionState?.dayRange != nil, color: .custom(self.presentationData.theme.list.itemDestructiveColor))), transition: transition)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
                 } else {
                     selectionToolbarNode = ToolbarNode(
                         theme: TabBarControllerTheme(
@@ -1254,7 +1358,7 @@ public final class CalendarMessageScreen: ViewController {
                         }
                     )
                     selectionToolbarNode.frame = tabBarFrame
-                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: self.presentationData.strings.DialogList_ClearHistoryConfirmation, isEnabled: self.selectionState?.dayRange != nil, color: .custom(self.presentationData.theme.list.itemDestructiveColor))), transition: .immediate)
+                    selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: .immediate)
                     self.addSubnode(selectionToolbarNode)
                     self.selectionToolbarNode = selectionToolbarNode
                     transition.animatePositionAdditive(node: selectionToolbarNode, offset: CGPoint(x: 0.0, y: tabBarFrame.height))
@@ -1316,10 +1420,20 @@ public final class CalendarMessageScreen: ViewController {
 
             }
 
-            updateMonthViews()
+            updateMonthViews(transition: componentsTransition)
         }
 
         private func selectionToolbarActionSelected() {
+            if self.selectionState?.dayRange == nil {
+                if let selectionToolbarNode = self.selectionToolbarNode {
+                    let toolbarFrame = selectionToolbarNode.view.convert(selectionToolbarNode.bounds, to: self.view)
+                    self.controller?.present(TooltipScreen(account: self.context.account, text: self.presentationData.strings.MessageCalendar_EmptySelectionTooltip, style: .default, icon: .none, location: .point(toolbarFrame.insetBy(dx: 0.0, dy: 10.0), .bottom), shouldDismissOnTouch: { point in
+                        return .dismiss(consume: false)
+                    }), in: .current)
+                }
+                
+                return
+            }
             guard let selectionState = self.selectionState, let dayRange = selectionState.dayRange else {
                 return
             }
@@ -1441,15 +1555,9 @@ public final class CalendarMessageScreen: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    let _ = strongSelf.calendarSource.removeMessagesInRange(minTimestamp: minTimestampValue, maxTimestamp: maxTimestampValue, type: type, completion: {
-                        Queue.mainQueue().async {
-                            guard let strongSelf = self else {
-                                return
-                            }
-
-                            strongSelf.controller?.dismiss(completion: nil)
-                        }
-                    })
+                    
+                    strongSelf.controller?.completedWithRemoveMessagesInRange?(minTimestampValue ... maxTimestampValue, type, selectedCount, strongSelf.calendarSource)
+                    strongSelf.controller?.dismiss(completion: nil)
                 }
 
                 if let _ = info.canClearForMyself ?? info.canClearForEveryone {
@@ -1496,8 +1604,6 @@ public final class CalendarMessageScreen: ViewController {
 
                 strongSelf.controller?.present(actionSheet, in: .window(.root))
             })
-
-            self.controller?.toggleSelectPressed()
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -1510,7 +1616,7 @@ public final class CalendarMessageScreen: ViewController {
                     indicator.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
                 }
 
-                self.updateMonthViews()
+                self.updateMonthViews(transition: .immediate)
             }
         }
 
@@ -1537,6 +1643,8 @@ public final class CalendarMessageScreen: ViewController {
                         theme: self.presentationData.theme,
                         dayAction: { _ in
                         },
+                        monthAction: { _ in
+                        },
                         selectedDays: nil
                     )),
                     environment: {
@@ -1562,15 +1670,17 @@ public final class CalendarMessageScreen: ViewController {
             return true
         }
 
-        func updateMonthViews() {
+        func updateMonthViews(transition: Transition) {
             guard let (width, _, frames) = self.scrollLayout else {
                 return
             }
+            
+            self.dayEnvironment.selectionDelayCoordination = 0
 
             let visibleRect = self.scrollView.bounds.insetBy(dx: 0.0, dy: -200.0)
             var validMonths = Set<Int>()
 
-            for i in 0 ..< self.months.count {
+            for i in (0 ..< self.months.count).reversed() {
                 guard let monthFrame = frames[i] else {
                     continue
                 }
@@ -1579,17 +1689,19 @@ public final class CalendarMessageScreen: ViewController {
                 }
                 validMonths.insert(i)
 
+                var monthTransition = transition
                 let monthView: ComponentHostView<DayEnvironment>
                 if let current = self.monthViews[i] {
                     monthView = current
                 } else {
+                    monthTransition = .immediate
                     monthView = ComponentHostView()
                     monthView.layer.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                     self.monthViews[i] = monthView
                     self.scrollView.addSubview(monthView)
                 }
                 let _ = monthView.update(
-                    transition: .immediate,
+                    transition: monthTransition,
                     component: AnyComponent(MonthComponent(
                         context: self.context,
                         model: self.months[i],
@@ -1601,22 +1713,29 @@ public final class CalendarMessageScreen: ViewController {
                                 return
                             }
                             if var selectionState = strongSelf.selectionState {
+                                var transition = Transition(animation: .curve(duration: 0.2, curve: .spring))
                                 if let dayRange = selectionState.dayRange {
-                                    if dayRange.lowerBound == dayRange.upperBound {
+                                    if dayRange.lowerBound == timestamp || dayRange.upperBound == timestamp {
+                                        selectionState.dayRange = nil
+                                        transition = transition.withUserData(SelectionTransition.end)
+                                    } else if dayRange.lowerBound == dayRange.upperBound {
                                         if timestamp < dayRange.lowerBound {
                                             selectionState.dayRange = timestamp ... dayRange.upperBound
                                         } else {
                                             selectionState.dayRange = dayRange.lowerBound ... timestamp
                                         }
+                                        transition = transition.withUserData(SelectionTransition.change)
                                     } else {
                                         selectionState.dayRange = timestamp ... timestamp
+                                        transition = transition.withUserData(SelectionTransition.change)
                                     }
                                 } else {
                                     selectionState.dayRange = timestamp ... timestamp
+                                    transition = transition.withUserData(SelectionTransition.begin)
                                 }
                                 strongSelf.selectionState = selectionState
 
-                                strongSelf.updateSelectionState()
+                                strongSelf.updateSelectionState(transition: transition)
                             } else if let calendarState = strongSelf.calendarState {
                                 outer: for month in strongSelf.months {
                                     let firstDayTimestamp = Int32(month.firstDay.timeIntervalSince1970)
@@ -1642,6 +1761,30 @@ public final class CalendarMessageScreen: ViewController {
                                 }
                             }
                         },
+                        monthAction: { [weak self] range in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            guard var selectionState = strongSelf.selectionState else {
+                                return
+                            }
+                            var transition = Transition(animation: .curve(duration: 0.2, curve: .spring))
+                            if let dayRange = selectionState.dayRange {
+                                if dayRange == range {
+                                    selectionState.dayRange = nil
+                                    transition = transition.withUserData(SelectionTransition.end)
+                                } else {
+                                    selectionState.dayRange = range
+                                    transition = transition.withUserData(SelectionTransition.change)
+                                }
+                            } else {
+                                selectionState.dayRange = range
+                                transition = transition.withUserData(SelectionTransition.begin)
+                            }
+                            strongSelf.selectionState = selectionState
+
+                            strongSelf.updateSelectionState(transition: transition)
+                        },
                         selectedDays: self.selectionState?.dayRange
                     )),
                     environment: {
@@ -1664,7 +1807,7 @@ public final class CalendarMessageScreen: ViewController {
             }
         }
 
-        private func updateSelectionState() {
+        private func updateSelectionState(transition: Transition) {
             var title = self.presentationData.strings.MessageCalendar_Title
             if let selectionState = self.selectionState, let dayRange = selectionState.dayRange {
                 var selectedCount = 0
@@ -1687,7 +1830,7 @@ public final class CalendarMessageScreen: ViewController {
             self.controller?.navigationItem.title = title
 
             if let (layout, navigationHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring))
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .animated(duration: 0.5, curve: .spring), componentsTransition: transition)
             }
         }
 
@@ -1733,7 +1876,7 @@ public final class CalendarMessageScreen: ViewController {
                 self.months[monthIndex].mediaByDay = mediaByDay
             }
 
-            self.updateMonthViews()
+            self.updateMonthViews(transition: .immediate)
         }
     }
 
@@ -1751,6 +1894,8 @@ public final class CalendarMessageScreen: ViewController {
     private let previewDay: (Int32, MessageIndex?, ASDisplayNode, CGRect, ContextGesture) -> Void
 
     private var presentationData: PresentationData
+    
+    public var completedWithRemoveMessagesInRange: ((ClosedRange<Int32>, InteractiveHistoryClearingType, Int, SparseMessageCalendar) -> Void)?
 
     public init(
         context: AccountContext,
@@ -1845,6 +1990,6 @@ public final class CalendarMessageScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
 
-        self.node.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        self.node.containerLayoutUpdated(layout: layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, componentsTransition: .immediate)
     }
 }

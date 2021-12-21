@@ -12,6 +12,7 @@ import AccountContext
 import AuthTransferUI
 import ItemListPeerActionItem
 import NGData
+import DeviceAccess
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext
@@ -29,8 +30,12 @@ private final class RecentSessionsControllerArguments {
     let addDevice: () -> Void
     
     let openOtherAppsUrl: () -> Void
+    let setupAuthorizationTTL: () -> Void
     
-    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void) {
+    let openDesktopLink: () -> Void
+    let openWebLink: () -> Void
+    
+    init(context: AccountContext, setSessionIdWithRevealedOptions: @escaping (Int64?, Int64?) -> Void, removeSession: @escaping (Int64) -> Void, terminateOtherSessions: @escaping () -> Void, openSession: @escaping (RecentAccountSession) -> Void, openWebSession: @escaping (WebAuthorization, Peer?) -> Void, removeWebSession: @escaping (Int64) -> Void, terminateAllWebSessions: @escaping () -> Void, addDevice: @escaping () -> Void, openOtherAppsUrl: @escaping () -> Void, setupAuthorizationTTL: @escaping () -> Void, openDesktopLink: @escaping () -> Void, openWebLink: @escaping () -> Void) {
         self.context = context
         self.setSessionIdWithRevealedOptions = setSessionIdWithRevealedOptions
         self.removeSession = removeSession
@@ -45,6 +50,11 @@ private final class RecentSessionsControllerArguments {
         self.addDevice = addDevice
         
         self.openOtherAppsUrl = openOtherAppsUrl
+        
+        self.setupAuthorizationTTL = setupAuthorizationTTL
+        
+        self.openDesktopLink = openDesktopLink
+        self.openWebLink = openWebLink
     }
 }
 
@@ -54,15 +64,18 @@ private enum RecentSessionsMode: Int {
 }
 
 private enum RecentSessionsSection: Int32 {
+    case header
     case currentSession
     case pendingSessions
     case otherSessions
+    case ttl
 }
 
 private enum RecentSessionsEntryStableId: Hashable {
     case session(Int64)
     case index(Int32)
     case devicesInfo
+    case ttl(Int32)
 }
 
 private struct SortIndex: Comparable {
@@ -78,6 +91,7 @@ private struct SortIndex: Comparable {
 }
 
 private enum RecentSessionsEntry: ItemListNodeEntry {
+    case header(SortIndex, String)
     case currentSessionHeader(SortIndex, String)
     case currentSession(SortIndex, PresentationStrings, PresentationDateTimeFormat, RecentAccountSession)
     case terminateOtherSessions(SortIndex, String)
@@ -92,53 +106,67 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     case session(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, session: RecentAccountSession, enabled: Bool, editing: Bool, revealed: Bool)
     case website(index: Int32, sortIndex: SortIndex, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, website: WebAuthorization, peer: Peer?, enabled: Bool, editing: Bool, revealed: Bool)
     case devicesInfo(SortIndex, String)
+    case ttlHeader(SortIndex, String)
+    case ttlTimeout(SortIndex, String, String)
     
     var section: ItemListSectionId {
         switch self {
+            case .header:
+                return RecentSessionsSection.header.rawValue
             case .currentSessionHeader, .currentSession, .terminateOtherSessions, .terminateAllWebSessions, .currentAddDevice, .currentSessionInfo:
                 return RecentSessionsSection.currentSession.rawValue
             case .pendingSessionsHeader, .pendingSession, .pendingSessionsInfo:
                 return RecentSessionsSection.pendingSessions.rawValue
             case .otherSessionsHeader, .addDevice, .session, .website, .devicesInfo:
                 return RecentSessionsSection.otherSessions.rawValue
+            case .ttlHeader, .ttlTimeout:
+                return RecentSessionsSection.ttl.rawValue
         }
     }
     
     var stableId: RecentSessionsEntryStableId {
         switch self {
-        case .currentSessionHeader:
+        case .header:
             return .index(0)
-        case .currentSession:
+        case .currentSessionHeader:
             return .index(1)
-        case .terminateOtherSessions:
+        case .currentSession:
             return .index(2)
-        case .terminateAllWebSessions:
+        case .terminateOtherSessions:
             return .index(3)
-        case .currentAddDevice:
+        case .terminateAllWebSessions:
             return .index(4)
-        case .currentSessionInfo:
+        case .currentAddDevice:
             return .index(5)
-        case .pendingSessionsHeader:
+        case .currentSessionInfo:
             return .index(6)
+        case .pendingSessionsHeader:
+            return .index(7)
         case let .pendingSession(_, _, _, _, session, _, _, _):
             return .session(session.hash)
         case .pendingSessionsInfo:
-            return .index(7)
-        case .otherSessionsHeader:
             return .index(8)
-        case .addDevice:
+        case .otherSessionsHeader:
             return .index(9)
+        case .addDevice:
+            return .index(10)
         case let .session(_, _, _, _, session, _, _, _):
             return .session(session.hash)
         case let .website(_, _, _, _, _, website, _, _, _, _):
             return .session(website.hash)
         case .devicesInfo:
             return .devicesInfo
+        case .ttlHeader:
+            return .index(11)
+        case .ttlTimeout:
+            return .index(12)
         }
     }
 
     var sortIndex: SortIndex {
         switch self {
+        case let .header(index, _):
+            return index
         case let .currentSessionHeader(index, _):
             return index
         case let .currentSession(index, _, _, _):
@@ -167,11 +195,21 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             return index
         case let .devicesInfo(index, _):
             return index
+        case let .ttlHeader(index, _):
+            return index
+        case let .ttlTimeout(index, _, _):
+            return index
         }
     }
     
     static func ==(lhs: RecentSessionsEntry, rhs: RecentSessionsEntry) -> Bool {
         switch lhs {
+        case let .header(lhsSortIndex, lhsText):
+            if case let .header(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         case let .currentSessionHeader(lhsSortIndex, lhsText):
             if case let .currentSessionHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
                 return true
@@ -256,6 +294,18 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
             } else {
                 return false
             }
+        case let .ttlHeader(lhsSortIndex, lhsText):
+            if case let .ttlHeader(rhsSortIndex, rhsText) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .ttlTimeout(lhsSortIndex, lhsText, lhsValue):
+            if case let .ttlTimeout(rhsSortIndex, rhsText, rhsValue) = rhs, lhsSortIndex == rhsSortIndex, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -266,6 +316,21 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! RecentSessionsControllerArguments
         switch self {
+        case let .header(_, text):
+            return RecentSessionsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animationName: "Devices", sectionId: self.section, buttonAction: {
+                arguments.addDevice()
+            }, linkAction: { action in
+                if case let .tap(link) = action {
+                    switch link {
+                    case "desktop":
+                        arguments.openDesktopLink()
+                    case "web":
+                        arguments.openWebLink()
+                    default:
+                        break
+                    }
+                }
+            })
         case let .currentSessionHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .currentSession(_, _, dateTimeFormat, session):
@@ -334,6 +399,12 @@ private enum RecentSessionsEntry: ItemListNodeEntry {
                     arguments.openOtherAppsUrl()
                 }
             })
+        case let .ttlHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .ttlTimeout(_, text, value):
+            return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                arguments.setupAuthorizationTTL()
+            }, tag: PrivacyAndSecurityEntryTag.accountTimeout)
         }
     }
 }
@@ -395,44 +466,46 @@ private struct RecentSessionsControllerState: Equatable {
 private func recentSessionsControllerEntries(presentationData: PresentationData, state: RecentSessionsControllerState, sessionsState: ActiveSessionsContextState, enableQRLogin: Bool) -> [RecentSessionsEntry] {
     var entries: [RecentSessionsEntry] = []
     
+    entries.append(.header(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_HeaderInfo))
+    
     if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
-        entries.append(.currentSessionHeader(SortIndex(section: 0, item: 0), presentationData.strings.AuthSessions_CurrentSession))
+        entries.append(.currentSessionHeader(SortIndex(section: 1, item: 0), presentationData.strings.AuthSessions_CurrentSession))
         if let index = sessionsState.sessions.firstIndex(where: { $0.hash == 0 }) {
             existingSessionIds.insert(sessionsState.sessions[index].hash)
-            entries.append(.currentSession(SortIndex(section: 0, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
+            entries.append(.currentSession(SortIndex(section: 1, item: 1), presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }
         
         var hasAddDevice = false
         if sessionsState.sessions.count > 1 || enableQRLogin {
             if sessionsState.sessions.count > 1 {
-                entries.append(.terminateOtherSessions(SortIndex(section: 0, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
-                entries.append(.currentSessionInfo(SortIndex(section: 0, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
+                entries.append(.terminateOtherSessions(SortIndex(section: 1, item: 2), presentationData.strings.AuthSessions_TerminateOtherSessions))
+                entries.append(.currentSessionInfo(SortIndex(section: 1, item: 3), presentationData.strings.AuthSessions_TerminateOtherSessionsHelp))
             } else if enableQRLogin {
                 hasAddDevice = true
-                entries.append(.currentAddDevice(SortIndex(section: 0, item: 4), presentationData.strings.AuthSessions_AddDevice))
-                entries.append(.currentSessionInfo(SortIndex(section: 0, item: 5), presentationData.strings.AuthSessions_OtherDevices))
+//                entries.append(.currentAddDevice(SortIndex(section: 1, item: 4), presentationData.strings.AuthSessions_AddDevice))
+                entries.append(.currentSessionInfo(SortIndex(section: 1, item: 5), presentationData.strings.AuthSessions_OtherDevices))
             }
             
             let filteredPendingSessions: [RecentAccountSession] = sessionsState.sessions.filter({ $0.flags.contains(.passwordPending) })
             if !filteredPendingSessions.isEmpty {
-                entries.append(.pendingSessionsHeader(SortIndex(section: 0, item: 6), presentationData.strings.AuthSessions_IncompleteAttempts))
+                entries.append(.pendingSessionsHeader(SortIndex(section: 1, item: 6), presentationData.strings.AuthSessions_IncompleteAttempts))
                 for i in 0 ..< filteredPendingSessions.count {
                     if !existingSessionIds.contains(filteredPendingSessions[i].hash) {
                         existingSessionIds.insert(filteredPendingSessions[i].hash)
-                        entries.append(.pendingSession(index: Int32(i), sortIndex: SortIndex(section: 1, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredPendingSessions[i], enabled: state.removingSessionId != filteredPendingSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredPendingSessions[i].hash))
+                        entries.append(.pendingSession(index: Int32(i), sortIndex: SortIndex(section: 2, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredPendingSessions[i], enabled: state.removingSessionId != filteredPendingSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredPendingSessions[i].hash))
                     }
                 }
-                entries.append(.pendingSessionsInfo(SortIndex(section: 2, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
+                entries.append(.pendingSessionsInfo(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_IncompleteAttemptsInfo))
             }
             
             if sessionsState.sessions.count > 1 {
-                entries.append(.otherSessionsHeader(SortIndex(section: 3, item: 0), presentationData.strings.AuthSessions_OtherSessions))
+                entries.append(.otherSessionsHeader(SortIndex(section: 4, item: 0), presentationData.strings.AuthSessions_OtherSessions))
             }
             
-            if enableQRLogin && !hasAddDevice {
-                entries.append(.addDevice(SortIndex(section: 3, item: 1), presentationData.strings.AuthSessions_AddDevice))
-            }
+//            if enableQRLogin && !hasAddDevice {
+//                entries.append(.addDevice(SortIndex(section: 4, item: 1), presentationData.strings.AuthSessions_AddDevice))
+//            }
             
             let filteredSessions: [RecentAccountSession] = sessionsState.sessions.sorted(by: { lhs, rhs in
                 return lhs.activityDate > rhs.activityDate
@@ -441,14 +514,17 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
             for i in 0 ..< filteredSessions.count {
                 if !existingSessionIds.contains(filteredSessions[i].hash) {
                     existingSessionIds.insert(filteredSessions[i].hash)
-                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 4, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
+                    entries.append(.session(index: Int32(i), sortIndex: SortIndex(section: 5, item: i), strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, session: filteredSessions[i], enabled: state.removingSessionId != filteredSessions[i].hash && !state.terminatingOtherSessions, editing: state.editing, revealed: state.sessionIdWithRevealedOptions == filteredSessions[i].hash))
                 }
             }
             
             if enableQRLogin && !hasAddDevice {
-                entries.append(.devicesInfo(SortIndex(section: 5, item: 0), presentationData.strings.AuthSessions_OtherDevices))
+                entries.append(.devicesInfo(SortIndex(section: 6, item: 0), presentationData.strings.AuthSessions_OtherDevices))
             }
         }
+        
+        entries.append(.ttlHeader(SortIndex(section: 7, item: 0), presentationData.strings.AuthSessions_TerminateIfAwayTitle.uppercased()))
+        entries.append(.ttlTimeout(SortIndex(section: 7, item: 1), presentationData.strings.AuthSessions_TerminateIfAwayFor, timeIntervalString(strings: presentationData.strings, value: sessionsState.ttlDays * 24 * 60 * 60)))
     }
     
     return entries
@@ -534,6 +610,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.AuthSessions_TerminateSessionText),
                 ActionSheetButtonItem(title: presentationData.strings.AuthSessions_TerminateSession, color: .destructive, action: {
                     dismissAction()
                     completion()
@@ -576,6 +653,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }))
     }
     
+    let updateAuthorizationTTLDisposable = MetaDisposable()
+    actionsDisposable.add(updateAuthorizationTTLDisposable)
+    
+    let updateSessionDisposable = MetaDisposable()
+    actionsDisposable.add(updateSessionDisposable)
+    
     let arguments = RecentSessionsControllerArguments(context: context, setSessionIdWithRevealedOptions: { sessionId, fromSessionId in
         updateState { state in
             if (sessionId == nil && fromSessionId == state.sessionIdWithRevealedOptions) || (sessionId != nil && fromSessionId == nil) {
@@ -594,6 +677,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         }
         controller.setItemGroups([
             ActionSheetItemGroup(items: [
+                ActionSheetTextItem(title: presentationData.strings.AuthSessions_TerminateOtherSessionsText),
                 ActionSheetButtonItem(title: presentationData.strings.AuthSessions_TerminateOtherSessions, color: .destructive, action: {
                     dismissAction()
                     
@@ -618,14 +702,18 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openSession: { session in
-        let controller = RecentSessionScreen(context: context, subject: .session(session), remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .session(session), updateAcceptSecretChats: { value in
+            updateSessionDisposable.set(activeSessionsContext.updateSessionAcceptsSecretChats(session, accepts: value).start())
+        }, updateAcceptIncomingCalls: { value in
+            updateSessionDisposable.set(activeSessionsContext.updateSessionAcceptsIncomingCalls(session, accepts: value).start())
+        }, remove: { completion in
             removeSessionImpl(session.hash, {
                 completion()
             })
         })
         presentControllerImpl?(controller, nil)
     }, openWebSession: { session, peer in
-        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), remove: { completion in
+        let controller = RecentSessionScreen(context: context, subject: .website(session, peer), updateAcceptSecretChats: { _ in }, updateAcceptIncomingCalls: { _ in }, remove: { completion in
             removeWebSessionImpl(session.hash)
             completion()
         })
@@ -661,9 +749,50 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             ])
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, addDevice: {
-        pushControllerImpl?(AuthDataTransferSplashScreen(context: context, activeSessionsContext: activeSessionsContext))
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: presentationData, present: { c, a in
+            c.presentationArguments = a
+            context.sharedContext.mainWindow?.present(c, on: .root)
+        }, openSettings: {
+            context.sharedContext.applicationBindings.openSettings()
+        }, { granted in
+            guard granted else {
+                return
+            }
+            pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
+        })
     }, openOtherAppsUrl: {
-        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://desktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://telegram.org/apps", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+    }, setupAuthorizationTTL: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = ActionSheetController(presentationData: presentationData)
+        let dismissAction: () -> Void = { [weak controller] in
+            controller?.dismissAnimated()
+        }
+        let ttlAction: (Int32) -> Void = { ttl in
+            updateAuthorizationTTLDisposable.set(activeSessionsContext.updateAuthorizationTTL(days: ttl).start())
+        }
+        let timeoutValues: [Int32] = [
+            7,
+            30,
+            90,
+            180
+        ]
+        let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
+            return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value * 24 * 60 * 60), action: {
+                dismissAction()
+                ttlAction(value)
+            })
+        }
+        controller.setItemGroups([
+            ActionSheetItemGroup(items: timeoutItems),
+            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+        ])
+        presentControllerImpl?(controller, nil)
+    }, openDesktopLink: {
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://getdesktop.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+    }, openWebLink: {
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://web.telegram.org", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
     })
     
     let previousMode = Atomic<RecentSessionsMode>(value: .sessions)
@@ -708,12 +837,12 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             }
         }
         
-        let emptyStateItem: ItemListControllerEmptyStateItem?
-        if sessionsState.sessions.count == 1 && mode == .sessions {
-            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
-        } else {
-            emptyStateItem = nil
-        }
+        let emptyStateItem: ItemListControllerEmptyStateItem? = nil
+//        if sessionsState.sessions.count == 1 && mode == .sessions {
+//            emptyStateItem = RecentSessionsEmptyStateItem(theme: presentationData.theme, strings: presentationData.strings)
+//        } else {
+//            emptyStateItem = nil
+//        }
         
         let title: ItemListControllerTitle
         let entries: [RecentSessionsEntry]

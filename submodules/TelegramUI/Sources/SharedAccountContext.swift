@@ -1240,7 +1240,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, updateMessageReaction: { _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
             }, tapMessage: { message in
                 tapMessage?(message)
@@ -1249,7 +1249,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in }, navigationController: {
+        }, presentController: { _, _ in
+        }, presentControllerInCurrent: { _, _ in
+        }, navigationController: {
             return nil
         }, chatControllerNode: {
             return nil
@@ -1291,6 +1293,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return nil
         }, updateChoosingSticker: { _ in
         }, commitEmojiInteraction: { _, _, _, _ in
+        }, openLargeEmojiInfo: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -1299,10 +1302,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let content: ChatMessageItemContent
         let chatLocation: ChatLocation
         if messages.count > 1 {
-            content = .group(messages: messages.map { ($0, true, .none, ChatMessageEntryAttributes()) })
+            content = .group(messages: messages.map { ($0, true, .none, ChatMessageEntryAttributes(), nil) })
             chatLocation = .peer(messages.first!.id.peerId)
         } else {
-            content = .message(message: messages.first!, read: true, selection: .none, attributes: ChatMessageEntryAttributes())
+            content = .message(message: messages.first!, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil)
             chatLocation = .peer(messages.first!.id.peerId)
         }
         

@@ -275,7 +275,7 @@ private func preparedLanguageListNodeTransition(presentationData: PresentationDa
 final class LocalizationListControllerNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
-    private let navigationBar: NavigationBar
+    private weak var navigationBar: NavigationBar?
     private let requestActivateSearch: () -> Void
     private let requestDeactivateSearch: () -> Void
     private let present: (ViewController, Any?) -> Void
@@ -314,7 +314,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.present = present
 
         self.listNode = ListView()
-        self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
+        self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.list.blocksBackgroundColor, direction: true)
         self.listNode.accessibilityPageScrolledString = { row, count in
             return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
         }
@@ -452,7 +452,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.presentationData = presentationData
         self.presentationDataValue.set(.single(presentationData))
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
-        self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.chatList.backgroundColor, direction: true)
+        self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.list.blocksBackgroundColor, direction: true)
         self.searchDisplayController?.updatePresentationData(presentationData)
         self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -602,8 +602,8 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             if let strongSelf = self, let strongPlaceholderNode = placeholderNode {
                 if isSearchBar {
                     strongPlaceholderNode.supernode?.insertSubnode(subnode, aboveSubnode: strongPlaceholderNode)
-                } else {
-                    strongSelf.insertSubnode(subnode, belowSubnode: strongSelf.navigationBar)
+                } else if let navigationBar = strongSelf.navigationBar  {
+                    strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                 }
             }
         }, placeholder: placeholderNode)

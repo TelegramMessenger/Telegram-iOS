@@ -44,7 +44,7 @@ public final class ManagedAnimationState {
             guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
                 return nil
             }
-            guard let instance = LottieInstance(data: unpackedData, cacheKey: item.source.cacheKey) else {
+            guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, cacheKey: item.source.cacheKey) else {
                 return nil
             }
             resolvedInstance = instance

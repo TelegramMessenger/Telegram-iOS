@@ -364,7 +364,7 @@
 "Login.HaveNotReceivedCodeInternal" = "Haven't received the code?";
 "Login.CodeSentSms" = "We have sent you an SMS with the code";
 "Login.Code" = "Code";
-"Login.WillCallYou" = "Nicegram will call you in %@";
+"Login.WillCallYou" = "You can request a voice call in %@";
 "Login.CallRequestState2" = "Requesting a call from Nicegram...";
 "Login.CallRequestState3" = "Nicegram dialed your number\n[Didn't get the code?]";
 "Login.EmailNotConfiguredError" = "Please set up an email account.";
@@ -2073,7 +2073,7 @@
 
 "Login.CodeSentCall" = "We are calling your phone to dictate a code.";
 
-"Login.WillSendSms" = "Nicegram will send you an SMS in %@";
+"Login.WillSendSms" = "You can request an SMS in %@";
 "Login.SmsRequestState2" = "Requesting an SMS from Nicegram...";
 "Login.SmsRequestState3" = "Nicegram sent you an SMS\n[Didn't get the code?]";
 
@@ -2657,6 +2657,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CaptionEdited" = "%@ edited caption:";
 "Channel.AdminLog.MessageDeleted" = "%@ deleted message:";
 "Channel.AdminLog.MessagePinned" = "%@ pinned message:";
+"Channel.AdminLog.MessageUnpinnedExtended" = "%@ unpinned message:";
 
 "Channel.AdminLog.MessageInvitedName" = "invited %1$@";
 "Channel.AdminLog.MessageInvitedNameUsername" = "invited %1$@ (%2$@)";
@@ -2891,6 +2892,7 @@ Unused sets are archived when you add more.";
 "FastTwoStepSetup.EmailHelp" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 
 "Conversation.ViewMessage" = "VIEW MESSAGE";
+"Conversation.ViewPost" = "VIEW POST";
 
 "GroupInfo.GroupHistory" = "History For New Members";
 "GroupInfo.GroupHistoryVisible" = "Visible";
@@ -3740,7 +3742,7 @@ Unused sets are archived when you add more.";
 "TwoStepAuth.RecoveryEmailAddDescription" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 "TwoStepAuth.RecoveryEmailChangeDescription" = "Please enter your new recovery email. It is the only way to recover a forgotten password.";
 "TwoStepAuth.ChangeEmail" = "Change Email";
-"TwoStepAuth.ConfirmEmailDescription" = "Please enter the code we've just emailed at %1$@."; 
+"TwoStepAuth.ConfirmEmailDescription" = "Please enter the code we've just emailed at %1$@.";
 "TwoStepAuth.ConfirmEmailCodePlaceholder" = "Code";
 "TwoStepAuth.ConfirmEmailResendCode" = "Resend Code";
 
@@ -3762,7 +3764,9 @@ Unused sets are archived when you add more.";
 
 "AuthCode.Alert" = "Your login code is %@. Enter it in the Telegram app where you are trying to log in.\n\nDo not give this code to anyone.";
 "Login.CheckOtherSessionMessages" = "Check your Telegram messages";
-"Login.SendCodeViaSms" = "Send the code as an SMS";
+"Login.SendCodeViaSms" = "Get the code via SMS";
+"Login.SendCodeViaCall" = "Call me to dictate the code";
+"Login.SendCodeViaFlashCall" = "Get the code via phone call";
 "Login.CancelPhoneVerification" = "Do you want to stop the phone number verification process?";
 "Login.CancelPhoneVerificationStop" = "Stop";
 "Login.CancelPhoneVerificationContinue" = "Continue";
@@ -4848,6 +4852,7 @@ Sorry for the inconvenience.";
 "ChatList.Context.Mute" = "Mute";
 "ChatList.Context.Unmute" = "Unmute";
 "ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.JoinChat" = "Join Chat";
 "ChatList.Context.Delete" = "Delete";
 
 "ContactList.Context.SendMessage" = "Send Message";
@@ -7046,3 +7051,87 @@ Sorry for the inconvenience.";
 "Themes.CreateNewTheme" = "Create a New Theme";
 
 "Chat.JumpToDate" = "Jump to Date";
+
+"VoiceChat.DiscussionGroup" = "discussion group";
+
+"Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";
+
+"Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
+"Conversation.CopyProtectionInfoChannel" = "Copying and forwarding is not allowed in this channel.";
+
+"Conversation.CopyProtectionForwardingDisabledGroup" = "Forwards from this group are restricted";
+"Conversation.CopyProtectionForwardingDisabledChannel" = "Forwards from this channel are restricted";
+"Conversation.CopyProtectionSavingDisabledGroup" = "Saving from this group is restricted";
+"Conversation.CopyProtectionSavingDisabledChannel" = "Saving from this channel is restricted";
+
+"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ restricted message forwarding";
+"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ allowed message forwarding";
+
+"Group.Setup.ForwardingGroupTitle" = "Forwarding From This Group";
+"Group.Setup.ForwardingChannelTitle" = "Saving And Copying Content";
+"Group.Setup.ForwardingEnabled" = "Allow Saving Content";
+"Group.Setup.ForwardingDisabled" = "Restrict Saving Content";
+"Group.Setup.ForwardingGroupInfo" = "Participants will be able copy, save and forward content from this group.";
+"Group.Setup.ForwardingChannelInfo" = "Participants will be able copy, save and forward content from this channel.";
+"Group.Setup.ForwardingGroupInfoDisabled" = "Participants won't be able to copy, save and forward content from this group.";
+"Group.Setup.ForwardingChannelInfoDisabled" = "Participants won't be able to copy, save and forward content from this channel.";
+
+"AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
+"AuthSessions.TerminateIfAwayFor" = "If Inactive For";
+
+"AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
+
+"AuthSessions.View.AcceptTitle" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChats" = "New Secret Chats";
+"AuthSessions.View.AcceptIncomingCalls" = "Incoming Calls";
+
+"Conversation.SendMesageAs" = "Send Message As...";
+"Conversation.InviteRequestAdminGroup" = "%1$@ is an admin of %2$@, a group you requested to join.";
+"Conversation.InviteRequestAdminChannel" = "%1$@ is an admin of %2$@, a channel you requested to join.";
+"Conversation.InviteRequestInfo" = "You received this message because you requested to join %1$@ on %2$@.";
+"Conversation.InviteRequestInfoConfirm" = "I understand";
+
+"AuthSessions.HeaderInfo" = "Link [Telegram Desktop](desktop) or [Telegram Web](web) by scanning a QR code.";
+"AuthSessions.LinkDesktopDevice" = "Link Desktop Device";
+"AuthSessions.AddDevice.ScanInstallInfo" = "Go to [getdesktop.telegram.org](desktop) or [web.telegram.org](web) to get the QR code";
+
+"Channel.AdminLog.MessageSent" = "%@ sent message:";
+
+"ChatList.ClearSearchHistory" = "Are you sure you want to clear your search history?";
+
+"AuthSessions.TerminateSessionText" = "Are you sure you want to terminate this session?";
+"AuthSessions.TerminateOtherSessionsText" = "Are you sure you want to terminate all other sessions?";
+
+"Notifications.ResetAllNotificationsText" = "Are you sure you want to reset all notification settings to default?";
+
+"MessageCalendar.ClearHistoryForThisDay" = "Clear History For This Day";
+"MessageCalendar.ClearHistoryForTheseDays" = "Clear History For These Days";
+"MessageCalendar.EmptySelectionTooltip" = "Please select one or more days first.";
+"Chat.MessageRangeDeleted.ForMe_1" = "Messages for 1 day deleted.";
+"Chat.MessageRangeDeleted.ForMe_any" = "Messages for %@ days deleted.";
+"Chat.MessageRangeDeleted.ForBothSides_1" = "Messages for 1 day deleted for both sides.";
+"Chat.MessageRangeDeleted.ForBothSides_any" = "Messages for %@ days deleted for both sides.";
+
+"ForcedPasswordSetup.Intro.Title" = "Set a Password";
+"ForcedPasswordSetup.Intro.Text" = "If you want to log into your account frequently, please choose a password.";
+"ForcedPasswordSetup.Intro.Action" = "Set a Password";
+"ForcedPasswordSetup.Intro.DoneAction" = "Done";
+"ForcedPasswordSetup.Intro.DismissTitle" = "Warning";
+"ForcedPasswordSetup.Intro.DismissText_1" = "Proceed without a password? If you do not set a password, you will only be able to log into your account via SMS once every **day**.";
+"ForcedPasswordSetup.Intro.DismissText_any" = "Proceed without a password? If you do not set a password, you will only be able to log into your account via SMS once every **%@ days**.";
+"ForcedPasswordSetup.Intro.DismissActionCancel" = "No, let me set a password";
+"ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
+
+"Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
+"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
+"Login.EnterMissingDigits" = "Enter the missing digits";
+
+"Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
+
+"Contacts.AddContact" = "Add Contact";
+
+"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
+"Conversation.LargeEmojiEnable" = "Enable Large Emoji";
+"Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
+
+"ChatList.Archive" = "Archive";

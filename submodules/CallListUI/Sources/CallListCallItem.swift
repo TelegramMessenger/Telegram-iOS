@@ -190,6 +190,11 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
+    private let containerNode: ASDisplayNode
+    override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
+    
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let statusNode: TextNode
@@ -206,6 +211,8 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
     required init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
+        
+        self.containerNode = ASDisplayNode()
         
         self.maskNode = ASImageNode()
         self.maskNode.isUserInteractionEnabled = false
@@ -239,12 +246,13 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.avatarNode)
-        self.addSubnode(self.typeIconNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.statusNode)
-        self.addSubnode(self.dateNode)
-        self.addSubnode(self.infoButtonNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.typeIconNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.statusNode)
+        self.containerNode.addSubnode(self.dateNode)
+        self.containerNode.addSubnode(self.infoButtonNode)
         self.addSubnode(self.accessibilityArea)
         
         self.infoButtonNode.addTarget(self, action: #selector(self.infoPressed), forControlEvents: .touchUpInside)
@@ -631,6 +639,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             
                             let topHighlightInset: CGFloat = (first || !nodeLayout.insets.top.isZero) ? 0.0 : separatorHeight
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: nodeLayout.contentSize.width, height: nodeLayout.contentSize.height))
+                            strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
                             strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - topHighlightInset), size: CGSize(width: nodeLayout.size.width, height: nodeLayout.size.height + topHighlightInset))
                             
                             strongSelf.updateLayout(size: nodeLayout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)

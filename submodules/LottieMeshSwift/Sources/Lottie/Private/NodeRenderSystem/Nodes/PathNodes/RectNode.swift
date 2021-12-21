@@ -8,18 +8,15 @@
 import Foundation
 import CoreGraphics
 
-final class RectNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
+final class RectNodeProperties: NodePropertyMap {
 
   init(rectangle: Rectangle) {
-    self.keypathName = rectangle.name
     self.direction = rectangle.direction
     self.position = NodeProperty(provider: KeyframeInterpolator(keyframes: rectangle.position.keyframes))
     self.size = NodeProperty(provider: KeyframeInterpolator(keyframes: rectangle.size.keyframes))
     self.cornerRadius = NodeProperty(provider: KeyframeInterpolator(keyframes: rectangle.cornerRadius.keyframes))
  
-    self.keypathProperties =  [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Position" : position,
       "Size" : size,
       "Roundness" : cornerRadius
@@ -28,7 +25,6 @@ final class RectNodeProperties: NodePropertyMap, KeypathSearchable {
     self.properties = Array(keypathProperties.values)
   }
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
   let direction: PathDirection
@@ -52,7 +48,7 @@ final class RectangleNode: AnimatorNode, PathNode {
 
   // MARK: Animator Node
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
 

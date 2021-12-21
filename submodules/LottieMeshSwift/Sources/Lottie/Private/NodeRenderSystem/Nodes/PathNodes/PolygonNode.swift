@@ -8,21 +8,16 @@
 import Foundation
 import QuartzCore
 
-final class PolygonNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
-
-  var childKeypaths: [KeypathSearchable] = []
+final class PolygonNodeProperties: NodePropertyMap {
   
   init(star: Star) {
-    self.keypathName = star.name
     self.direction = star.direction
     self.position = NodeProperty(provider: KeyframeInterpolator(keyframes: star.position.keyframes))
     self.outerRadius = NodeProperty(provider: KeyframeInterpolator(keyframes: star.outerRadius.keyframes))
     self.outerRoundedness = NodeProperty(provider: KeyframeInterpolator(keyframes: star.outerRoundness.keyframes))
     self.rotation = NodeProperty(provider: KeyframeInterpolator(keyframes: star.rotation.keyframes))
     self.points = NodeProperty(provider: KeyframeInterpolator(keyframes: star.points.keyframes))
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Position" : position,
       "Outer Radius" : outerRadius,
       "Outer Roundedness" : outerRoundedness,
@@ -32,7 +27,6 @@ final class PolygonNodeProperties: NodePropertyMap, KeypathSearchable {
     self.properties = Array(keypathProperties.values)
   }
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
   let direction: PathDirection
@@ -57,7 +51,7 @@ final class PolygonNode: AnimatorNode, PathNode {
   
   // MARK: Animator Node
 
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
   

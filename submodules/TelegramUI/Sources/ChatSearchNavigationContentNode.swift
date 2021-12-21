@@ -112,7 +112,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                     self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)
                     self.searchBar.placeholderString = nil
                 case let .member(peer):
-                    self.searchBar.tokens = [SearchBarToken(id: peer.id, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: EnginePeer(peer).compactDisplayTitle)]
+                    self.searchBar.tokens = [SearchBarToken(id: peer.id, icon: UIImage(bundleImageName: "Chat List/Search/User"), title: EnginePeer(peer).compactDisplayTitle, permanent: false)]
                     self.searchBar.prefixString = nil
                     self.searchBar.placeholderString = nil
             }

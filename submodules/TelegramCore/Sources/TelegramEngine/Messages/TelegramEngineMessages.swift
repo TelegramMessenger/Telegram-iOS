@@ -92,8 +92,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
 
-        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId) -> Signal<Void, NoError> {
-            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId)
+        public func forwardGameWithScore(messageId: MessageId, to peerId: PeerId, as senderPeerId: PeerId?) -> Signal<Void, NoError> {
+            return _internal_forwardGameWithScore(account: self.account, messageId: messageId, to: peerId, as: senderPeerId)
         }
 
         public func requestUpdatePinnedMessage(peerId: PeerId, update: PinnedMessageUpdate) -> Signal<Void, UpdatePinnedMessageError> {
@@ -249,6 +249,10 @@ public extension TelegramEngine {
 
         public func sparseMessageCalendar(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageCalendar {
             return SparseMessageCalendar(account: self.account, peerId: peerId, messageTag: tag)
+        }
+
+        public func sparseMessageScrollingContext(peerId: EnginePeer.Id) -> SparseMessageScrollingContext {
+            return SparseMessageScrollingContext(account: self.account, peerId: peerId)
         }
 
         public func refreshMessageTagStats(peerId: EnginePeer.Id, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {

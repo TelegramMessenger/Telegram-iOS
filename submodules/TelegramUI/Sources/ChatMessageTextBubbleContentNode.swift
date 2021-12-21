@@ -107,6 +107,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
+                
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -164,7 +166,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
                     statusSize = size
                     statusApply = apply
                 }
@@ -458,7 +460,23 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return .copy(pre)
             } else {
-                return .none
+                if let item = self.item, item.message.text.count == 1, !item.presentationData.largeEmoji {
+                    let (emoji, fitz) = item.message.text.basicEmoji
+                    var emojiFile: TelegramMediaFile?
+                    
+                    emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                    if emojiFile == nil {
+                        emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                    }
+                    
+                    if let emojiFile = emojiFile {
+                        return .largeEmoji(emoji, fitz, emojiFile)
+                    } else {
+                        return .none
+                    }
+                } else {
+                    return .none
+                }
             }
         } else {
             if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
@@ -578,7 +596,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
-            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+            if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled, let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
                 let knobColor: UIColor
                 if item.message.effectivelyIncoming(item.context.account.peerId) {
@@ -614,6 +632,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 textSelectionNode?.removeFromSupernode()
             })
         }
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
     
     override func getStatusNode() -> ASDisplayNode? {

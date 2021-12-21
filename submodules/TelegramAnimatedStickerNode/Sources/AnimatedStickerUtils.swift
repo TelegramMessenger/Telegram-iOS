@@ -27,7 +27,7 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
                 let decompressedData = transformedWithFitzModifier(data: decompressedData, fitzModifier: fitzModifier)
-                if let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
+                if let player = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: cacheKey) {
                     if cancelled.with({ $0 }) {
                         return
                     }
@@ -126,7 +126,7 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
                 let decompressedData = transformedWithFitzModifier(data: decompressedData, fitzModifier: fitzModifier)
-                if let player = LottieInstance(data: decompressedData, cacheKey: cacheKey) {
+                if let player = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: cacheKey) {
                     let endFrame = Int(player.frameCount)
                     
                     if cancelled.with({ $0 }) {

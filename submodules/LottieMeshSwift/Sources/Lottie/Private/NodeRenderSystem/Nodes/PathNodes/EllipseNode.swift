@@ -8,27 +8,19 @@
 import Foundation
 import QuartzCore
 
-final class EllipseNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
+final class EllipseNodeProperties: NodePropertyMap {
   
   init(ellipse: Ellipse) {
-    self.keypathName = ellipse.name
     self.direction = ellipse.direction
     self.position = NodeProperty(provider: KeyframeInterpolator(keyframes: ellipse.position.keyframes))
     self.size = NodeProperty(provider: KeyframeInterpolator(keyframes: ellipse.size.keyframes))
-    self.keypathProperties = [
-      "Position" : position,
-      "Size" : size
-    ]
-    self.properties = Array(keypathProperties.values)
+    self.properties = []
   }
   
   let direction: PathDirection
   let position: NodeProperty<Vector3D>
   let size: NodeProperty<Vector3D>
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
 }
 
@@ -46,7 +38,7 @@ final class EllipseNode: AnimatorNode, PathNode {
   
   // MARK: Animator Node
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return properties
   }
   

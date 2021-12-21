@@ -203,7 +203,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.fullscreenNode.addTarget(self, action: #selector(self.toggleFullscreenPressed), forControlEvents: .touchUpInside)
     }
     
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, metrics, leftInset, rightInset, bottomInset)
         
         let isLandscape = size.width > size.height
@@ -235,7 +235,7 @@ private final class UniversalVideoGalleryItemOverlayNode: GalleryOverlayContentN
         self.wrapperNode.alpha = self.visibilityAlpha
         
         if let validLayout = self.validLayout {
-            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, transition: .animated(duration: 0.3, curve: .easeInOut))
+            self.updateLayout(size: validLayout.0, metrics: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, bottomInset: validLayout.4, isHidden: false, transition: .animated(duration: 0.3, curve: .easeInOut))
         }
     }
     
@@ -2423,8 +2423,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         let url = content.url
                         
                         let item = OpenInItem.url(url: url)
-                        let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: item).count > 1
-                        let openText = canOpenIn ? strongSelf.presentationData.strings.Conversation_FileOpenIn : strongSelf.presentationData.strings.Conversation_LinkDialogOpen
+                        let openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         items.append(.action(ContextMenuActionItem(text: openText, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                             f(.default)
 
@@ -2446,7 +2445,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
             
-            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile {
+            if let (message, maybeFile, _) = strongSelf.contentInfo(), let file = maybeFile, !message.isCopyProtected() {
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Gallery_SaveVideo, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Download"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
                     f(.default)
 

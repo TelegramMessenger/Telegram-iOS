@@ -1194,6 +1194,7 @@ public final class GroupCallParticipantsContext {
     }
     
     private let account: Account
+    private let peerId: PeerId
     public let myPeerId: PeerId
     public let id: Int64
     public let accessHash: Int64
@@ -1286,7 +1287,8 @@ public final class GroupCallParticipantsContext {
     private let updateDefaultMuteDisposable = MetaDisposable()
     private let resetInviteLinksDisposable = MetaDisposable()
     private let updateShouldBeRecordingDisposable = MetaDisposable()
-
+    private let subscribeDisposable = MetaDisposable()
+    
     private var localVideoIsMuted: Bool? = nil
     private var localIsVideoPaused: Bool? = nil
     private var localIsPresentationPaused: Bool? = nil
@@ -1298,6 +1300,7 @@ public final class GroupCallParticipantsContext {
     
     init(account: Account, peerId: PeerId, myPeerId: PeerId, id: Int64, accessHash: Int64, state: State, previousServiceState: ServiceState?) {
         self.account = account
+        self.peerId = peerId
         self.myPeerId = myPeerId
         self.id = id
         self.accessHash = accessHash
@@ -1423,7 +1426,8 @@ public final class GroupCallParticipantsContext {
         self.updateDefaultMuteDisposable.dispose()
         self.updateShouldBeRecordingDisposable.dispose()
         self.activityRankResetTimer?.invalidate()
-        resetInviteLinksDisposable.dispose()
+        self.resetInviteLinksDisposable.dispose()
+        self.subscribeDisposable.dispose()
     }
     
     public func addUpdates(updates: [Update]) {
@@ -2027,6 +2031,15 @@ public final class GroupCallParticipantsContext {
             }
             strongSelf.account.stateManager.addUpdates(updates)
         }))
+    }
+    
+    public func toggleScheduledSubscription(_ subscribe: Bool) {
+        if subscribe == self.stateValue.state.subscribedToScheduled {
+            return
+        }
+        self.stateValue.state.subscribedToScheduled = subscribe
+        
+        self.subscribeDisposable.set(_internal_toggleScheduledGroupCallSubscription(account: self.account, peerId: self.peerId, callId: self.id, accessHash: self.accessHash, subscribe: subscribe).start())
     }
     
     public func loadMore(token: String) {

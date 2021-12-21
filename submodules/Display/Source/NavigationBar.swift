@@ -6,6 +6,12 @@ private var backArrowImageCache: [Int32: UIImage] = [:]
 
 public final class SparseNode: ASDisplayNode {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.alpha.isZero {
+            return nil
+        }
+        if !self.bounds.contains(point) {
+            return nil
+        }
         for view in self.view.subviews {
             if let result = view.hitTest(self.view.convert(point, to: view), with: event), result.isUserInteractionEnabled {
                 return result
@@ -544,6 +550,7 @@ open class NavigationBar: ASDisplayNode {
         if self.badgeNode.text != actualText {
             self.badgeNode.text = actualText
             self.badgeNode.isHidden = actualText.isEmpty
+            self.backButtonNode.manualAlpha = self.badgeNode.isHidden ? 1.0 : 0.0
             
             self.invalidateCalculatedLayout()
             self.requestLayout()
@@ -829,7 +836,7 @@ open class NavigationBar: ASDisplayNode {
         self.titleNode.accessibilityTraits = .header
         
         self.backButtonNode = NavigationButtonNode()
-        self.badgeNode = NavigationBarBadgeNode(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
+        self.badgeNode = NavigationBarBadgeNode(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
         self.badgeNode.isUserInteractionEnabled = false
         self.badgeNode.isHidden = true
         self.backButtonArrow = ASImageNode()
@@ -884,6 +891,7 @@ open class NavigationBar: ASDisplayNode {
         self.backButtonNode.highlightChanged = { [weak self] index, highlighted in
             if let strongSelf = self, index == 0 {
                 strongSelf.backButtonArrow.alpha = (highlighted ? 0.4 : 1.0)
+                strongSelf.badgeNode.alpha = (highlighted ? 0.4 : 1.0)
             }
         }
         self.backButtonNode.pressed = { [weak self] index in
@@ -951,7 +959,7 @@ open class NavigationBar: ASDisplayNode {
             }
             self.stripeNode.backgroundColor = self.presentationData.theme.separatorColor
             
-            self.badgeNode.updateTheme(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
+            self.badgeNode.updateTheme(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
             
             self.requestLayout()
         }
@@ -1083,7 +1091,7 @@ open class NavigationBar: ASDisplayNode {
         
         let badgeSize = self.badgeNode.measure(CGSize(width: 200.0, height: 100.0))
         let backButtonArrowFrame = self.backButtonArrow.frame
-        transition.updateFrame(node: self.badgeNode, frame: CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 7.0, dy: -9.0), size: badgeSize))
+        transition.updateFrame(node: self.badgeNode, frame: CGRect(origin: backButtonArrowFrame.origin.offsetBy(dx: 16.0, dy: 2.0), size: badgeSize))
         
         if self.rightButtonNode.supernode != nil {
             let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)), isLandscape: isLandscape)
@@ -1116,7 +1124,7 @@ open class NavigationBar: ASDisplayNode {
                         transitionBackArrowNode.alpha = max(0.0, 1.0 - progress * 1.3)
                         
                         if let transitionBadgeNode = self.transitionBadgeNode {
-                            transitionBadgeNode.frame = CGRect(origin: transitionBackArrowNode.frame.origin.offsetBy(dx: 7.0, dy: -9.0), size: transitionBadgeNode.bounds.size)
+                            transitionBadgeNode.frame = CGRect(origin: transitionBackArrowNode.frame.origin.offsetBy(dx: 16.0, dy: 2.0), size: transitionBadgeNode.bounds.size)
                             transitionBadgeNode.alpha = transitionBackArrowNode.alpha
                         }
                     }
@@ -1228,6 +1236,7 @@ open class NavigationBar: ASDisplayNode {
     public func makeTransitionBackButtonNode(accentColor: UIColor) -> NavigationButtonNode? {
         if self.backButtonNode.supernode != nil {
             let node = NavigationButtonNode()
+            node.manualAlpha = self.backButtonNode.manualAlpha
             node.updateManualText(self.backButtonNode.manualText)
             node.color = accentColor
             if let validLayout = self.validLayout {
@@ -1278,7 +1287,7 @@ open class NavigationBar: ASDisplayNode {
     
     public func makeTransitionBadgeNode() -> ASDisplayNode? {
         if self.badgeNode.supernode != nil && !self.badgeNode.isHidden {
-            let node = NavigationBarBadgeNode(fillColor: self.presentationData.theme.badgeBackgroundColor, strokeColor: self.presentationData.theme.badgeStrokeColor, textColor: self.presentationData.theme.badgeTextColor)
+            let node = NavigationBarBadgeNode(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
             node.text = self.badgeNode.text
             let nodeSize = node.measure(CGSize(width: 200.0, height: 100.0))
             node.frame = CGRect(origin: CGPoint(), size: nodeSize)

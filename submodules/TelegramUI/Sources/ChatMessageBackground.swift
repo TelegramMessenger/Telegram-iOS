@@ -116,7 +116,7 @@ class ChatMessageBackground: ASDisplayNode {
         case .none:
             image = nil
         case let .incoming(mergeType):
-            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .incoming) {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .incoming), !highlighted {
                 image = nil
             } else {
                 switch mergeType {
@@ -139,7 +139,7 @@ class ChatMessageBackground: ASDisplayNode {
                 }
             }
         case let .outgoing(mergeType):
-            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .outgoing) {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .outgoing), !highlighted {
                 image = nil
             } else {
                 switch mergeType {

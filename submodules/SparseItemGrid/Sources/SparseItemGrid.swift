@@ -15,10 +15,13 @@ private let nullAction = NullActionClass()
 public protocol SparseItemGridLayer: CALayer {
     func update(size: CGSize)
     func needsShimmer() -> Bool
+    
+    func getContents() -> Any?
+    func setContents(_ contents: Any?)
 }
 
 public protocol SparseItemGridView: UIView {
-    func update(size: CGSize)
+    func update(size: CGSize, insets: UIEdgeInsets)
     func needsShimmer() -> Bool
 }
 
@@ -35,7 +38,7 @@ public protocol SparseItemGridBinding: AnyObject {
     func createLayer() -> SparseItemGridLayer?
     func createView() -> SparseItemGridView?
     func createShimmerLayer() -> SparseItemGridShimmerLayer?
-    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], synchronous: SparseItemGrid.Synchronous)
+    func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], size: CGSize, insets: UIEdgeInsets, synchronous: SparseItemGrid.Synchronous)
     func unbindLayer(layer: SparseItemGridLayer)
     func scrollerTextForTag(tag: Int32) -> String?
     func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError>
@@ -392,15 +395,20 @@ public final class SparseItemGrid: ASDisplayNode {
 
             init(containerLayout: ContainerLayout, zoomLevel: ZoomLevel) {
                 self.containerLayout = containerLayout
+                let width: CGFloat
+                if containerLayout.useSideInsets {
+                    width = containerLayout.size.width - containerLayout.insets.left - containerLayout.insets.right
+                } else {
+                    width = containerLayout.size.width
+                }
                 if let fixedItemHeight = containerLayout.fixedItemHeight {
                     self.itemsPerRow = 1
-                    self.itemSize = CGSize(width: containerLayout.size.width, height: fixedItemHeight)
-                    self.lastItemSize = containerLayout.size.width
+                    self.itemSize = CGSize(width: width, height: fixedItemHeight)
+                    self.lastItemSize = width
                     self.itemSpacing = 0.0
                 } else {
                     self.itemSpacing = 1.0
 
-                    let width = containerLayout.size.width
                     let itemsPerRow = CGFloat(zoomLevel.rawValue)
                     self.itemsPerRow = Int(itemsPerRow)
                     let itemSize = floorToScreenPixels((width - (self.itemSpacing * CGFloat(self.itemsPerRow - 1))) / itemsPerRow)
@@ -414,7 +422,8 @@ public final class SparseItemGrid: ASDisplayNode {
                 let row = index / self.itemsPerRow
                 let column = index % self.itemsPerRow
 
-                return CGRect(origin: CGPoint(x: CGFloat(column) * (self.itemSize.width + self.itemSpacing), y: self.containerLayout.insets.top + CGFloat(row) * (self.itemSize.height + self.itemSpacing)), size: CGSize(width: column == (self.itemsPerRow - 1) ? self.lastItemSize : itemSize.width, height: itemSize.height))
+                
+                return CGRect(origin: CGPoint(x: (self.containerLayout.useSideInsets ? self.containerLayout.insets.left : 0.0) + CGFloat(column) * (self.itemSize.width + self.itemSpacing), y: self.containerLayout.insets.top + CGFloat(row) * (self.itemSize.height + self.itemSpacing)), size: CGSize(width: column == (self.itemsPerRow - 1) ? self.lastItemSize : itemSize.width, height: itemSize.height))
             }
 
             func contentHeight(count: Int) -> CGFloat {
@@ -954,7 +963,7 @@ public final class SparseItemGrid: ASDisplayNode {
                 }
 
                 if !bindItems.isEmpty {
-                    items.itemBinding.bindLayers(items: bindItems, layers: bindLayers, synchronous: synchronous)
+                    items.itemBinding.bindLayers(items: bindItems, layers: bindLayers, size: layout.containerLayout.size, insets: layout.containerLayout.insets, synchronous: synchronous)
                 }
 
                 for item in updateLayers {
@@ -962,7 +971,7 @@ public final class SparseItemGrid: ASDisplayNode {
                     if let layer = item.layer {
                         layer.update(size: layer.frame.size)
                     } else if let view = item.view {
-                        view.update(size: layer.frame.size)
+                        view.update(size: layer.frame.size, insets: layout.containerLayout.insets)
                     }
                 }
             }
@@ -1257,6 +1266,7 @@ public final class SparseItemGrid: ASDisplayNode {
     private struct ContainerLayout: Equatable {
         var size: CGSize
         var insets: UIEdgeInsets
+        var useSideInsets: Bool
         var scrollIndicatorInsets: UIEdgeInsets
         var lockScrollingAtTop: Bool
         var fixedItemHeight: CGFloat?
@@ -1504,9 +1514,9 @@ public final class SparseItemGrid: ASDisplayNode {
         }
     }
 
-    public func update(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items, theme: PresentationTheme, synchronous: SparseItemGrid.Synchronous) {
+    public func update(size: CGSize, insets: UIEdgeInsets, useSideInsets: Bool, scrollIndicatorInsets: UIEdgeInsets, lockScrollingAtTop: Bool, fixedItemHeight: CGFloat?, items: Items, theme: PresentationTheme, synchronous: SparseItemGrid.Synchronous) {
         self.theme = theme
-        let containerLayout = ContainerLayout(size: size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, lockScrollingAtTop: lockScrollingAtTop, fixedItemHeight: fixedItemHeight)
+        let containerLayout = ContainerLayout(size: size, insets: insets, useSideInsets: useSideInsets, scrollIndicatorInsets: scrollIndicatorInsets, lockScrollingAtTop: lockScrollingAtTop, fixedItemHeight: fixedItemHeight)
         self.containerLayout = containerLayout
         self.items = items
         self.scrollingArea.isHidden = lockScrollingAtTop

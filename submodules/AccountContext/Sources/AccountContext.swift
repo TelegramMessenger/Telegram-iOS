@@ -10,7 +10,7 @@ import AsyncDisplayKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
-//import MeshAnimationCache
+import MeshAnimationCache
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -147,11 +147,13 @@ public struct ChatAvailableMessageActions {
     public var options: ChatAvailableMessageActionOptions
     public var banAuthor: Peer?
     public var disableDelete: Bool
+    public var isCopyProtected: Bool
     
-    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, disableDelete: Bool) {
+    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?, disableDelete: Bool, isCopyProtected: Bool) {
         self.options = options
         self.banAuthor = banAuthor
         self.disableDelete = disableDelete
+        self.isCopyProtected = isCopyProtected
     }
 }
 
@@ -737,7 +739,7 @@ public protocol AccountContext: AnyObject {
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
-    //var meshAnimationCache: MeshAnimationCache { get }
+    var meshAnimationCache: MeshAnimationCache { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?

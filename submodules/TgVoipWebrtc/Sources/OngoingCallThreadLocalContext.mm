@@ -1,8 +1,5 @@
-#ifndef WEBRTC_IOS
-#import "OngoingCallThreadLocalContext.h"
-#else
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
-#endif
+
 
 #import "Instance.h"
 #import "InstanceImpl.h"
@@ -803,7 +800,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     [list addObject:@"2.7.7"];
     [list addObject:@"3.0.0"];
     if (includeReference) {
-        //[list addObject:@"4.0.0"];
+        [list addObject:@"4.0.0"];
     }
     return list;
 }

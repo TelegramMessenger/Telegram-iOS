@@ -369,8 +369,10 @@ public final class PendingMessageManager {
                     guard let messageContext = strongSelf.messageContexts[message.id] else {
                         continue
                     }
-                    
-                    messageContext.activityType = uploadActivityTypeForMessage(message)
+                                        
+                    if message.author?.id == strongSelf.accountPeerId {
+                        messageContext.activityType = uploadActivityTypeForMessage(message)
+                    }
                     messageContext.threadId = message.threadId
                     strongSelf.collectUploadingInfo(messageContext: messageContext, message: message)
                 }
@@ -433,13 +435,13 @@ public final class PendingMessageManager {
                 }
                 
                 Logger.shared.log("PendingMessageManager", "beginSendingMessages messagesToForward.count: \(messagesToForward.count)")
-
+                
                 
                 for (_, messages) in messagesToForward {
                     for (context, _, _) in messages {
                         context.state = .sending(groupId: nil)
                     }
-                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, group: messages.map { data in
+                    let sendMessage: Signal<PendingMessageResult, NoError> = strongSelf.sendGroupMessagesContent(network: strongSelf.network, postbox: strongSelf.postbox, stateManager: strongSelf.stateManager, accountPeerId: strongSelf.accountPeerId, group: messages.map { data in
                         let (_, message, forwardInfo) = data
                         return (message.id, PendingMessageUploadedContentAndReuploadInfo(content: .forward(forwardInfo), reuploadInfo: nil))
                     })
@@ -508,7 +510,7 @@ public final class PendingMessageManager {
         for (context, _, _) in messages {
             context.state = .sending(groupId: groupId)
         }
-        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendGroupMessagesContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, group: messages.map { ($0.1, $0.2) })
+        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendGroupMessagesContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, accountPeerId: self.accountPeerId, group: messages.map { ($0.1, $0.2) })
         |> map { next -> PendingMessageResult in
             return .progress(1.0)
         }
@@ -518,7 +520,7 @@ public final class PendingMessageManager {
     
     private func commitSendingSingleMessage(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) {
         messageContext.state = .sending(groupId: nil)
-        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, messageId: messageId, content: content)
+        let sendMessage: Signal<PendingMessageResult, NoError> = self.sendMessageContent(network: self.network, postbox: self.postbox, stateManager: self.stateManager, accountPeerId: self.accountPeerId, messageId: messageId, content: content)
         |> map { next -> PendingMessageResult in
             return .progress(1.0)
         }
@@ -669,7 +671,7 @@ public final class PendingMessageManager {
         }
     }
     
-    private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, group: [(messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo)]) -> Signal<Void, NoError> {
+    private func sendGroupMessagesContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, accountPeerId: PeerId, group: [(messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo)]) -> Signal<Void, NoError> {
         let queue = self.queue
         return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
             if group.isEmpty {
@@ -701,6 +703,7 @@ public final class PendingMessageManager {
                 var hideCaptions = false
                 var replyMessageId: Int32?
                 var scheduleTime: Int32?
+                var sendAsPeerId: PeerId?
                 
                 var flags: Int32 = 0
                 
@@ -719,9 +722,11 @@ public final class PendingMessageManager {
                     } else if let attribute = attribute as? ForwardOptionsMessageAttribute {
                         hideSendersNames = attribute.hideNames
                         hideCaptions = attribute.hideCaptions
+                    } else if let attribute = attribute as? SendAsMessageAttribute {
+                        sendAsPeerId = attribute.peerId
                     }
                 }
-                
+                                
                 let sendMessageRequest: Signal<Api.Updates, MTRpcError>
                 if isForward {
                     if messages.contains(where: { $0.0.groupingKey != nil }) {
@@ -734,6 +739,12 @@ public final class PendingMessageManager {
                         flags |= (1 << 12)
                     }
                     
+                    var sendAsInputPeer: Api.InputPeer?
+                    if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
+                        sendAsInputPeer = inputPeer
+                        flags |= (1 << 13)
+                    }
+
                     var forwardIds: [(MessageId, Int64)] = []
                     for (message, content) in messages {
                         var uniqueId: Int64?
@@ -763,7 +774,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, scheduleDate: scheduleTime), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -772,6 +783,12 @@ public final class PendingMessageManager {
                     flags |= (1 << 7)
                     if let _ = replyMessageId {
                         flags |= Int32(1 << 0)
+                    }
+                    
+                    var sendAsInputPeer: Api.InputPeer?
+                    if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
+                        sendAsInputPeer = inputPeer
+                        flags |= (1 << 13)
                     }
                     
                     var singleMedias: [Api.InputSingleMedia] = []
@@ -807,7 +824,7 @@ public final class PendingMessageManager {
                         }
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, multiMedia: singleMedias, scheduleDate: scheduleTime))
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                 }
                 
                 return sendMessageRequest
@@ -961,7 +978,7 @@ public final class PendingMessageManager {
         }
     }
     
-    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) -> Signal<Void, NoError> {
+    private func sendMessageContent(network: Network, postbox: Postbox, stateManager: AccountStateManager, accountPeerId: PeerId, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) -> Signal<Void, NoError> {
         let queue = self.queue
         return postbox.transaction { [weak self] transaction -> Signal<Void, NoError> in
             guard let message = transaction.getMessage(messageId) else {
@@ -977,6 +994,7 @@ public final class PendingMessageManager {
                 var messageEntities: [Api.MessageEntity]?
                 var replyMessageId: Int32?
                 var scheduleTime: Int32?
+                var sendAsPeerId: PeerId?
                 
                 var flags: Int32 = 0
         
@@ -1000,6 +1018,8 @@ public final class PendingMessageManager {
                     } else if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
                         flags |= Int32(1 << 10)
                         scheduleTime = attribute.scheduleTime
+                    } else if let attribute = attribute as? SendAsMessageAttribute {
+                        sendAsPeerId = attribute.peerId
                     }
                 }
                 
@@ -1015,18 +1035,24 @@ public final class PendingMessageManager {
                     }
                 }
                 
+                var sendAsInputPeer: Api.InputPeer?
+                if let sendAsPeerId = sendAsPeerId, let sendAsPeer = transaction.getPeer(sendAsPeerId), let inputPeer = apiInputPeerOrSelf(sendAsPeer, accountPeerId: accountPeerId) {
+                    sendAsInputPeer = inputPeer
+                    flags |= (1 << 13)
+                }
+                
                 let dependencyTag = PendingMessageRequestDependencyTag(messageId: messageId)
                 
                 let sendMessageRequest: Signal<NetworkRequestResult<Api.Updates>, MTRpcError>
                 switch content.content {
                     case .text:
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime), info: .acknowledgement, tag: dependencyTag)
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, scheduleDate: scheduleTime), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -1035,7 +1061,7 @@ public final class PendingMessageManager {
                         if chatContextResult.hideVia {
                             flags |= Int32(1 << 11)
                         }
-                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime))
+                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
                         sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyToMsgId: replyMessageId ?? 0, randomId: uniqueId))

@@ -42,6 +42,7 @@ final class PeerInfoScreenAddressItem: PeerInfoScreenItem {
 private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
     private let bottomSeparatorNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private var item: PeerInfoScreenAddressItem?
     private var itemNode: ItemListAddressItemNode?
@@ -53,6 +54,9 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         self.bottomSeparatorNode = ASDisplayNode()
         self.bottomSeparatorNode.isLayerBacked = true
         
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
+        
         super.init()
         
         bringToFrontForHighlightImpl = { [weak self] in
@@ -61,9 +65,10 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
+        self.addSubnode(self.maskNode)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenAddressItem else {
             return 10.0
         }
@@ -107,6 +112,14 @@ private final class PeerInfoScreenAddressItemNode: PeerInfoScreenItemNode {
         }
         
         let height = itemNode.contentSize.height
+        
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
+        let hasTopCorners = hasCorners && topItem == nil
+        let hasBottomCorners = hasCorners && bottomItem == nil
+        
+        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
         
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))
         

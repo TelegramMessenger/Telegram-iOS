@@ -6,6 +6,7 @@ import MtProtoKit
 public struct ActiveSessionsContextState: Equatable {
     public var isLoadingMore: Bool
     public var sessions: [RecentAccountSession]
+    public var ttlDays: Int32
 }
 
 private final class ActiveSessionsContextImpl {
@@ -29,7 +30,7 @@ private final class ActiveSessionsContextImpl {
         assert(Queue.mainQueue().isCurrent())
         
         self.account = account
-        self._state = ActiveSessionsContextState(isLoadingMore: false, sessions: [])
+        self._state = ActiveSessionsContextState(isLoadingMore: false, sessions: [], ttlDays: 1)
         self._statePromise.set(.single(self._state))
         
         self.loadMore()
@@ -52,17 +53,17 @@ private final class ActiveSessionsContextImpl {
         if self._state.isLoadingMore {
             return
         }
-        self._state = ActiveSessionsContextState(isLoadingMore: true, sessions: self._state.sessions)
-        self.disposable.set((requestRecentAccountSessions(account: account)
-        |> map { result -> (sessions: [RecentAccountSession], canLoadMore: Bool) in
-            return (result, false)
+        self._state = ActiveSessionsContextState(isLoadingMore: true, sessions: self._state.sessions, ttlDays: self._state.ttlDays)
+        self.disposable.set((requestRecentAccountSessions(account: self.account)
+        |> map { result -> (sessions: [RecentAccountSession], ttlDays: Int32, canLoadMore: Bool) in
+            return (result.0, result.1, false)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] (sessions, canLoadMore) in
+        |> deliverOnMainQueue).start(next: { [weak self] (sessions, ttlDays, canLoadMore) in
             guard let strongSelf = self else {
                 return
             }
         
-            strongSelf._state = ActiveSessionsContextState(isLoadingMore: false, sessions: sessions)
+            strongSelf._state = ActiveSessionsContextState(isLoadingMore: false, sessions: sessions, ttlDays: ttlDays)
         }))
     }
     
@@ -79,7 +80,7 @@ private final class ActiveSessionsContextImpl {
             mergedSessions.insert(session, at: 0)
         }
         
-        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: mergedSessions)
+        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: mergedSessions, ttlDays: self._state.ttlDays)
     }
     
     func remove(hash: Int64) -> Signal<Never, TerminateSessionError> {
@@ -100,11 +101,11 @@ private final class ActiveSessionsContextImpl {
                 }
             }
             
-            strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions)
+            strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions, ttlDays: strongSelf._state.ttlDays)
             return .complete()
         }
     }
-    
+        
     func removeOther() -> Signal<Never, TerminateSessionError> {
         return terminateOtherAccountSessions(account: self.account)
         |> deliverOnMainQueue
@@ -115,7 +116,64 @@ private final class ActiveSessionsContextImpl {
             
             let mergedSessions = strongSelf._state.sessions.filter({ $0.hash == 0 })
             
-            strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions)
+            strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions, ttlDays: strongSelf._state.ttlDays)
+            return .complete()
+        }
+    }
+    
+    func updateSessionAcceptsSecretChats(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+        var mergedSessions = self._state.sessions
+        for i in 0 ..< mergedSessions.count {
+            if mergedSessions[i].hash == session.hash {
+                let updatedSession = mergedSessions[i].withUpdatedAcceptsSecretChats(accepts)
+                mergedSessions.remove(at: i)
+                mergedSessions.insert(updatedSession, at: i)
+                break
+            }
+        }
+        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: mergedSessions, ttlDays: self._state.ttlDays)
+        
+        return updateAccountSessionAcceptsSecretChats(account: self.account, hash: session.hash, accepts: accepts)
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] _ -> Signal<Never, UpdateSessionError> in
+            if let strongSelf = self {
+                strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions, ttlDays: strongSelf._state.ttlDays)
+            }
+            return .complete()
+        }
+    }
+    
+    func updateSessionAcceptsIncomingCalls(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+        var mergedSessions = self._state.sessions
+        for i in 0 ..< mergedSessions.count {
+            if mergedSessions[i].hash == session.hash {
+                let updatedSession = mergedSessions[i].withUpdatedAcceptsIncomingCalls(accepts)
+                mergedSessions.remove(at: i)
+                mergedSessions.insert(updatedSession, at: i)
+                break
+            }
+        }
+        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: mergedSessions, ttlDays: self._state.ttlDays)
+        
+        return updateAccountSessionAcceptsIncomingCalls(account: self.account, hash: session.hash, accepts: accepts)
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] _ -> Signal<Never, UpdateSessionError> in
+            if let strongSelf = self {
+                strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions, ttlDays: strongSelf._state.ttlDays)
+            }
+            return .complete()
+        }
+    }
+    
+    func updateAuthorizationTTL(days: Int32) -> Signal<Never, UpadteAuthorizationTTLError> {
+        self._state = ActiveSessionsContextState(isLoadingMore: self._state.isLoadingMore, sessions: self._state.sessions, ttlDays: days)
+        
+        return setAuthorizationTTL(account: self.account, ttl: days)
+        |> deliverOnMainQueue
+        |> mapToSignal { [weak self] _ -> Signal<Never, UpadteAuthorizationTTLError> in
+            if let strongSelf = self {
+                strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: strongSelf._state.sessions, ttlDays: days)
+            }
             return .complete()
         }
     }
@@ -173,6 +231,49 @@ public final class ActiveSessionsContext {
             let disposable = MetaDisposable()
             self.impl.with { impl in
                 disposable.set(impl.removeOther().start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func updateSessionAcceptsSecretChats(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.updateSessionAcceptsSecretChats(session, accepts: accepts).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func updateSessionAcceptsIncomingCalls(_ session: RecentAccountSession, accepts: Bool) -> Signal<Never, UpdateSessionError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.updateSessionAcceptsIncomingCalls(session, accepts: accepts).start(error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+    
+    public func updateAuthorizationTTL(days: Int32) -> Signal<Never, UpadteAuthorizationTTLError> {
+        let days = max(1, min(365, days))
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.updateAuthorizationTTL(days: days).start(error: { error in
                     subscriber.putError(error)
                 }, completed: {
                     subscriber.putCompletion()

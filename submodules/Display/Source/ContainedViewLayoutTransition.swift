@@ -389,6 +389,17 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func animatePositionWithKeyframes(node: ASDisplayNode, keyframes: [AnyObject], removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        switch self {
+        case .immediate:
+            completion?(true)
+        case let .animated(duration, curve):
+            node.layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { value in
+                completion?(value)
+            })
+        }
+    }
+    
     func animateFrame(node: ASDisplayNode, from frame: CGRect, to toFrame: CGRect? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
             case .immediate:

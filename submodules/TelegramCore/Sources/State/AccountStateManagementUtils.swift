@@ -2576,35 +2576,39 @@ func replayFinalState(
                         }
                         
                         if !message.flags.contains(.Incoming), message.forwardInfo == nil {
-                            inner: for media in message.media {
-                                if let file = media as? TelegramMediaFile {
-                                    for attribute in file.attributes {
-                                        switch attribute {
-                                            case let .Sticker(_, packReference, _):
-                                                if let index = message.index, packReference != nil {
-                                                    if let (currentIndex, _) = recentlyUsedStickers[file.fileId] {
-                                                        if currentIndex < index {
+                            if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), let peer = transaction.getPeer(message.id.peerId), peer.isCopyProtectionEnabled {
+                                
+                            } else {
+                                inner: for media in message.media {
+                                    if let file = media as? TelegramMediaFile {
+                                        for attribute in file.attributes {
+                                            switch attribute {
+                                                case let .Sticker(_, packReference, _):
+                                                    if let index = message.index, packReference != nil {
+                                                        if let (currentIndex, _) = recentlyUsedStickers[file.fileId] {
+                                                            if currentIndex < index {
+                                                                recentlyUsedStickers[file.fileId] = (index, file)
+                                                            }
+                                                        } else {
                                                             recentlyUsedStickers[file.fileId] = (index, file)
                                                         }
-                                                    } else {
-                                                        recentlyUsedStickers[file.fileId] = (index, file)
                                                     }
-                                                }
-                                            case .Animated:
-                                                if let index = message.index {
-                                                    if let (currentIndex, _) = recentlyUsedGifs[file.fileId] {
-                                                        if currentIndex < index {
+                                                case .Animated:
+                                                    if let index = message.index {
+                                                        if let (currentIndex, _) = recentlyUsedGifs[file.fileId] {
+                                                            if currentIndex < index {
+                                                                recentlyUsedGifs[file.fileId] = (index, file)
+                                                            }
+                                                        } else {
                                                             recentlyUsedGifs[file.fileId] = (index, file)
                                                         }
-                                                    } else {
-                                                        recentlyUsedGifs[file.fileId] = (index, file)
                                                     }
-                                                }
-                                            default:
-                                                break
+                                                default:
+                                                    break
+                                            }
                                         }
+                                        break inner
                                     }
-                                    break inner
                                 }
                             }
                         }
@@ -3302,65 +3306,63 @@ func replayFinalState(
                         let namespace: ItemCollectionId.Namespace
                         var items: [ItemCollectionItem] = []
                         let info: StickerPackCollectionInfo
-                        switch apiSet {
-                            case let .stickerSet(set, packs, documents):
-                                var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
-                                for pack in packs {
-                                    switch pack {
-                                    case let .stickerPack(text, fileIds):
-                                        let key = ValueBoxKey(text).toMemoryBuffer()
-                                        for fileId in fileIds {
-                                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                            if indexKeysByFile[mediaId] == nil {
-                                                indexKeysByFile[mediaId] = [key]
-                                            } else {
-                                                indexKeysByFile[mediaId]!.append(key)
-                                            }
-                                        }
-                                        break
-                                    }
-                                }
-                                
-                                for apiDocument in documents {
-                                    if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
-                                        let fileIndexKeys: [MemoryBuffer]
-                                        if let indexKeys = indexKeysByFile[id] {
-                                            fileIndexKeys = indexKeys
+                        if case let .stickerSet(set, packs, documents) = apiSet {
+                            var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
+                            for pack in packs {
+                                switch pack {
+                                case let .stickerPack(text, fileIds):
+                                    let key = ValueBoxKey(text).toMemoryBuffer()
+                                    for fileId in fileIds {
+                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                        if indexKeysByFile[mediaId] == nil {
+                                            indexKeysByFile[mediaId] = [key]
                                         } else {
-                                            fileIndexKeys = []
+                                            indexKeysByFile[mediaId]!.append(key)
                                         }
-                                        items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
                                     }
+                                    break
                                 }
-                                
-                                switch set {
-                                    case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
-                                        if (flags & (1 << 3)) != 0 {
-                                            namespace = Namespaces.ItemCollection.CloudMaskPacks
-                                        } else {
-                                            namespace = Namespaces.ItemCollection.CloudStickerPacks
-                                        }
-                                }
+                            }
                             
-                                info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
-                        }
+                            for apiDocument in documents {
+                                if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                                    let fileIndexKeys: [MemoryBuffer]
+                                    if let indexKeys = indexKeysByFile[id] {
+                                        fileIndexKeys = indexKeys
+                                    } else {
+                                        fileIndexKeys = []
+                                    }
+                                    items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
+                                }
+                            }
+                            switch set {
+                                case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
+                                    if (flags & (1 << 3)) != 0 {
+                                        namespace = Namespaces.ItemCollection.CloudMaskPacks
+                                    } else {
+                                        namespace = Namespaces.ItemCollection.CloudStickerPacks
+                                    }
+                            }
+                            
+                            info = StickerPackCollectionInfo(apiSet: set, namespace: namespace)
                         
-                        if namespace == Namespaces.ItemCollection.CloudMaskPacks && syncMasks {
-                            continue loop
-                        } else if namespace == Namespaces.ItemCollection.CloudStickerPacks && syncStickers {
-                            continue loop
+                            if namespace == Namespaces.ItemCollection.CloudMaskPacks && syncMasks {
+                                continue loop
+                            } else if namespace == Namespaces.ItemCollection.CloudStickerPacks && syncStickers {
+                                continue loop
+                            }
+                            
+                            var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
+                            if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
+                                let currentInfo = updatedInfos[index]
+                                updatedInfos.remove(at: index)
+                                updatedInfos.insert(currentInfo, at: 0)
+                            } else {
+                                updatedInfos.insert(info, at: 0)
+                                transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
+                            }
+                            transaction.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
                         }
-                        
-                        var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
-                        if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
-                            let currentInfo = updatedInfos[index]
-                            updatedInfos.remove(at: index)
-                            updatedInfos.insert(currentInfo, at: 0)
-                        } else {
-                            updatedInfos.insert(info, at: 0)
-                            transaction.replaceItemCollectionItems(collectionId: info.id, items: items)
-                        }
-                        transaction.replaceItemCollectionInfos(namespace: info.id.namespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
                     case let .reorder(namespace, ids):
                         let collectionNamespace: ItemCollectionId.Namespace
                         switch namespace {

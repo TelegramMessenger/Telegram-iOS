@@ -50,7 +50,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
 
     private var durationBackgroundNode: NavigationBackgroundNode?
     private var durationNode: ChatInstantVideoMessageDurationNode?
-    private let dateAndStatusNode: ChatMessageDateAndStatusNode
+    let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private let infoBackgroundNode: ASImageNode
     private let muteIconNode: ASImageNode
@@ -262,6 +262,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let sentViaBot = false
             var viewCount: Int? = nil
             var dateReplies = 0
+            let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: item.message.attributes)?.reactions ?? []
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                    edited = !attribute.isHidden
@@ -288,7 +289,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 isReplyThread = true
             }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
             
             var displayVideoFrame = videoFrame
             displayVideoFrame.size.width *= imageScale
@@ -427,7 +428,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         }
                                     }
                                 }
-                            }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false), priority: .embedded, autoplay: true)
+                            }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false, captureProtected: item.message.isCopyProtected()), priority: .embedded, autoplay: true)
                             let previousVideoNode = strongSelf.videoNode
                             strongSelf.videoNode = videoNode
                             strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)

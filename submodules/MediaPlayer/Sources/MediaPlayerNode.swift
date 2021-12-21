@@ -367,7 +367,7 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
     }
     
-    public init(backgroundThread: Bool = false) {
+    public init(backgroundThread: Bool = false, captureProtected: Bool = false) {
         self.videoNode = MediaPlayerNodeDisplayNode()
         
         if false && backgroundThread {
@@ -397,6 +397,9 @@ public final class MediaPlayerNode: ASDisplayNode {
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.videoLayer = videoLayer
+                    if #available(iOS 13.0, *) {
+                        videoLayer.preventsCapture = captureProtected
+                    }
                     strongSelf.updateLayout()
                     
                     strongSelf.layer.addSublayer(videoLayer)

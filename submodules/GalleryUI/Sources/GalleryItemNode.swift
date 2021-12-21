@@ -58,6 +58,10 @@ open class GalleryItemNode: ASDisplayNode {
         return .single(nil)
     }
     
+    open func isPagingEnabled() -> Signal<Bool, NoError> {
+        return .single(true)
+    }
+    
     open func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {
         return .single((nil, nil))
     }

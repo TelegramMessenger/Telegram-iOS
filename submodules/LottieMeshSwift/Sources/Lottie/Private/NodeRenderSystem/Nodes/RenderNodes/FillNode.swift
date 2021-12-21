@@ -8,16 +8,13 @@
 import Foundation
 import CoreGraphics
 
-final class FillNodeProperties: NodePropertyMap, KeypathSearchable {
-  
-  var keypathName: String
+final class FillNodeProperties: NodePropertyMap {
   
   init(fill: Fill) {
-    self.keypathName = fill.name
     self.color = NodeProperty(provider: KeyframeInterpolator(keyframes: fill.color.keyframes))
     self.opacity = NodeProperty(provider: KeyframeInterpolator(keyframes: fill.opacity.keyframes))
     self.type = fill.fillRule
-    self.keypathProperties = [
+    let keypathProperties: [String : AnyNodeProperty] = [
       "Opacity" : opacity,
       "Color" : color
     ]
@@ -28,7 +25,6 @@ final class FillNodeProperties: NodePropertyMap, KeypathSearchable {
   let color: NodeProperty<Color>
   let type: FillRule
   
-  let keypathProperties: [String : AnyNodeProperty]
   let properties: [AnyNodeProperty]
   
 }
@@ -50,7 +46,7 @@ final class FillNode: AnimatorNode, RenderNode {
   
   // MARK: Animator Node Protocol
   
-  var propertyMap: NodePropertyMap & KeypathSearchable {
+  var propertyMap: NodePropertyMap {
     return fillProperties
   }
   

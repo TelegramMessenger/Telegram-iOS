@@ -35,6 +35,23 @@
 
 @end
 
+@protocol TGCaptionPanelView <NSObject>
+
+@property (nonatomic, readonly) UIView *view;
+
+- (NSAttributedString *)caption;
+- (void)setCaption:(NSAttributedString *)caption;
+- (void)dismissInput;
+
+@property (nonatomic, copy) void(^sendPressed)(NSAttributedString *string);
+@property (nonatomic, copy) void(^focusUpdated)(BOOL focused);
+@property (nonatomic, copy) void(^heightUpdated)(BOOL animated);
+
+- (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset;
+- (CGFloat)baseHeight;
+
+@end
+
 @protocol TGPhotoPaintStickersContext <NSObject>
 
 - (int64_t)documentIdForDocument:(id)document;
@@ -43,5 +60,7 @@
 - (UIView<TGPhotoPaintStickerRenderView> *)stickerViewForDocument:(id)document;
 
 @property (nonatomic, copy) id<TGPhotoPaintStickersScreen>(^presentStickersController)(void(^)(id, bool, UIView *, CGRect));
+
+@property (nonatomic, copy) id<TGCaptionPanelView>(^captionPanelView)(void);
 
 @end

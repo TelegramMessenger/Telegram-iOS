@@ -564,8 +564,16 @@ public final class TextNodeLayout: NSObject {
                                 rightOffset = ceil(secondaryOffset)
                             }
                         }
+                        
                         var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
-                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                        switch self.resolvedAlignment {
+                            case .center:
+                                lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
+                            case .natural:
+                                lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                            default:
+                                break
+                        }
                         
                         let rect = CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: abs(rightOffset - leftOffset), height: lineFrame.size.height))
                         if coveringRect.isEmpty {

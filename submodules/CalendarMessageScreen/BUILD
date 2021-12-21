@@ -21,6 +21,7 @@ swift_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/DirectMediaImageCache:DirectMediaImageCache",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/TooltipUI:TooltipUI",
     ],
     visibility = [
         "//visibility:public",

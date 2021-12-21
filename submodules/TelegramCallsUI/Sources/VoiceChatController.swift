@@ -1840,6 +1840,7 @@ public final class VoiceChatController: ViewController {
             
             self.addSubnode(self.dimNode)
             self.addSubnode(self.contentContainer)
+            
             self.contentContainer.addSubnode(self.backgroundNode)
             
             self.contentContainer.addSubnode(self.listContainer)

@@ -321,7 +321,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             break
                     }
                 }
-            } else if let _ = item.message.adAttribute {
+            } else if let adAttribute = item.message.adAttribute {
                 title = nil
                 subtitle = nil
                 text = item.message.text
@@ -342,9 +342,17 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 if let author = item.message.author as? TelegramUser, author.botInfo != nil {
                     actionTitle = item.presentationData.strings.Conversation_ViewBot
                 } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
-                    actionTitle = item.presentationData.strings.Conversation_ViewGroup
+                    if adAttribute.messageId != nil {
+                        actionTitle = item.presentationData.strings.Conversation_ViewPost
+                    } else {
+                        actionTitle = item.presentationData.strings.Conversation_ViewGroup
+                    }
                 } else {
-                    actionTitle = item.presentationData.strings.Conversation_ViewChannel
+                    if adAttribute.messageId != nil {
+                        actionTitle = item.presentationData.strings.Conversation_ViewMessage
+                    } else {
+                        actionTitle = item.presentationData.strings.Conversation_ViewChannel
+                    }
                 }
                 displayLine = false
             }
@@ -533,5 +541,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         let contentNodeFrame = self.contentNode.frame
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+        if !self.contentNode.statusNode.isHidden {
+            return self.contentNode.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

@@ -24,11 +24,12 @@ swift_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
-        "//submodules/Markdown:Markdown",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
     ],
     visibility = [
         "//visibility:public",

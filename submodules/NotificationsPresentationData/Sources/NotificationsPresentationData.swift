@@ -2,9 +2,11 @@ import Foundation
 
 public struct NotificationsPresentationData: Codable, Equatable {
     public var applicationLockedMessageString: String
+    public var incomingCallString: String
     
-    public init(applicationLockedMessageString: String) {
+    public init(applicationLockedMessageString: String, incomingCallString: String) {
         self.applicationLockedMessageString = applicationLockedMessageString
+        self.incomingCallString = incomingCallString
     }
 }
 
