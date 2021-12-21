@@ -429,12 +429,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var currentPinchController: PinchController?
     private weak var currentPinchSourceItemNode: ListViewItemNode?
     
-    private weak var currentReactionContextController: ContextController?
-    private weak var currentReactionContextItemNode: ListViewItemNode?
-    
-    private weak var currentStandaloneReactionAnimation: StandaloneReactionAnimation?
-    private weak var currentStandaloneReactionItemNode: ListViewItemNode?
-    
     private var screenCaptureManager: ScreenCaptureDetectionManager?
     private let chatAdditionalDataDisposable = MetaDisposable()
     
@@ -594,6 +588,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return true
             }
+            
+            strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+            
             if strongSelf.presentVoiceMessageDiscardAlert(action: action, performAction: false) {
                 return false
             }
@@ -1025,6 +1022,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
+                    strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+                    
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, selectAll: selectAll)), items: .single(actions), recognizer: recognizer, gesture: gesture)
                     strongSelf.currentContextController = controller
                     
@@ -1059,8 +1058,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 return
                                             }
                                             if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: updatedReaction) {
-                                                strongSelf.currentReactionContextController = controller
-                                                strongSelf.currentReactionContextItemNode = itemNode
+                                                strongSelf.chatDisplayNode.messageTransitionNode.addMessageContextController(messageId: item.message.id, contextController: controller)
                                                 
                                                 controller.dismissWithReaction(value: updatedReaction, targetView: targetView, hideNode: true, completion: { [weak itemNode, weak targetView] in
                                                     guard let strongSelf = self, let itemNode = itemNode, let targetView = targetView else {
@@ -1115,6 +1113,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.openPeer(peerId: id, navigation: .default, fromMessage: message)
                     })
                 })))
+                
+                strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                 
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageReactionContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, contentNode: sourceNode)), items: .single(items), recognizer: nil, gesture: gesture)
                 
@@ -1238,21 +1238,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
                                 for reaction in availableReactions.reactions {
                                     if reaction.value == updatedReaction {
-                                        let standaloneReactionAnimation = StandaloneReactionAnimation(context: strongSelf.context, theme: strongSelf.presentationData.theme, reaction: ReactionContextItem(
-                                            reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
-                                            stillAnimation: reaction.selectAnimation,
-                                            listAnimation: reaction.activateAnimation,
-                                            applicationAnimation: reaction.effectAnimation
-                                        ))
+                                        let standaloneReactionAnimation = StandaloneReactionAnimation()
                                         
-                                        strongSelf.currentStandaloneReactionAnimation = standaloneReactionAnimation
-                                        strongSelf.currentStandaloneReactionItemNode = itemNode
+                                        strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
                                         
                                         strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
                                         standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
-                                        standaloneReactionAnimation.animateReactionSelection(targetView: targetView, hideNode: true, completion: { [weak standaloneReactionAnimation] in
-                                            standaloneReactionAnimation?.removeFromSupernode()
-                                        })
+                                        standaloneReactionAnimation.animateReactionSelection(
+                                            context: strongSelf.context,
+                                            theme: strongSelf.presentationData.theme,
+                                            reaction: ReactionContextItem(
+                                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                                stillAnimation: reaction.selectAnimation,
+                                                listAnimation: reaction.activateAnimation,
+                                                applicationAnimation: reaction.effectAnimation
+                                            ),
+                                            targetView: targetView,
+                                            hideNode: true,
+                                            completion: { [weak standaloneReactionAnimation] in
+                                                standaloneReactionAnimation?.removeFromSupernode()
+                                            }
+                                        )
                                         
                                         break
                                     }
@@ -2471,6 +2477,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })))
                     
+                    strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+                    
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.forEachController({ controller in
@@ -2547,6 +2555,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         f(.dismissWithoutContent)
                     })))
+                    
+                    strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: topMessage, selectAll: true)), items: .single(ContextController.Items(content: .list(actions))), recognizer: nil)
                     strongSelf.currentContextController = controller
@@ -2981,6 +2991,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return items
                 }
                 
+                strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+                
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             })
@@ -3286,6 +3298,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })))
                         return items
                     }
+                    
+                    strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
                     let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: galleryController, sourceNode: node, passthroughTouches: false)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                     strongSelf.presentInGlobalOverlay(contextController)
@@ -4888,26 +4902,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if let reactionItemNode = strongSelf.currentReactionContextItemNode, let currentReactionContextController = strongSelf.currentReactionContextController {
-                if let itemNode = itemNode {
-                    if itemNode === reactionItemNode {
-                        currentReactionContextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
-                    }
-                } else {
-                    currentReactionContextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
-                }
-            }
-
-            if let standaloneReactionItemNode = strongSelf.currentStandaloneReactionItemNode, let currentStandaloneReactionAnimation = strongSelf.currentStandaloneReactionAnimation {
-                if let itemNode = itemNode {
-                    if itemNode === standaloneReactionItemNode {
-                        currentStandaloneReactionAnimation.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
-                    }
-                } else {
-                    currentStandaloneReactionAnimation.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
-                }
-            }
-            
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
 
@@ -6271,6 +6265,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     return items
                 }
+                
+                strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
 
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
                 contextController.dismissedForCancel = { [weak chatController] in
@@ -7750,6 +7746,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
+            
+            strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+            
             let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             strongSelf.presentInGlobalOverlay(contextController)
         }, joinGroupCall: { [weak self] activeCall in
@@ -7811,6 +7810,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var items: [ContextMenuItem] = []
             items.append(.custom(ChatSendAsPeerTitleContextItem(text: strongSelf.presentationInterfaceState.strings.Conversation_SendMesageAs.uppercased()), false))
             items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId), false))
+            
+            strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             
             let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceNode: node, insets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: bottomInset, right: 0.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             contextController.dismissed = { [weak self] in
@@ -11998,6 +11999,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                 let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: .timestamp(timestamp), highlight: false, timecode: nil), botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
+                
+                strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+                
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, sourceRect: sourceRect, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }

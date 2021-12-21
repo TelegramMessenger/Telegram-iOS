@@ -653,4 +653,15 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             intermediateCompletion()
         })
     }
+    
+    func cancelReactionAnimation() {
+        self.reactionContextNode?.cancelReactionAnimation()
+    }
+    
+    func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        if self.reactionContextNodeIsAnimatingOut, let reactionContextNode = self.reactionContextNode {
+            reactionContextNode.bounds = reactionContextNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
+            transition.animateOffsetAdditive(node: reactionContextNode, offset: -offset.y)
+        }
+    }
 }
