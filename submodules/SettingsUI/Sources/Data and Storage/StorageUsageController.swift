@@ -507,7 +507,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     } else {
                         otherSize = (!otherSize.0, otherSize.1)
                     }
-                    controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                    controller?.updateItem(groupIndex: 0, itemIndex: itemIndex + 1, { item in
                         if let item = item as? ActionSheetCheckboxItem {
                             return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
                         }
