@@ -986,7 +986,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                         let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 10.0), size: reactionButtonsSizeAndApply.0)
+                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 4.0), size: reactionButtonsSizeAndApply.0)
                         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                             reactionButtonsFrame.origin.y += 4.0 + actionButtonsSizeAndApply.0.height
                         }
