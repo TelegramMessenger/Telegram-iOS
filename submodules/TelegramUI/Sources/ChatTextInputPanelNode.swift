@@ -296,7 +296,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     var isMediaDeleted: Bool = false
     
-    private let inputMenu = ChatTextInputMenu()
+    private let inputMenu: ChatTextInputMenu
     
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
@@ -448,6 +448,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
 
+        var hasSpoilers = true
+        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+            hasSpoilers = false
+        }
+        self.inputMenu = ChatTextInputMenu(hasSpoilers: hasSpoilers)
+        
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
         
@@ -713,6 +719,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             textInputNode.frame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - self.textInputViewInternalInsets.bottom))
+            textInputNode.view.layoutIfNeeded()
+            self.updateSpoiler()
         }
         
         self.textInputBackgroundNode.isUserInteractionEnabled = false
@@ -1793,10 +1801,145 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func updateSpoiler() {
+        guard let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState else {
+            return
+        }
+        
+        let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+        
+        var rects: [CGRect] = []
+        
+        if let attributedText = textInputNode.attributedText {
+            let beginning = textInputNode.textView.beginningOfDocument
+            attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
+                if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                    func addSpoiler(startIndex: Int, endIndex: Int) {
+                        if let start = textInputNode.textView.position(from: beginning, offset: startIndex), let end = textInputNode.textView.position(from: start, offset: endIndex - startIndex), let textRange = textInputNode.textView.textRange(from: start, to: end) {
+                            let textRects = textInputNode.textView.selectionRects(for: textRange)
+                            for textRect in textRects {
+                                rects.append(textRect.rect.insetBy(dx: 1.0, dy: 1.0).offsetBy(dx: 0.0, dy: 1.0))
+                            }
+                        }
+                    }
+                    
+                    var startIndex: Int?
+                    var currentIndex: Int?
+                    
+                    let nsString = (attributedText.string as NSString)
+                    nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                        if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                            if let currentStartIndex = startIndex {
+                                startIndex = nil
+                                let endIndex = range.location
+                                addSpoiler(startIndex: currentStartIndex, endIndex: endIndex)
+                            }
+                        } else if startIndex == nil {
+                            startIndex = range.location
+                        }
+                        currentIndex = range.location + range.length
+                    }
+                    
+                    if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                        startIndex = nil
+                        let endIndex = currentIndex
+                        addSpoiler(startIndex: currentStartIndex, endIndex: endIndex)
+                    }
+                }
+            })
+        }
+        
+        if !rects.isEmpty {
+            let dustNode: InvisibleInkDustNode
+            if let current = self.dustNode {
+                dustNode = current
+            } else {
+                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode.alpha = self.spoilersRevealed ? 0.0 : 1.0
+                dustNode.isUserInteractionEnabled = false
+                textInputNode.textView.addSubview(dustNode.view)
+                self.dustNode = dustNode
+            }
+            dustNode.frame = CGRect(origin: CGPoint(), size: textInputNode.textView.contentSize)
+            dustNode.update(size: textInputNode.textView.contentSize, color: textColor, rects: rects, wordRects: rects)
+        } else if let dustNode = self.dustNode {
+            dustNode.removeFromSupernode()
+            self.dustNode = nil
+        }
+    }
+    
+    private func updateSpoilersRevealed(animated: Bool = true) {
         guard let textInputNode = self.textInputNode else {
             return
         }
-        print(textInputNode.attributedText?.description ?? "")
+        
+        let selectionRange = textInputNode.textView.selectedRange
+        
+        var revealed = false
+        if let attributedText = textInputNode.attributedText {
+            attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, range, _ in
+                if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                    if let _ = selectionRange.intersection(range) {
+                        revealed = true
+                    }
+                }
+            })
+        }
+            
+        guard self.spoilersRevealed != revealed else {
+            return
+        }
+        self.spoilersRevealed = revealed
+        
+        if revealed {
+            self.updateInternalSpoilersRevealed(true, animated: animated)
+        } else {
+            Queue.mainQueue().after(1.5, {
+                self.updateInternalSpoilersRevealed(false, animated: true)
+            })
+        }
+    }
+    
+    private func updateInternalSpoilersRevealed(_ revealed: Bool, animated: Bool) {
+        guard self.spoilersRevealed == revealed, let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState else {
+            return
+        }
+        
+        let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+        let accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
+        let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
+        
+        refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed)
+        
+        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
+        
+        if textInputNode.textView.subviews.count > 1, animated {
+            let containerView = textInputNode.textView.subviews[1]
+            if let canvasView = containerView.subviews.first {
+                if let snapshotView = canvasView.snapshotView(afterScreenUpdates: false) {
+                    textInputNode.view.insertSubview(snapshotView, at: 0)
+                    canvasView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+            }
+        }
+    
+        if animated {
+            if revealed {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+                if let dustNode = self.dustNode {
+                    transition.updateAlpha(node: dustNode, alpha: 0.0)
+                }
+            } else {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+                if let dustNode = self.dustNode {
+                    transition.updateAlpha(node: dustNode, alpha: 1.0)
+                }
+            }
+        } else if let dustNode = self.dustNode {
+            dustNode.alpha = revealed ? 0.0 : 1.0
+        }
     }
     
     private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
@@ -2069,6 +2212,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
+            
+            self.updateSpoilersRevealed()
         }
     }
     
@@ -2190,9 +2335,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func formatAttributesSpoiler(_ sender: Any) {
         self.inputMenu.back()
+        
+        var animated = false
+        if let attributedText = self.textInputNode?.attributedText {
+            attributedText.enumerateAttributes(in: NSMakeRange(0, attributedText.length), options: [], using: { attributes, _, _ in
+                if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                    animated = true
+                }
+            })
+        }
+        
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler), inputMode)
         }
+        
+        self.updateSpoilersRevealed(animated: animated)
     }
     
     @objc func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {

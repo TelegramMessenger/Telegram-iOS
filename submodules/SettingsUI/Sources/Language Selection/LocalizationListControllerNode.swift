@@ -15,6 +15,7 @@ import SearchBarNode
 import SearchUI
 import UndoUI
 import TelegramUIPreferences
+import Translate
 
 private enum LanguageListSection: ItemListSectionId {
     case translate
@@ -432,8 +433,20 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             var existingIds = Set<String>()
             
             var showTranslate = true
+            var ignoredLanguages: [String] = []
             if let translationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
                 showTranslate = translationSettings.showTranslate
+                if let languages = translationSettings.ignoredLanguages {
+                    ignoredLanguages = languages
+                } else {
+                    if let activeLanguageCode = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguageCode) {
+                        ignoredLanguages = [activeLanguageCode]
+                    }
+                }
+            } else {
+                if let activeLanguageCode = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguageCode) {
+                    ignoredLanguages = [activeLanguageCode]
+                }
             }
             
             let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self)
@@ -444,8 +457,18 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     entries.append(.translateTitle(text: presentationData.strings.Localization_TranslateMessages.uppercased()))
                     entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
                     if showTranslate {
-                        entries.append(.doNotTranslate(text: presentationData.strings.Localization_DoNotTranslate, value: ""))
-                        entries.append(.translateInfo(text: presentationData.strings.Localization_DoNotTranslateInfo))
+                        var value = ""
+                        if ignoredLanguages.count > 1 {
+                            value = ignoredLanguages.joined(separator: ", ")
+                        } else if let code = ignoredLanguages.first {
+                            let enLocale = Locale(identifier: "en")
+                            if let title = enLocale.localizedString(forLanguageCode: code) {
+                                value = title
+                            }
+                        }
+                        
+                        entries.append(.doNotTranslate(text: presentationData.strings.Localization_DoNotTranslate, value: value))
+                        entries.append(.translateInfo(text: ignoredLanguages.count > 1 ? presentationData.strings.Localization_DoNotTranslateManyInfo : presentationData.strings.Localization_DoNotTranslateInfo))
                     } else {
                         entries.append(.translateInfo(text: presentationData.strings.Localization_ShowTranslateInfo))
                     }

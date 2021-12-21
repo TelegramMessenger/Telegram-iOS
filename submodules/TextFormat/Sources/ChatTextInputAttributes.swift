@@ -86,7 +86,11 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
                 result.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
             } else if key == ChatTextInputAttributes.spoiler {
                 result.addAttribute(key, value: value, range: range)
-                result.addAttribute(NSAttributedString.Key.backgroundColor, value: textColor.withAlphaComponent(0.15), range: range)
+                if spoilersRevealed {
+                    result.addAttribute(NSAttributedString.Key.backgroundColor, value: textColor.withAlphaComponent(0.15), range: range)
+                } else {
+                    result.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
+                }
             }
         }
             
@@ -472,7 +476,11 @@ public func refreshChatTextInputAttributes(_ textNode: ASEditableTextNode, theme
                     textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
                 } else if key == ChatTextInputAttributes.spoiler {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
-                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.15), range: range)
+                    if spoilersRevealed {
+                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.15), range: range)
+                    } else {
+                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
+                    }
                 }
             }
                 
@@ -564,7 +572,11 @@ public func refreshGenericTextInputAttributes(_ textNode: ASEditableTextNode, th
                     textNode.textView.textStorage.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: range)
                 } else if key == ChatTextInputAttributes.spoiler {
                     textNode.textView.textStorage.addAttribute(key, value: value, range: range)
-                    textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: UIColor.clear, range: range)
+                    if spoilersRevealed {
+                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.backgroundColor, value: theme.chat.inputPanel.primaryTextColor.withAlphaComponent(0.15), range: range)
+                    } else {
+                        textNode.textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
+                    }
                 }
             }
                 

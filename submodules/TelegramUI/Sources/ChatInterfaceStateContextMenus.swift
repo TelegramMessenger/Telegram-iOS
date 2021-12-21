@@ -82,7 +82,11 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             }
         }
     } else if let author = message.author, message.author?.id != message.id.peerId, author.id.namespace == Namespaces.Peer.CloudChannel && message.id.peerId.namespace == Namespaces.Peer.CloudChannel, !message.flags.contains(.Incoming) {
-        hasEditRights = true
+        if message.media.contains(where: { $0 is TelegramMediaInvoice }) {
+            hasEditRights = false
+        } else {
+            hasEditRights = true
+        }
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
             switch peer.info {
@@ -708,7 +712,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             resourceAvailable = false
         }
         
-        if (!messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled {
+        var messageText: String = ""
+        for message in messages {
+            if !message.text.isEmpty {
+                if messageText.isEmpty {
+                    messageText = message.text
+                } else {
+                    messageText = ""
+                    break
+                }
+            }
+        }
+        
+        if (!messageText.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -738,7 +754,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             if let restrictedText = restrictedText {
                                 storeMessageTextInPasteboard(restrictedText, entities: nil)
                             } else {
-                                storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                                storeMessageTextInPasteboard(messageText, entities: messageEntities)
                             }
                             
                             Queue.mainQueue().after(0.2, {
@@ -754,7 +770,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         |> deliverOnMainQueue).start(next: { data in
                                             if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                                 if let image = UIImage(data: imageData) {
-                                                    if !message.text.isEmpty {
+                                                    if !messageText.isEmpty {
                                                         copyTextWithEntities()
                                                     } else {
                                                         UIPasteboard.general.image = image
@@ -780,20 +796,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     f(.default)
                 })))
                 
-                if canTranslateText(context: context, text: message.text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages) {
+                if canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages) {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: message.text), .translate)
+                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: messageText), .translate)
                         f(.default)
                     })))
                 }
                 
-                if isSpeakSelectionEnabled() && !message.text.isEmpty {
+                if isSpeakSelectionEnabled() && !messageText.isEmpty {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSpeak, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: message.text), .speak)
+                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: messageText), .speak)
                         f(.default)
                     })))
                 }

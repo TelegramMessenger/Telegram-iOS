@@ -1757,7 +1757,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.dustNode = dustNode
                             strongSelf.contextContainer.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode)
                         }
-                        dustNode.update(size: textNodeFrame.size, color: theme.messageTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
+                        dustNode.update(size: textNodeFrame.size, color: theme.messageTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
                         dustNode.frame = textNodeFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
                      
                     } else if let dustNode = strongSelf.dustNode {
@@ -1786,11 +1786,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.inputActivitiesNode.alpha = 1.0
                             strongSelf.textNode.alpha = 0.0
                             strongSelf.authorNode.alpha = 0.0
+                            strongSelf.dustNode?.alpha = 0.0
                             
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.authorNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                                strongSelf.dustNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                             }
                         }
                     } else {
@@ -1798,6 +1800,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.inputActivitiesNode.alpha = 0.0
                             strongSelf.textNode.alpha = 1.0
                             strongSelf.authorNode.alpha = 1.0
+                            strongSelf.dustNode?.alpha = 1.0
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { value in
                                     if let strongSelf = self, value {
@@ -1806,6 +1809,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 })
                                 strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.authorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                strongSelf.dustNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                             } else {
                                 strongSelf.inputActivitiesNode.removeFromSupernode()
                             }
@@ -2015,6 +2019,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var textFrame = self.textNode.frame
             textFrame.origin.x = contentRect.origin.x
             transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+            
+            if let dustNode = self.dustNode {
+                transition.updateFrameAdditive(node: dustNode, frame: textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0))
+            }
             
             var mediaPreviewOffsetX = textFrame.origin.x + 1.0
             let contentImageSpacing: CGFloat = 2.0
