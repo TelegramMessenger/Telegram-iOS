@@ -173,7 +173,8 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
         isTemporary: false,
         isReadOnly: false,
         useCopy: false,
-        useCaches: !supplementary
+        useCaches: !supplementary,
+        removeDatabaseOnError: !supplementary
     )
     
     return postbox
@@ -1295,7 +1296,8 @@ public func standaloneStateManager(
         isTemporary: false,
         isReadOnly: false,
         useCopy: false,
-        useCaches: false
+        useCaches: false,
+        removeDatabaseOnError: false
     )
 
     return postbox

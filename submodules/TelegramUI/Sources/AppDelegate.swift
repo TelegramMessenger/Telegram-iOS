@@ -705,7 +705,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             UINavigationController.attemptRotationToDeviceOrientation()
         })
 
-        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true)
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true)
         self.accountManager = accountManager
 
         telegramUIDeclareEncodables()
