@@ -195,7 +195,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         animation.animator.updateFrame(layer: buttonView.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0)), completion: nil)
                     }
                     if let iconNode = node.iconNode {
-                        animation.animator.updateFrame(layer: iconNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0)), completion: nil)
+                        animation.animator.updateFrame(layer: iconNode.layer, frame: CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0), completion: nil)
                     }
                     
                     node.accessibilityArea.accessibilityLabel = title

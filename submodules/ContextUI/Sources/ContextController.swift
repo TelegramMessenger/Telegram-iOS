@@ -148,6 +148,10 @@ public final class ContextMenuActionItem {
 public protocol ContextMenuCustomNode: ASDisplayNode {
     func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void)
     func updateTheme(presentationData: PresentationData)
+    
+    func canBeHighlighted() -> Bool
+    func updateIsHighlighted(isHighlighted: Bool)
+    func performAction()
 }
 
 public protocol ContextMenuCustomItem {
@@ -355,23 +359,28 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         }
                     }
                     if strongSelf.didMoveFromInitialGesturePoint {
-                        let actionPoint = strongSelf.view.convert(localPoint, to: strongSelf.actionsContainerNode.view)
-                        let actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
-                        if strongSelf.highlightedActionNode !== actionNode {
-                            strongSelf.highlightedActionNode?.setIsHighlighted(false)
-                            strongSelf.highlightedActionNode = actionNode
-                            if let actionNode = actionNode {
-                                actionNode.setIsHighlighted(true)
-                                strongSelf.hapticFeedback.tap()
+                        if let presentationNode = strongSelf.presentationNode {
+                            let presentationPoint = strongSelf.view.convert(localPoint, to: presentationNode.view)
+                            presentationNode.highlightGestureMoved(location: presentationPoint)
+                        } else {
+                            let actionPoint = strongSelf.view.convert(localPoint, to: strongSelf.actionsContainerNode.view)
+                            let actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
+                            if strongSelf.highlightedActionNode !== actionNode {
+                                strongSelf.highlightedActionNode?.setIsHighlighted(false)
+                                strongSelf.highlightedActionNode = actionNode
+                                if let actionNode = actionNode {
+                                    actionNode.setIsHighlighted(true)
+                                    strongSelf.hapticFeedback.tap()
+                                }
                             }
-                        }
-                        
-                        if let reactionContextNode = strongSelf.reactionContextNode {
-                            let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
-                            let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
-                            if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
-                                strongSelf.highlightedReaction = highlightedReaction
-                                strongSelf.hapticFeedback.tap()
+                            
+                            if let reactionContextNode = strongSelf.reactionContextNode {
+                                let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
+                                let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
+                                if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
+                                    strongSelf.highlightedReaction = highlightedReaction
+                                    strongSelf.hapticFeedback.tap()
+                                }
                             }
                         }
                     }
@@ -383,18 +392,22 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }
                 recognizer.externalUpdated = nil
                 if strongSelf.didMoveFromInitialGesturePoint {
-                    if let (_, _) = viewAndPoint {
-                        if let highlightedActionNode = strongSelf.highlightedActionNode {
-                            strongSelf.highlightedActionNode = nil
-                            highlightedActionNode.performAction()
-                        }
-                        if let highlightedReaction = strongSelf.highlightedReaction {
-                            strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
-                        }
+                    if let presentationNode = strongSelf.presentationNode {
+                        presentationNode.highlightGestureFinished(performAction: viewAndPoint != nil)
                     } else {
-                        if let highlightedActionNode = strongSelf.highlightedActionNode {
-                            strongSelf.highlightedActionNode = nil
-                            highlightedActionNode.setIsHighlighted(false)
+                        if let (_, _) = viewAndPoint {
+                            if let highlightedActionNode = strongSelf.highlightedActionNode {
+                                strongSelf.highlightedActionNode = nil
+                                highlightedActionNode.performAction()
+                            }
+                            if let highlightedReaction = strongSelf.highlightedReaction {
+                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
+                            }
+                        } else {
+                            if let highlightedActionNode = strongSelf.highlightedActionNode {
+                                strongSelf.highlightedActionNode = nil
+                                highlightedActionNode.setIsHighlighted(false)
+                            }
                         }
                     }
                 }
@@ -420,27 +433,32 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         }
                     }
                     if strongSelf.didMoveFromInitialGesturePoint {
-                        let actionPoint = strongSelf.view.convert(localPoint, to: strongSelf.actionsContainerNode.view)
-                        var actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
-                        if let actionNodeValue = actionNode, !actionNodeValue.isActionEnabled {
-                            actionNode = nil
-                        }
-
-                        if strongSelf.highlightedActionNode !== actionNode {
-                            strongSelf.highlightedActionNode?.setIsHighlighted(false)
-                            strongSelf.highlightedActionNode = actionNode
-                            if let actionNode = actionNode {
-                                actionNode.setIsHighlighted(true)
-                                strongSelf.hapticFeedback.tap()
+                        if let presentationNode = strongSelf.presentationNode {
+                            let presentationPoint = strongSelf.view.convert(localPoint, to: presentationNode.view)
+                            presentationNode.highlightGestureMoved(location: presentationPoint)
+                        } else {
+                            let actionPoint = strongSelf.view.convert(localPoint, to: strongSelf.actionsContainerNode.view)
+                            var actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
+                            if let actionNodeValue = actionNode, !actionNodeValue.isActionEnabled {
+                                actionNode = nil
                             }
-                        }
-                        
-                        if let reactionContextNode = strongSelf.reactionContextNode {
-                            let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
-                            let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
-                            if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
-                                strongSelf.highlightedReaction = highlightedReaction
-                                strongSelf.hapticFeedback.tap()
+
+                            if strongSelf.highlightedActionNode !== actionNode {
+                                strongSelf.highlightedActionNode?.setIsHighlighted(false)
+                                strongSelf.highlightedActionNode = actionNode
+                                if let actionNode = actionNode {
+                                    actionNode.setIsHighlighted(true)
+                                    strongSelf.hapticFeedback.tap()
+                                }
+                            }
+                            
+                            if let reactionContextNode = strongSelf.reactionContextNode {
+                                let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
+                                let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
+                                if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
+                                    strongSelf.highlightedReaction = highlightedReaction
+                                    strongSelf.hapticFeedback.tap()
+                                }
                             }
                         }
                     }
@@ -452,19 +470,23 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }
                 gesture.externalUpdated = nil
                 if strongSelf.didMoveFromInitialGesturePoint {
-                    if let (_, _) = viewAndPoint {
-                        if let highlightedActionNode = strongSelf.highlightedActionNode {
-                            strongSelf.highlightedActionNode = nil
-                            highlightedActionNode.performAction()
-                        }
-                        
-                        if let highlightedReaction = strongSelf.highlightedReaction {
-                            strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
-                        }
+                    if let presentationNode = strongSelf.presentationNode {
+                        presentationNode.highlightGestureFinished(performAction: viewAndPoint != nil)
                     } else {
-                        if let highlightedActionNode = strongSelf.highlightedActionNode {
-                            strongSelf.highlightedActionNode = nil
-                            highlightedActionNode.setIsHighlighted(false)
+                        if let (_, _) = viewAndPoint {
+                            if let highlightedActionNode = strongSelf.highlightedActionNode {
+                                strongSelf.highlightedActionNode = nil
+                                highlightedActionNode.performAction()
+                            }
+                            
+                            if let highlightedReaction = strongSelf.highlightedReaction {
+                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
+                            }
+                        } else {
+                            if let highlightedActionNode = strongSelf.highlightedActionNode {
+                                strongSelf.highlightedActionNode = nil
+                                highlightedActionNode.setIsHighlighted(false)
+                            }
                         }
                     }
                 }
@@ -1207,9 +1229,18 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
+        if let presentationNode = self.presentationNode {
+            presentationNode.addRelativeContentOffset(offset, transition: transition)
+        }
         if self.reactionContextNodeIsAnimatingOut, let reactionContextNode = self.reactionContextNode {
             reactionContextNode.bounds = reactionContextNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
             transition.animateOffsetAdditive(node: reactionContextNode, offset: -offset.y)
+        }
+    }
+    
+    func cancelReactionAnimation() {
+        if let presentationNode = self.presentationNode {
+            presentationNode.cancelReactionAnimation()
         }
     }
     
@@ -2348,6 +2379,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
             })
             self.dismissed?()
         }
+    }
+    
+    public func cancelReactionAnimation() {
+        self.controllerNode.cancelReactionAnimation()
     }
     
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {

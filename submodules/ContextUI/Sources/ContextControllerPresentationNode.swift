@@ -25,4 +25,10 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
     )
     
     func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void)
+    func cancelReactionAnimation()
+    
+    func highlightGestureMoved(location: CGPoint)
+    func highlightGestureFinished(performAction: Bool)
+    
+    func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition)
 }

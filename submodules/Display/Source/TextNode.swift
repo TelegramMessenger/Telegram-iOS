@@ -173,7 +173,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let textStroke: (UIColor, CGFloat)?
     fileprivate let displaySpoilers: Bool
     public let hasRTL: Bool
-    public let spoilers: [CGRect]
+    public let spoilers: [(NSRange, CGRect)]
     
     fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) {
         self.attributedString = attributedString
@@ -198,12 +198,12 @@ public final class TextNodeLayout: NSObject {
         self.textStroke = textStroke
         self.displaySpoilers = displaySpoilers
         var hasRTL = false
-        var spoilers: [CGRect] = []
+        var spoilers: [(NSRange, CGRect)] = []
         for line in lines {
             if line.isRTL {
                 hasRTL = true
             }
-            spoilers.append(contentsOf: line.spoilers.map { $0.frame.offsetBy(dx: line.frame.minX, dy: line.frame.minY) })
+            spoilers.append(contentsOf: line.spoilers.map { ( $0.range, $0.frame.offsetBy(dx: line.frame.minX, dy: line.frame.minY)) })
         }
         self.hasRTL = hasRTL
         self.spoilers = spoilers
@@ -973,7 +973,7 @@ public class TextNode: ASDisplayNode {
                 
                 let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, lastLineCharacterIndex, Double(lineConstrainedWidth))
                 
-                func addSpoiler(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int) {
+                func addSpoiler(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
                     var secondaryLeftOffset: CGFloat = 0.0
                     let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
                     var leftOffset = floor(rawLeftOffset)
@@ -988,7 +988,7 @@ public class TextNode: ASDisplayNode {
                         rightOffset = ceil(secondaryRightOffset)
                     }
                     
-                    spoilers.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+                    spoilers.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent)))
                 }
                 
                 var isLastLine = false
@@ -1033,6 +1033,10 @@ public class TextNode: ASDisplayNode {
                         let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
                         
                         coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(lineConstrainedSize.width), truncationType, truncationToken) ?? truncationToken
+                        brokenLineRange.length = CTLineGetGlyphCount(coreTextLine) - 1
+                        if brokenLineRange.location + brokenLineRange.length > attributedString.length {
+                            brokenLineRange.length = attributedString.length - brokenLineRange.location
+                        }
                         truncated = true
                     }
                     
@@ -1063,7 +1067,7 @@ public class TextNode: ASDisplayNode {
                             if let currentStartIndex = startIndex, let currentIndex = currentIndex {
                                 startIndex = nil
                                 let endIndex = currentIndex
-                                addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                                addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex, rightInset: truncated ? 12.0 : 0.0)
                             }
                         } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
                             let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))

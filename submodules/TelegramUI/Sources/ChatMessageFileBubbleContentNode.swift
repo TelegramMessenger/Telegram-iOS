@@ -70,7 +70,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
     }
     
@@ -117,7 +117,26 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.context, item.presentationData, item.message, item.topMessage, item.associatedData, item.chatLocation, item.attributes, item.isItemPinned, item.isItemEdited, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.context.account.peerId), item.associatedData.isRecentActions, item.associatedData.forcedResourceStatus, statusType, item.message.groupingKey != nil ? selection : nil, CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
+            let (initialWidth, refineLayout) = interactiveFileLayout(ChatMessageInteractiveFileNode.Arguments(
+                context: item.context,
+                presentationData: item.presentationData,
+                message: item.message,
+                topMessage: item.topMessage,
+                associatedData: item.associatedData,
+                chatLocation: item.chatLocation,
+                attributes: item.attributes,
+                isPinned: item.isItemPinned,
+                forcedIsEdited: item.isItemEdited,
+                file: selectedFile!,
+                automaticDownload: automaticDownload,
+                incoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                isRecentActions: item.associatedData.isRecentActions,
+                forcedResourceStatus: item.associatedData.forcedResourceStatus,
+                dateAndStatusType: statusType,
+                displayReactions: true,
+                messageSelection: item.message.groupingKey != nil ? selection : nil,
+                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height)
+            ))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
@@ -179,6 +198,9 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
+            return .ignore
+        }
+        if self.interactiveFileNode.hasTapAction(at: self.view.convert(point, to: self.interactiveFileNode.view)) {
             return .ignore
         }
         return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)

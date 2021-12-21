@@ -812,13 +812,13 @@ public final class AccountViewTracker {
         }
     }
     
-    public func updateReactionsForMessageIds(messageIds: Set<MessageId>) {
+    public func updateReactionsForMessageIds(messageIds: Set<MessageId>, force: Bool = false) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
             let timestamp = Int32(CFAbsoluteTimeGetCurrent())
             for messageId in messageIds {
                 let messageTimestamp = self.updatedReactionsMessageIdsAndTimestamps[messageId]
-                if messageTimestamp == nil || messageTimestamp! < timestamp - 5 * 60 {
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 1 * 20 || force {
                     self.updatedReactionsMessageIdsAndTimestamps[messageId] = timestamp
                     addedMessageIds.append(messageId)
                 }

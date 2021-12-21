@@ -194,4 +194,14 @@ private final class VoiceChatVolumeContextItemNode: ASDisplayNode, ContextMenuCu
         self.value = max(self.minValue, min(2.0, location.x / self.bounds.width * 2.0))
         self.valueChanged(self.value, true)
     }
+    
+    func canBeHighlighted() -> Bool {
+        return false
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+    }
+    
+    func performAction() {
+    }
 }

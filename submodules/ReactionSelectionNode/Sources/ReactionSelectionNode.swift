@@ -131,9 +131,11 @@ final class ReactionNode: ASDisplayNode {
         if self.validSize != size {
             self.validSize = size
             
-            self.staticImageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, file: item.stillAnimation, small: false, size: CGSize(width: animationDisplaySize.width * UIScreenScale, height: animationDisplaySize.height * UIScreenScale), fitzModifier: nil, fetched: false, onlyFullSize: false, thumbnail: false, synchronousLoad: false))
-            let imageApply = self.staticImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: animationDisplaySize, boundingSize: animationDisplaySize, intrinsicInsets: UIEdgeInsets()))
-            imageApply()
+            if !self.staticImageNode.isHidden {
+                self.staticImageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, file: item.stillAnimation, small: false, size: CGSize(width: animationDisplaySize.width * UIScreenScale, height: animationDisplaySize.height * UIScreenScale), fitzModifier: nil, fetched: false, onlyFullSize: false, thumbnail: false, synchronousLoad: false))
+                let imageApply = self.staticImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: animationDisplaySize, boundingSize: animationDisplaySize, intrinsicInsets: UIEdgeInsets()))
+                imageApply()
+            }
             transition.updateFrame(node: self.staticImageNode, frame: animationFrame)
         }
         
@@ -141,15 +143,15 @@ final class ReactionNode: ASDisplayNode {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
-                self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .loop, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
                 self.stillAnimationNode.position = animationFrame.center
                 self.stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                 self.stillAnimationNode.updateLayout(size: animationFrame.size)
                 self.stillAnimationNode.visibility = true
             }
         } else {
-            transition.updatePosition(node: self.stillAnimationNode, position: animationFrame.center)
-            transition.updateTransformScale(node: self.stillAnimationNode, scale: animationFrame.size.width / self.stillAnimationNode.bounds.width)
+            transition.updatePosition(node: self.stillAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
+            transition.updateTransformScale(node: self.stillAnimationNode, scale: animationFrame.size.width / self.stillAnimationNode.bounds.width, beginWithCurrentState: true)
         }
     }
     

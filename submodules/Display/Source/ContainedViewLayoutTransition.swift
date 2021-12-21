@@ -261,7 +261,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateBounds(node: ASDisplayNode, bounds: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func updateBounds(node: ASDisplayNode, bounds: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if node.bounds.equalTo(bounds) && !force {
             completion?(true)
         } else {
@@ -272,7 +272,12 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                let previousBounds = node.bounds
+                let previousBounds: CGRect
+                if beginWithCurrentState, let presentation = node.layer.presentation() {
+                    previousBounds = presentation.bounds
+                } else {
+                    previousBounds = node.bounds
+                }
                 node.bounds = bounds
                 node.layer.animateBounds(from: previousBounds, to: bounds, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
                     if let completion = completion {
