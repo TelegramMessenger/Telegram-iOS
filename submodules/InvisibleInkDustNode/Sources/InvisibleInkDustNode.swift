@@ -57,9 +57,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     private let emitterMaskNode: ASDisplayNode
     private let emitterSpotNode: ASImageNode
     private let emitterMaskFillNode: ASDisplayNode
-    
-    public var isRevealedUpdated: (Bool) -> Void = { _ in }
-    
+        
     public var isRevealed = false
     
     public init(textNode: TextNode?) {
@@ -232,7 +230,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
             square += Float(rect.width * rect.height)
         }
         
-        self.emitter?.birthRate = square * 0.4
+        self.emitter?.birthRate = min(100000, square * 0.33)
     }
     
     public func update(size: CGSize, color: UIColor, rects: [CGRect], wordRects: [CGRect]) {
