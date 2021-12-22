@@ -41,6 +41,7 @@ private let largeCircleSize: CGFloat = 16.0
 private let smallCircleSize: CGFloat = 8.0
 
 public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
+    private let context: AccountContext
     private let theme: PresentationTheme
     private let items: [ReactionContextItem]
     
@@ -49,7 +50,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let contentContainer: ASDisplayNode
     private let contentContainerMask: UIImageView
     private let scrollNode: ASScrollNode
-    private var itemNodes: [ReactionNode] = []
+    private var visibleItemNodes: [Int: ReactionNode] = [:]
     
     private var isExpanded: Bool = true
     private var highlightedReaction: ReactionContextItem.Reaction?
@@ -64,7 +65,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var animationTargetView: UIView?
     private var animationHideNode: Bool = false
     
+    private var didAnimateIn: Bool = false
+    
     public init(context: AccountContext, theme: PresentationTheme, items: [ReactionContextItem]) {
+        self.context = context
         self.theme = theme
         self.items = items
         
@@ -115,11 +119,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.backgroundNode)
         
         self.scrollNode.view.delegate = self
-        
-        self.itemNodes = self.items.map { item in
-            return ReactionNode(context: context, theme: theme, item: item)
-        }
-        self.itemNodes.forEach(self.scrollNode.addSubnode)
         
         self.addSubnode(self.contentContainer)
     }
@@ -180,30 +179,61 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateScrolling(transition: ContainedViewLayoutTransition) {
-        let sideInset: CGFloat = 14.0
-        let minScale: CGFloat = 0.6
-        let scaleDistance: CGFloat = 30.0
+        let sideInset: CGFloat = 11.0
+        let itemSpacing: CGFloat = 9.0
+        let itemSize: CGFloat = 40.0
+        let verticalInset: CGFloat = 13.0
+        let rowHeight: CGFloat = 30.0
+        
         let visibleBounds = self.scrollNode.view.bounds
         
-        for itemNode in self.itemNodes {
-            if itemNode.isExtracted {
-                continue
-            }
-            let itemScale: CGFloat
-            let itemFrame = itemNode.frame.offsetBy(dx: -visibleBounds.minX, dy: 0.0)
-            if itemFrame.minX < sideInset || itemFrame.maxX > visibleBounds.width - sideInset {
-                let edgeDistance: CGFloat
-                if itemFrame.minX < sideInset {
-                    edgeDistance = sideInset - itemFrame.minX
+        var validIndices = Set<Int>()
+        for i in 0 ..< self.items.count {
+            let columnIndex = i
+            let column = CGFloat(columnIndex)
+            
+            let itemOffsetY: CGFloat = -1.0
+            
+            let itemFrame = CGRect(origin: CGPoint(x: sideInset + column * (itemSize + itemSpacing), y: verticalInset + floor((rowHeight - itemSize) / 2.0) + itemOffsetY), size: CGSize(width: itemSize, height: itemSize))
+            /*if self.highlightedReaction == self.items[i].reaction {
+                itemFrame = itemFrame.insetBy(dx: -6.0, dy: -6.0)
+            }*/
+            if visibleBounds.intersects(itemFrame) {
+                validIndices.insert(i)
+                
+                var animateIn = false
+                
+                let itemNode: ReactionNode
+                if let current = self.visibleItemNodes[i] {
+                    itemNode = current
                 } else {
-                    edgeDistance = itemFrame.maxX - (visibleBounds.width - sideInset)
+                    animateIn = self.didAnimateIn
+                    
+                    itemNode = ReactionNode(context: self.context, theme: self.theme, item: self.items[i])
+                    self.visibleItemNodes[i] = itemNode
+                    self.scrollNode.addSubnode(itemNode)
                 }
-                let edgeFactor: CGFloat = min(1.0, edgeDistance / scaleDistance)
-                itemScale = edgeFactor * minScale + (1.0 - edgeFactor) * 1.0
-            } else {
-                itemScale = 1.0
+                
+                if !itemNode.isExtracted {
+                    transition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true)
+                    itemNode.updateLayout(size: itemFrame.size, isExpanded: false, transition: transition)
+                    
+                    if animateIn {
+                        itemNode.animateIn()
+                    }
+                }
             }
-            transition.updateSublayerTransformScale(node: itemNode, scale: itemScale)
+        }
+        
+        var removedIndices: [Int] = []
+        for (index, itemNode) in self.visibleItemNodes {
+            if !validIndices.contains(index) {
+                removedIndices.append(index)
+                itemNode.removeFromSupernode()
+            }
+        }
+        for index in removedIndices {
+            self.visibleItemNodes.removeValue(forKey: index)
         }
     }
     
@@ -236,22 +266,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(view: self.contentContainerMask, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         self.scrollNode.view.contentSize = CGSize(width: completeContentWidth, height: backgroundFrame.size.height)
-        
-        for i in 0 ..< self.items.count {
-            let columnIndex = i
-            let column = CGFloat(columnIndex)
-            
-            let itemOffsetY: CGFloat = -1.0
-            
-            var itemFrame = CGRect(origin: CGPoint(x: sideInset + column * (itemSize + itemSpacing), y: verticalInset + floor((rowHeight - itemSize) / 2.0) + itemOffsetY), size: CGSize(width: itemSize, height: itemSize))
-            if self.highlightedReaction == self.items[i].reaction {
-                itemFrame = itemFrame.insetBy(dx: -6.0, dy: -6.0)
-            }
-            if !self.itemNodes[i].isExtracted {
-                transition.updateFrame(node: self.itemNodes[i], frame: itemFrame, beginWithCurrentState: true)
-                self.itemNodes[i].updateLayout(size: itemFrame.size, isExpanded: false, transition: transition)
-            }
-        }
         
         self.updateScrolling(transition: transition)
         
@@ -291,23 +305,28 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
         }
         
-        let mainCircleDuration: Double = 0.5
+        //let mainCircleDuration: Double = 0.5
         let mainCircleDelay: Double = 0.1
         
         self.backgroundNode.animateIn()
         
-        for i in 0 ..< self.itemNodes.count {
-            let itemNode = self.itemNodes[i]
+        self.didAnimateIn = true
+        
+        for i in 0 ..< self.items.count {
+            guard let itemNode = self.visibleItemNodes[i] else {
+                continue
+            }
             let itemDelay = mainCircleDelay + 0.1 + Double(i) * 0.03
-            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: itemDelay)
-            itemNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: itemDelay, initialVelocity: 0.0)
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + itemDelay, execute: { [weak itemNode] in
+                itemNode?.animateIn()
+            })
         }
     }
     
     public func animateOut(to targetAnchorRect: CGRect?, animatingOutToReaction: Bool) {
         self.backgroundNode.animateOut()
         
-        for itemNode in self.itemNodes {
+        for (_, itemNode) in self.visibleItemNodes {
             if itemNode.isExtracted {
                 continue
             }
@@ -367,7 +386,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func willAnimateOutToReaction(value: String) {
-        for itemNode in self.itemNodes {
+        for (_, itemNode) in self.visibleItemNodes {
             if itemNode.item.reaction.rawValue != value {
                 continue
             }
@@ -376,7 +395,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
-        for itemNode in self.itemNodes {
+        for (_, itemNode) in self.visibleItemNodes {
             if itemNode.item.reaction.rawValue != value {
                 continue
             }
@@ -400,7 +419,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             let selfSourceRect = itemNode.view.convert(itemNode.view.bounds, to: self.view)
             let selfTargetRect = self.view.convert(targetView.bounds, from: targetView)
             
-            let expandedScale: CGFloat = 3.0
+            let expandedScale: CGFloat = 4.0
             let expandedSize = CGSize(width: floor(selfSourceRect.width * expandedScale), height: floor(selfSourceRect.height * expandedScale))
             
             var expandedFrame = CGRect(origin: CGPoint(x: floor(selfTargetRect.midX - expandedSize.width / 2.0), y: floor(selfTargetRect.midY - expandedSize.height / 2.0)), size: expandedSize)
@@ -411,10 +430,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
             
             self.addSubnode(itemNode)
-            itemNode.frame = selfSourceRect
+            //itemNode.position = selfSourceRect.center
             itemNode.position = expandedFrame.center
             transition.updateBounds(node: itemNode, bounds: CGRect(origin: CGPoint(), size: expandedFrame.size))
             itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, transition: transition)
+            
             transition.animatePositionWithKeyframes(node: itemNode, keyframes: generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: 30.0))
             
             let additionalAnimationNode = AnimatedStickerNode()
@@ -507,7 +527,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     public func reaction(at point: CGPoint) -> ReactionContextItem? {
         for i in 0 ..< 2 {
             let touchInset: CGFloat = i == 0 ? 0.0 : 8.0
-            for itemNode in self.itemNodes {
+            for (_, itemNode) in self.visibleItemNodes {
                 let itemPoint = self.view.convert(point, to: itemNode.view)
                 if itemNode.bounds.insetBy(dx: -touchInset, dy: -touchInset).contains(itemPoint) {
                     return itemNode.item
@@ -518,7 +538,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func performReactionSelection(reaction: ReactionContextItem.Reaction) {
-        for itemNode in self.itemNodes {
+        for (_, itemNode) in self.visibleItemNodes {
             if itemNode.item.reaction == reaction {
                 self.reactionSelected?(itemNode.item)
                 break
@@ -782,7 +802,7 @@ public final class StandaloneDismissReactionAnimation: ASDisplayNode {
     }
 }
 
-private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat) -> [AnyObject] {
+private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat) -> [CGPoint] {
     let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - elevation)
     
     let x1 = sourcePoint.x
@@ -792,13 +812,13 @@ private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to tar
     let x3 = targetPosition.x
     let y3 = targetPosition.y
     
-    var keyframes: [AnyObject] = []
+    var keyframes: [CGPoint] = []
     if abs(y1 - y3) < 5.0 && abs(x1 - x3) < 5.0 {
         for i in 0 ..< 10 {
             let k = CGFloat(i) / CGFloat(10 - 1)
             let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
             let y = sourcePoint.y * (1.0 - k) + targetPosition.y * k
-            keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
+            keyframes.append(CGPoint(x: x, y: y))
         }
     } else {
         let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
@@ -809,7 +829,7 @@ private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to tar
             let k = CGFloat(i) / CGFloat(10 - 1)
             let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
             let y = a * x * x + b * x + c
-            keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
+            keyframes.append(CGPoint(x: x, y: y))
         }
     }
     

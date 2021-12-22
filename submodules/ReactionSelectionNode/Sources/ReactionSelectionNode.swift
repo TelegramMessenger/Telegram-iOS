@@ -38,8 +38,10 @@ private let font = Font.medium(13.0)
 final class ReactionNode: ASDisplayNode {
     let context: AccountContext
     let item: ReactionContextItem
-    private let staticImageNode: TransformImageNode
-    private let stillAnimationNode: AnimatedStickerNode
+    
+    private var animateInAnimationNode: AnimatedStickerNode?
+    private let staticAnimationNode: AnimatedStickerNode
+    private var stillAnimationNode: AnimatedStickerNode?
     private var animationNode: AnimatedStickerNode?
     
     private var fetchStickerDisposable: Disposable?
@@ -55,22 +57,40 @@ final class ReactionNode: ASDisplayNode {
         self.context = context
         self.item = item
         
-        self.staticImageNode = TransformImageNode()
+        self.staticAnimationNode = AnimatedStickerNode()
+        self.staticAnimationNode.isHidden = true
+        
+        self.animateInAnimationNode = AnimatedStickerNode()
         self.stillAnimationNode = AnimatedStickerNode()
         
         super.init()
         
-        self.addSubnode(self.staticImageNode)
+        if let animateInAnimationNode = self.animateInAnimationNode {
+            self.addSubnode(animateInAnimationNode)
+        }
+        self.addSubnode(self.staticAnimationNode)
         
-        self.addSubnode(self.stillAnimationNode)
-        
-        self.stillAnimationNode.started = { [weak self] in
+        self.animateInAnimationNode?.completed = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.staticImageNode.isHidden = true
+            if strongSelf.animationNode == nil {
+                strongSelf.staticAnimationNode.isHidden = false
+            }
+            
+            strongSelf.animateInAnimationNode?.removeFromSupernode()
+            strongSelf.animateInAnimationNode = nil
         }
         
+        /*self.stillAnimationNode.started = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.animateInAnimationNode.isHidden = true
+            strongSelf.animateInAnimationNode.visibility = false
+        }*/
+        
+        self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.appearAnimation.resource)).start()
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.stillAnimation.resource)).start()
         self.fetchStickerDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.listAnimation.resource)).start()
         self.fetchFullAnimationDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: item.applicationAnimation.resource)).start()
@@ -79,6 +99,10 @@ final class ReactionNode: ASDisplayNode {
     deinit {
         self.fetchStickerDisposable?.dispose()
         self.fetchFullAnimationDisposable?.dispose()
+    }
+    
+    func animateIn() {
+        self.animateInAnimationNode?.visibility = true
     }
     
     func updateLayout(size: CGSize, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
@@ -101,60 +125,102 @@ final class ReactionNode: ASDisplayNode {
             self.animationNode = animationNode
             self.addSubnode(animationNode)
             
-            animationNode.started = { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.staticImageNode.isHidden = true
-            }
-            
             animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
             animationNode.frame = animationFrame
             animationNode.updateLayout(size: animationFrame.size)
-            if transition.isAnimated, !self.staticImageNode.frame.isEmpty {
-                transition.animateTransformScale(node: animationNode, from: self.staticImageNode.bounds.width / animationFrame.width)
-                transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: self.staticImageNode.frame.midX - animationFrame.midX, y: self.staticImageNode.frame.midY - animationFrame.midY))
-            }
-            animationNode.visibility = true
             
-            self.stillAnimationNode.alpha = 0.0
             if transition.isAnimated {
-                self.stillAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
-                    self?.stillAnimationNode.visibility = false
-                })
+                if let stillAnimationNode = self.stillAnimationNode, !stillAnimationNode.frame.isEmpty {
+                    stillAnimationNode.alpha = 0.0
+                    stillAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                        guard let strongSelf = self, let stillAnimationNode = strongSelf.stillAnimationNode else {
+                            return
+                        }
+                        strongSelf.stillAnimationNode = nil
+                        stillAnimationNode.removeFromSupernode()
+                    })
+                }
+                if let animateInAnimationNode = self.animateInAnimationNode {
+                    animateInAnimationNode.alpha = 0.0
+                    animateInAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                        guard let strongSelf = self, let animateInAnimationNode = strongSelf.animateInAnimationNode else {
+                            return
+                        }
+                        strongSelf.animateInAnimationNode = nil
+                        animateInAnimationNode.removeFromSupernode()
+                    })
+                }
+                
+                var referenceNode: ASDisplayNode?
+                if let animateInAnimationNode = self.animateInAnimationNode {
+                    referenceNode = animateInAnimationNode
+                } else if !self.staticAnimationNode.isHidden {
+                    referenceNode = self.staticAnimationNode
+                }
+                
+                if let referenceNode = referenceNode {
+                    transition.animateTransformScale(node: animationNode, from: referenceNode.bounds.width / animationFrame.width)
+                    transition.animatePositionAdditive(node: animationNode, offset: CGPoint(x: referenceNode.frame.midX - animationFrame.midX, y: referenceNode.frame.midY - animationFrame.midY))
+                }
+                
+                if !self.staticAnimationNode.isHidden {
+                    transition.animateTransformScale(node: self.staticAnimationNode, from: self.staticAnimationNode.bounds.width / animationFrame.width)
+                    transition.animatePositionAdditive(node: self.staticAnimationNode, offset: CGPoint(x: self.staticAnimationNode.frame.midX - animationFrame.midX, y: self.staticAnimationNode.frame.midY - animationFrame.midY))
+                    
+                    self.staticAnimationNode.alpha = 0.0
+                    self.staticAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                }
+                
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
             } else {
-                self.stillAnimationNode.visibility = false
+                if let stillAnimationNode = self.stillAnimationNode {
+                    self.stillAnimationNode = nil
+                    stillAnimationNode.removeFromSupernode()
+                }
+                self.staticAnimationNode.isHidden = true
             }
+            animationNode.visibility = true
         }
         
         if self.validSize != size {
             self.validSize = size
-            
-            if !self.staticImageNode.isHidden {
-                self.staticImageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, file: item.stillAnimation, small: false, size: CGSize(width: animationDisplaySize.width * UIScreenScale, height: animationDisplaySize.height * UIScreenScale), fitzModifier: nil, fetched: false, onlyFullSize: false, thumbnail: false, synchronousLoad: false))
-                let imageApply = self.staticImageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: animationDisplaySize, boundingSize: animationDisplaySize, intrinsicInsets: UIEdgeInsets()))
-                imageApply()
-            }
-            transition.updateFrame(node: self.staticImageNode, frame: animationFrame)
         }
         
         if !self.didSetupStillAnimation {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
-                self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .loop, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                self.staticAnimationNode.position = animationFrame.center
+                self.staticAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                self.staticAnimationNode.updateLayout(size: animationFrame.size)
+                self.staticAnimationNode.visibility = true
+                
+                if let animateInAnimationNode = self.animateInAnimationNode {
+                    animateInAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.appearAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.appearAnimation.resource.id)))
+                    animateInAnimationNode.position = animationFrame.center
+                    animateInAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                    animateInAnimationNode.updateLayout(size: animationFrame.size)
+                }
+                
+                /*self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
                 self.stillAnimationNode.position = animationFrame.center
                 self.stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
-                self.stillAnimationNode.updateLayout(size: animationFrame.size)
-                self.stillAnimationNode.visibility = true
+                self.stillAnimationNode.updateLayout(size: animationFrame.size)*/
             }
         } else {
-            transition.updatePosition(node: self.stillAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
-            transition.updateTransformScale(node: self.stillAnimationNode, scale: animationFrame.size.width / self.stillAnimationNode.bounds.width, beginWithCurrentState: true)
+            transition.updatePosition(node: self.staticAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
+            transition.updateTransformScale(node: self.staticAnimationNode, scale: animationFrame.size.width / self.staticAnimationNode.bounds.width, beginWithCurrentState: true)
+            
+            if let animateInAnimationNode = self.animateInAnimationNode {
+                transition.updatePosition(node: animateInAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
+                transition.updateTransformScale(node: animateInAnimationNode, scale: animationFrame.size.width / animateInAnimationNode.bounds.width, beginWithCurrentState: true)
+            }
+            
+            if let stillAnimationNode = self.stillAnimationNode {
+                transition.updatePosition(node: stillAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
+                transition.updateTransformScale(node: stillAnimationNode, scale: animationFrame.size.width / stillAnimationNode.bounds.width, beginWithCurrentState: true)
+            }
         }
-    }
-    
-    func didAppear() {
     }
 }
