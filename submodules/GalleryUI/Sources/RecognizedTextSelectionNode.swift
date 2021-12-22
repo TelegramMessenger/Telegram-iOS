@@ -203,6 +203,7 @@ public enum RecognizedTextSelectionAction {
     case share
     case lookup
     case speak
+    case translate
 }
 
 public final class RecognizedTextSelectionNode: ASDisplayNode {
@@ -509,12 +510,18 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
             self?.performAction(selectedText, .lookup)
             let _ = self?.dismissSelection()
         }))
-        if isSpeakSelectionEnabled() {
-            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
-                self?.performAction(selectedText, .speak)
+        if #available(iOS 15.0, *) {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+                self?.performAction(selectedText, .translate)
                 let _ = self?.dismissSelection()
             }))
         }
+//        if isSpeakSelectionEnabled() {
+//            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
+//                self?.performAction(selectedText, .speak)
+//                let _ = self?.dismissSelection()
+//            }))
+//        }
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             self?.performAction(selectedText, .share)
             let _ = self?.dismissSelection()

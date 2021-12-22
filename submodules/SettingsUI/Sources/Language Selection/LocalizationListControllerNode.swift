@@ -14,14 +14,19 @@ import ShareController
 import SearchBarNode
 import SearchUI
 import UndoUI
+import TelegramUIPreferences
+import Translate
 
 private enum LanguageListSection: ItemListSectionId {
+    case translate
     case official
     case unofficial
 }
 
 private enum LanguageListEntryId: Hashable {
     case search
+    case translate(Int)
+    case localizationTitle
     case localization(String)
 }
 
@@ -31,10 +36,26 @@ private enum LanguageListEntryType {
 }
 
 private enum LanguageListEntry: Comparable, Identifiable {
+    case translateTitle(text: String)
+    case translate(text: String, value: Bool)
+    case doNotTranslate(text: String, value: String)
+    case translateInfo(text: String)
+    
+    case localizationTitle(text: String, section: ItemListSectionId)
     case localization(index: Int, info: LocalizationInfo?, type: LanguageListEntryType, selected: Bool, activity: Bool, revealed: Bool, editing: Bool)
     
     var stableId: LanguageListEntryId {
         switch self {
+            case .translateTitle:
+                return .translate(0)
+            case .translate:
+                return .translate(1)
+            case .doNotTranslate:
+                return .translate(2)
+            case .translateInfo:
+                return .translate(3)
+            case .localizationTitle:
+                return .localizationTitle
             case let .localization(index, info, _, _, _, _, _):
                 return .localization(info?.languageCode ?? "\(index)")
         }
@@ -42,8 +63,18 @@ private enum LanguageListEntry: Comparable, Identifiable {
     
     private func index() -> Int {
         switch self {
+            case .translateTitle:
+                return 0
+            case .translate:
+                return 1
+            case .doNotTranslate:
+                return 2
+            case .translateInfo:
+                return 3
+            case .localizationTitle:
+                return 1000
             case let .localization(index, _, _, _, _, _, _):
-                return index
+                return 1001 + index
         }
     }
     
@@ -51,8 +82,22 @@ private enum LanguageListEntry: Comparable, Identifiable {
        return lhs.index() < rhs.index()
     }
     
-    func item(presentationData: PresentationData, searchMode: Bool, openSearch: @escaping () -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) -> ListViewItem {
+    func item(presentationData: PresentationData, searchMode: Bool, openSearch: @escaping () -> Void, toggleShowTranslate: @escaping (Bool) -> Void, openDoNotTranslate: @escaping () -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) -> ListViewItem {
         switch self {
+            case let .translateTitle(text):
+                return ItemListSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), text: text, sectionId: LanguageListSection.translate.rawValue)
+            case let .translate(text, value):
+                return ItemListSwitchItem(presentationData: ItemListPresentationData(presentationData), title: text, value: value, sectionId: LanguageListSection.translate.rawValue, style: .blocks, updated: { value in
+                    toggleShowTranslate(value)
+                })
+            case let .doNotTranslate(text, value):
+                return ItemListDisclosureItem(presentationData: ItemListPresentationData(presentationData), title: text, label: value, sectionId: LanguageListSection.translate.rawValue, style: .blocks, action: {
+                    openDoNotTranslate()
+                })
+            case let .translateInfo(text):
+                return ItemListTextItem(presentationData: ItemListPresentationData(presentationData), text: .plain(text), sectionId: LanguageListSection.translate.rawValue)
+            case let .localizationTitle(text, section):
+                return ItemListSectionHeaderItem(presentationData: ItemListPresentationData(presentationData), text: text, sectionId: section)
             case let .localization(_, info, type, selected, activity, revealed, editing):
                 return LocalizationListItem(presentationData: ItemListPresentationData(presentationData), id: info?.languageCode ?? "", title: info?.title ?? " ", subtitle: info?.localizedTitle ?? " ", checked: selected, activity: activity, loading: info == nil, editing: LocalizationListItemEditing(editable: !selected && !searchMode && !(info?.isOfficial ?? true), editing: editing, revealed: !selected && revealed, reorderable: false), sectionId: type == .official ? LanguageListSection.official.rawValue : LanguageListSection.unofficial.rawValue, alwaysPlain: searchMode, action: {
                     if let info = info {
@@ -74,8 +119,8 @@ private func preparedLanguageListSearchContainerTransition(presentationData: Pre
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: true, openSearch: {}, selectLocalization: selectLocalization, setItemWithRevealedOptions: { _, _ in }, removeItem: { _ in }), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: true, openSearch: {}, selectLocalization: selectLocalization, setItemWithRevealedOptions: { _, _ in }, removeItem: { _ in }), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: true, openSearch: {}, toggleShowTranslate: { _ in }, openDoNotTranslate: {}, selectLocalization: selectLocalization, setItemWithRevealedOptions: { _, _ in }, removeItem: { _ in }), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: true, openSearch: {}, toggleShowTranslate: { _ in }, openDoNotTranslate: {}, selectLocalization: selectLocalization, setItemWithRevealedOptions: { _, _ in }, removeItem: { _ in }), directionHint: nil) }
     
     return LocalizationListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, isSearching: isSearching)
 }
@@ -262,12 +307,12 @@ private struct LanguageListNodeTransition {
     let crossfade: Bool
 }
 
-private func preparedLanguageListNodeTransition(presentationData: PresentationData, from fromEntries: [LanguageListEntry], to toEntries: [LanguageListEntry], openSearch: @escaping () -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void, firstTime: Bool, isLoading: Bool, forceUpdate: Bool, animated: Bool, crossfade: Bool) -> LanguageListNodeTransition {
+private func preparedLanguageListNodeTransition(presentationData: PresentationData, from fromEntries: [LanguageListEntry], to toEntries: [LanguageListEntry], openSearch: @escaping () -> Void, toggleShowTranslate: @escaping (Bool) -> Void, openDoNotTranslate: @escaping () -> Void, selectLocalization: @escaping (LocalizationInfo) -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void, firstTime: Bool, isLoading: Bool, forceUpdate: Bool, animated: Bool, crossfade: Bool) -> LanguageListNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, allUpdated: forceUpdate)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: false, openSearch: openSearch, selectLocalization: selectLocalization, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: false, openSearch: openSearch, selectLocalization: selectLocalization, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: false, openSearch: openSearch, toggleShowTranslate: toggleShowTranslate, openDoNotTranslate: openDoNotTranslate, selectLocalization: selectLocalization, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(presentationData: presentationData, searchMode: false, openSearch: openSearch, toggleShowTranslate: toggleShowTranslate, openDoNotTranslate: openDoNotTranslate, selectLocalization: selectLocalization, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem), directionHint: nil) }
     
     return LanguageListNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, isLoading: isLoading, animated: animated, crossfade: crossfade)
 }
@@ -279,6 +324,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
     private let requestActivateSearch: () -> Void
     private let requestDeactivateSearch: () -> Void
     private let present: (ViewController, Any?) -> Void
+    private let push: (ViewController) -> Void
     
     private var didSetReady = false
     let _ready = ValuePromise<Bool>()
@@ -304,7 +350,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         }
     }
     
-    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, navigationBar: NavigationBar, requestActivateSearch: @escaping () -> Void, requestDeactivateSearch: @escaping () -> Void, updateCanStartEditing: @escaping (Bool?) -> Void, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.presentationDataValue.set(.single(presentationData))
@@ -312,6 +358,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         self.requestActivateSearch = requestActivateSearch
         self.requestDeactivateSearch = requestDeactivateSearch
         self.present = present
+        self.push = push
 
         self.listNode = ListView()
         self.listNode.keepTopItemOverscrollBackground = ListViewKeepTopItemOverscrollBackground(color: presentationData.theme.list.blocksBackgroundColor, direction: true)
@@ -373,7 +420,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
         let preferencesKey: PostboxViewKey = .preferences(keys: Set([PreferencesKeys.localizationListState]))
         let previousState = Atomic<LocalizationListState?>(value: nil)
         let previousEntriesHolder = Atomic<([LanguageListEntry], PresentationTheme, PresentationStrings)?>(value: nil)
-        self.listDisposable = combineLatest(queue: .mainQueue(), context.account.postbox.combinedView(keys: [preferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, sharedData, presentationData, applyingCode, revealedCode, isEditing in
+        self.listDisposable = combineLatest(queue: .mainQueue(), context.account.postbox.combinedView(keys: [preferencesKey]), context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.translationSettings]), self.presentationDataValue.get(), self.applyingCode.get(), revealedCode.get(), self.isEditing.get()).start(next: { [weak self] view, sharedData, presentationData, applyingCode, revealedCode, isEditing in
             guard let strongSelf = self else {
                 return
             }
@@ -385,9 +432,47 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             }
             var existingIds = Set<String>()
             
+            var showTranslate = true
+            var ignoredLanguages: [String] = []
+            if let translationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                showTranslate = translationSettings.showTranslate
+                if let languages = translationSettings.ignoredLanguages {
+                    ignoredLanguages = languages
+                } else {
+                    if let activeLanguageCode = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguageCode) {
+                        ignoredLanguages = [activeLanguageCode]
+                    }
+                }
+            } else {
+                if let activeLanguageCode = activeLanguageCode, supportedTranslationLanguages.contains(activeLanguageCode) {
+                    ignoredLanguages = [activeLanguageCode]
+                }
+            }
+            
             let localizationListState = (view.views[preferencesKey] as? PreferencesView)?.values[PreferencesKeys.localizationListState]?.get(LocalizationListState.self)
             if let localizationListState = localizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
+                
+                if #available(iOS 15.0, *) {
+                    entries.append(.translateTitle(text: presentationData.strings.Localization_TranslateMessages.uppercased()))
+                    entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
+                    if showTranslate {
+                        var value = ""
+                        if ignoredLanguages.count > 1 {
+                            value = ignoredLanguages.joined(separator: ", ")
+                        } else if let code = ignoredLanguages.first {
+                            let enLocale = Locale(identifier: "en")
+                            if let title = enLocale.localizedString(forLanguageCode: code) {
+                                value = title
+                            }
+                        }
+                        
+                        entries.append(.doNotTranslate(text: presentationData.strings.Localization_DoNotTranslate, value: value))
+                        entries.append(.translateInfo(text: ignoredLanguages.count > 1 ? presentationData.strings.Localization_DoNotTranslateManyInfo : presentationData.strings.Localization_DoNotTranslateInfo))
+                    } else {
+                        entries.append(.translateInfo(text: presentationData.strings.Localization_ShowTranslateInfo))
+                    }
+                }
                 
                 let availableSavedLocalizations = localizationListState.availableSavedLocalizations.filter({ info in !localizationListState.availableOfficialLocalizations.contains(where: { $0.languageCode == info.languageCode }) })
                 if availableSavedLocalizations.isEmpty {
@@ -396,6 +481,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                     updateCanStartEditing(isEditing)
                 }
                 if !availableSavedLocalizations.isEmpty {
+                    entries.append(.localizationTitle(text: presentationData.strings.Localization_InterfaceLanguage.uppercased(), section: LanguageListSection.unofficial.rawValue))
                     for info in availableSavedLocalizations {
                         if existingIds.contains(info.languageCode) {
                             continue
@@ -403,6 +489,8 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
                         existingIds.insert(info.languageCode)
                         entries.append(.localization(index: entries.count, info: info, type: .unofficial, selected: info.languageCode == activeLanguageCode, activity: applyingCode == info.languageCode, revealed: revealedCode == info.languageCode, editing: isEditing))
                     }
+                } else {
+                    entries.append(.localizationTitle(text: presentationData.strings.Localization_InterfaceLanguage.uppercased(), section: LanguageListSection.official.rawValue))
                 }
                 for info in localizationListState.availableOfficialLocalizations {
                     if existingIds.contains(info.languageCode) {
@@ -420,7 +508,19 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             let previousState = previousState.swap(localizationListState)
             
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
-            let transition = preparedLanguageListNodeTransition(presentationData: presentationData, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openSearch: openSearch, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) >= entries.count, crossfade: (previousState == nil) != (localizationListState == nil))
+            let transition = preparedLanguageListNodeTransition(presentationData: presentationData, from: previousEntriesAndPresentationData?.0 ?? [], to: entries, openSearch: openSearch, toggleShowTranslate: { value in
+                let _ = updateTranslationSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                    var updated = current.withUpdatedShowTranslate(value)
+                    if !value {
+                        updated = updated.withUpdatedIgnoredLanguages(nil)
+                    }
+                    return updated
+                }).start()
+            }, openDoNotTranslate: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.push(translationSettingsController(context: strongSelf.context))
+                }
+            }, selectLocalization: { [weak self] info in self?.selectLocalization(info) }, setItemWithRevealedOptions: setItemWithRevealedOptions, removeItem: removeItem, firstTime: previousEntriesAndPresentationData == nil, isLoading: entries.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings, animated: (previousEntriesAndPresentationData?.0.count ?? 0) >= entries.count, crossfade: (previousState == nil) != (localizationListState == nil))
             strongSelf.enqueueTransition(transition)
         })
         self.updatedDisposable = context.engine.localization.synchronizedLocalizationListState().start()

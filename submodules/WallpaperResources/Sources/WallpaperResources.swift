@@ -1300,7 +1300,23 @@ public func themeImage(account: Account, accountManager: AccountManager<Telegram
     }
 }
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+private let qrIconImage: UIImage = {
+    return generateImage(CGSize(width: 36.0, height: 36.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        context.setFillColor(UIColor.white.cgColor)
+        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 9.0).cgPath)
+        context.fillPath()
+        
+        if let image = UIImage(bundleImageName: "Settings/QrButtonIcon")?.cgImage {
+            context.clip(to: CGRect(x: 6.0, y: 6.0, width: 24.0, height: 24.0), mask: image)
+            context.clear(bounds)
+        }
+    })!
+}()
+
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1552,134 +1568,140 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     }
                 }
                 
-                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                c.scaleBy(x: 1.0, y: -1.0)
-                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                
-                let incomingColors = colors.1
-                if emoticon {
-                    if large {
-                        c.saveGState()
+                if qr {
+                    if let image = qrIconImage.cgImage {
+                        c.draw(image, in: CGRect(x: floor((drawingRect.width - 36.0) / 2.0), y: floor((drawingRect.height - 36.0) / 2.0), width: 36.0, height: 36.0))
+                    }
+                } else {
+                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                    c.scaleBy(x: 1.0, y: -1.0)
+                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                    
+                    let incomingColors = colors.1
+                    if emoticon {
+                        if large {
+                            c.saveGState()
 
-                        c.translateBy(x: 7.0, y: 27.0)
-                        c.translateBy(x: 114.0, y: 32.0)
-                        c.scaleBy(x: 1.0, y: -1.0)
-                        c.translateBy(x: -114.0, y: -32.0)
-                        
-                        let _ = try? drawSvgPath(c, path: "M12.8304,29.8712 C10.0551,31.8416 6.6628,33 2.99998,33 C1.98426,33 0.989361,32.9109 0.022644,32.7402 C2.97318,31.9699 5.24596,29.5785 5.84625,26.5607 C5.99996,25.7879 5.99996,24.8586 5.99996,23 V16.0 H6.00743 C6.27176,7.11861 13.5546,0 22.5,0 H61.5 C70.6127,0 78,7.3873 78,16.5 C78,25.6127 70.6127,33 61.5,33 H22.5 C18.8883,33 15.5476,31.8396 12.8304,29.8712 ")
-                        if Set(incomingColors.map(\.rgb)).count > 1 {
-                            c.clip()
+                            c.translateBy(x: 7.0, y: 27.0)
+                            c.translateBy(x: 114.0, y: 32.0)
+                            c.scaleBy(x: 1.0, y: -1.0)
+                            c.translateBy(x: -114.0, y: -32.0)
+                            
+                            let _ = try? drawSvgPath(c, path: "M12.8304,29.8712 C10.0551,31.8416 6.6628,33 2.99998,33 C1.98426,33 0.989361,32.9109 0.022644,32.7402 C2.97318,31.9699 5.24596,29.5785 5.84625,26.5607 C5.99996,25.7879 5.99996,24.8586 5.99996,23 V16.0 H6.00743 C6.27176,7.11861 13.5546,0 22.5,0 H61.5 C70.6127,0 78,7.3873 78,16.5 C78,25.6127 70.6127,33 61.5,33 H22.5 C18.8883,33 15.5476,31.8396 12.8304,29.8712 ")
+                            if Set(incomingColors.map(\.rgb)).count > 1 {
+                                c.clip()
 
-                            var colors: [CGColor] = []
-                            var locations: [CGFloat] = []
-                            for i in 0 ..< incomingColors.count {
-                                let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
-                                locations.append(t)
-                                colors.append(incomingColors[i].cgColor)
+                                var colors: [CGColor] = []
+                                var locations: [CGFloat] = []
+                                for i in 0 ..< incomingColors.count {
+                                    let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
+                                    locations.append(t)
+                                    colors.append(incomingColors[i].cgColor)
+                                }
+
+                                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
+                                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 34.0), options: CGGradientDrawingOptions())
+                            } else {
+                                c.setFillColor(incomingColors[0].cgColor)
+                                c.fillPath()
                             }
-
-                            let colorSpace = CGColorSpaceCreateDeviceRGB()
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 34.0), options: CGGradientDrawingOptions())
+                            
+                            c.restoreGState()
                         } else {
-                            c.setFillColor(incomingColors[0].cgColor)
-                            c.fillPath()
-                        }
-                        
-                        c.restoreGState()
-                    } else {
-                        let rect = CGRect(x: 8.0, y: 44.0, width: 48.0, height: 24.0)
-                        c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
-                        c.clip()
-                        
-                        if incomingColors.count >= 2 {
-                            let gradientColors = incomingColors.reversed().map { $0.cgColor } as CFArray
+                            let rect = CGRect(x: 8.0, y: 44.0, width: 48.0, height: 24.0)
+                            c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
+                            c.clip()
+                            
+                            if incomingColors.count >= 2 {
+                                let gradientColors = incomingColors.reversed().map { $0.cgColor } as CFArray
 
-                            var locations: [CGFloat] = []
-                            for i in 0 ..< incomingColors.count {
-                                let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
-                                locations.append(t)
+                                var locations: [CGFloat] = []
+                                for i in 0 ..< incomingColors.count {
+                                    let t = CGFloat(i) / CGFloat(incomingColors.count - 1)
+                                    locations.append(t)
+                                }
+                                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
+                            } else if !incomingColors.isEmpty {
+                                c.setFillColor(incomingColors[0].cgColor)
+                                c.fill(rect)
                             }
-                            let colorSpace = CGColorSpaceCreateDeviceRGB()
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+                                
+                            c.resetClip()
+                        }
+                    } else {
+                        let incoming = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: incomingColors)
+                        c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
+                    }
+                    
+                    if !(emoticon && large) {
+                        c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                        c.scaleBy(x: -1.0, y: 1.0)
+                        c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                    }
+                    
+                    let outgoingColors = colors.2
+                    if emoticon {
+                        if large {
+                            c.saveGState()
+                            
+                            c.translateBy(x: (drawingRect.width - 120) - 71, y: 66.0)
+                            c.translateBy(x: 114.0, y: 32.0)
+                            c.scaleBy(x: 1.0, y: -1.0)
+                            c.translateBy(x: 0.0, y: -32.0)
+                            
+                            let _ = try? drawSvgPath(c, path: "M57.1696,29.8712 C59.9449,31.8416 63.3372,33 67,33 C68.0157,33 69.0106,32.9109 69.9773,32.7402 C67.0268,31.9699 64.754,29.5786 64.1537,26.5607 C64,25.7879 64,24.8586 64,23 V16.5 V16 H63.9926 C63.7282,7.11861 56.4454,0 47.5,0 H16.5 C7.3873,0 0,7.3873 0,16.5 C0,25.6127 7.3873,33 16.5,33 H47.5 C51.1117,33 54.4524,31.8396 57.1696,29.8712 ")
+                            if Set(outgoingColors.map(\.rgb)).count > 1 {
+                                c.clip()
 
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
-                        } else if !incomingColors.isEmpty {
-                            c.setFillColor(incomingColors[0].cgColor)
-                            c.fill(rect)
+                                var colors: [CGColor] = []
+                                var locations: [CGFloat] = []
+                                for i in 0 ..< outgoingColors.count {
+                                    let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
+                                    locations.append(t)
+                                    colors.append(outgoingColors[i].cgColor)
+                                }
+
+                                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
+                                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 34.0), options: CGGradientDrawingOptions())
+                            } else {
+                                c.setFillColor(outgoingColors[0].cgColor)
+                                c.fillPath()
+                            }
+                            
+                            c.restoreGState()
+                        } else {
+                            let rect = CGRect(x: 8.0, y: 72.0, width: 48.0, height: 24.0)
+                            c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
+                            c.clip()
+                            
+                            if outgoingColors.count >= 2 {
+                                let gradientColors = outgoingColors.reversed().map { $0.cgColor } as CFArray
+
+                                var locations: [CGFloat] = []
+                                for i in 0 ..< outgoingColors.count {
+                                    let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
+                                    locations.append(t)
+                                }
+                                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                                let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
+
+                                c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
+                            } else if !outgoingColors.isEmpty {
+                                c.setFillColor(outgoingColors[0].cgColor)
+                                c.fill(rect)
+                            }
                         }
                             
                         c.resetClip()
-                    }
-                } else {
-                    let incoming = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: incomingColors)
-                    c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
-                }
-                
-                if !(emoticon && large) {
-                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                    c.scaleBy(x: -1.0, y: 1.0)
-                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                }
-                
-                let outgoingColors = colors.2
-                if emoticon {
-                    if large {
-                        c.saveGState()
-                        
-                        c.translateBy(x: (drawingRect.width - 120) - 71, y: 66.0)
-                        c.translateBy(x: 114.0, y: 32.0)
-                        c.scaleBy(x: 1.0, y: -1.0)
-                        c.translateBy(x: 0.0, y: -32.0)
-                        
-                        let _ = try? drawSvgPath(c, path: "M57.1696,29.8712 C59.9449,31.8416 63.3372,33 67,33 C68.0157,33 69.0106,32.9109 69.9773,32.7402 C67.0268,31.9699 64.754,29.5786 64.1537,26.5607 C64,25.7879 64,24.8586 64,23 V16.5 V16 H63.9926 C63.7282,7.11861 56.4454,0 47.5,0 H16.5 C7.3873,0 0,7.3873 0,16.5 C0,25.6127 7.3873,33 16.5,33 H47.5 C51.1117,33 54.4524,31.8396 57.1696,29.8712 ")
-                        if Set(outgoingColors.map(\.rgb)).count > 1 {
-                            c.clip()
-
-                            var colors: [CGColor] = []
-                            var locations: [CGFloat] = []
-                            for i in 0 ..< outgoingColors.count {
-                                let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
-                                locations.append(t)
-                                colors.append(outgoingColors[i].cgColor)
-                            }
-
-                            let colorSpace = CGColorSpaceCreateDeviceRGB()
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as NSArray, locations: &locations)!
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: 34.0), options: CGGradientDrawingOptions())
-                        } else {
-                            c.setFillColor(outgoingColors[0].cgColor)
-                            c.fillPath()
-                        }
-                        
-                        c.restoreGState()
                     } else {
-                        let rect = CGRect(x: 8.0, y: 72.0, width: 48.0, height: 24.0)
-                        c.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 12.0).cgPath)
-                        c.clip()
-                        
-                        if outgoingColors.count >= 2 {
-                            let gradientColors = outgoingColors.reversed().map { $0.cgColor } as CFArray
-
-                            var locations: [CGFloat] = []
-                            for i in 0 ..< outgoingColors.count {
-                                let t = CGFloat(i) / CGFloat(outgoingColors.count - 1)
-                                locations.append(t)
-                            }
-                            let colorSpace = CGColorSpaceCreateDeviceRGB()
-                            let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-
-                            c.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: rect.minY), end: CGPoint(x: 0.0, y: rect.maxY), options: CGGradientDrawingOptions())
-                        } else if !outgoingColors.isEmpty {
-                            c.setFillColor(outgoingColors[0].cgColor)
-                            c.fill(rect)
-                        }
+                        let outgoing = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: outgoingColors)
+                        c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
                     }
-                        
-                    c.resetClip()
-                } else {
-                    let outgoing = generateGradientTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), colors: outgoingColors)
-                    c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
                 }
             }
             addCorners(context, arguments: arguments)

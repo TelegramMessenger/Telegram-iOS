@@ -1806,7 +1806,8 @@ public final class PostboxDecoder {
                 let result = try AdaptedPostboxDecoder().decode(T.self, from: innerData)
                 return result
             } catch let error {
-                assertionFailure("Decoding error: \(error)")
+                postboxLog("Decoding error: \(error)")
+                //assertionFailure("Decoding error: \(error)")
                 return nil
             }
         } else {

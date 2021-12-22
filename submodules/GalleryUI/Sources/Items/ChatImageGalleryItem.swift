@@ -16,6 +16,7 @@ import PresentationDataUtils
 import ImageContentAnalysis
 import TextSelectionNode
 import Speak
+import Translate
 import ShareController
 import UndoUI
 
@@ -352,6 +353,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                         }
                                                     case .speak:
                                                         speakText(string)
+                                                    case .translate:
+                                                        translateText(context: strongSelf.context, text: string)
                                                     }
                                                 })
                                                 recognizedContentNode.barcodeAction = { [weak self] payload, rect in

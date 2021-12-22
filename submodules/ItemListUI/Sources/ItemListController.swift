@@ -206,6 +206,14 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
+    public var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode).listNode.didScrollWithOffset = self.didScrollWithOffset
+            }
+        }
+    }
+    
     public var willScrollToTop: (() -> Void)?
     
     public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Signal<Bool, NoError>) {
@@ -471,6 +479,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         displayNode.reorderEntry = self.reorderEntry
         displayNode.reorderCompleted = self.reorderCompleted
         displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
+        displayNode.listNode.didScrollWithOffset = self.didScrollWithOffset
         displayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)
         }

@@ -69,7 +69,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var icon: UIImage? {
         didSet {
-            self.iconNode.image = generateTintedImage(image: self.iconNode.image, color: self.theme.foregroundColor)
+            self.iconNode.image = generateTintedImage(image: self.icon, color: self.theme.foregroundColor)
         }
     }
     

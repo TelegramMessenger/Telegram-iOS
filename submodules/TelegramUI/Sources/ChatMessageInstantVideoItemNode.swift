@@ -184,6 +184,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         return .fail
                     }
                 }
+                
+                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
             }
             return .waitForSingleTap
         }
@@ -351,7 +357,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     }
                 }
                 
-                if item.associatedData.isCopyProtectionEnabled {
+                if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
                     needsShareButton = false
                 }
             }
@@ -552,7 +558,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             if !reactions.reactions.isEmpty {
                 let totalInset = params.leftInset + layoutConstants.bubble.edgeInset * 2.0 + avatarInset + layoutConstants.bubble.contentInsets.left + params.rightInset + layoutConstants.bubble.contentInsets.right
                 
-                let maxReactionsWidth = params.width - totalInset
+                let maxReactionsWidth = params.width - totalInset - 8.0
                 let (minWidth, buttonsLayout) = reactionButtonsLayout(ChatMessageReactionButtonsNode.Arguments(
                     context: item.context,
                     presentationData: item.presentationData,
@@ -582,13 +588,6 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, _ in
                 if let strongSelf = self {
-                    let transition: ContainedViewLayoutTransition
-                    if animation.isAnimated {
-                        transition = .animated(duration: 0.2, curve: .spring)
-                    } else {
-                        transition = .immediate
-                    }
-                    
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -718,14 +717,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             let deliveryFailedFrame = CGRect(origin: CGPoint(x: videoFrame.maxX + deliveryFailedInset - deliveryFailedSize.width, y: videoFrame.maxY - deliveryFailedSize.height), size: deliveryFailedSize)
                             if isAppearing {
                                 deliveryFailedNode.frame = deliveryFailedFrame
-                                transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
+                                animation.transition.animatePositionAdditive(node: deliveryFailedNode, offset: CGPoint(x: deliveryFailedInset, y: 0.0))
                             } else {
-                                transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedFrame)
+                                animation.animator.updateFrame(layer: deliveryFailedNode.layer, frame: deliveryFailedFrame, completion: nil)
                             }
                         } else if let deliveryFailedNode = strongSelf.deliveryFailedNode {
                             strongSelf.deliveryFailedNode = nil
-                            transition.updateAlpha(node: deliveryFailedNode, alpha: 0.0)
-                            transition.updateFrame(node: deliveryFailedNode, frame: deliveryFailedNode.frame.offsetBy(dx: 24.0, dy: 0.0), completion: { [weak deliveryFailedNode] _ in
+                            animation.animator.updateAlpha(layer: deliveryFailedNode.layer, alpha: 0.0, completion: nil)
+                            animation.animator.updateFrame(layer: deliveryFailedNode.layer, frame: deliveryFailedNode.frame.offsetBy(dx: 24.0, dy: 0.0), completion: { [weak deliveryFailedNode] _ in
                                 deliveryFailedNode?.removeFromSupernode()
                             })
                         }
@@ -788,7 +787,10 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         
                         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                             let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                            let reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSizeAndApply.0)
+                            var reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSizeAndApply.0)
+                            if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                                reactionButtonsFrame.origin.y += 4.0 + actionButtonsSizeAndApply.0.height
+                            }
                             if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                                 strongSelf.reactionButtonsNode = reactionButtonsNode
                                 reactionButtonsNode.reactionSelected = { value in
@@ -797,7 +799,25 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                                     }
                                     item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                                 }
+                                reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
+                                    guard let strongSelf = self, let item = strongSelf.item else {
+                                        gesture?.cancel()
+                                        return
+                                    }
+                                    
+                                    item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+                                }
                                 reactionButtonsNode.frame = reactionButtonsFrame
+                                if let (rect, containerSize) = strongSelf.absoluteRect {
+                                    var rect = rect
+                                    rect.origin.y = containerSize.height - rect.maxY + strongSelf.insets.top
+                                    
+                                    var reactionButtonsNodeFrame = reactionButtonsFrame
+                                    reactionButtonsNodeFrame.origin.x += rect.minX
+                                    reactionButtonsNodeFrame.origin.y += rect.minY
+                                    
+                                    reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+                                }
                                 strongSelf.addSubnode(reactionButtonsNode)
                                 if animation.isAnimated {
                                     reactionButtonsNode.animateIn(animation: animation)
@@ -1234,14 +1254,20 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         let animationProgress: CGFloat = (currentValue - initialHeight) / (targetHeight - initialHeight)
         let scaleProgress: CGFloat
         var effectiveAvatarInset = avatarInset
-        if currentValue < targetHeight {
-            initialSize = displaySize
-            targetSize = maximumDisplaySize
-            scaleProgress = animationProgress
-        } else if currentValue > targetHeight {
-            initialSize = maximumDisplaySize
-            targetSize = displaySize
-            scaleProgress = 1.0 - animationProgress
+        if abs(targetHeight - initialHeight) > 100.0 {
+            if currentValue < targetHeight {
+                initialSize = displaySize
+                targetSize = maximumDisplaySize
+                scaleProgress = animationProgress
+            } else if currentValue > targetHeight {
+                initialSize = maximumDisplaySize
+                targetSize = displaySize
+                scaleProgress = 1.0 - animationProgress
+            } else {
+                initialSize = isPlaying ? maximumDisplaySize : displaySize
+                targetSize = initialSize
+                scaleProgress = isPlaying ? 1.0 : 0.0
+            }
         } else {
             initialSize = isPlaying ? maximumDisplaySize : displaySize
             targetSize = initialSize
@@ -1309,6 +1335,41 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             let actionButtonsSize = actionButtonsNode.frame.size
             let actionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY), size: actionButtonsSize)
             actionButtonsNode.frame = actionButtonsFrame
+        }
+        
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            let reactionButtonsSize = reactionButtonsNode.frame.size
+            let reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSize)
+            reactionButtonsNode.frame = reactionButtonsFrame
+        }
+    }
+    
+    override func openMessageContextMenu() {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.interactiveVideoNode.frame, nil)
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        
+        var rect = rect
+        rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+            
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            var reactionButtonsNodeFrame = reactionButtonsNode.frame
+            reactionButtonsNodeFrame.origin.x += rect.minX
+            reactionButtonsNodeFrame.origin.y += rect.minY
+            
+            reactionButtonsNode.update(rect: rect, within: containerSize, transition: .immediate)
+        }
+    }
+    
+    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        if let reactionButtonsNode = self.reactionButtonsNode {
+            reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     

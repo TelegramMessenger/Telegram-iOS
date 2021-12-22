@@ -205,7 +205,7 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false)
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext

@@ -48,6 +48,15 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             }
             item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
+        
+        self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                gesture?.cancel()
+                return
+            }
+            
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
@@ -217,7 +226,8 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
-                        hasAutoremove: item.message.isSelfExpiring
+                        hasAutoremove: item.message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: item.message)
                     ))
                 }
                 

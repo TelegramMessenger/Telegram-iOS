@@ -675,7 +675,7 @@ final class ChatMessageAccessibilityData {
     }
 }
 
-public class ChatMessageItemView: ListViewItemNode {
+public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     let layoutConstants = (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular)
     
     var item: ChatMessageItem?
@@ -869,7 +869,10 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func targetReactionView(value: String) -> UIView? {
+    func openMessageContextMenu() {
+    }
+    
+    public func targetReactionView(value: String) -> UIView? {
         return nil
     }
     

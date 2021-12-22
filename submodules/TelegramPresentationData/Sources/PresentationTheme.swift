@@ -639,16 +639,50 @@ public final class PresentationThemeBubbleColorComponents {
     public let highlightedFill: UIColor
     public let stroke: UIColor
     public let shadow: PresentationThemeBubbleShadow?
+    public let reactionInactiveBackground: UIColor
+    public let reactionInactiveForeground: UIColor
+    public let reactionActiveBackground: UIColor
+    public let reactionActiveForeground: UIColor
     
-    public init(fill: [UIColor], highlightedFill: UIColor, stroke: UIColor, shadow: PresentationThemeBubbleShadow?) {
+    public init(
+        fill: [UIColor],
+        highlightedFill: UIColor,
+        stroke: UIColor,
+        shadow: PresentationThemeBubbleShadow?,
+        reactionInactiveBackground: UIColor,
+        reactionInactiveForeground: UIColor,
+        reactionActiveBackground: UIColor,
+        reactionActiveForeground: UIColor
+    ) {
         self.fill = fill
         self.highlightedFill = highlightedFill
         self.stroke = stroke
         self.shadow = shadow
+        self.reactionInactiveBackground = reactionInactiveBackground
+        self.reactionInactiveForeground = reactionInactiveForeground
+        self.reactionActiveBackground = reactionActiveBackground
+        self.reactionActiveForeground = reactionActiveForeground
     }
     
-    public func withUpdated(fill: [UIColor]? = nil, highlightedFill: UIColor? = nil, stroke: UIColor? = nil) -> PresentationThemeBubbleColorComponents {
-        return PresentationThemeBubbleColorComponents(fill: fill ?? self.fill, highlightedFill: highlightedFill ?? self.highlightedFill, stroke: stroke ?? self.stroke, shadow: self.shadow)
+    public func withUpdated(
+        fill: [UIColor]? = nil,
+        highlightedFill: UIColor? = nil,
+        stroke: UIColor? = nil,
+        reactionInactiveBackground: UIColor? = nil,
+        reactionInactiveForeground: UIColor? = nil,
+        reactionActiveBackground: UIColor? = nil,
+        reactionActiveForeground: UIColor? = nil
+    ) -> PresentationThemeBubbleColorComponents {
+        return PresentationThemeBubbleColorComponents(
+            fill: fill ?? self.fill,
+            highlightedFill: highlightedFill ?? self.highlightedFill,
+            stroke: stroke ?? self.stroke,
+            shadow: self.shadow,
+            reactionInactiveBackground: reactionInactiveBackground ?? self.reactionInactiveBackground,
+            reactionInactiveForeground: reactionInactiveForeground ?? self.reactionInactiveForeground,
+            reactionActiveBackground: reactionActiveBackground ?? self.reactionActiveBackground,
+            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground
+        )
     }
 }
 

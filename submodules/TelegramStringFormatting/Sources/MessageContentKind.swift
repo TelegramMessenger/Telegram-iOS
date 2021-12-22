@@ -229,12 +229,13 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     }
 }
 
-public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (String, Bool) {
+public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (String, Bool, Bool) {
     let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
     if !message.text.isEmpty && ![.expiredImage, .expiredVideo].contains(contentKind.key) {
-        return (foldLineBreaks(message.text), false)
+        return (foldLineBreaks(message.text), false, true)
     }
-    return stringForMediaKind(contentKind, strings: strings)
+    let result = stringForMediaKind(contentKind, strings: strings)
+    return (result.0, result.1, false)
 }
 
 public func foldLineBreaks(_ text: String) -> String {

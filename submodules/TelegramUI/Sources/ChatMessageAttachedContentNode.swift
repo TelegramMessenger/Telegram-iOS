@@ -565,7 +565,26 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                         
-                        let (_, refineLayout) = contentFileLayout(context, presentationData, message, message, associatedData, chatLocation, attributes, message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread, false, file, automaticDownload, message.effectivelyIncoming(context.account.peerId), false, associatedData.forcedResourceStatus, statusType, nil, CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height))
+                        let (_, refineLayout) = contentFileLayout(ChatMessageInteractiveFileNode.Arguments(
+                            context: context,
+                            presentationData: presentationData,
+                            message: message,
+                            topMessage: message,
+                            associatedData: associatedData,
+                            chatLocation: chatLocation,
+                            attributes: attributes,
+                            isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
+                            forcedIsEdited: false,
+                            file: file,
+                            automaticDownload: automaticDownload,
+                            incoming: message.effectivelyIncoming(context.account.peerId),
+                            isRecentActions: false,
+                            forcedResourceStatus: associatedData.forcedResourceStatus,
+                            dateAndStatusType: statusType,
+                            displayReactions: false,
+                            messageSelection: nil,
+                            constrainedSize: CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)
+                        ))
                         refineContentFileLayout = refineLayout
                     }
                 } else if let image = media as? TelegramMediaImage {
@@ -642,7 +661,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         reactionPeers: dateReactionsAndPeers.peers,
                         replyCount: dateReplies,
                         isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
-                        hasAutoremove: message.isSelfExpiring
+                        hasAutoremove: message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: message)
                     ))
                 }
                 let _ = statusSuggestedWidthAndContinue
@@ -938,11 +958,18 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             
                             strongSelf.textNode.frame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
                             if let statusSizeAndApply = statusSizeAndApply {
+                                var statusFrame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX, y: strongSelf.textNode.frame.maxY), size: statusSizeAndApply.0)
+                                if let imageFrame = imageFrame {
+                                    statusFrame.origin.y = max(statusFrame.minY, imageFrame.maxY + 2.0)
+                                }
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
+                                    strongSelf.statusNode.frame = statusFrame
+                                    statusSizeAndApply.1(.None)
+                                } else {
+                                    animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: statusFrame, completion: nil)
+                                    statusSizeAndApply.1(animation)
                                 }
-                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: strongSelf.textNode.frame.minX, y: strongSelf.textNode.frame.maxY), size: statusSizeAndApply.0)
-                                statusSizeAndApply.1(animation)
                             } else if strongSelf.statusNode.supernode != nil {
                                 strongSelf.statusNode.removeFromSupernode()
                             }

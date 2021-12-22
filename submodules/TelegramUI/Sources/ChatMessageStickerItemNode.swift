@@ -173,6 +173,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     return .fail
                 }
                 
+                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
+                
                 if let item = strongSelf.item, item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
                     if strongSelf.imageNode.frame.contains(point) {
                         return .waitForDoubleTap
@@ -436,7 +442,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if item.associatedData.isCopyProtectionEnabled {
+                if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
                     needsShareButton = false
                 }
             }
@@ -479,8 +485,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var dateReplies = 0
             let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
             for attribute in item.message.attributes {
-                if let _ = attribute as? EditedMessageAttribute, isEmoji {
-                    edited = true
+                if let attribute = attribute as? EditedMessageAttribute, isEmoji {
+                    edited = !attribute.isHidden
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
@@ -511,7 +517,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 reactionPeers: dateReactionsAndPeers.peers,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
-                hasAutoremove: item.message.isSelfExpiring
+                hasAutoremove: item.message.isSelfExpiring,
+                canViewReactionList: canViewMessageReactionList(message: item.message)
             ))
             
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -682,7 +689,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutSize.height += dateAndStatusSize.height
             }
             if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
-                layoutSize.height += reactionButtonsSizeAndApply.0.height
+                layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
             }
             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
@@ -979,7 +986,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                         let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                        let reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 10.0), size: reactionButtonsSizeAndApply.0)
+                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - 4.0), size: reactionButtonsSizeAndApply.0)
+                        if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
+                            reactionButtonsFrame.origin.y += 4.0 + actionButtonsSizeAndApply.0.height
+                        }
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
                             reactionButtonsNode.reactionSelected = { value in
@@ -987,6 +997,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     return
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                            }
+                            reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
+                                guard let strongSelf = self, let item = strongSelf.item else {
+                                    gesture?.cancel()
+                                    return
+                                }
+                                
+                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
                             }
                             reactionButtonsNode.frame = reactionButtonsFrame
                             strongSelf.addSubnode(reactionButtonsNode)
@@ -1597,6 +1615,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             }
         }
+    }
+    
+    override func openMessageContextMenu() {
+        guard let item = self.item else {
+            return
+        }
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

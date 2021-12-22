@@ -2,7 +2,8 @@ import Foundation
 
 private let whitelistedHosts: Set<String> = Set([
     "t.me",
-    "telegram.me"
+    "telegram.me",
+    "telegra.ph"
 ])
 
 public func isConcealedUrlWhitelisted(_ url: URL) -> Bool {

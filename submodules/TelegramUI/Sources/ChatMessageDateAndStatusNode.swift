@@ -70,7 +70,7 @@ private final class StatusReactionNode: ASDisplayNode {
         if self.value != value {
             self.value = value
             
-            let defaultImageSize = CGSize(width: 19.0, height: 19.0)
+            let defaultImageSize = CGSize(width: 17.0, height: 17.0)
             let imageSize: CGSize
             if let file = file {
                 self.iconImageDisposable.set((context.account.postbox.mediaBox.resourceData(file.resource)
@@ -148,6 +148,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
+        var canViewReactionList: Bool
         
         init(
             context: AccountContext,
@@ -163,7 +164,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             reactionPeers: [(String, EnginePeer)],
             replyCount: Int,
             isPinned: Bool,
-            hasAutoremove: Bool
+            hasAutoremove: Bool,
+            canViewReactionList: Bool
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -179,6 +181,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.replyCount = replyCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
+            self.canViewReactionList = canViewReactionList
         }
     }
     
@@ -220,6 +223,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     var reactionSelected: ((String) -> Void)?
+    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingNode, String) -> Void)?
     
     override init() {
         self.dateNode = TextNode()
@@ -284,18 +288,26 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             let reactionColors: ReactionButtonComponent.Colors
             switch arguments.type {
             case .BubbleIncoming, .ImageIncoming, .FreeIncoming:
+                let themeColors = bubbleColorComponents(theme: arguments.presentationData.theme.theme, incoming: true, wallpaper: !arguments.presentationData.theme.wallpaper.isEmpty)
+                
                 reactionColors = ReactionButtonComponent.Colors(
-                    deselectedBackground: arguments.presentationData.theme.theme.chat.message.incoming.accentControlColor.withMultipliedAlpha(0.1).argb,
-                    selectedBackground: arguments.presentationData.theme.theme.chat.message.incoming.accentControlColor.withMultipliedAlpha(1.0).argb,
-                    deselectedForeground: arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor.argb,
-                    selectedForeground: arguments.presentationData.theme.theme.chat.message.incoming.bubble.withWallpaper.fill.last!.argb
+                    deselectedBackground: themeColors.reactionInactiveBackground.argb,
+                    selectedBackground: themeColors.reactionActiveBackground.argb,
+                    deselectedForeground: themeColors.reactionInactiveForeground.argb,
+                    selectedForeground: themeColors.reactionActiveForeground.argb,
+                    extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
+                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb
                 )
             case .BubbleOutgoing, .ImageOutgoing, .FreeOutgoing:
+                let themeColors = bubbleColorComponents(theme: arguments.presentationData.theme.theme, incoming: false, wallpaper: !arguments.presentationData.theme.wallpaper.isEmpty)
+                
                 reactionColors = ReactionButtonComponent.Colors(
-                    deselectedBackground: arguments.presentationData.theme.theme.chat.message.outgoing.accentControlColor.withMultipliedAlpha(0.1).argb,
-                    selectedBackground: arguments.presentationData.theme.theme.chat.message.outgoing.accentControlColor.withMultipliedAlpha(1.0).argb,
-                    deselectedForeground: arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor.argb,
-                    selectedForeground: arguments.presentationData.theme.theme.chat.message.outgoing.bubble.withWallpaper.fill.last!.argb
+                    deselectedBackground: themeColors.reactionInactiveBackground.argb,
+                    selectedBackground: themeColors.reactionActiveBackground.argb,
+                    deselectedForeground: themeColors.reactionInactiveForeground.argb,
+                    selectedForeground: themeColors.reactionActiveForeground.argb,
+                    extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
+                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb
                 )
             }
             
@@ -564,7 +576,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
 
             var replyCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             
-            let reactionSize: CGFloat = 19.0
+            let reactionSize: CGFloat = 17.0
             var reactionCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             let reactionSpacing: CGFloat = 2.0
             let reactionTrailingSpacing: CGFloat = 6.0
@@ -641,6 +653,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 )
             case let .trailingContent(contentWidth, reactionSettings):
                 if let reactionSettings = reactionSettings, !reactionSettings.displayInline {
+                    var totalReactionCount: Int = 0
+                    for reaction in arguments.reactions {
+                        totalReactionCount += Int(reaction.count)
+                    }
+                    
                     reactionButtonsResult = reactionButtonsContainer.update(
                         context: arguments.context,
                         action: { value in
@@ -667,11 +684,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     peers.append(peer)
                                 }
                             }
-                            if peers.count != Int(reaction.count) {
+                            if peers.count != Int(reaction.count) || arguments.reactionPeers.count != totalReactionCount {
                                 peers.removeAll()
                             }
                             
-                            return ReactionButtonsLayoutContainer.Reaction(
+                            return ReactionButtonsAsyncLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
                                     iconFile: iconFile
@@ -774,32 +791,51 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         var reactionButtonPosition = CGPoint(x: -1.0, y: verticalReactionsInset)
                         for item in reactionButtons.items {
                             if reactionButtonPosition.x + item.size.width > boundingWidth {
-                                reactionButtonPosition.x = 0.0
+                                reactionButtonPosition.x = -1.0
                                 reactionButtonPosition.y += item.size.height + 6.0
                             }
                                 
-                            if item.view.superview == nil {
-                                strongSelf.view.addSubview(item.view)
-                                item.view.frame = CGRect(origin: reactionButtonPosition, size: item.size)
+                            if item.node.supernode == nil {
+                                strongSelf.addSubnode(item.node)
+                                item.node.frame = CGRect(origin: reactionButtonPosition, size: item.size)
                                 
                                 if animation.isAnimated {
-                                    item.view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                                    item.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    item.node.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                                    item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                }
+                                
+                                item.node.isGestureEnabled = true
+                                let itemValue = item.value
+                                let itemNode = item.node
+                                item.node.isGestureEnabled = arguments.canViewReactionList
+                                item.node.activated = { [weak itemNode] gesture, _ in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    guard let itemNode = itemNode else {
+                                        return
+                                    }
+                                    
+                                    if let openReactionPreview = strongSelf.openReactionPreview {
+                                        openReactionPreview(gesture, itemNode.containerNode, itemValue)
+                                    } else {
+                                        gesture.cancel()
+                                    }
                                 }
                             } else {
-                                animation.animator.updateFrame(layer: item.view.layer, frame: CGRect(origin: reactionButtonPosition, size: item.size), completion: nil)
+                                animation.animator.updateFrame(layer: item.node.layer, frame: CGRect(origin: reactionButtonPosition, size: item.size), completion: nil)
                             }
                             reactionButtonPosition.x += item.size.width + 6.0
                         }
                         
-                        for view in reactionButtons.removedViews {
+                        for node in reactionButtons.removedNodes {
                             if animation.isAnimated {
-                                view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
-                                    view?.removeFromSuperview()
+                                node.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                                node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                                    node?.removeFromSupernode()
                                 })
                             } else {
-                                view.removeFromSuperview()
+                                node.removeFromSupernode()
                             }
                         }
                         
@@ -1160,7 +1196,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for (_, button) in self.reactionButtonsContainer.buttons {
             if button.frame.contains(point) {
-                if let result = button.hitTest(self.view.convert(point, to: button), with: event) {
+                if let result = button.hitTest(self.view.convert(point, to: button.view), with: event) {
                     return result
                 }
             }

@@ -16,6 +16,9 @@ public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
         standardWidth: CGFloat,
         transition: ContainedViewLayoutTransition
     ) -> (size: CGSize, apparentHeight: CGFloat)
+    
+    func highlightGestureMoved(location: CGPoint)
+    func highlightGestureFinished(performAction: Bool)
 }
 
 public protocol ContextControllerActionsStackItem: AnyObject {
@@ -31,6 +34,10 @@ public protocol ContextControllerActionsStackItem: AnyObject {
 
 protocol ContextControllerActionsListItemNode: ASDisplayNode {
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)
+    
+    func canBeHighlighted() -> Bool
+    func updateIsHighlighted(isHighlighted: Bool)
+    func performAction()
 }
 
 private final class ContextControllerActionsListActionItemNode: HighlightTrackingButtonNode, ContextControllerActionsListItemNode {
@@ -43,6 +50,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let titleLabelNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    
+    private var iconDisposable: Disposable?
     
     init(
         getController: @escaping () -> ContextControllerProtocol?,
@@ -84,13 +93,15 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             if highlighted {
                 strongSelf.highlightBackgroundNode.alpha = 1.0
             } else {
-                let previousAlpha = strongSelf.highlightBackgroundNode.alpha
                 strongSelf.highlightBackgroundNode.alpha = 0.0
-                strongSelf.highlightBackgroundNode.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
             }
         }
         
         self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+    }
+    
+    deinit {
+        self.iconDisposable?.dispose()
     }
     
     @objc private func pressed() {
@@ -113,6 +124,18 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 strongSelf.requestUpdateAction(id, updatedAction)
             }
         ))
+    }
+    
+    func canBeHighlighted() -> Bool {
+        return true
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.highlightBackgroundNode.alpha = isHighlighted ? 1.0 : 0.0
+    }
+    
+    func performAction() {
+        self.pressed()
     }
     
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {
@@ -170,12 +193,29 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             )
         }
         
-        let iconImage = self.iconNode.image ?? self.item.icon(presentationData.theme)
+        let iconSize: CGSize?
+        if let iconSource = self.item.iconSource {
+            iconSize = iconSource.size
+            if self.iconDisposable == nil {
+                self.iconDisposable = (iconSource.signal |> deliverOnMainQueue).start(next: { [weak self] image in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.iconNode.image = image
+                })
+            }
+        } else if let image = self.iconNode.image {
+            iconSize = image.size
+        } else {
+            let iconImage = self.item.icon(presentationData.theme)
+            self.iconNode.image = iconImage
+            iconSize = iconImage?.size
+        }
         
         var maxTextWidth: CGFloat = constrainedSize.width
         maxTextWidth -= sideInset
-        if let iconImage = iconImage {
-            maxTextWidth -= max(standardIconWidth, iconImage.size.width)
+        if let iconSize = iconSize {
+            maxTextWidth -= max(standardIconWidth, iconSize.width)
         } else {
             maxTextWidth -= sideInset
         }
@@ -187,8 +227,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         var minSize = CGSize()
         minSize.width += sideInset
         minSize.width += max(titleSize.width, subtitleSize.width)
-        if let iconImage = iconImage {
-            minSize.width += max(standardIconWidth, iconImage.size.width)
+        if let iconSize = iconSize {
+            minSize.width += max(standardIconWidth, iconSize.width)
             minSize.width += iconSideInset
         } else {
             minSize.width += sideInset
@@ -204,23 +244,30 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleSize)
             let subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
             
-            transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
             transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
             transition.updateFrameAdditive(node: self.subtitleNode, frame: subtitleFrame)
             
-            if let iconImage = iconImage {
-                if self.iconNode.image !== iconImage {
-                    self.iconNode.image = iconImage
-                }
-                let iconWidth = max(standardIconWidth, iconImage.size.width)
-                let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconImage.size.width) / 2.0), y: floor((size.height - iconImage.size.height) / 2.0)), size: iconImage.size)
-                transition.updateFrame(node: self.iconNode, frame: iconFrame)
+            if let iconSize = iconSize {
+                let iconWidth = max(standardIconWidth, iconSize.width)
+                let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+                transition.updateFrame(node: self.iconNode, frame: iconFrame, beginWithCurrentState: true)
             }
         })
     }
 }
 
 private final class ContextControllerActionsListSeparatorItemNode: ASDisplayNode, ContextControllerActionsListItemNode {
+    func canBeHighlighted() -> Bool {
+        return false
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+    }
+    
+    func performAction() {
+    }
+    
     override init() {
         super.init()
     }
@@ -233,6 +280,26 @@ private final class ContextControllerActionsListSeparatorItemNode: ASDisplayNode
 }
 
 private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, ContextControllerActionsListItemNode {
+    func canBeHighlighted() -> Bool {
+        if let itemNode = self.itemNode {
+            return itemNode.canBeHighlighted()
+        } else {
+            return false
+        }
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        if let itemNode = self.itemNode {
+            itemNode.updateIsHighlighted(isHighlighted: isHighlighted)
+        }
+    }
+    
+    func performAction() {
+        if let itemNode = self.itemNode {
+            itemNode.performAction()
+        }
+    }
+    
     private let getController: () -> ContextControllerProtocol?
     private let item: ContextMenuCustomItem
     
@@ -275,7 +342,7 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
         let itemLayoutAndApply = itemNode.updateLayout(constrainedWidth: constrainedSize.width, constrainedHeight: constrainedSize.height)
         
         return (minSize: itemLayoutAndApply.0, apply: { size, transition in
-            transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: size))
+            transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
             itemLayoutAndApply.1(size, transition)
         })
     }
@@ -296,6 +363,9 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         private let requestUpdate: (ContainedViewLayoutTransition) -> Void
         private var items: [ContextMenuItem]
         private var itemNodes: [Item]
+        
+        private var hapticFeedback: HapticFeedback?
+        private var highlightedItemNode: Item?
         
         init(
             getController: @escaping () -> ContextControllerProtocol?,
@@ -421,10 +491,10 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                 
                 let itemSize = CGSize(width: combinedSize.width, height: itemNodeLayout.minSize.height)
                 let itemFrame = CGRect(origin: nextItemOrigin, size: itemSize)
-                itemTransition.updateFrame(node: item.node, frame: itemFrame)
+                itemTransition.updateFrame(node: item.node, frame: itemFrame, beginWithCurrentState: true)
                 
                 if let separatorNode = item.separatorNode {
-                    itemTransition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.maxY), size: CGSize(width: itemFrame.width, height: UIScreenPixel)))
+                    itemTransition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: itemFrame.minX, y: itemFrame.maxY), size: CGSize(width: itemFrame.width, height: UIScreenPixel)), beginWithCurrentState: true)
                     if i != self.itemNodes.count - 1 {
                         switch self.items[i + 1] {
                         case .separator:
@@ -444,6 +514,38 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             }
             
             return (combinedSize, combinedSize.height)
+        }
+        
+        func highlightGestureMoved(location: CGPoint) {
+            var highlightedItemNode: Item?
+            for itemNode in self.itemNodes {
+                if itemNode.node.frame.contains(location) {
+                    if itemNode.node.canBeHighlighted() {
+                        highlightedItemNode = itemNode
+                    }
+                    break
+                }
+            }
+            if self.highlightedItemNode !== highlightedItemNode {
+                self.highlightedItemNode?.node.updateIsHighlighted(isHighlighted: false)
+                highlightedItemNode?.node.updateIsHighlighted(isHighlighted: true)
+                
+                self.highlightedItemNode = highlightedItemNode
+                if self.hapticFeedback == nil {
+                    self.hapticFeedback = HapticFeedback()
+                }
+                self.hapticFeedback?.tap()
+            }
+        }
+        
+        func highlightGestureFinished(performAction: Bool) {
+            if let highlightedItemNode = self.highlightedItemNode {
+                self.highlightedItemNode = nil
+                highlightedItemNode.node.updateIsHighlighted(isHighlighted: false)
+                if performAction {
+                    highlightedItemNode.node.performAction()
+                }
+            }
         }
     }
     
@@ -503,14 +605,21 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let contentLayout = self.contentNode.update(
+                presentationData: presentationData,
                 constrainedWidth: constrainedSize.width,
                 maxHeight: constrainedSize.height,
                 bottomInset: 0.0,
                 transition: transition
             )
-            transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: contentLayout.cleanSize))
+            transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: contentLayout.cleanSize), beginWithCurrentState: true)
             
             return (contentLayout.cleanSize, contentLayout.apparentHeight)
+        }
+        
+        func highlightGestureMoved(location: CGPoint) {
+        }
+        
+        func highlightGestureFinished(performAction: Bool) {
         }
     }
     
@@ -555,18 +664,65 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> Co
 
 final class ContextControllerActionsStackNode: ASDisplayNode {
     final class NavigationContainer: ASDisplayNode {
+        var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
+        var requestPop: (() -> Void)?
+        var transitionFraction: CGFloat = 0.0
+        
+        private var panRecognizer: UIPanGestureRecognizer?
+        
+        var isNavigationEnabled: Bool = false {
+            didSet {
+                self.panRecognizer?.isEnabled = self.isNavigationEnabled
+            }
+        }
+        
         override init() {
             super.init()
             
             self.clipsToBounds = true
             self.cornerRadius = 14.0
+            
+            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+            self.panRecognizer = panRecognizer
+            self.view.addGestureRecognizer(panRecognizer)
+        }
+        
+        @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            switch recognizer.state {
+            case .began:
+                self.transitionFraction = 0.0
+            case .changed:
+                let distanceFactor: CGFloat = recognizer.translation(in: self.view).x / self.bounds.width
+                let transitionFraction = max(0.0, min(1.0, distanceFactor))
+                if self.transitionFraction != transitionFraction {
+                    self.transitionFraction = transitionFraction
+                    self.requestUpdate?(.immediate)
+                }
+            case .ended, .cancelled:
+                let distanceFactor: CGFloat = recognizer.translation(in: self.view).x / self.bounds.width
+                let transitionFraction = max(0.0, min(1.0, distanceFactor))
+                if transitionFraction > 0.2 {
+                    self.transitionFraction = 0.0
+                    self.requestPop?()
+                } else {
+                    self.transitionFraction = 0.0
+                    self.requestUpdate?(.animated(duration: 0.45, curve: .spring))
+                }
+            default:
+                break
+            }
+        }
+        
+        func update(presentationData: PresentationData, size: CGSize, transition: ContainedViewLayoutTransition) {
         }
     }
     
     final class ItemContainer: ASDisplayNode {
         let requestUpdate: (ContainedViewLayoutTransition) -> Void
         let node: ContextControllerActionsStackItemNode
+        let dimNode: ASDisplayNode
         let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+        var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
         
         init(
@@ -586,18 +742,26 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 requestUpdateApparentHeight: requestUpdateApparentHeight
             )
             
+            self.dimNode = ASDisplayNode()
+            self.dimNode.isUserInteractionEnabled = false
+            self.dimNode.alpha = 0.0
+            
             self.reactionItems = reactionItems
             self.positionLock = positionLock
             
             super.init()
             
+            self.clipsToBounds = true
+            
             self.addSubnode(self.node)
+            self.addSubnode(self.dimNode)
         }
         
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
             standardWidth: CGFloat,
+            transitionFraction: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let (size, apparentHeight) = self.node.update(
@@ -606,9 +770,32 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 standardWidth: standardWidth,
                 transition: transition
             )
-            transition.updateFrame(node: self.node, frame: CGRect(origin: CGPoint(), size: size))
+            
+            let maxScaleOffset: CGFloat = 10.0
+            let scaleOffset: CGFloat = 0.0 * transitionFraction + maxScaleOffset * (1.0 - transitionFraction)
+            let scale: CGFloat = (size.width - scaleOffset) / size.width
+            let yOffset: CGFloat = size.height * (1.0 - scale)
+            let transitionOffset = (1.0 - transitionFraction) * size.width / 2.0
+            transition.updatePosition(node: self.node, position: CGPoint(x: size.width / 2.0 + scaleOffset / 2.0 + transitionOffset, y: size.height / 2.0 - yOffset / 2.0), beginWithCurrentState: true)
+            transition.updateBounds(node: self.node, bounds: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
+            transition.updateTransformScale(node: self.node, scale: scale, beginWithCurrentState: true)
             
             return (size, apparentHeight)
+        }
+        
+        func updateDimNode(presentationData: PresentationData, size: CGSize, transitionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
+            self.dimNode.backgroundColor = presentationData.theme.contextMenu.sectionSeparatorColor
+            
+            transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
+            transition.updateAlpha(node: self.dimNode, alpha: 1.0 - transitionFraction, beginWithCurrentState: true)
+        }
+        
+        func highlightGestureMoved(location: CGPoint) {
+            self.node.highlightGestureMoved(location: self.view.convert(location, to: self.node.view))
+        }
+        
+        func highlightGestureFinished(performAction: Bool) {
+            self.node.highlightGestureFinished(performAction: performAction)
         }
     }
     
@@ -620,12 +807,18 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     private var itemContainers: [ItemContainer] = []
     private var dismissingItemContainers: [(container: ItemContainer, isPopped: Bool)] = []
     
+    private var selectionPanGesture: UIPanGestureRecognizer?
+    
     var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? {
         return self.itemContainers.last?.reactionItems
     }
     
     var topPositionLock: CGFloat? {
         return self.itemContainers.last?.positionLock
+    }
+    
+    var storedScrollingState: CGFloat? {
+        return self.itemContainers.last?.storedScrollingState
     }
     
     init(
@@ -642,6 +835,39 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.navigationContainer)
+        
+        self.navigationContainer.requestUpdate = { [weak self] transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.requestUpdate(transition)
+        }
+        
+        self.navigationContainer.requestPop = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.pop()
+        }
+        
+        let selectionPanGesture = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        self.selectionPanGesture = selectionPanGesture
+        self.view.addGestureRecognizer(selectionPanGesture)
+        selectionPanGesture.isEnabled = false
+    }
+    
+    @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .changed:
+            let location = recognizer.location(in: self.view)
+            self.highlightGestureMoved(location: location)
+        case .ended:
+            self.highlightGestureFinished(performAction: true)
+        case .cancelled:
+            self.highlightGestureFinished(performAction: false)
+        default:
+            break
+        }
     }
     
     func replace(item: ContextControllerActionsStackItem, animated: Bool) {
@@ -653,11 +879,15 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             }
         }
         self.itemContainers.removeAll()
+        self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
         
-        self.push(item: item, positionLock: nil, animated: animated)
+        self.push(item: item, currentScrollingState: nil, positionLock: nil, animated: animated)
     }
     
-    func push(item: ContextControllerActionsStackItem, positionLock: CGFloat?, animated: Bool) {
+    func push(item: ContextControllerActionsStackItem, currentScrollingState: CGFloat?, positionLock: CGFloat?, animated: Bool) {
+        if let itemContainer = self.itemContainers.last {
+            itemContainer.storedScrollingState = currentScrollingState
+        }
         let itemContainer = ItemContainer(
             getController: self.getController,
             requestDismiss: self.requestDismiss,
@@ -674,6 +904,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         )
         self.itemContainers.append(itemContainer)
         self.navigationContainer.addSubnode(itemContainer)
+        self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
         
         let transition: ContainedViewLayoutTransition
         if animated {
@@ -684,6 +915,10 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.requestUpdate(transition)
     }
     
+    func clearStoredScrollingState() {
+        self.itemContainers.last?.storedScrollingState = nil
+    }
+    
     func pop() {
         if self.itemContainers.count == 1 {
             //dismiss
@@ -692,6 +927,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             self.itemContainers.remove(at: self.itemContainers.count - 1)
             self.dismissingItemContainers.append((itemContainer, true))
         }
+        
+        self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
         
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
         self.requestUpdate(transition)
@@ -706,8 +943,17 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         
         let animateAppearingContainers = transition.isAnimated && !self.dismissingItemContainers.isEmpty
         
+        struct ItemLayout {
+            var size: CGSize
+            var apparentHeight: CGFloat
+            var transitionFraction: CGFloat
+            var alphaTransitionFraction: CGFloat
+            var itemTransition: ContainedViewLayoutTransition
+            var animateAppearingContainer: Bool
+        }
+        
         var topItemSize = CGSize()
-        var topItemApparentHeight: CGFloat = 0.0
+        var itemLayouts: [ItemLayout] = []
         for i in 0 ..< self.itemContainers.count {
             let itemContainer = self.itemContainers[i]
             
@@ -720,39 +966,113 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             
             let itemConstrainedHeight: CGFloat = constrainedSize.height
             
+            let transitionFraction: CGFloat
+            let alphaTransitionFraction: CGFloat
+            if i == self.itemContainers.count - 1 {
+                transitionFraction = self.navigationContainer.transitionFraction
+                alphaTransitionFraction = 1.0
+            } else if i == self.itemContainers.count - 2 {
+                transitionFraction = self.navigationContainer.transitionFraction - 1.0
+                alphaTransitionFraction = self.navigationContainer.transitionFraction
+            } else {
+                transitionFraction = 0.0
+                alphaTransitionFraction = 0.0
+            }
+            
             let itemSize = itemContainer.update(
                 presentationData: presentationData,
                 constrainedSize: CGSize(width: constrainedSize.width, height: itemConstrainedHeight),
-                standardWidth: 260.0,
+                standardWidth: 250.0,
+                transitionFraction: alphaTransitionFraction,
                 transition: itemContainerTransition
             )
             if i == self.itemContainers.count - 1 {
                 topItemSize = itemSize.size
-                topItemApparentHeight = itemSize.apparentHeight
             }
             
-            let itemFrame: CGRect
-            if i == self.itemContainers.count - 1 {
-                itemFrame = CGRect(origin: CGPoint(), size: itemSize.size)
-            } else {
-                itemFrame = CGRect(origin: CGPoint(x: -itemSize.size.width, y: 0.0), size: itemSize.size)
-            }
-            
-            itemContainerTransition.updateFrame(node: itemContainer, frame: itemFrame)
-            if animateAppearingContainer {
-                transition.animatePositionAdditive(node: itemContainer, offset: CGPoint(x: itemContainer.bounds.width, y: 0.0))
-            }
+            itemLayouts.append(ItemLayout(
+                size: itemSize.size,
+                apparentHeight: itemSize.apparentHeight,
+                transitionFraction: transitionFraction,
+                alphaTransitionFraction: alphaTransitionFraction,
+                itemTransition: itemContainerTransition,
+                animateAppearingContainer: animateAppearingContainer
+            ))
         }
         
-        transition.updateFrame(node: self.navigationContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: topItemSize.width, height: max(44.0, topItemApparentHeight))))
+        let topItemApparentHeight: CGFloat
+        let topItemWidth: CGFloat
+        if itemLayouts.isEmpty {
+            topItemApparentHeight = 0.0
+            topItemWidth = 0.0
+        } else if itemLayouts.count == 1 {
+            topItemApparentHeight = itemLayouts[0].apparentHeight
+            topItemWidth = itemLayouts[0].size.width
+        } else {
+            let lastItemLayout = itemLayouts[itemLayouts.count - 1]
+            let previousItemLayout = itemLayouts[itemLayouts.count - 2]
+            let transitionFraction = self.navigationContainer.transitionFraction
+            
+            topItemApparentHeight = lastItemLayout.apparentHeight * (1.0 - transitionFraction) + previousItemLayout.apparentHeight * transitionFraction
+            topItemWidth = lastItemLayout.size.width * (1.0 - transitionFraction) + previousItemLayout.size.width * transitionFraction
+        }
+        
+        let navigationContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: topItemWidth, height: max(14 * 2.0, topItemApparentHeight)))
+        transition.updateFrame(node: self.navigationContainer, frame: navigationContainerFrame, beginWithCurrentState: true)
+        self.navigationContainer.update(presentationData: presentationData, size: navigationContainerFrame.size, transition: transition)
+        
+        for i in 0 ..< self.itemContainers.count {
+            let xOffset: CGFloat
+            if itemLayouts[i].transitionFraction < 0.0 {
+                xOffset = itemLayouts[i].transitionFraction * itemLayouts[i].size.width
+            } else {
+                if i != 0 {
+                    xOffset = itemLayouts[i].transitionFraction * itemLayouts[i - 1].size.width
+                } else {
+                    xOffset = itemLayouts[i].transitionFraction * topItemWidth
+                }
+            }
+            let itemFrame = CGRect(origin: CGPoint(x: xOffset, y: 0.0), size: CGSize(width: itemLayouts[i].size.width, height: navigationContainerFrame.height))
+            
+            itemLayouts[i].itemTransition.updateFrame(node: self.itemContainers[i], frame: itemFrame, beginWithCurrentState: true)
+            if itemLayouts[i].animateAppearingContainer {
+                transition.animatePositionAdditive(node: self.itemContainers[i], offset: CGPoint(x: itemFrame.width, y: 0.0))
+            }
+            
+            self.itemContainers[i].updateDimNode(presentationData: presentationData, size: CGSize(width: itemLayouts[i].size.width, height: navigationContainerFrame.size.height), transitionFraction: itemLayouts[i].alphaTransitionFraction, transition: transition)
+        }
         
         for (itemContainer, isPopped) in self.dismissingItemContainers {
-            transition.updatePosition(node: itemContainer, position: CGPoint(x: isPopped ? itemContainer.bounds.width * 3.0 / 2.0 : -itemContainer.bounds.width / 2.0, y: itemContainer.position.y), completion: { [weak itemContainer] _ in
+            var position = itemContainer.position
+            if isPopped {
+                position.x = itemContainer.bounds.width / 2.0 + topItemWidth
+            } else {
+                position.x = itemContainer.bounds.width / 2.0 - topItemWidth
+            }
+            transition.updatePosition(node: itemContainer, position: position, completion: { [weak itemContainer] _ in
                 itemContainer?.removeFromSupernode()
             })
         }
         self.dismissingItemContainers.removeAll()
         
-        return CGSize(width: topItemSize.width, height: topItemSize.height)
+        return CGSize(width: topItemWidth, height: topItemSize.height)
+    }
+    
+    func highlightGestureMoved(location: CGPoint) {
+        if let topItemContainer = self.itemContainers.last {
+            topItemContainer.highlightGestureMoved(location: self.view.convert(location, to: topItemContainer.view))
+        }
+    }
+    
+    func highlightGestureFinished(performAction: Bool) {
+        if let topItemContainer = self.itemContainers.last {
+            topItemContainer.highlightGestureFinished(performAction: performAction)
+        }
+    }
+    
+    func updatePanSelection(isEnabled: Bool) {
+        if let selectionPanGesture = self.selectionPanGesture {
+            selectionPanGesture.isEnabled = isEnabled
+        }
     }
 }

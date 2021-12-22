@@ -217,6 +217,40 @@
 "PUSH_CHAT_MESSAGE_GAME_SCORE" = "%1$@ scored %4$@ in game %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_VIDEOS" = "%1$@ sent %3$@ videos to the group %2$@";
 
+"PUSH_REACT_TEXT" = "%1$@|%2$@ to your %3$@";
+"PUSH_REACT_NOTEXT" = "%1$@|%2$@ to your message";
+"PUSH_REACT_PHOTO" = "%1$@|%2$@ to your photo";
+"PUSH_REACT_VIDEO" = "%1$@|%2$@ to your video";
+"PUSH_REACT_ROUND" = "%1$@|%2$@ to your video message";
+"PUSH_REACT_DOC" = "%1$@|%2$@ to your file";
+"PUSH_REACT_STICKER" = "%1$@|%2$@ to your %3$@sticker";
+"PUSH_REACT_AUDIO" = "%1$@|%2$@ to your voice message";
+"PUSH_REACT_CONTACT" = "%1$@|%2$@ to your contact %3$@";
+"PUSH_REACT_GEO" = "%1$@|%2$@ to your map";
+"PUSH_REACT_GEOLIVE" = "%1$@|%2$@ to your live location";
+"PUSH_REACT_POLL" = "%1$@|%2$@ to your poll %3$@";
+"PUSH_REACT_QUIZ" = "%1$@|%2$@ to your quiz %3$@";
+"PUSH_REACT_GAME" = "%1$@|%2$@ to your game";
+"PUSH_REACT_INVOICE" = "%1$@|%2$@ to your invoice";
+"PUSH_REACT_GIF" = "%1$@|%2$@ to your GIF";
+
+"PUSH_CHAT_REACT_TEXT" = "%2$@|%1$@ %3$@ to your %4$@";
+"PUSH_CHAT_REACT_NOTEXT" = "%2$@|%1$@ %3$@ to your message";
+"PUSH_CHAT_REACT_PHOTO" = "%2$@|%1$@ %3$@ to your photo";
+"PUSH_CHAT_REACT_VIDEO" = "%2$@|%1$@ %3$@ to your video";
+"PUSH_CHAT_REACT_ROUND" = "%2$@|%1$@ %3$@ to your video message";
+"PUSH_CHAT_REACT_DOC" = "%2$@|%1$@ %3$@ to your file";
+"PUSH_CHAT_REACT_STICKER" = "%2$@|%1$@ %3$@ to your %4$@sticker";
+"PUSH_CHAT_REACT_AUDIO" = "%2$@|%1$@ %3$@ to your voice message";
+"PUSH_CHAT_REACT_CONTACT" = "%2$@|%1$@ %3$@ to your contact %4$@";
+"PUSH_CHAT_REACT_GEO" = "%2$@|%1$@ %3$@ to your map";
+"PUSH_CHAT_REACT_GEOLIVE" = "%2$@|%1$@ %3$@ to your live location";
+"PUSH_CHAT_REACT_POLL" = "%2$@|%1$@ %3$@ to your poll %4$@";
+"PUSH_CHAT_REACT_QUIZ" = "%2$@|%1$@ %3$@ to your quiz %4$@";
+"PUSH_CHAT_REACT_GAME" = "%2$@|%1$@ %3$@ to your game";
+"PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
+"PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
 
@@ -7145,3 +7179,19 @@ Sorry for the inconvenience.";
 "ChatList.Archive" = "Archive";
 
 "TextFormat.Spoiler" = "Spoiler";
+
+"Conversation.ContextMenuTranslate" = "Translate";
+
+"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"ChatSettings.StickersAndReactions" = "Stickers and Emoji";
+
+"Localization.TranslateMessages" = "Translate Messages";
+"Localization.ShowTranslate" = "Show Translate Button";
+"Localization.ShowTranslateInfo" = "Show 'Translate' button in the message action menu.";
+"Localization.DoNotTranslate" = "Do Not Translate";
+"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language";
+"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages";
+"Localization.InterfaceLanguage" = "Interface Language";
+
+"DoNotTranslate.Title" = "Do Not Translate";

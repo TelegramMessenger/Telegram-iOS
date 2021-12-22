@@ -249,11 +249,16 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
             } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
-                if result[result.count - 2].1 == ChatMessageTextBubbleContentNode.self {
+                if result[result.count - 2].1 == ChatMessageWebpageBubbleContentNode.self ||
+                    result[result.count - 2].1 == ChatMessagePollBubbleContentNode.self ||
+                    result[result.count - 2].1 == ChatMessageContactBubbleContentNode.self {
+                    result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
+                }
+                /*if result[result.count - 2].1 == ChatMessageTextBubbleContentNode.self {
                 } else {
                     result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
                     needReactions = false
-                }
+                }*/
             }
         }
     }
@@ -805,6 +810,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     return .fail
                 }
                 
+                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
+                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
+                
                 if let avatarNode = strongSelf.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
                     return .waitForSingleTap
                 }
@@ -829,7 +840,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 for contentNode in strongSelf.contentNodes {
-                    let tapAction = contentNode.tapActionAtPoint(CGPoint(x: point.x - contentNode.frame.minX, y: point.y - contentNode.frame.minY), gesture: .tap, isEstimating: true)
+                    let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
+                    let tapAction = contentNode.tapActionAtPoint(contentNodePoint, gesture: .tap, isEstimating: true)
                     switch tapAction {
                         case .none:
                             if let _ = strongSelf.item?.controllerInteraction.tapMessage {
@@ -1161,7 +1173,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
             
-            if item.associatedData.isCopyProtectionEnabled {
+            if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
                 needsShareButton = false
             }
         }
@@ -1596,7 +1608,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     reactionPeers: dateReactionsAndPeers.peers,
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
-                    hasAutoremove: message.isSelfExpiring
+                    hasAutoremove: message.isSelfExpiring,
+                    canViewReactionList: canViewMessageReactionList(message: message)
                 ))
                 
                 mosaicStatusSizeAndApply = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -2689,14 +2702,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if let mosaicStatusOrigin = mosaicStatusOrigin, let (size, apply) = mosaicStatusSizeAndApply {
-            let mosaicStatusNode = apply(animation)
+            var statusNodeAnimation = animation
+            if strongSelf.mosaicStatusNode == nil {
+                statusNodeAnimation = .None
+            }
+            let mosaicStatusNode = apply(statusNodeAnimation)
             if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                 strongSelf.mosaicStatusNode?.removeFromSupernode()
                 strongSelf.mosaicStatusNode = mosaicStatusNode
                 strongSelf.clippingNode.addSubnode(mosaicStatusNode)
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
-            mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
+            statusNodeAnimation.animator.updateFrame(layer: mosaicStatusNode.layer, frame: CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size), completion: nil)
         } else if let mosaicStatusNode = strongSelf.mosaicStatusNode {
             strongSelf.mosaicStatusNode = nil
             mosaicStatusNode.removeFromSupernode()
@@ -2828,6 +2845,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         return
                     }
                     item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+                }
+                reactionButtonsNode.openReactionPreview = { [weak strongSelf] gesture, sourceNode, value in
+                    guard let strongSelf = strongSelf, let item = strongSelf.item else {
+                        gesture?.cancel()
+                        return
+                    }
+                    
+                    item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
                 }
                 reactionButtonsNode.frame = reactionButtonsFrame
                 strongSelf.addSubnode(reactionButtonsNode)
@@ -3848,6 +3873,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
     }
     
+    override func openMessageContextMenu() {
+        guard let item = self.item else {
+            return
+        }
+        let subFrame = self.backgroundNode.frame
+        item.controllerInteraction.openMessageContextMenu(item.message, true, self, subFrame, nil)
+    }
+    
     override func targetReactionView(value: String) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
@@ -3856,6 +3889,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let result = contentNode.reactionTargetView(value: value) {
                 return result
             }
+        }
+        if let mosaicStatusNode = self.mosaicStatusNode, let result = mosaicStatusNode.reactionView(value: value) {
+            return result
         }
         return nil
     }

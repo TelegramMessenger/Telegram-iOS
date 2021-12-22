@@ -39,6 +39,7 @@ swift_library(
         "//submodules/Speak:Speak",
         "//submodules/UndoUI:UndoUI",
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
+        "//submodules/Translate:Translate",
     ],
     visibility = [
         "//visibility:public",

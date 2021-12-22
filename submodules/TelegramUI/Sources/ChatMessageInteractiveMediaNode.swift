@@ -522,7 +522,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     reactionPeers: dateAndStatus.dateReactionPeers,
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
-                    hasAutoremove: message.isSelfExpiring
+                    hasAutoremove: message.isSelfExpiring,
+                    canViewReactionList: canViewMessageReactionList(message: message)
                 ))
                 
                 let (size, apply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)

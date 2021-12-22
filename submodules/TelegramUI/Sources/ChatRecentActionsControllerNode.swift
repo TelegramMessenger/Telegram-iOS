@@ -255,6 +255,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
+        }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in

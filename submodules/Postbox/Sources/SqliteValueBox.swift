@@ -46,7 +46,7 @@ struct SqlitePreparedStatement {
         sqlite3_clear_bindings(statement)
     }
     
-    func step(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Bool {
+    func step(handle: OpaquePointer?, _ initial: Bool = false, pathToRemoveOnError: String?) -> Bool {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
             if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
@@ -56,7 +56,7 @@ struct SqlitePreparedStatement {
             }
             
             if res == SQLITE_CORRUPT {
-                if let path = path {
+                if let path = pathToRemoveOnError {
                     postboxLog("Corrupted DB at step, dropping")
                     try? FileManager.default.removeItem(atPath: path)
                     preconditionFailure()
@@ -70,7 +70,7 @@ struct SqlitePreparedStatement {
         var code: Int32
     }
     
-    func tryStep(handle: OpaquePointer?, _ initial: Bool = false, path: String?) -> Result<Void, SqlError> {
+    func tryStep(handle: OpaquePointer?, _ initial: Bool = false, pathToRemoveOnError: String?) -> Result<Void, SqlError> {
         let res = sqlite3_step(statement)
         if res != SQLITE_ROW && res != SQLITE_DONE {
             if let error = sqlite3_errmsg(handle), let str = NSString(utf8String: error) {
@@ -80,7 +80,7 @@ struct SqlitePreparedStatement {
             }
             
             if res == SQLITE_CORRUPT {
-                if let path = path {
+                if let path = pathToRemoveOnError {
                     postboxLog("Corrupted DB at step, dropping")
                     try? FileManager.default.removeItem(atPath: path)
                     preconditionFailure()
@@ -167,6 +167,7 @@ public final class SqliteValueBox: ValueBox {
     private let inMemory: Bool
     private let encryptionParameters: ValueBoxEncryptionParameters?
     private let databasePath: String
+    private let removeDatabaseOnError: Bool
     private var database: Database!
     private var tables: [Int32: SqliteValueBoxTable] = [:]
     private var fullTextTables: [Int32: ValueBoxFullTextTable] = [:]
@@ -202,11 +203,12 @@ public final class SqliteValueBox: ValueBox {
     
     private let queue: Queue
     
-    public init?(basePath: String, queue: Queue, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
+    public init?(basePath: String, queue: Queue, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, removeDatabaseOnError: Bool, encryptionParameters: ValueBoxEncryptionParameters?, upgradeProgress: (Float) -> Void, inMemory: Bool = false) {
         self.basePath = basePath
         self.isTemporary = isTemporary
         self.isReadOnly = isReadOnly
         self.useCaches = useCaches
+        self.removeDatabaseOnError = removeDatabaseOnError
         self.inMemory = inMemory
         self.encryptionParameters = encryptionParameters
         self.databasePath = basePath + "/db_sqlite"
@@ -294,7 +296,9 @@ public final class SqliteValueBox: ValueBox {
                 preconditionFailure("Don't have write access to database folder")
             }
             
-            let _ = try? FileManager.default.removeItem(atPath: path)
+            if self.removeDatabaseOnError {
+                let _ = try? FileManager.default.removeItem(atPath: path)
+            }
             preconditionFailure("Couldn't open database")
         }
 
@@ -328,7 +332,7 @@ public final class SqliteValueBox: ValueBox {
                 if self.isEncrypted(database) {
                     postboxLog("Encryption key is invalid")
 
-                    if isTemporary || isReadOnly {
+                    if isTemporary || isReadOnly || !self.removeDatabaseOnError {
                         return nil
                     }
                     
@@ -347,7 +351,7 @@ public final class SqliteValueBox: ValueBox {
                 }
             } else {
                 postboxLog("Encryption key is required")
-                if isReadOnly {
+                if isReadOnly || !self.removeDatabaseOnError {
                     return nil
                 }
                 
@@ -548,13 +552,16 @@ public final class SqliteValueBox: ValueBox {
         postboxLog("isEncrypted prepare...")
 
         let allIsOk = Atomic<Bool>(value: false)
+        let removeDatabaseOnError = self.removeDatabaseOnError
         let databasePath = self.databasePath
         DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: {
             if allIsOk.with({ $0 }) == false {
                 postboxLog("Timeout reached, discarding database")
-                try? FileManager.default.removeItem(atPath: databasePath)
+                if removeDatabaseOnError {
+                    try? FileManager.default.removeItem(atPath: databasePath)
+                }
 
-                exit(0)
+                preconditionFailure()
             }
         })
         let status = sqlite3_prepare_v2(database.handle, "SELECT * FROM sqlite_master LIMIT 1", -1, &statement, nil)
@@ -569,7 +576,7 @@ public final class SqliteValueBox: ValueBox {
             return true
         }
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        switch preparedStatement.tryStep(handle: database.handle, path: self.databasePath) {
+        switch preparedStatement.tryStep(handle: database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
         case .success:
             break
         case let .failure(error):
@@ -588,7 +595,7 @@ public final class SqliteValueBox: ValueBox {
         let status = sqlite3_prepare_v2(database.handle, "PRAGMA user_version", -1, &statement, nil)
         precondition(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
-        let _ = preparedStatement.step(handle: database.handle, path: self.databasePath)
+        let _ = preparedStatement.step(handle: database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil)
         let value = preparedStatement.int64At(0)
         preparedStatement.destroy()
         return value
@@ -601,7 +608,7 @@ public final class SqliteValueBox: ValueBox {
         precondition(status == SQLITE_OK)
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var result: String?
-        if preparedStatement.step(handle: database.handle, path: self.databasePath) {
+        if preparedStatement.step(handle: database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             result = preparedStatement.stringAt(0)
         }
         preparedStatement.destroy()
@@ -616,7 +623,7 @@ public final class SqliteValueBox: ValueBox {
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [SqliteValueBoxTable] = []
         
-        while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
+        while preparedStatement.step(handle: database.handle, true, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             guard let name = preparedStatement.stringAt(0) else {
                 assertionFailure()
                 continue
@@ -663,7 +670,7 @@ public final class SqliteValueBox: ValueBox {
         let preparedStatement = SqlitePreparedStatement(statement: statement)
         var tables: [ValueBoxFullTextTable] = []
         
-        while preparedStatement.step(handle: database.handle, true, path: self.databasePath) {
+        while preparedStatement.step(handle: database.handle, true, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             let value = preparedStatement.int64At(0)
             tables.append(ValueBoxFullTextTable(id: Int32(value)))
         }
@@ -1475,7 +1482,7 @@ public final class SqliteValueBox: ValueBox {
             
             var buffer: ReadBuffer?
             
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 buffer = statement.valueAt(0)
                 break
             }
@@ -1495,7 +1502,7 @@ public final class SqliteValueBox: ValueBox {
         if let _ = self.tables[table.id] {
             let statement = self.getRowIdStatement(table, key: key)
             
-            if statement.step(handle: self.database.handle, path: self.databasePath) {
+            if statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 let rowId = statement.int64At(0)
                 var blobHandle: OpaquePointer?
                 sqlite3_blob_open(database.handle, "main", "t\(table.id)", "value", rowId, 0, &blobHandle)
@@ -1515,7 +1522,7 @@ public final class SqliteValueBox: ValueBox {
         if let _ = self.tables[table.id] {
             let statement = self.getRowIdStatement(table, key: key)
             
-            if statement.step(handle: self.database.handle, path: self.databasePath) {
+            if statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 let rowId = statement.int64At(0)
                 var blobHandle: OpaquePointer?
                 sqlite3_blob_open(database.handle, "main", "t\(table.id)", "value", rowId, 1, &blobHandle)
@@ -1566,7 +1573,7 @@ public final class SqliteValueBox: ValueBox {
                         }
                     }
                     
-                    while statement.step(handle: self.database.handle, path: self.databasePath) {
+                    while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                         let key = statement.keyAt(0)
                         let value = statement.valueAt(1)
                         
@@ -1591,7 +1598,7 @@ public final class SqliteValueBox: ValueBox {
                         }
                     }
                     
-                    while statement.step(handle: self.database.handle, path: self.databasePath) {
+                    while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                         let key = statement.int64KeyAt(0)
                         let value = statement.valueAt(1)
                         
@@ -1702,7 +1709,7 @@ public final class SqliteValueBox: ValueBox {
                         }
                     }
                     
-                    while statement.step(handle: self.database.handle, path: self.databasePath) {
+                    while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                         let key = statement.keyAt(0)
                         
                         if !keys(key) {
@@ -1726,7 +1733,7 @@ public final class SqliteValueBox: ValueBox {
                         }
                     }
                     
-                    while statement.step(handle: self.database.handle, path: self.databasePath) {
+                    while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                         let key = statement.int64KeyAt(0)
                         
                         if !keys(key) {
@@ -1748,7 +1755,7 @@ public final class SqliteValueBox: ValueBox {
         if let _ = self.tables[table.id] {
             let statement: SqlitePreparedStatement = self.scanStatement(table)
             
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 let key = statement.keyAt(0)
                 let value = statement.valueAt(1)
                 
@@ -1767,7 +1774,7 @@ public final class SqliteValueBox: ValueBox {
         if let _ = self.tables[table.id] {
             let statement: SqlitePreparedStatement = self.scanKeysStatement(table)
             
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 let key = statement.keyAt(0)
                 
                 if !keys(key) {
@@ -1785,7 +1792,7 @@ public final class SqliteValueBox: ValueBox {
         if let _ = self.tables[table.id] {
             let statement: SqlitePreparedStatement = self.scanStatement(table)
             
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 let key = statement.int64KeyValueAt(0)
                 let value = statement.valueAt(1)
                 
@@ -1804,7 +1811,7 @@ public final class SqliteValueBox: ValueBox {
         if let _ = self.tables[table.id] {
             let statement: SqlitePreparedStatement = self.scanKeysStatement(table)
             
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 let key = statement.int64KeyValueAt(0)
                 
                 if !keys(key) {
@@ -1822,18 +1829,18 @@ public final class SqliteValueBox: ValueBox {
         
         if sqliteTable.hasPrimaryKey {
             let statement = self.insertOrReplaceStatement(sqliteTable, key: key, value: value)
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             }
             statement.reset()
         } else {
             if self.exists(table, key: key) {
                 let statement = self.updateStatement(table, key: key, value: value)
-                while statement.step(handle: self.database.handle, path: self.databasePath) {
+                while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 }
                 statement.reset()
             } else {
                 let statement = self.insertOrReplaceStatement(sqliteTable, key: key, value: value)
-                while statement.step(handle: self.database.handle, path: self.databasePath) {
+                while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                 }
                 statement.reset()
             }
@@ -1850,7 +1857,7 @@ public final class SqliteValueBox: ValueBox {
             }
             
             let statement = self.deleteStatement(table, key: key)
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             }
             statement.reset()
         }
@@ -1860,7 +1867,7 @@ public final class SqliteValueBox: ValueBox {
         precondition(self.queue.isCurrent())
         if let _ = self.tables[table.id] {
             let statement = self.rangeDeleteStatement(table, start: min(start, end), end: max(start, end))
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             }
             statement.reset()
         }
@@ -1870,7 +1877,7 @@ public final class SqliteValueBox: ValueBox {
         precondition(self.queue.isCurrent())
         if let _ = self.tables[table.id] {
             let statement = self.moveStatement(table, from: previousKey, to: updatedKey)
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             }
             statement.reset()
         }
@@ -1880,7 +1887,7 @@ public final class SqliteValueBox: ValueBox {
         precondition(self.queue.isCurrent())
         if let _ = self.tables[fromTable.id] {
             let statement = self.copyStatement(fromTable: fromTable, fromKey: fromKey, toTable: toTable, toKey: toKey)
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             }
             statement.reset()
         }
@@ -1916,7 +1923,7 @@ public final class SqliteValueBox: ValueBox {
             }
             
             if let statement = statement {
-                while statement.step(handle: self.database.handle, path: self.databasePath) {
+                while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
                     let resultCollectionId = statement.stringAt(0)
                     let resultItemId = statement.stringAt(1)
                     
@@ -1942,7 +1949,7 @@ public final class SqliteValueBox: ValueBox {
         }
         
         let statement = self.fullTextInsertStatement(table, collectionId: collectionIdData, itemId: itemIdData, contents: contentsData, tags: tagsData)
-        while statement.step(handle: self.database.handle, path: self.databasePath) {
+        while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
         }
         statement.reset()
     }
@@ -1960,7 +1967,7 @@ public final class SqliteValueBox: ValueBox {
             }
             
             let statement = self.fullTextDeleteStatement(table, itemId: itemIdData)
-            while statement.step(handle: self.database.handle, path: self.databasePath) {
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             }
             statement.reset()
         }
@@ -1987,7 +1994,7 @@ public final class SqliteValueBox: ValueBox {
         }
         
         var result = 0
-        while statement.step(handle: database.handle, true, path: self.databasePath) {
+        while statement.step(handle: database.handle, true, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             let value = statement.int32At(0)
             result = Int(value)
         }
@@ -2005,7 +2012,7 @@ public final class SqliteValueBox: ValueBox {
         let statement = SqlitePreparedStatement(statement: statementImpl)
         
         var result = 0
-        while statement.step(handle: database.handle, true, path: self.databasePath) {
+        while statement.step(handle: database.handle, true, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
             let value = statement.int32At(0)
             result = Int(value)
         }

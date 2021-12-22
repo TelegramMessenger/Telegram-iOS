@@ -141,7 +141,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var initializedPlaceholder = false
         
-    private let inputMenu = ChatTextInputMenu()
+    private let inputMenu: ChatTextInputMenu
     
     private var theme: PresentationTheme?
     private var strings: PresentationStrings?
@@ -207,7 +207,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil)
+            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: false)
             textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
             self.updatingInputState = false
             self.updateTextNodeText(animated: animated)
@@ -240,6 +240,12 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     init(presentationInterfaceState: ChatPresentationInterfaceState, isCaption: Bool = false, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
         self.isCaption = isCaption
+        
+        var hasSpoilers = true
+        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+            hasSpoilers = false
+        }
+        self.inputMenu = ChatTextInputMenu(hasSpoilers: hasSpoilers)
         
         self.textInputContainerBackgroundNode = ASImageNode()
         self.textInputContainerBackgroundNode.isUserInteractionEnabled = false
@@ -697,7 +703,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
             let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
-            refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
+            refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: false)
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
             
             let inputTextState = self.inputTextState
@@ -999,7 +1005,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil)
+            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: false)
             string.replaceCharacters(in: range, with: cleanReplacementString)
             self.textInputNode?.attributedText = string
             self.textInputNode?.selectedRange = NSMakeRange(range.lowerBound + cleanReplacementString.length, 0)

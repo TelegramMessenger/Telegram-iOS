@@ -251,6 +251,7 @@ swift_library(
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/Components/ReactionListContextMenuContent:ReactionListContextMenuContent",
+        "//submodules/Translate:Translate",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

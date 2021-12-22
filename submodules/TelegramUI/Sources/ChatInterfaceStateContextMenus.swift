@@ -24,6 +24,8 @@ import AvatarNode
 import AdUI
 import TelegramNotices
 import ReactionListContextMenuContent
+import TelegramUIPreferences
+import Translate
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -80,7 +82,11 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             }
         }
     } else if let author = message.author, message.author?.id != message.id.peerId, author.id.namespace == Namespaces.Peer.CloudChannel && message.id.peerId.namespace == Namespaces.Peer.CloudChannel, !message.flags.contains(.Incoming) {
-        hasEditRights = true
+        if message.media.contains(where: { $0 is TelegramMediaInvoice }) {
+            hasEditRights = false
+        } else {
+            hasEditRights = true
+        }
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
             switch peer.info {
@@ -144,7 +150,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
     return false
 }
 
-private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
+private func canViewReadStats(message: Message, cachedData: CachedPeerData?, isMessageRead: Bool, appConfig: AppConfiguration) -> Bool {
     guard let peer = message.peers[message.id.peerId] else {
         return false
     }
@@ -192,6 +198,16 @@ private func canViewReadStats(message: Message, isMessageRead: Bool, appConfig: 
     switch peer {
     case let channel as TelegramChannel:
         if case .broadcast = channel.info {
+            return false
+        } else if let cachedData = cachedData as? CachedChannelData {
+            if let memberCount = cachedData.participantsSummary.memberCount {
+                if Int(memberCount) > maxParticipantCount {
+                    return false
+                }
+            } else {
+                return false
+            }
+        } else {
             return false
         }
     case let group as TelegramGroup:
@@ -543,7 +559,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return transaction.getCombinedPeerReadState(messages[0].id.peerId)
     }
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
@@ -553,9 +569,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         cachedData,
         readState,
         ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
-        context.engine.stickers.availableReactions()
+        context.engine.stickers.availableReactions(),
+        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips, availableReactions -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips, availableReactions, sharedData -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -568,12 +585,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             isMessageRead = readState.isOutgoingMessageIndexRead(message.index)
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions)
+        let translationSettings: TranslationSettings
+        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+            translationSettings = current
+        } else {
+            translationSettings = TranslationSettings.defaultSettings
+        }
+        
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions -> ContextController.Items in
+    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings -> ContextController.Items in
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -688,7 +712,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             resourceAvailable = false
         }
         
-        if (!messages[0].text.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled {
+        var messageText: String = ""
+        for message in messages {
+            if !message.text.isEmpty {
+                if messageText.isEmpty {
+                    messageText = message.text
+                } else {
+                    messageText = ""
+                    break
+                }
+            }
+        }
+        
+        if (!messageText.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -718,7 +754,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             if let restrictedText = restrictedText {
                                 storeMessageTextInPasteboard(restrictedText, entities: nil)
                             } else {
-                                storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                                storeMessageTextInPasteboard(messageText, entities: messageEntities)
                             }
                             
                             Queue.mainQueue().after(0.2, {
@@ -734,7 +770,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         |> deliverOnMainQueue).start(next: { data in
                                             if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                                 if let image = UIImage(data: imageData) {
-                                                    if !message.text.isEmpty {
+                                                    if !messageText.isEmpty {
                                                         copyTextWithEntities()
                                                     } else {
                                                         UIPasteboard.general.image = image
@@ -760,11 +796,20 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     f(.default)
                 })))
                 
-                if isSpeakSelectionEnabled() && !message.text.isEmpty {
+                if canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages) {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: messageText), .translate)
+                        f(.default)
+                    })))
+                }
+                
+                if isSpeakSelectionEnabled() && !messageText.isEmpty {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuSpeak, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: message.text), .speak)
+                        controllerInteraction.performTextSelectionAction(0, NSAttributedString(string: messageText), .speak)
                         f(.default)
                     })))
                 }
@@ -1172,7 +1217,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        let canViewStats = canViewReadStats(message: message, isMessageRead: isMessageRead, appConfig: appConfig)
+        let canViewStats = canViewReadStats(message: message, cachedData: cachedData, isMessageRead: isMessageRead, appConfig: appConfig)
         var reactionCount = 0
         for reaction in mergedMessageReactionsAndPeers(message: message).reactions {
             reactionCount += Int(reaction.count)
@@ -1192,6 +1237,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 if group.participantCount <= 50 {
                     hasReadReports = true
                 }
+            } else {
+                reactionCount = 0
             }
             
             var readStats = readStats
@@ -1205,51 +1252,18 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
 
                 actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, stats: readStats, action: { c, f, stats in
-                    if reactionCount == 0 && stats.peers.count == 1 {
+                    if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
                         c.dismiss(completion: {
                             controllerInteraction.openPeer(stats.peers[0].id, .default, nil)
                         })
-                    } else if !stats.peers.isEmpty || reactionCount != 0 {
-                        if reactionCount != 0 {
-                            c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), back: { [weak c] in
-                                c?.popItems()
-                            }, openPeer: { [weak c] id in
-                                c?.dismiss(completion: {
-                                    controllerInteraction.openPeer(id, .default, nil)
-                                })
-                            })), tip: nil)))
-                        } else {
-                            var subActions: [ContextMenuItem] = []
-
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-
-                            subActions.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, textColor: .primary, icon: { theme in
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
-                            }, action: { controller, _ in
-                                controller.setItems(contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: chatPresentationInterfaceState, context: context, messages: messages, controllerInteraction: controllerInteraction, selectAll: selectAll, interfaceInteraction: interfaceInteraction, readStats: stats), minHeight: nil, previousActionsTransition: .slide(forward: false))
-                            })))
-
-                            subActions.append(.separator)
-
-                            for peer in stats.peers {
-                                let avatarSignal = peerAvatarCompleteImage(account: context.account, peer: peer, size: CGSize(width: 30.0, height: 30.0))
-
-                                subActions.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: CGSize(width: 30.0, height: 30.0), signal: avatarSignal), action: { _, f in
-                                    c.dismiss(completion: {
-                                        controllerInteraction.openPeer(peer.id, .default, nil)
-                                    })
-                                })))
-                            }
-
-                            var tip: ContextController.Tip?
-                            if messageViewsPrivacyTips < 3 {
-                                tip = .messageViewsPrivacy
-                                let _ = ApplicationSpecificNotice.incrementMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager).start()
-                            }
-
-                            let minHeight = c.getActionsMinHeight()
-                            c.setItems(.single(ContextController.Items(content: .list(subActions), tip: tip)), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
-                        }
+                    } else if (stats != nil && !stats!.peers.isEmpty) || reactionCount != 0 {
+                        c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), reaction: nil, readStats: stats, back: { [weak c] in
+                            c?.popItems()
+                        }, openPeer: { [weak c] id in
+                            c?.dismiss(completion: {
+                                controllerInteraction.openPeer(id, .default, nil)
+                            })
+                        })), tip: nil)))
                     } else {
                         f(.default)
                     }
@@ -1757,6 +1771,14 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
         }
     }
     
+    func canBeHighlighted() -> Bool {
+        return self.isActionEnabled
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+    
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
         return self
     }
@@ -1766,9 +1788,9 @@ final class ChatReadReportContextItem: ContextMenuCustomItem {
     fileprivate let context: AccountContext
     fileprivate let message: Message
     fileprivate let stats: MessageReadStats?
-    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats) -> Void
+    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?) -> Void
 
-    init(context: AccountContext, message: Message, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats) -> Void) {
+    init(context: AccountContext, message: Message, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?) -> Void) {
         self.context = context
         self.message = message
         self.stats = stats
@@ -1899,6 +1921,8 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 }
             })
         }
+        
+        item.context.account.viewTracker.updateReactionsForMessageIds(messageIds: [item.message.id], force: true)
     }
 
     deinit {
@@ -2110,6 +2134,14 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
     }
 
     private var actionTemporarilyDisabled: Bool = false
+    
+    func canBeHighlighted() -> Bool {
+        return self.isActionEnabled
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
 
     func performAction() {
         if self.actionTemporarilyDisabled {
@@ -2120,15 +2152,22 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             self?.actionTemporarilyDisabled = false
         }
 
-        guard let controller = self.getController(), let currentStats = self.currentStats else {
+        guard let controller = self.getController() else {
             return
         }
         self.item.action(controller, { [weak self] result in
             self?.actionSelected(result)
-        }, currentStats)
+        }, self.currentStats)
     }
 
     var isActionEnabled: Bool {
+        var reactionCount = 0
+        for reaction in mergedMessageReactionsAndPeers(message: self.item.message).reactions {
+            reactionCount += Int(reaction.count)
+        }
+        if reactionCount >= 0 {
+            return true
+        }
         guard let currentStats = self.currentStats else {
             return false
         }
