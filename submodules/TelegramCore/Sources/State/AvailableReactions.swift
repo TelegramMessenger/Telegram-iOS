@@ -234,6 +234,7 @@ func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) ->
                         
                         for reaction in availableReactions.reactions {
                             resources.append(reaction.staticIcon.resource)
+                            resources.append(reaction.appearAnimation.resource)
                             resources.append(reaction.selectAnimation.resource)
                             resources.append(reaction.activateAnimation.resource)
                             resources.append(reaction.effectAnimation.resource)

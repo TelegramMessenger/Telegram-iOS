@@ -487,6 +487,12 @@ private func compressFrame(width: Int, height: Int, rgbData: Data) -> Data? {
 }
 
 private final class AnimatedStickerDirectFrameSourceCache {
+    private enum FrameRangeResult {
+        case range(Range<Int>)
+        case notFound
+        case corruptedFile
+    }
+    
     private let queue: Queue
     private let storeQueue: Queue
     private let file: ManagedFileImpl
@@ -548,27 +554,31 @@ private final class AnimatedStickerDirectFrameSourceCache {
         }
     }
     
-    private func readFrameRange(index: Int) -> Range<Int>? {
+    private func readFrameRange(index: Int) -> FrameRangeResult {
         if index < 0 || index >= self.frameCount {
-            return nil
+            return .notFound
         }
         
         self.file.seek(position: Int64(index * 4 * 2))
         var offset: Int32 = 0
         var length: Int32 = 0
         if self.file.read(&offset, 4) != 4 {
-            return nil
+            return .corruptedFile
         }
         if self.file.read(&length, 4) != 4 {
-            return nil
+            return .corruptedFile
         }
         if length == 0 {
-            return nil
+            return .notFound
         }
         if length < 0 || offset < 0 {
-            return nil
+            return .corruptedFile
         }
-        return (Int(offset) ..< Int(offset + length))
+        if Int64(offset) + Int64(length) > 100 * 1024 * 1024 {
+            return .corruptedFile
+        }
+        
+        return .range(Int(offset) ..< Int(offset + length))
     }
     
     func storeUncompressedRgbFrame(index: Int, rgbData: Data) {
@@ -617,43 +627,52 @@ private final class AnimatedStickerDirectFrameSourceCache {
         if index < 0 || index >= self.frameCount {
             return nil
         }
-        guard let range = self.readFrameRange(index: index) else {
-            return nil
-        }
-        self.file.seek(position: Int64(range.lowerBound))
-        let length = range.upperBound - range.lowerBound
-        let compressedData = self.file.readData(count: length)
-        if compressedData.count != length {
-            return nil
-        }
+        let rangeResult = self.readFrameRange(index: index)
         
-        var frameData: Data?
-        
-        let decodeBufferLength = self.decodeBuffer.count
-        
-        compressedData.withUnsafeBytes { buffer -> Void in
-            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
-                return
+        switch rangeResult {
+        case let .range(range):
+            self.file.seek(position: Int64(range.lowerBound))
+            let length = range.upperBound - range.lowerBound
+            let compressedData = self.file.readData(count: length)
+            if compressedData.count != length {
+                return nil
             }
             
-            self.scratchBuffer.withUnsafeMutableBytes { scratchBuffer -> Void in
-                guard let scratchBytes = scratchBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+            var frameData: Data?
+            
+            let decodeBufferLength = self.decodeBuffer.count
+            
+            compressedData.withUnsafeBytes { buffer -> Void in
+                guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                     return
                 }
-
-                self.decodeBuffer.withUnsafeMutableBytes { decodeBuffer -> Void in
-                    guard let decodeBytes = decodeBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                
+                self.scratchBuffer.withUnsafeMutableBytes { scratchBuffer -> Void in
+                    guard let scratchBytes = scratchBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
                         return
                     }
 
-                    let resultLength = compression_decode_buffer(decodeBytes, decodeBufferLength, bytes, length, UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
-                    
-                    frameData = Data(bytes: decodeBytes, count: resultLength)
+                    self.decodeBuffer.withUnsafeMutableBytes { decodeBuffer -> Void in
+                        guard let decodeBytes = decodeBuffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                            return
+                        }
+
+                        let resultLength = compression_decode_buffer(decodeBytes, decodeBufferLength, bytes, length, UnsafeMutableRawPointer(scratchBytes), COMPRESSION_LZFSE)
+                        
+                        frameData = Data(bytes: decodeBytes, count: resultLength)
+                    }
                 }
             }
+            
+            return frameData
+        case .notFound:
+            return nil
+        case .corruptedFile:
+            self.file.truncate(count: 0)
+            self.initializeFrameTable()
+            
+            return nil
         }
-        
-        return frameData
     }
 }
 

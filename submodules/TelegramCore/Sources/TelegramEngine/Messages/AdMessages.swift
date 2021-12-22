@@ -22,17 +22,37 @@ private class AdMessagesHistoryContextImpl {
             
             enum CodingKeys: String, CodingKey {
                 case peer
+                case invite
+            }
+            
+            struct Invite: Equatable, Codable {
+                var title: String
+                var joinHash: String
             }
             
             case peer(PeerId)
+            case invite(Invite)
             
             init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 
                 if let peer = try container.decodeIfPresent(Int64.self, forKey: .peer) {
                     self = .peer(PeerId(peer))
+                } else if let invite = try container.decodeIfPresent(Invite.self, forKey: .invite) {
+                    self = .invite(invite)
                 } else {
                     throw DecodingError.generic
+                }
+            }
+            
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                
+                switch self {
+                case let .peer(peerId):
+                    try container.encode(peerId.toInt64(), forKey: .peer)
+                case let .invite(invite):
+                    try container.encode(invite, forKey: .invite)
                 }
             }
         }
@@ -133,7 +153,14 @@ private class AdMessagesHistoryContextImpl {
         func toMessage(peerId: PeerId, transaction: Transaction) -> Message? {
             var attributes: [MessageAttribute] = []
 
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam, messageId: self.messageId))
+            let target: AdMessageAttribute.MessageTarget
+            switch self.target {
+            case let .peer(peerId):
+                target = .peer(id: peerId, message: self.messageId, startParam: self.startParam)
+            case let .invite(invite):
+                target = .join(title: invite.title, joinHash: invite.joinHash)
+            }
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, target: target))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -153,6 +180,23 @@ private class AdMessagesHistoryContextImpl {
                 } else {
                     return nil
                 }
+            case let .invite(invite):
+                author = TelegramChannel(
+                    id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1)),
+                    accessHash: nil,
+                    title: invite.title,
+                    username: nil,
+                    photo: [],
+                    creationDate: 0,
+                    version: 0,
+                    participationStatus: .left,
+                    info: .broadcast(TelegramChannelBroadcastInfo(flags: [])),
+                    flags: [],
+                    restrictionInfo: nil,
+                    adminRights: nil,
+                    bannedRights: nil,
+                    defaultBannedRights: nil
+                )
             }
             
             messagePeers[author.id] = author
@@ -368,6 +412,36 @@ private class AdMessagesHistoryContextImpl {
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
                                     target = .peer(fromId.peerId)
+                                } else if let chatInvite = chatInvite, let chatInviteHash = chatInviteHash {
+                                    switch chatInvite {
+                                    case let .chatInvite(flags, title, _, photo, participantsCount, participants):
+                                        let photo = telegramMediaImageFromApiPhoto(photo).flatMap({ smallestImageRepresentation($0.representations) })
+                                        let flags: ExternalJoiningChatState.Invite.Flags = .init(isChannel: (flags & (1 << 0)) != 0, isBroadcast: (flags & (1 << 1)) != 0, isPublic: (flags & (1 << 2)) != 0, isMegagroup: (flags & (1 << 3)) != 0, requestNeeded: (flags & (1 << 6)) != 0)
+                                        
+                                        let _ = photo
+                                        let _ = flags
+                                        let _ = participantsCount
+                                        let _ = participants
+                                        
+                                        target = .invite(CachedMessage.Target.Invite(
+                                            title: title,
+                                            joinHash: chatInviteHash
+                                        ))
+                                    case let .chatInvitePeek(chat, _):
+                                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                            target = .invite(CachedMessage.Target.Invite(
+                                                title: peer.debugDisplayTitle,
+                                                joinHash: chatInviteHash
+                                            ))
+                                        }
+                                    case let .chatInviteAlready(chat):
+                                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                            target = .invite(CachedMessage.Target.Invite(
+                                                title: peer.debugDisplayTitle,
+                                                joinHash: chatInviteHash
+                                            ))
+                                        }
+                                    }
                                 }
                                 
                                 var messageId: MessageId?

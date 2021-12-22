@@ -17,17 +17,20 @@ public final class ReactionContextItem {
     }
     
     public let reaction: ReactionContextItem.Reaction
+    public let appearAnimation: TelegramMediaFile
     public let stillAnimation: TelegramMediaFile
     public let listAnimation: TelegramMediaFile
     public let applicationAnimation: TelegramMediaFile
     
     public init(
         reaction: ReactionContextItem.Reaction,
+        appearAnimation: TelegramMediaFile,
         stillAnimation: TelegramMediaFile,
         listAnimation: TelegramMediaFile,
         applicationAnimation: TelegramMediaFile
     ) {
         self.reaction = reaction
+        self.appearAnimation = appearAnimation
         self.stillAnimation = stillAnimation
         self.listAnimation = listAnimation
         self.applicationAnimation = applicationAnimation

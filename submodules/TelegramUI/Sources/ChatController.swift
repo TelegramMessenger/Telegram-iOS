@@ -1004,7 +1004,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     actions.context = strongSelf.context
                     
                     if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
-                    filterReactions: for reaction in availableReactions.reactions {
+                        filterReactions: for reaction in availableReactions.reactions {
                             switch allowedReactions {
                             case let .set(set):
                                 if !set.contains(reaction.value) {
@@ -1015,6 +1015,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             actions.reactionItems.append(ReactionContextItem(
                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
                                 listAnimation: reaction.activateAnimation,
                                 applicationAnimation: reaction.effectAnimation
@@ -1249,6 +1250,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             theme: strongSelf.presentationData.theme,
                                             reaction: ReactionContextItem(
                                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                                appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
                                                 listAnimation: reaction.activateAnimation,
                                                 applicationAnimation: reaction.effectAnimation
@@ -3193,6 +3195,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             ])])
             strongSelf.chatDisplayNode.dismissInput()
             strongSelf.present(actionSheet, in: .window(.root))
+        }, openJoinLink: { [weak self] joinHash in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
