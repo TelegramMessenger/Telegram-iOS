@@ -4591,6 +4591,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func setDefaultReaction(emoji: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1474910882)
+                    serializeString(emoji, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.setDefaultReaction", parameters: [("emoji", emoji)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

@@ -9,6 +9,7 @@ public final class AvailableReactions: Equatable, Codable {
             case value
             case title
             case staticIcon
+            case appearAnimation
             case selectAnimation
             case activateAnimation
             case effectAnimation
@@ -17,6 +18,7 @@ public final class AvailableReactions: Equatable, Codable {
         public let value: String
         public let title: String
         public let staticIcon: TelegramMediaFile
+        public let appearAnimation: TelegramMediaFile
         public let selectAnimation: TelegramMediaFile
         public let activateAnimation: TelegramMediaFile
         public let effectAnimation: TelegramMediaFile
@@ -25,6 +27,7 @@ public final class AvailableReactions: Equatable, Codable {
             value: String,
             title: String,
             staticIcon: TelegramMediaFile,
+            appearAnimation: TelegramMediaFile,
             selectAnimation: TelegramMediaFile,
             activateAnimation: TelegramMediaFile,
             effectAnimation: TelegramMediaFile
@@ -32,6 +35,7 @@ public final class AvailableReactions: Equatable, Codable {
             self.value = value
             self.title = title
             self.staticIcon = staticIcon
+            self.appearAnimation = appearAnimation
             self.selectAnimation = selectAnimation
             self.activateAnimation = activateAnimation
             self.effectAnimation = effectAnimation
@@ -45,6 +49,9 @@ public final class AvailableReactions: Equatable, Codable {
                 return false
             }
             if lhs.staticIcon != rhs.staticIcon {
+                return false
+            }
+            if lhs.appearAnimation != rhs.appearAnimation {
                 return false
             }
             if lhs.selectAnimation != rhs.selectAnimation {
@@ -68,6 +75,9 @@ public final class AvailableReactions: Equatable, Codable {
             let staticIconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .staticIcon)
             self.staticIcon = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: staticIconData.data)))
             
+            let appearAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .appearAnimation)
+            self.appearAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: appearAnimationData.data)))
+            
             let selectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .selectAnimation)
             self.selectAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: selectAnimationData.data)))
             
@@ -85,6 +95,7 @@ public final class AvailableReactions: Equatable, Codable {
             try container.encode(self.title, forKey: .title)
             
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.staticIcon), forKey: .staticIcon)
+            try container.encode(PostboxEncoder().encodeObjectToRawData(self.appearAnimation), forKey: .appearAnimation)
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.selectAnimation), forKey: .selectAnimation)
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.activateAnimation), forKey: .activateAnimation)
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.effectAnimation), forKey: .effectAnimation)
@@ -135,8 +146,11 @@ public final class AvailableReactions: Equatable, Codable {
 private extension AvailableReactions.Reaction {
     convenience init?(apiReaction: Api.AvailableReaction) {
         switch apiReaction {
-        case let .availableReaction(reaction, title, staticIcon, selectAnimation, activateAnimation, effectAnimation):
+        case let .availableReaction(reaction, title, staticIcon, appearAnimation, selectAnimation, activateAnimation, effectAnimation):
             guard let staticIconFile = telegramMediaFileFromApiDocument(staticIcon) else {
+                return nil
+            }
+            guard let appearAnimationFile = telegramMediaFileFromApiDocument(appearAnimation) else {
                 return nil
             }
             guard let selectAnimationFile = telegramMediaFileFromApiDocument(selectAnimation) else {
@@ -152,6 +166,7 @@ private extension AvailableReactions.Reaction {
                 value: reaction,
                 title: title,
                 staticIcon: staticIconFile,
+                appearAnimation: appearAnimationFile,
                 selectAnimation: selectAnimationFile,
                 activateAnimation: activateAnimationFile,
                 effectAnimation: effectAnimationFile
