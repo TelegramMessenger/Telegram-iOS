@@ -19708,17 +19708,19 @@ public extension Api {
     
     }
     public enum SponsoredMessage: TypeConstructorDescription {
-        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
+        case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let channelPost, let startParam, let message, let entities):
+                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
                     if boxed {
-                        buffer.appendInt32(-783162982)
+                        buffer.appendInt32(981691896)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeBytes(randomId, buffer: buffer, boxed: false)
-                    fromId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 3) != 0 {fromId!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {chatInvite!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(chatInviteHash!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(channelPost!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     serializeString(message, buffer: buffer, boxed: false)
@@ -19733,8 +19735,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sponsoredMessage(let flags, let randomId, let fromId, let channelPost, let startParam, let message, let entities):
-                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("fromId", fromId), ("channelPost", channelPost), ("startParam", startParam), ("message", message), ("entities", entities)])
+                case .sponsoredMessage(let flags, let randomId, let fromId, let chatInvite, let chatInviteHash, let channelPost, let startParam, let message, let entities):
+                return ("sponsoredMessage", [("flags", flags), ("randomId", randomId), ("fromId", fromId), ("chatInvite", chatInvite), ("chatInviteHash", chatInviteHash), ("channelPost", channelPost), ("startParam", startParam), ("message", message), ("entities", entities)])
     }
     }
     
@@ -19744,28 +19746,36 @@ public extension Api {
             var _2: Buffer?
             _2 = parseBytes(reader)
             var _3: Api.Peer?
-            if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
                 _3 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            } }
+            var _4: Api.ChatInvite?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.ChatInvite
+            } }
             var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = parseString(reader) }
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
+            var _7: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_7 = parseString(reader) }
+            var _8: String?
+            _8 = parseString(reader)
+            var _9: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3!, channelPost: _4, startParam: _5, message: _6!, entities: _7)
+            let _c3 = (Int(_1!) & Int(1 << 3) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 0) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
+                return Api.SponsoredMessage.sponsoredMessage(flags: _1!, randomId: _2!, fromId: _3, chatInvite: _4, chatInviteHash: _5, channelPost: _6, startParam: _7, message: _8!, entities: _9)
             }
             else {
                 return nil
@@ -20190,17 +20200,18 @@ public extension Api {
     
     }
     public enum AvailableReaction: TypeConstructorDescription {
-        case availableReaction(reaction: String, title: String, staticIcon: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document)
+        case availableReaction(reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .availableReaction(let reaction, let title, let staticIcon, let selectAnimation, let activateAnimation, let effectAnimation):
+                case .availableReaction(let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
                     if boxed {
-                        buffer.appendInt32(1679961905)
+                        buffer.appendInt32(1424116867)
                     }
                     serializeString(reaction, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     staticIcon.serialize(buffer, true)
+                    appearAnimation.serialize(buffer, true)
                     selectAnimation.serialize(buffer, true)
                     activateAnimation.serialize(buffer, true)
                     effectAnimation.serialize(buffer, true)
@@ -20210,8 +20221,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .availableReaction(let reaction, let title, let staticIcon, let selectAnimation, let activateAnimation, let effectAnimation):
-                return ("availableReaction", [("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation)])
+                case .availableReaction(let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
+                return ("availableReaction", [("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation)])
     }
     }
     
@@ -20236,14 +20247,19 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.Document
             }
+            var _7: Api.Document?
+            if let signature = reader.readInt32() {
+                _7 = Api.parse(reader, signature: signature) as? Api.Document
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.AvailableReaction.availableReaction(reaction: _1!, title: _2!, staticIcon: _3!, selectAnimation: _4!, activateAnimation: _5!, effectAnimation: _6!)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.AvailableReaction.availableReaction(reaction: _1!, title: _2!, staticIcon: _3!, appearAnimation: _4!, selectAnimation: _5!, activateAnimation: _6!, effectAnimation: _7!)
             }
             else {
                 return nil
