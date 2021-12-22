@@ -110,7 +110,7 @@
 - (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id _Nullable)authToken;
 
 - (void)addressSetForDatacenterWithIdRequired:(NSInteger)datacenterId;
-- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn selector:(MTDatacenterAuthInfoSelector)selector;
+- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn selector:(MTDatacenterAuthInfoSelector)selector allowUnboundEphemeralKeys:(bool)allowUnboundEphemeralKeys;
 - (void)authTokenForDatacenterWithIdRequired:(NSInteger)datacenterId authToken:(id _Nullable)authToken masterDatacenterId:(NSInteger)masterDatacenterId;
 
 - (void)reportProblemsWithDatacenterAddressForId:(NSInteger)datacenterId address:(MTDatacenterAddress * _Nonnull)address;
