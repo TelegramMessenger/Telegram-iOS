@@ -2260,7 +2260,33 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) {
             if case .format = self.inputMenu.state {
-                return ASEditableTextNodeTargetForAction(target: self)
+                if action == #selector(self.formatAttributesSpoiler(_:)), let selectedRange = self.textInputNode?.selectedRange {
+                    var intersectsMonospace = false
+                    self.inputTextState.inputText.enumerateAttributes(in: selectedRange, options: [], using: { attributes, _, _ in
+                        if let _ = attributes[ChatTextInputAttributes.monospace] {
+                            intersectsMonospace = true
+                        }
+                    })
+                    if !intersectsMonospace {
+                        return ASEditableTextNodeTargetForAction(target: self)
+                    } else {
+                        return ASEditableTextNodeTargetForAction(target: nil)
+                    }
+                } else if action == #selector(self.formatAttributesMonospace(_:)), let selectedRange = self.textInputNode?.selectedRange {
+                    var intersectsSpoiler = false
+                    self.inputTextState.inputText.enumerateAttributes(in: selectedRange, options: [], using: { attributes, _, _ in
+                        if let _ = attributes[ChatTextInputAttributes.spoiler] {
+                            intersectsSpoiler = true
+                        }
+                    })
+                    if !intersectsSpoiler {
+                        return ASEditableTextNodeTargetForAction(target: self)
+                    } else {
+                        return ASEditableTextNodeTargetForAction(target: nil)
+                    }
+                } else {
+                    return ASEditableTextNodeTargetForAction(target: self)
+                }
             } else {
                 return ASEditableTextNodeTargetForAction(target: nil)
             }
