@@ -193,7 +193,11 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityValue = item.label.text
         
         transition.updateFrame(node: self.labelBadgeNode, frame: labelBadgeNodeFrame)
-        transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        if self.labelNode.bounds.size != labelFrame.size {
+            self.labelNode.frame = labelFrame
+        } else {
+            transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        }
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
         let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)

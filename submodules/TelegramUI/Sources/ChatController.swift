@@ -1005,6 +1005,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
                         filterReactions: for reaction in availableReactions.reactions {
+                            if !reaction.isEnabled {
+                                continue
+                            }
+                            
                             switch allowedReactions {
                             case let .set(set):
                                 if !set.contains(reaction.value) {

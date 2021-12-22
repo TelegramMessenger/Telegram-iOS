@@ -7195,3 +7195,6 @@ Sorry for the inconvenience.";
 "Localization.InterfaceLanguage" = "Interface Language";
 
 "DoNotTranslate.Title" = "Do Not Translate";
+
+"Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
+"Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";

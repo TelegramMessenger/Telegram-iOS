@@ -61,7 +61,6 @@ final class ReactionNode: ASDisplayNode {
         self.staticAnimationNode.isHidden = true
         
         self.animateInAnimationNode = AnimatedStickerNode()
-        self.stillAnimationNode = AnimatedStickerNode()
         
         super.init()
         
@@ -105,7 +104,7 @@ final class ReactionNode: ASDisplayNode {
         self.animateInAnimationNode?.visibility = true
     }
     
-    func updateLayout(size: CGSize, isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         
         let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -186,27 +185,50 @@ final class ReactionNode: ASDisplayNode {
             self.validSize = size
         }
         
+        /*if isPreviewing {
+            if self.stillAnimationNode == nil {
+                let stillAnimationNode = AnimatedStickerNode()
+                self.stillAnimationNode = stillAnimationNode
+                self.addSubnode(stillAnimationNode)
+                
+                stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                stillAnimationNode.position = animationFrame.center
+                stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                stillAnimationNode.updateLayout(size: animationFrame.size)
+                stillAnimationNode.started = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = strongSelf
+                }
+                stillAnimationNode.visibility = true
+            } else {
+                if let stillAnimationNode = self.stillAnimationNode {
+                    transition.updatePosition(node: stillAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
+                    transition.updateTransformScale(node: stillAnimationNode, scale: animationFrame.size.width / stillAnimationNode.bounds.width, beginWithCurrentState: true)
+                }
+            }
+        } else if let stillAnimationNode = self.stillAnimationNode {
+            self.stillAnimationNode = nil
+            stillAnimationNode.removeFromSupernode()
+        }*/
+        
         if !self.didSetupStillAnimation {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
-                self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
+                self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
                 self.staticAnimationNode.position = animationFrame.center
                 self.staticAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                 self.staticAnimationNode.updateLayout(size: animationFrame.size)
                 self.staticAnimationNode.visibility = true
                 
                 if let animateInAnimationNode = self.animateInAnimationNode {
-                    animateInAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.appearAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.appearAnimation.resource.id)))
+                    animateInAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.appearAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.appearAnimation.resource.id)))
                     animateInAnimationNode.position = animationFrame.center
                     animateInAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                     animateInAnimationNode.updateLayout(size: animationFrame.size)
                 }
-                
-                /*self.stillAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.stillAnimation.resource), width: Int(animationDisplaySize.width * 2.5), height: Int(animationDisplaySize.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.stillAnimation.resource.id)))
-                self.stillAnimationNode.position = animationFrame.center
-                self.stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
-                self.stillAnimationNode.updateLayout(size: animationFrame.size)*/
             }
         } else {
             transition.updatePosition(node: self.staticAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
@@ -215,11 +237,6 @@ final class ReactionNode: ASDisplayNode {
             if let animateInAnimationNode = self.animateInAnimationNode {
                 transition.updatePosition(node: animateInAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
                 transition.updateTransformScale(node: animateInAnimationNode, scale: animationFrame.size.width / animateInAnimationNode.bounds.width, beginWithCurrentState: true)
-            }
-            
-            if let stillAnimationNode = self.stillAnimationNode {
-                transition.updatePosition(node: stillAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
-                transition.updateTransformScale(node: stillAnimationNode, scale: animationFrame.size.width / stillAnimationNode.bounds.width, beginWithCurrentState: true)
             }
         }
     }

@@ -194,12 +194,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             let itemOffsetY: CGFloat = -1.0
             
-            let itemFrame = CGRect(origin: CGPoint(x: sideInset + column * (itemSize + itemSpacing), y: verticalInset + floor((rowHeight - itemSize) / 2.0) + itemOffsetY), size: CGSize(width: itemSize, height: itemSize))
-            /*if self.highlightedReaction == self.items[i].reaction {
-                itemFrame = itemFrame.insetBy(dx: -6.0, dy: -6.0)
-            }*/
-            if visibleBounds.intersects(itemFrame) {
+            let baseItemFrame = CGRect(origin: CGPoint(x: sideInset + column * (itemSize + itemSpacing), y: verticalInset + floor((rowHeight - itemSize) / 2.0) + itemOffsetY), size: CGSize(width: itemSize, height: itemSize))
+            if visibleBounds.intersects(baseItemFrame) {
                 validIndices.insert(i)
+                
+                var itemFrame = baseItemFrame
+                var isPreviewing = false
+                if self.highlightedReaction == self.items[i].reaction {
+                    itemFrame = itemFrame.insetBy(dx: -6.0, dy: -6.0)
+                    isPreviewing = true
+                }
                 
                 var animateIn = false
                 
@@ -216,7 +220,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 if !itemNode.isExtracted {
                     transition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true)
-                    itemNode.updateLayout(size: itemFrame.size, isExpanded: false, transition: transition)
+                    itemNode.updateLayout(size: itemFrame.size, isExpanded: false, isPreviewing: isPreviewing, transition: transition)
                     
                     if animateIn {
                         itemNode.animateIn()
@@ -433,7 +437,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             //itemNode.position = selfSourceRect.center
             itemNode.position = expandedFrame.center
             transition.updateBounds(node: itemNode, bounds: CGRect(origin: CGPoint(), size: expandedFrame.size))
-            itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, transition: transition)
+            itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, isPreviewing: false, transition: transition)
             
             transition.animatePositionWithKeyframes(node: itemNode, keyframes: generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: 30.0))
             
@@ -632,7 +636,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         
         self.addSubnode(itemNode)
         itemNode.frame = expandedFrame
-        itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, transition: .immediate)
+        itemNode.updateLayout(size: expandedFrame.size, isExpanded: true, isPreviewing: false, transition: .immediate)
         
         itemNode.layer.animateSpring(from: (selfTargetRect.width / expandedFrame.width) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.04)

@@ -11695,6 +11695,7 @@ public extension Api {
         case channelAdminLogEventActionParticipantJoinByRequest(invite: Api.ExportedChatInvite, approvedBy: Int64)
         case channelAdminLogEventActionToggleNoForwards(newValue: Api.Bool)
         case channelAdminLogEventActionSendMessage(message: Api.Message)
+        case channelAdminLogEventActionChangeAvailableReactions(prevValue: [String], newValue: [String])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11923,6 +11924,21 @@ public extension Api {
                     }
                     message.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(-1661470870)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(prevValue.count))
+                    for item in prevValue {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newValue.count))
+                    for item in newValue {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
     }
     }
     
@@ -11998,6 +12014,8 @@ public extension Api {
                 return ("channelAdminLogEventActionToggleNoForwards", [("newValue", newValue)])
                 case .channelAdminLogEventActionSendMessage(let message):
                 return ("channelAdminLogEventActionSendMessage", [("message", message)])
+                case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", prevValue), ("newValue", newValue)])
     }
     }
     
@@ -12480,6 +12498,24 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionSendMessage(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeAvailableReactions(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: [String]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            var _2: [String]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAvailableReactions(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil
@@ -20200,14 +20236,15 @@ public extension Api {
     
     }
     public enum AvailableReaction: TypeConstructorDescription {
-        case availableReaction(reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document)
+        case availableReaction(flags: Int32, reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .availableReaction(let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
+                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
                     if boxed {
-                        buffer.appendInt32(1424116867)
+                        buffer.appendInt32(35486795)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(reaction, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     staticIcon.serialize(buffer, true)
@@ -20221,20 +20258,18 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .availableReaction(let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
-                return ("availableReaction", [("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation)])
+                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
+                return ("availableReaction", [("flags", flags), ("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation)])
     }
     }
     
         public static func parse_availableReaction(_ reader: BufferReader) -> AvailableReaction? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
             var _2: String?
             _2 = parseString(reader)
-            var _3: Api.Document?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Document
-            }
+            var _3: String?
+            _3 = parseString(reader)
             var _4: Api.Document?
             if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.Document
@@ -20251,6 +20286,10 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.Document
             }
+            var _8: Api.Document?
+            if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Document
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -20258,8 +20297,9 @@ public extension Api {
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.AvailableReaction.availableReaction(reaction: _1!, title: _2!, staticIcon: _3!, appearAnimation: _4!, selectAnimation: _5!, activateAnimation: _6!, effectAnimation: _7!)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.AvailableReaction.availableReaction(flags: _1!, reaction: _2!, title: _3!, staticIcon: _4!, appearAnimation: _5!, selectAnimation: _6!, activateAnimation: _7!, effectAnimation: _8!)
             }
             else {
                 return nil

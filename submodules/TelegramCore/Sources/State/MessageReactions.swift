@@ -499,3 +499,11 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
         }
     }
 }
+
+func _internal_updateDefaultReaction(account: Account, reaction: String) -> Signal<Never, NoError> {
+    return account.network.request(Api.functions.messages.setDefaultReaction(emoji: reaction))
+    |> `catch` { _ -> Signal<Api.Bool, NoError> in
+        return .single(.boolFalse)
+    }
+    |> ignoreValues
+}
