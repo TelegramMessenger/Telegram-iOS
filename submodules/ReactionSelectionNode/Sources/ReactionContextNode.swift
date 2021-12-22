@@ -50,6 +50,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let contentContainer: ASDisplayNode
     private let contentContainerMask: UIImageView
     private let scrollNode: ASScrollNode
+    private let previewingItemContainer: ASDisplayNode
     private var visibleItemNodes: [Int: ReactionNode] = [:]
     
     private var isExpanded: Bool = true
@@ -84,6 +85,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
+        
+        self.previewingItemContainer = ASDisplayNode()
+        self.previewingItemContainer.isUserInteractionEnabled = false
         
         self.contentContainer = ASDisplayNode()
         self.contentContainer.clipsToBounds = true
@@ -121,6 +125,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.delegate = self
         
         self.addSubnode(self.contentContainer)
+        self.addSubnode(self.previewingItemContainer)
     }
     
     override public func didLoad() {
@@ -186,6 +191,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let rowHeight: CGFloat = 30.0
         
         let visibleBounds = self.scrollNode.view.bounds
+        self.previewingItemContainer.bounds = visibleBounds
         
         var validIndices = Set<Int>()
         for i in 0 ..< self.items.count {
@@ -199,10 +205,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 validIndices.insert(i)
                 
                 var itemFrame = baseItemFrame
-                var isPreviewing = false
+                let isPreviewing = false
                 if self.highlightedReaction == self.items[i].reaction {
-                    itemFrame = itemFrame.insetBy(dx: -6.0, dy: -6.0)
-                    isPreviewing = true
+                    itemFrame = itemFrame.insetBy(dx: -4.0, dy: -4.0).offsetBy(dx: 0.0, dy: 0.0)
+                    //isPreviewing = true
                 }
                 
                 var animateIn = false
@@ -219,6 +225,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 
                 if !itemNode.isExtracted {
+                    if isPreviewing {
+                        /*if itemNode.supernode !== self.previewingItemContainer {
+                            self.previewingItemContainer.addSubnode(itemNode)
+                        }*/
+                    } else {
+                        /*if itemNode.supernode !== self.scrollNode {
+                            self.scrollNode.addSubnode(itemNode)
+                        }*/
+                    }
+                    
                     transition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true)
                     itemNode.updateLayout(size: itemFrame.size, isExpanded: false, isPreviewing: isPreviewing, transition: transition)
                     
@@ -269,6 +285,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         transition.updateFrame(node: self.contentContainer, frame: backgroundFrame)
         transition.updateFrame(view: self.contentContainerMask, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+        transition.updateFrame(node: self.previewingItemContainer, frame: backgroundFrame)
         self.scrollNode.view.contentSize = CGSize(width: completeContentWidth, height: backgroundFrame.size.height)
         
         self.updateScrolling(transition: transition)
@@ -532,6 +549,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         for i in 0 ..< 2 {
             let touchInset: CGFloat = i == 0 ? 0.0 : 8.0
             for (_, itemNode) in self.visibleItemNodes {
+                if itemNode.supernode === self.scrollNode && !self.scrollNode.bounds.intersects(itemNode.frame) {
+                    continue
+                }
                 let itemPoint = self.view.convert(point, to: itemNode.view)
                 if itemNode.bounds.insetBy(dx: -touchInset, dy: -touchInset).contains(itemPoint) {
                     return itemNode.item
