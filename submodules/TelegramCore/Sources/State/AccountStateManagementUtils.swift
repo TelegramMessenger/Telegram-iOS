@@ -1474,7 +1474,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                 })
             case let .updateMessageReactions(peer, msgId, reactions):
-                updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions)
+                updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions, eventTimestamp: updatesDate)
             default:
                 break
         }
@@ -2430,6 +2430,7 @@ func replayFinalState(
     }
     var wasScheduledMessageIds:[MessageId] = []
     var addedIncomingMessageIds: [MessageId] = []
+    var addedReactionEvents: [(reactionAuthor: Peer, message: Message, timestamp: Int32)] = []
     
     if !wasOperationScheduledMessageIds.isEmpty {
         let existingIds = transaction.filterStoredMessageIds(Set(wasOperationScheduledMessageIds))
@@ -3228,16 +3229,19 @@ func replayFinalState(
                         return state
                     })
                 }
-            case let .UpdateMessageReactions(messageId, reactions):
+            case let .UpdateMessageReactions(messageId, reactions, eventTimestamp):
+                var generatedEvent: (reactionAuthor: Peer, message: Message, timestamp: Int32)?
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                     
                     let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                     var attributes = currentMessage.attributes
+                    var previousReactions: ReactionsMessageAttribute?
                     var added = false
                     loop: for j in 0 ..< attributes.count {
                         if let attribute = attributes[j] as? ReactionsMessageAttribute {
                             added = true
+                            previousReactions = attribute
                             updatedReactions = attribute.withUpdatedResults(reactions)
                             
                             if updatedReactions == attribute {
@@ -3251,8 +3255,44 @@ func replayFinalState(
                         attributes.append(updatedReactions)
                     }
                     
+                    if let eventTimestamp = eventTimestamp, !currentMessage.flags.contains(.Incoming), let chatPeer = currentMessage.peers[currentMessage.id.peerId] {
+                        let _ = chatPeer
+                        
+                        var previousCount = 0
+                        if let previousReactions = previousReactions {
+                            for reaction in previousReactions.reactions {
+                                previousCount += Int(reaction.count)
+                            }
+                        }
+                        
+                        var updatedCount = 0
+                        for reaction in updatedReactions.reactions {
+                            updatedCount += Int(reaction.count)
+                        }
+                        
+                        if updatedCount > previousCount {
+                            if let topPeer = updatedReactions.recentPeers.last {
+                                var wasPresentBefore = false
+                                if let previousReactions = previousReactions {
+                                    for recentPeer in previousReactions.recentPeers {
+                                        if recentPeer.peerId == topPeer.peerId {
+                                            wasPresentBefore = true
+                                            break
+                                        }
+                                    }
+                                }
+                                if !wasPresentBefore, let reactionAuthor = transaction.getPeer(topPeer.peerId), transaction.isPeerContact(peerId: topPeer.peerId) {
+                                    generatedEvent = (reactionAuthor: reactionAuthor, message: currentMessage.withUpdatedAttributes(attributes), timestamp: eventTimestamp)
+                                }
+                            }
+                        }
+                    }
+                    
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
+                if let generatedEvent = generatedEvent {
+                    addedReactionEvents.append(generatedEvent)
+                }
         }
     }
     
@@ -3624,5 +3664,5 @@ func replayFinalState(
         requestChatListFiltersSync(transaction: transaction)
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates)
 }
