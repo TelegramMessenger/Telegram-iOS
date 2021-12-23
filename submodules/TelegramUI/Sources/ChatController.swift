@@ -8648,6 +8648,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.sendMessageActionsController?.dismiss()
         self.themeSceen?.dismiss()
         
+        self.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+        
         if let _ = self.peekData {
             self.peekTimerDisposable.set(nil)
         }

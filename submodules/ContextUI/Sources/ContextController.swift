@@ -1911,7 +1911,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         transition.updateFrame(node: self.dismissNode, frame: CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize))
-        self.dismissAccessibilityArea.frame =  CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
+        self.dismissAccessibilityArea.frame = CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -2368,6 +2368,11 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.dismiss(result: .default, completion: completion)
+    }
+    
+    public func dismissNow() {
+        self.presentingViewController?.dismiss(animated: false, completion: nil)
+        self.dismissed?()
     }
     
     public func dismissWithReaction(value: String, targetView: UIView, hideNode: Bool, completion: (() -> Void)?) {

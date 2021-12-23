@@ -65,21 +65,28 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.item = item
         
         self.highlightBackgroundNode = ASDisplayNode()
+        self.highlightBackgroundNode.isAccessibilityElement = false
         self.highlightBackgroundNode.isUserInteractionEnabled = false
         self.highlightBackgroundNode.alpha = 0.0
         
         self.titleLabelNode = ImmediateTextNode()
+        self.titleLabelNode.isAccessibilityElement = false
         self.titleLabelNode.displaysAsynchronously = false
         self.titleLabelNode.isUserInteractionEnabled = false
         
         self.subtitleNode = ImmediateTextNode()
+        self.subtitleNode.isAccessibilityElement = false
         self.subtitleNode.displaysAsynchronously = false
         self.subtitleNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
+        self.iconNode.isAccessibilityElement = false
         self.iconNode.isUserInteractionEnabled = false
         
         super.init()
+        
+        self.isAccessibilityElement = true
+        self.accessibilityLabel = item.text
         
         self.addSubnode(self.highlightBackgroundNode)
         self.addSubnode(self.titleLabelNode)
