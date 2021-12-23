@@ -227,8 +227,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
         Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
-            self.isRevealed = false
-                        
             if let (_, color, _, _) = self.currentParams {
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let animation = POPBasicAnimation()
@@ -269,7 +267,9 @@ public class InvisibleInkDustNode: ASDisplayNode {
             Queue.mainQueue().after(0.15) {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
                 transition.updateAlpha(node: self, alpha: 1.0)
-                transition.updateAlpha(node: textNode, alpha: 0.0)
+                transition.updateAlpha(node: textNode, alpha: 0.0, completion: { [weak self] _ in
+                    self?.isRevealed = false
+                })
             }
         }
     }

@@ -1254,7 +1254,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         let animationProgress: CGFloat = (currentValue - initialHeight) / (targetHeight - initialHeight)
         let scaleProgress: CGFloat
         var effectiveAvatarInset = avatarInset
-        if abs(targetHeight - initialHeight) > 100.0 {
+        if abs(targetHeight - initialHeight) > 80.0 {
             if currentValue < targetHeight {
                 initialSize = displaySize
                 targetSize = maximumDisplaySize

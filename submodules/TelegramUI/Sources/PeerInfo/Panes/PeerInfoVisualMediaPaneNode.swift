@@ -1205,7 +1205,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         self.listItemInteraction = listItemInteraction
         self.chatControllerInteraction = chatControllerInteraction
         self.directMediaImageCache = directMediaImageCache
-        self.captureProtected = captureProtected
+        self.captureProtected = false //captureProtected
 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.strings = presentationData.strings
