@@ -655,9 +655,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             let reactions: ReactionsMessageAttribute
             if shouldDisplayInlineDateReactions(message: item.message) {
-                reactions = ReactionsMessageAttribute(reactions: [], recentPeers: [])
+                reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
-                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
+                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             }
             
             var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?

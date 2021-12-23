@@ -1435,9 +1435,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let bubbleReactions: ReactionsMessageAttribute
         if needReactions {
-            bubbleReactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
+            bubbleReactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
         } else {
-            bubbleReactions = ReactionsMessageAttribute(reactions: [], recentPeers: [])
+            bubbleReactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
         }
         if !bubbleReactions.reactions.isEmpty {
             bottomNodeMergeStatus = .Both

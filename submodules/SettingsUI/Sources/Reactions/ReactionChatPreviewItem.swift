@@ -197,15 +197,13 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             let messages = SimpleDictionary<MessageId, Message>()
             
             peers[chatPeerId] = TelegramGroup(id: chatPeerId, title: "Chat", photo: [], participantCount: 1, role: .member, membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 1, version: 1)
-            //TODO:localize
-            peers[userPeerId] = TelegramUser(id: userPeerId, accessHash: nil, firstName: "Dino", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            peers[userPeerId] = TelegramUser(id: userPeerId, accessHash: nil, firstName: item.strings.Settings_QuickReactionSetup_DemoMessageAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             
-            //TODO:localize
-            let messageText = "I hope you're enjoying your day as much as I am."
+            let messageText = item.strings.Settings_QuickReactionSetup_DemoMessageText
             
             var attributes: [MessageAttribute] = []
             if let reaction = item.reaction {
-                attributes.append(ReactionsMessageAttribute(reactions: [MessageReaction(value: reaction, count: 1, isSelected: true)], recentPeers: []))
+                attributes.append(ReactionsMessageAttribute(canViewList: false, reactions: [MessageReaction(value: reaction, count: 1, isSelected: true)], recentPeers: []))
             }
             
             let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions)

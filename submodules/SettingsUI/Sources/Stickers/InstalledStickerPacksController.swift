@@ -543,8 +543,7 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
         }
         entries.append(.masks(presentationData.theme, presentationData.strings.MaskStickerSettings_Title))
         
-        //TODO:localize
-        entries.append(.quickReaction("Quick Reaction", quickReactionImage))
+        entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReactionImage))
         
         entries.append(.animatedStickers(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickers, stickerSettings.loopAnimatedStickers))
         entries.append(.animatedStickersInfo(presentationData.theme, presentationData.strings.StickerPacksSettings_AnimatedStickersInfo))

@@ -7,6 +7,7 @@ extension ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results, recentReactions):
             let min = (flags & (1 << 0)) != 0
+            let canViewList = (flags & (1 << 2)) != 0
             var reactions = results.map { result -> MessageReaction in
                 switch result {
                 case let .reactionCount(flags, reaction, count):
@@ -41,7 +42,7 @@ extension ReactionsMessageAttribute {
                     }
                 }
             }
-            return ReactionsMessageAttribute(reactions: reactions, recentPeers: parsedRecentReactions)
+            return ReactionsMessageAttribute(canViewList: canViewList, reactions: reactions, recentPeers: parsedRecentReactions)
         }
     }
 }
@@ -116,7 +117,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
             }
         }
         if !reactions.isEmpty {
-            return ReactionsMessageAttribute(reactions: reactions, recentPeers: recentPeers)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, reactions: reactions, recentPeers: recentPeers)
         } else {
             return nil
         }
@@ -130,7 +131,8 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
 extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
-        case let .messageReactions(_, results, recentReactions):
+        case let .messageReactions(flags, results, recentReactions):
+            let canViewList = (flags & (1 << 2)) != 0
             let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
@@ -144,6 +146,7 @@ extension ReactionsMessageAttribute {
             }
             
             self.init(
+                canViewList: canViewList,
                 reactions: results.map { result in
                     switch result {
                     case let .reactionCount(flags, reaction, count):
