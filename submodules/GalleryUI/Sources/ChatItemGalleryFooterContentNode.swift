@@ -888,7 +888,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             transition.updateBounds(layer: scrubberView.layer, bounds: CGRect(origin: CGPoint(), size: scrubberFrame.size))
             transition.updatePosition(layer: scrubberView.layer, position: CGPoint(x: scrubberFrame.midX, y: scrubberFrame.midY))
         }
-        transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.scrollWrapperNode, alpha: displayCaption ? 1.0 : 0.0)
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         
