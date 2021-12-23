@@ -163,25 +163,27 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateIn() {
-        let smallCircleDuration: Double = 0.5
-        let largeCircleDuration: Double = 0.5
-        let largeCircleDelay: Double = 0.08
-        let mainCircleDuration: Double = 0.5
-        let mainCircleDelay: Double = 0.1
+        let smallCircleDuration: Double = 0.35
+        let largeCircleDuration: Double = 0.35
+        let largeCircleDelay: Double = 0.13
+        let mainCircleDuration: Double = 0.25
+        let mainCircleDelay: Double = 0.16
         
-        self.smallCircleLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration)
+        //self.smallCircleLayer.animate(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: smallCircleDuration)
+        self.smallCircleLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration, delay: 0.0)
         
-        self.largeCircleLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: largeCircleDelay)
-        self.largeCircleLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
+        self.largeCircleLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.01, delay: largeCircleDelay)
+        self.largeCircleLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
+        //self.largeCircleLayer.animate(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: largeCircleDuration)
         
-        self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: mainCircleDelay)
-        self.backgroundLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
+        self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.01, delay: mainCircleDelay)
+        self.backgroundLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
     }
     
     func animateInFromAnchorRect(size: CGSize, sourceBackgroundFrame: CGRect) {
-        let springDuration: Double = 0.42
+        let springDuration: Double = 0.2
         let springDamping: CGFloat = 104.0
-        let springDelay: Double = 0.22
+        let springDelay: Double = 0.25
         
         self.backgroundLayer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.midX - size.width / 2.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping, additive: true)
         self.backgroundLayer.animateSpring(from: NSValue(cgRect: CGRect(origin: CGPoint(), size: sourceBackgroundFrame.size)), to: NSValue(cgRect: CGRect(origin: CGPoint(), size: size)), keyPath: "bounds", duration: springDuration, delay: springDelay, initialVelocity: 0.0, damping: springDamping)

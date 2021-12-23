@@ -337,7 +337,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             guard let itemNode = self.visibleItemNodes[i] else {
                 continue
             }
-            let itemDelay = mainCircleDelay + 0.1 + Double(i) * 0.03
+            let itemDelay = mainCircleDelay + 0.1 + Double(i) * 0.035
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + itemDelay, execute: { [weak itemNode] in
                 itemNode?.animateIn()
             })
