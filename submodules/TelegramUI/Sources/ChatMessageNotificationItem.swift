@@ -194,6 +194,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                         return false
                     }
                 }
+                if messageEntities?.count == 0 {
+                    messageEntities = nil
+                    messageText = textString
+                }
             } else {
                 messageText = textString
             }

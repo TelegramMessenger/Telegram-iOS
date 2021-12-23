@@ -71,12 +71,9 @@ final class ContactsControllerNode: ASDisplayNode {
         
         var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
-        var qrScanImpl: (() -> Void)?
         
         let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: {
             addNearbyImpl?()
-        }), ContactListAdditionalOption(title: presentationData.strings.Contacts_ScanQrCode, icon: .generic(UIImage(bundleImageName: "Settings/QrIcon")!), action: {
-            qrScanImpl?()
         }), ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
             inviteImpl?()
         })]
@@ -130,12 +127,6 @@ final class ContactsControllerNode: ASDisplayNode {
         inviteImpl = { [weak self] in
             if let strongSelf = self {
                 strongSelf.openInvite?()
-            }
-        }
-        
-        qrScanImpl = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.openQrScan?()
             }
         }
         
