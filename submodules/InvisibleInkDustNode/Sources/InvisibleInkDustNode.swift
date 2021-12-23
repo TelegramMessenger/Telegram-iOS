@@ -227,6 +227,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
         Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
+//            self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            
             if let (_, color, _, _) = self.currentParams {
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let animation = POPBasicAnimation()
@@ -311,7 +313,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if let (_, _, rects, _) = self.currentParams {
+        if let (_, _, rects, _) = self.currentParams, !self.isRevealed {
             for rect in rects {
                 if rect.contains(point) {
                     return true
