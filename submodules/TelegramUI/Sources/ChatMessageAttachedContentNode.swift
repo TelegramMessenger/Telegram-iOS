@@ -647,6 +647,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if statusInText, let textStatusType = textStatusType {
+                    let trailingContentWidth: CGFloat
+                    if textLayout.hasRTL {
+                        trailingContentWidth = 10000.0
+                    } else {
+                        trailingContentWidth = textLayout.trailingLineWidth
+                    }
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: context,
                         presentationData: presentationData,
@@ -654,7 +660,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: textStatusType,
-                        layoutInput: .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
+                        layoutInput: .trailingContent(contentWidth: trailingContentWidth, reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,
