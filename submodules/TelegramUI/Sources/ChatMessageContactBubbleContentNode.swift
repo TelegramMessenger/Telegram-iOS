@@ -219,7 +219,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: nil),
+                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: CGSize(width: constrainedSize.width - sideInsets, height: .greatestFiniteMagnitude),
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,
