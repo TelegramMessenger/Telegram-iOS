@@ -99,9 +99,9 @@ public class InvisibleInkDustNode: ASDisplayNode {
         emitter.velocityRange = 20.0
         emitter.name = "dustCell"
         emitter.alphaRange = 1.0
-//        emitter.setValue("point", forKey: "particleType")
-//        emitter.setValue(3.0, forKey: "mass")
-//        emitter.setValue(2.0, forKey: "massRange")
+        emitter.setValue("point", forKey: "particleType")
+        emitter.setValue(3.0, forKey: "mass")
+        emitter.setValue(2.0, forKey: "massRange")
         self.emitter = emitter
 
         let fingerAttractor = createEmitterBehavior(type: "simpleAttractor")
@@ -182,7 +182,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
             var scaleAddition = maxFactor * 4.0
             var durationAddition = -maxFactor * 0.2
             if self.emitterNode.frame.height > 0.0, self.emitterNode.frame.width / self.emitterNode.frame.height < 0.3 {
-                scaleAddition *= 4.0
+                scaleAddition *= 5.0
                 durationAddition *= 2.0
             }
             
@@ -292,7 +292,9 @@ public class InvisibleInkDustNode: ASDisplayNode {
             square += Float(rect.width * rect.height)
         }
         
-        self.emitter?.birthRate = min(120000, square * 0.35)
+        Queue.mainQueue().async {
+            self.emitter?.birthRate = min(100000, square * 0.35)
+        }
     }
     
     public func update(size: CGSize, color: UIColor, rects: [CGRect], wordRects: [CGRect]) {
