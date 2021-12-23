@@ -1418,7 +1418,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             if let context = context {
                 Queue().async {
                 	let presentationData = context.context.sharedContext.currentPresentationData.with({ $0 })
-                	self.fetchNGUserSettings(context.context.account.peerId.toInt64())
+                	self.fetchNGUserSettings(context.context.account.peerId.id._internalGetInt64Value())
                 	self.fetchLocale(lang: presentationData.strings.baseLanguageCode)
 		 }
             }

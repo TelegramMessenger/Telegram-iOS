@@ -83,9 +83,7 @@ public struct NGSettings {
     
     @NGStorage(key: "showTabNames", defaultValue: true)
     public static var showTabNames: Bool
-    
-    @NGStorage(key: "classicProfileUI", defaultValue: false)
-    public static var classicProfileUI: Bool
+
     
     @NGStorage(key: "showGmodIcon", defaultValue: true)
     public static var showGmodIcon: Bool

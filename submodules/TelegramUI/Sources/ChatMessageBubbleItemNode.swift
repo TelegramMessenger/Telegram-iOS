@@ -2078,7 +2078,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var updatedTrButtonBackground: UIImage?
         
         var updatedShareButtonNode: HighlightableButtonNode?
-        if needShareButton {
+        if needsShareButton {
             if currentShareButtonNode != nil {
                 updatedShareButtonNode = currentShareButtonNode
                 if item.presentationData.theme !== currentItem?.presentationData.theme {

@@ -1422,18 +1422,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
 private let defaultChatControllerInteraction = ChatControllerInteraction.default
 
 private func peerInfoControllerImpl(context: AccountContext, updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, requestsContext: PeerInvitationImportersContext? = nil) -> ViewController? {
-    let useClassicUi = NGSettings.classicProfileUI
     if let _ = peer as? TelegramGroup {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
-    } else if let channel = peer as? TelegramChannel {
-        switch channel.info {
-        case .broadcast:
-            if useClassicUi {
-                return channelInfoController(context: context, peerId: peer.id)
-            }
-        default:
-            break
-        }
+    } else if let _ = peer as? TelegramChannel {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?

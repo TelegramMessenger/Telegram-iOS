@@ -611,7 +611,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         var idText = ""
         
         if let user = data.peer as? TelegramUser {
-            idText = String(user.id.toInt64())
+            idText = String(user.id.id._internalGetInt64Value())
         }
         
         // Sorry RTL users
@@ -898,7 +898,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     
     if let user = data.peer as? TelegramUser {
         // MARK: Nicegram User ID
-        idText = String(user.id.toInt64())
+        idText = String(user.id.id._internalGetInt64Value())
         isUser = true
         
         if !callMessages.isEmpty {
@@ -1161,17 +1161,17 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         var hasRegDate = false
         var regDateText = l("NGLab.RegDate.Btn", lang)
         let user = data.peer as! TelegramUser
-        if let registrationDate = getCachedRegDate(user.id.toInt64()) {
+        if let registrationDate = getCachedRegDate(user.id.id._internalGetInt64Value()) {
             let cachedRegdateString = makeNiceRegDateStr(registrationDate)
             regDateText = "~ " + cachedRegdateString
             hasRegDate = true
         }
         
         items[.nicegram]!.append(PeerInfoScreenLabeledValueItem(id: ngItemId, label: l("NGLab.RegDate.MenuItem", lang), text: regDateText, textColor: hasRegDate ? .primary : .accent, action: {
-            interaction.getPeerRegDate(user.id.toInt64(), context.account.peerId.toInt64())
+            interaction.getPeerRegDate(user.id.id._internalGetInt64Value(), context.account.peerId.id._internalGetInt64Value())
         }, longTapAction: { sourceNode in
             if !hasRegDate {
-                if let registrationDate = getCachedRegDate(user.id.toInt64()) {
+                if let registrationDate = getCachedRegDate(user.id.id._internalGetInt64Value()) {
                     let cachedRegdateString = makeNiceRegDateStr(registrationDate)
                     regDateText = cachedRegdateString
                     hasRegDate = true
