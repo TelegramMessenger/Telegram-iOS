@@ -925,7 +925,15 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             let presentationData = strongSelf.presentationData
                 
             var entries: [ThemeSettingsThemeEntry] = []
-            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+            
+            let defaultWallpaper: TelegramWallpaper?
+            if isDarkAppearance {
+                let dayTheme = makeDefaultPresentationTheme(reference: .dayClassic, serviceBackgroundColor: nil)
+                defaultWallpaper = dayTheme.chat.defaultWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: [0x00b3dd, 0x3b59f2, 0x358be2, 0xa434cf], intensity: -55, rotation: nil))
+            } else {
+                defaultWallpaper = nil
+            }
+            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: defaultWallpaper))
             for theme in themes {
                 guard let emoticon = theme.emoticon else {
                     continue
@@ -936,7 +944,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             let wallpaper: TelegramWallpaper
             if selectedEmoticon == defaultEmoticon {
                 let presentationTheme = makeDefaultPresentationTheme(reference: isDarkAppearance ? .night : .dayClassic, serviceBackgroundColor: nil)
-                wallpaper = presentationTheme.chat.defaultWallpaper
+                if isDarkAppearance {
+                    wallpaper = entries.first?.wallpaper ?? .color(0x000000)
+                } else {
+                    wallpaper = presentationTheme.chat.defaultWallpaper
+                }
             } else if let theme = themes.first(where: { $0.emoticon == selectedEmoticon }), let presentationTheme = makePresentationTheme(cloudTheme: theme, dark: isDarkAppearance) {
                 wallpaper = presentationTheme.chat.defaultWallpaper
             } else {
