@@ -193,6 +193,10 @@ private func quickReactionSetupControllerEntries(
         entries.append(.itemsHeader("QUICK REACTION"))
         var index = 0
         for availableReaction in availableReactions.reactions {
+            if !availableReaction.isEnabled {
+                continue
+            }
+            
             entries.append(.item(
                 index: index,
                 value: availableReaction.value,
@@ -226,12 +230,8 @@ public func quickReactionSetupController(
     
     let arguments = QuickReactionSetupControllerArguments(
         context: context,
-        selectItem: { reaction in
-            let _ = updateReactionSettingsInteractively(postbox: context.account.postbox, { settings in
-                var settings = settings
-                settings.quickReaction = reaction
-                return settings
-            }).start()
+        selectItem: { reaction in            
+            let _ = context.engine.stickers.updateQuickReaction(reaction: reaction).start()
         }
     )
     
@@ -252,6 +252,10 @@ public func quickReactionSetupController(
         
         if let availableReactions = availableReactions {
             for availableReaction in availableReactions.reactions {
+                if !availableReaction.isEnabled {
+                    continue
+                }
+                
                 let signal: Signal<(String, UIImage?), NoError> = context.account.postbox.mediaBox.resourceData(availableReaction.staticIcon.resource)
                 |> distinctUntilChanged(isEqual: { lhs, rhs in
                     return lhs.complete == rhs.complete

@@ -393,16 +393,16 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func animatePositionWithKeyframes(node: ASDisplayNode, keyframes: [AnyObject], removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animatePositionWithKeyframes(node: ASDisplayNode, keyframes: [CGPoint], removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         self.animatePositionWithKeyframes(layer: node.layer, keyframes: keyframes, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
-    func animatePositionWithKeyframes(layer: CALayer, keyframes: [AnyObject], removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animatePositionWithKeyframes(layer: CALayer, keyframes: [CGPoint], removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:
             completion?(true)
         case let .animated(duration, curve):
-            layer.animateKeyframes(values: keyframes, duration: duration, keyPath: "position", timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { value in
+            layer.animateKeyframes(values: keyframes.map(NSValue.init(cgPoint:)), duration: duration, keyPath: "position", timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, removeOnCompletion: removeOnCompletion, completion: { value in
                 completion?(value)
             })
         }

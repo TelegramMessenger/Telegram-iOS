@@ -148,6 +148,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                                         standaloneReactionAnimation.animateReactionSelection(
                                             context: item.context, theme: item.theme, reaction: ReactionContextItem(
                                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                                appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
                                                 listAnimation: reaction.activateAnimation,
                                                 applicationAnimation: reaction.effectAnimation

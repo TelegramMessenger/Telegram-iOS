@@ -6,6 +6,7 @@ import SwiftSignalKit
 public final class AvailableReactions: Equatable, Codable {
     public final class Reaction: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
+            case isEnabled
             case value
             case title
             case staticIcon
@@ -15,6 +16,7 @@ public final class AvailableReactions: Equatable, Codable {
             case effectAnimation
         }
         
+        public let isEnabled: Bool
         public let value: String
         public let title: String
         public let staticIcon: TelegramMediaFile
@@ -24,6 +26,7 @@ public final class AvailableReactions: Equatable, Codable {
         public let effectAnimation: TelegramMediaFile
         
         public init(
+            isEnabled: Bool,
             value: String,
             title: String,
             staticIcon: TelegramMediaFile,
@@ -32,6 +35,7 @@ public final class AvailableReactions: Equatable, Codable {
             activateAnimation: TelegramMediaFile,
             effectAnimation: TelegramMediaFile
         ) {
+            self.isEnabled = isEnabled
             self.value = value
             self.title = title
             self.staticIcon = staticIcon
@@ -42,6 +46,9 @@ public final class AvailableReactions: Equatable, Codable {
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
+            if lhs.isEnabled != rhs.isEnabled {
+                return false
+            }
             if lhs.value != rhs.value {
                 return false
             }
@@ -69,6 +76,8 @@ public final class AvailableReactions: Equatable, Codable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
+            self.isEnabled = try container.decode(Bool.self, forKey: .isEnabled)
+            
             self.value = try container.decode(String.self, forKey: .value)
             self.title = try container.decode(String.self, forKey: .title)
             
@@ -90,6 +99,8 @@ public final class AvailableReactions: Equatable, Codable {
         
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.isEnabled, forKey: .isEnabled)
             
             try container.encode(self.value, forKey: .value)
             try container.encode(self.title, forKey: .title)
@@ -146,7 +157,7 @@ public final class AvailableReactions: Equatable, Codable {
 private extension AvailableReactions.Reaction {
     convenience init?(apiReaction: Api.AvailableReaction) {
         switch apiReaction {
-        case let .availableReaction(reaction, title, staticIcon, appearAnimation, selectAnimation, activateAnimation, effectAnimation):
+        case let .availableReaction(flags, reaction, title, staticIcon, appearAnimation, selectAnimation, activateAnimation, effectAnimation):
             guard let staticIconFile = telegramMediaFileFromApiDocument(staticIcon) else {
                 return nil
             }
@@ -162,7 +173,9 @@ private extension AvailableReactions.Reaction {
             guard let effectAnimationFile = telegramMediaFileFromApiDocument(effectAnimation) else {
                 return nil
             }
+            let isEnabled = (flags & (1 << 0)) == 0
             self.init(
+                isEnabled: isEnabled,
                 value: reaction,
                 title: title,
                 staticIcon: staticIconFile,
@@ -234,6 +247,7 @@ func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) ->
                         
                         for reaction in availableReactions.reactions {
                             resources.append(reaction.staticIcon.resource)
+                            resources.append(reaction.appearAnimation.resource)
                             resources.append(reaction.selectAnimation.resource)
                             resources.append(reaction.activateAnimation.resource)
                             resources.append(reaction.effectAnimation.resource)

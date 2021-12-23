@@ -7190,6 +7190,9 @@ Sorry for the inconvenience.";
 
 "DoNotTranslate.Title" = "Do Not Translate";
 
+"Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
+"Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";
+
 "Contacts.ScanQrCode" = "Scan QR Code";
 "Contacts.QrCode.MyCode" = "My QR Code";
 "Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";

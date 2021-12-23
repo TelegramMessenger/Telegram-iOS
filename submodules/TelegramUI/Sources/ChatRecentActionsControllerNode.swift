@@ -531,6 +531,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, updateChoosingSticker: { _ in
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
+        }, openJoinLink: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

@@ -301,8 +301,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
+                    let trailingWidthToMeasure: CGFloat
+                    if textLayout.hasRTL {
+                        trailingWidthToMeasure = 10000.0
+                    } else {
+                        trailingWidthToMeasure = textLayout.trailingLineWidth
+                    }
+                    
                     let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
-                    dateLayoutInput = .trailingContent(contentWidth: textLayout.trailingLineWidth, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
                     
                     statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
                         context: item.context,

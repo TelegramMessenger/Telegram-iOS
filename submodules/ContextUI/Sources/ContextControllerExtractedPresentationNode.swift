@@ -532,13 +532,28 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             public var updateDistractionFreeMode: ((Bool) -> Void)?
             public var requestDismiss: (() -> Void)*/
         case let .animateOut(result, completion):
-            let duration: Double = self.reactionContextNodeIsAnimatingOut ? 0.25 : 0.2
+            let duration: Double
+            let timingFunction: String
+            switch result {
+            case .default, .dismissWithoutContent:
+                duration = self.reactionContextNodeIsAnimatingOut ? 0.25 : 0.2
+                timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+            case let .custom(customTransition):
+                switch customTransition {
+                case let .animated(customDuration, curve):
+                    duration = customDuration
+                    timingFunction = curve.timingFunction
+                case .immediate:
+                    duration = self.reactionContextNodeIsAnimatingOut ? 0.25 : 0.2
+                    timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+                }
+            }
             
             let putBackInfo = self.source.putBack()
             
             if let putBackInfo = putBackInfo {
-                self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(), size: layout.size), to: CGRect(origin: CGPoint(x: 0.0, y: putBackInfo.contentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: putBackInfo.contentAreaInScreenSpace.height)), duration: duration, removeOnCompletion: false)
-                self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: duration, removeOnCompletion: false)
+                self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(), size: layout.size), to: CGRect(origin: CGPoint(x: 0.0, y: putBackInfo.contentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: putBackInfo.contentAreaInScreenSpace.height)), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+                self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
             }
             
             let currentContentScreenFrame = convertFrame(contentNode.containingNode.contentRect, from: contentNode.containingNode.view, to: self.view)
@@ -574,7 +589,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 from: animationInContentDistance as NSNumber,
                 to: 0.0 as NSNumber,
                 keyPath: "position.y",
-                timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
+                timingFunction: timingFunction,
                 duration: duration,
                 delay: 0.0,
                 additive: true,
@@ -597,7 +612,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 from: 1.0 as NSNumber,
                 to: 0.01 as NSNumber,
                 keyPath: "transform.scale",
-                timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
+                timingFunction: timingFunction,
                 duration: duration,
                 delay: 0.0,
                 removeOnCompletion: false
@@ -611,7 +626,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 from: NSValue(cgPoint: CGPoint()),
                 to: NSValue(cgPoint: CGPoint(x: actionsPositionDeltaXDistance, y: actionsPositionDeltaYDistance)),
                 keyPath: "position",
-                timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
+                timingFunction: timingFunction,
                 duration: duration,
                 delay: 0.0,
                 removeOnCompletion: false,
