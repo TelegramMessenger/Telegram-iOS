@@ -398,9 +398,14 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 if !self.listState.canLoadMore {
                     return self.mergedItems.count
                 } else {
-                    var value = self.listState.totalCount
+                    let reactionCount = self.listState.totalCount
+                    var value = reactionCount
                     if let readStats = self.readStats {
-                        value = max(value, readStats.peers.count)
+                        if reactionCount < readStats.peers.count && self.listState.hasOutgoingReaction {
+                            value = readStats.peers.count + 1
+                        } else {
+                            value = max(reactionCount, readStats.peers.count)
+                        }
                     }
                     return value
                 }
