@@ -171,7 +171,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         if let mappedStatus = mappedStatus {
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self, status.duration > 1.0 {
+                if let strongSelf = self, status.duration > 1.0, strongSelf.chapters.count > 0 {
                     var text: String = ""
                     
                     for chapter in strongSelf.chapters {
@@ -230,7 +230,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             if let fetchStatus = fetchStatus {
                 self.fetchStatusDisposable.set((fetchStatus
                 |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
+                    if let strongSelf = self, strongSelf.chapters.isEmpty {
                         var text: String
                         switch status {
                             case .Remote:
@@ -247,10 +247,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         }
                     }
                 }))
-            } else {
+            } else if self.chapters.isEmpty {
                 self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, formatting: formatting), font: textFont, textColor: .white)
             }
-        } else {
+        } else if self.chapters.isEmpty {
             self.infoNode.attributedText = nil
         }
     }
