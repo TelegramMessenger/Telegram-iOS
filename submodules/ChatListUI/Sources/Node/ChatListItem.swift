@@ -1867,6 +1867,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition.animatePosition(node: strongSelf.titleNode, from: CGPoint(x: titlePosition.x - contentDelta.x, y: titlePosition.y - contentDelta.y))
                         
                         transition.animatePositionAdditive(node: strongSelf.textNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
+                        if let dustNode = strongSelf.dustNode {
+                            transition.animatePositionAdditive(node: dustNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
+                        }
                         
                         let authorPosition = strongSelf.authorNode.position
                         transition.animatePosition(node: strongSelf.authorNode, from: CGPoint(x: authorPosition.x - contentDelta.x, y: authorPosition.y - contentDelta.y))

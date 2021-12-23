@@ -1908,6 +1908,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
         let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
         
+        textInputNode.textView.isScrollEnabled = false
+        
         refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed)
         
         textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
@@ -1916,15 +1918,23 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let containerView = textInputNode.textView.subviews[1]
             if let canvasView = containerView.subviews.first {
                 if let snapshotView = canvasView.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = canvasView.frame.offsetBy(dx: 0.0, dy: -textInputNode.textView.contentOffset.y)
                     textInputNode.view.insertSubview(snapshotView, at: 0)
                     canvasView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView, weak textInputNode] _ in
+                        textInputNode?.textView.isScrollEnabled = false
                         snapshotView?.removeFromSuperview()
+                        Queue.mainQueue().after(0.1) {
+                            textInputNode?.textView.isScrollEnabled = true
+                        }
                     })
                 }
             }
         }
-    
+        Queue.mainQueue().after(0.1) {
+            textInputNode.textView.isScrollEnabled = true
+        }
+        
         if animated {
             if revealed {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
