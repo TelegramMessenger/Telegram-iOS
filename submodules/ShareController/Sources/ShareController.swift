@@ -1080,41 +1080,50 @@ final class MessageStoryRenderer {
     }
 }
 
-private class ShareToInstagramActivity: UIActivity {
+public class ShareToInstagramActivity: UIActivity {
+    private let context: AccountContext
     private var activityItems = [Any]()
-    private var action: ([Any]) -> Void
     
-    init(action: @escaping ([Any]) -> Void) {
-        self.action = action
+    public init(context: AccountContext) {
+        self.context = context
+        
         super.init()
     }
     
-    override var activityTitle: String? {
-        return "Share to Instagram Stories"
+    public override var activityTitle: String? {
+        return self.context.sharedContext.currentPresentationData.with { $0 }.strings.Share_ShareToInstagramStories
     }
 
-    override var activityImage: UIImage? {
-        return nil
+    public override var activityImage: UIImage? {
+        return UIImage(bundleImageName: "Share/Instagram")
     }
     
-    override var activityType: UIActivity.ActivityType? {
+    public override var activityType: UIActivity.ActivityType? {
         return UIActivity.ActivityType(rawValue: "org.telegram.Telegram.ShareToInstagram")
     }
 
-    override class var activityCategory: UIActivity.Category {
+    public override class var activityCategory: UIActivity.Category {
         return .action
     }
     
-    override func canPerform(withActivityItems activityItems: [Any]) -> Bool {
-        return true
+    public override func canPerform(withActivityItems activityItems: [Any]) -> Bool {
+        return self.context.sharedContext.applicationBindings.canOpenUrl("instagram-stories://")
     }
     
-    override func prepare(withActivityItems activityItems: [Any]) {
+    public override func prepare(withActivityItems activityItems: [Any]) {
         self.activityItems = activityItems
     }
     
-    override func perform() {
-        self.action(self.activityItems)
+    public override func perform() {
+        if let url = self.activityItems.first as? URL, let data = try? Data(contentsOf: url) {
+            let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data]]
+            if #available(iOS 10.0, *) {
+                UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
+            } else {
+                UIPasteboard.general.items = pasteboardItems
+            }
+            context.sharedContext.applicationBindings.openUrl("instagram-stories://share")
+        }
         activityDidFinish(true)
     }
 }

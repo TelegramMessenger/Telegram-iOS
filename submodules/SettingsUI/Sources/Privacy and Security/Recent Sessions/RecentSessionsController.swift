@@ -12,6 +12,7 @@ import AccountContext
 import AuthTransferUI
 import ItemListPeerActionItem
 import DeviceAccess
+import QrCodeUI
 
 private final class RecentSessionsControllerArguments {
     let context: AccountContext
@@ -749,7 +750,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, addDevice: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        DeviceAccess.authorizeAccess(to: .camera(.video), presentationData: presentationData, present: { c, a in
+        DeviceAccess.authorizeAccess(to: .camera(.qrCode), presentationData: presentationData, present: { c, a in
             c.presentationArguments = a
             context.sharedContext.mainWindow?.present(c, on: .root)
         }, openSettings: {
@@ -758,7 +759,7 @@ public func recentSessionsController(context: AccountContext, activeSessionsCont
             guard granted else {
                 return
             }
-            pushControllerImpl?(AuthTransferScanScreen(context: context, activeSessionsContext: activeSessionsContext))
+            pushControllerImpl?(QrCodeScanScreen(context: context, subject: .authTransfer(activeSessionsContext: activeSessionsContext)))
         })
     }, openOtherAppsUrl: {
         context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://telegram.org/apps", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})

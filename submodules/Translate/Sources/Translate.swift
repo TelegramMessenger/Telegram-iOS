@@ -40,10 +40,11 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         
         let text = String(text.prefix(64))
         languageRecognizer.processString(text)
-        let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 2)
+        let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
         languageRecognizer.reset()
         
-        if let language = hypotheses.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
+        let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
+        if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
             return !dontTranslateLanguages.contains(language.key.rawValue)
         } else {
             return false

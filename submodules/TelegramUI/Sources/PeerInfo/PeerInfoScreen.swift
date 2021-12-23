@@ -3245,6 +3245,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             self?.paneContainerNode.currentPane?.node.ensureMessageIsVisible(id: messageId)
         }))
     }
+    
     private func openResolved(_ result: ResolvedUrl) {
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
@@ -5479,35 +5480,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         guard let data = self.data, let peer = data.peer, let controller = self.controller else {
             return
         }
-        
-        let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
-        |> map { animatedEmoji -> [String: [StickerPackItem]] in
-            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
-            switch animatedEmoji {
-                case let .result(_, items, _):
-                    for item in items {
-                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
-                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
-                            if animatedEmojiStickers[strippedEmoji] == nil {
-                                animatedEmojiStickers[strippedEmoji] = [item]
-                            }
-                        }
-                    }
-                default:
-                    break
-            }
-            return animatedEmojiStickers
-        }
-        
-        let _ = (animatedEmojiStickers
-        |> deliverOnMainQueue).start(next: { [weak self, weak controller] animatedEmojiStickers in
-            if let strongSelf = self, let controller = controller {
-                controller.present(ChatQrCodeScreen(context: strongSelf.context, animatedEmojiStickers: animatedEmojiStickers, peer: peer), in: .window(.root))
-            }
-        })
-        
-//        controller.present(QrCodeScreen(context: self.context, updatedPresentationData: controller.updatedPresentationData, subject: .peer(peer: EnginePeer(peer))), in: .window(.root))
+
+        controller.present(ChatQrCodeScreen(context: self.context, peer: peer), in: .window(.root))
     }
     
     fileprivate func openSettings(section: PeerInfoSettingsSection) {

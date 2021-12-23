@@ -30,6 +30,7 @@ swift_library(
         "//submodules/UndoUI:UndoUI",
         "//submodules/TextFormat:TextFormat",
         "//submodules/Markdown:Markdown",
+        "//submodules/QrCodeUI:QrCodeUI",
     ],
     visibility = [
         "//visibility:public",

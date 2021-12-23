@@ -201,8 +201,14 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         
-        let textLength = CGFloat((textNode.cachedLayout?.attributedString?.string ?? "").count)
-        let timeToRead = min(45.0, ceil(max(4.0, textLength * 0.04)))
+        var spoilersLength: Int = 0
+        if let spoilers = textNode.cachedLayout?.spoilers {
+            for spoiler in spoilers {
+                spoilersLength += spoiler.0.length
+            }
+        }
+        
+        let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
         Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
             self.isRevealed = false
             

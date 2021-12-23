@@ -230,24 +230,12 @@ public final class QrCodeScreen: ViewController {
             let title: String
             let text: String
             switch subject {
-                case let .peer(peer):
-                    title = self.presentationData.strings.PeerInfo_QRCode_Title
-                    if case let .user(user) = peer {
-                        if user.id == context.account.peerId {
-                            text = self.presentationData.strings.UserInfo_QRCode_InfoYou
-                        } else if user.botInfo != nil {
-                            text = self.presentationData.strings.UserInfo_QRCode_InfoBot
-                        } else {
-                            text = self.presentationData.strings.UserInfo_QRCode_InfoOther(peer.compactDisplayTitle).string
-                        }
-                    } else if case let .channel(channel) = peer, case .broadcast = channel.info {
-                        text = self.presentationData.strings.GroupInfo_QRCode_Info
-                    } else {
-                        text = self.presentationData.strings.ChannelInfo_QRCode_Info
-                    }
                 case let .invite(_, isGroup):
                     title = self.presentationData.strings.InviteLink_QRCode_Title
                     text = isGroup ? self.presentationData.strings.InviteLink_QRCode_Info : self.presentationData.strings.InviteLink_QRCode_InfoChannel
+                default:
+                    title = ""
+                    text = ""
             }
             
             self.titleNode = ASTextNode()

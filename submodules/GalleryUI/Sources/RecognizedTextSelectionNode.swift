@@ -540,7 +540,13 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
             return self.view
         }
         if self.bounds.contains(point) {
-            return self.view
+            for recognition in self.recognitions {
+                let mappedRect = recognition.rect.convertTo(size: self.bounds.size)
+                if mappedRect.boundingFrame.insetBy(dx: -20.0, dy: -20.0).contains(point) {
+                    return self.view
+                }
+            }
+            return nil
         }
         return nil
     }

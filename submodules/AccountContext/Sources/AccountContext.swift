@@ -630,6 +630,8 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
+    func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController
+    
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }

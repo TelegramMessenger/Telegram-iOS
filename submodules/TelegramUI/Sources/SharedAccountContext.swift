@@ -1414,6 +1414,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: context.engine.privacy.webSessions(), websitesOnly: false)
     }
     
+    public func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController {
+        return ChatQrCodeScreen(context: context, peer: peer)
+    }
+    
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
         return SettingsUI.makePrivacyAndSecurityController(context: context)
     }
