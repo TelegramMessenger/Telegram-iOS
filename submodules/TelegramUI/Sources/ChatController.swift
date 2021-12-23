@@ -9868,6 +9868,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         let inputPanelNode = PeerSelectionTextInputPanelNode(presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { _ in })
+        inputPanelNode.context = self.context
         inputPanelNode.interfaceInteraction = interfaceInteraction
         inputPanelNode.effectivePresentationInterfaceState = {
             return presentationInterfaceState
