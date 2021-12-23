@@ -7201,3 +7201,26 @@ Sorry for the inconvenience.";
 "AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
 
 "Share.ShareToInstagramStories" = "Share to Instagram Stories";
+
+"PeerInfo.AllowedReactions.Title" = "Reactions";
+"PeerInfo.AllowedReactions.AllowAllText" = "Allow Reactions";
+"PeerInfo.AllowedReactions.AllowAllGroupInfo" = "Allow subscribers to react to group messages.";
+"PeerInfo.AllowedReactions.AllowAllChannelInfo" = "Allow subscribers to react to channel posts.";
+"PeerInfo.AllowedReactions.ReactionListHeader" = "AVAILABLE REACTIONS";
+
+"PeerInfo.Reactions" = "Reactions";
+"PeerInfo.ReactionsDisabled" = "Disabled";
+
+"Settings.QuickReactionSetup.NavigationTitle" = "Quick Reaction";
+"Settings.QuickReactionSetup.Title" = "Quick Reaction";
+"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON MESSAGE TO REACT";
+"Settings.QuickReactionSetup.DemoInfo" = "You can double tap on message for a quick reaction.";
+"Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
+"Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
+"Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
+
+"Chat.ContextReactionCount_1" = "1 reaction";
+"Chat.ContextReactionCount_any" = "%@ reactions";
+"Chat.OutgoingContextReactionCount_1" = "1 reacted";
+"Chat.OutgoingContextReactionCount_any" = "%@ reacted";
+"Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";

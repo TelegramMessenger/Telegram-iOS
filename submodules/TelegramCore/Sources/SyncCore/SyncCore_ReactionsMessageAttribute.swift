@@ -51,6 +51,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
     }
     
+    public let canViewList: Bool
     public let reactions: [MessageReaction]
     public let recentPeers: [RecentPeer]
     
@@ -58,22 +59,28 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         return self.recentPeers.map(\.peerId)
     }
     
-    public init(reactions: [MessageReaction], recentPeers: [RecentPeer]) {
+    public init(canViewList: Bool, reactions: [MessageReaction], recentPeers: [RecentPeer]) {
+        self.canViewList = canViewList
         self.reactions = reactions
         self.recentPeers = recentPeers
     }
     
     required public init(decoder: PostboxDecoder) {
+        self.canViewList = decoder.decodeBoolForKey("vl", orElse: true)
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("r")
         self.recentPeers = decoder.decodeObjectArrayWithDecoderForKey("rp")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeBool(self.canViewList, forKey: "vl")
         encoder.encodeObjectArray(self.reactions, forKey: "r")
         encoder.encodeObjectArray(self.recentPeers, forKey: "rp")
     }
     
     public static func ==(lhs: ReactionsMessageAttribute, rhs: ReactionsMessageAttribute) -> Bool {
+        if lhs.canViewList != rhs.canViewList {
+            return false
+        }
         if lhs.reactions != rhs.reactions {
             return false
         }

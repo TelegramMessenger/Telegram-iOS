@@ -14,6 +14,20 @@ import AccountContext
 import WallpaperBackgroundNode
 
 func canViewMessageReactionList(message: Message) -> Bool {
+    var found = false
+    for attribute in message.attributes {
+        if let attribute = attribute as? ReactionsMessageAttribute {
+            if !attribute.canViewList {
+                return false
+            }
+            found = true
+        }
+    }
+    
+    if !found {
+        return false
+    }
+    
     if let peer = message.peers[message.id.peerId] {
         if let channel = peer as? TelegramChannel {
             if case .broadcast = channel.info {
@@ -487,7 +501,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
             }
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
+                let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
                 let buttonsUpdate = buttonsNode.prepareUpdate(
                     context: item.context,
                     presentationData: item.presentationData,
