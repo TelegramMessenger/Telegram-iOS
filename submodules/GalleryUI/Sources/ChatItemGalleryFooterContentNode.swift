@@ -99,8 +99,8 @@ class CaptionScrollWrapperNode: ASDisplayNode {
         if result == self.view, let subnode = self.subnodes?.first {
             let convertedPoint = self.view.convert(point, to: subnode.view)
             if let subnodes = subnode.subnodes {
-                for node in subnodes {
-                    if node.frame.contains(convertedPoint) {
+                for node in subnodes.reversed() {
+                    if node.frame.contains(convertedPoint) && node.isUserInteractionEnabled {
                         return node.view
                     }
                 }
@@ -722,6 +722,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             if self.spoilerTextNode == nil {
                 let spoilerTextNode = ImmediateTextNode()
                 spoilerTextNode.attributedText = textNode.attributedText
+                spoilerTextNode.maximumNumberOfLines = 0
                 spoilerTextNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
                 spoilerTextNode.displaySpoilers = true
                 spoilerTextNode.isHidden = false
