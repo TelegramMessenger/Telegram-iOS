@@ -1070,7 +1070,7 @@ public class TextNode: ASDisplayNode {
                     
                     var headIndent: CGFloat = 0.0
                     attributedString.enumerateAttributes(in: NSMakeRange(brokenLineRange.location, brokenLineRange.length), options: []) { attributes, range, _ in
-                        if let _ = attributes[NSAttributedString.Key.init(rawValue: "TelegramSpoiler")] {
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
                             var ascent: CGFloat = 0.0
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
@@ -1151,7 +1151,7 @@ public class TextNode: ASDisplayNode {
                         
                         var headIndent: CGFloat = 0.0
                         attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                            if let _ = attributes[NSAttributedString.Key.init(rawValue: "TelegramSpoiler")] {
+                            if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
                                 var ascent: CGFloat = 0.0
                                 var descent: CGFloat = 0.0
                                 CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)

@@ -101,6 +101,9 @@ class CaptionScrollWrapperNode: ASDisplayNode {
             if let subnodes = subnode.subnodes {
                 for node in subnodes.reversed() {
                     if node.frame.contains(convertedPoint) && node.isUserInteractionEnabled {
+                        if let dustNode = node as? InvisibleInkDustNode, dustNode.isRevealed {
+                            continue
+                        }
                         return node.view
                     }
                 }

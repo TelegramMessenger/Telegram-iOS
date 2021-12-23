@@ -245,8 +245,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
                     }
                     property?.writeBlock = { node, values in
                         if let values = values, let color = CGColor(colorSpace: colorSpace, components: values) {
-                            let uicolor = UIColor(cgColor: color)
-                            print(uicolor)
                             (node as! InvisibleInkDustNode).animColor = color
                             (node as! InvisibleInkDustNode).updateEmitter()
                         }

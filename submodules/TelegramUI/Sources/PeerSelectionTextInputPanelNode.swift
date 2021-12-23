@@ -123,6 +123,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
     var textInputNode: CaptionEditableTextNode?
     var dustNode: InvisibleInkDustNode?
     private var oneLineNode: ImmediateTextNode
+    private var oneLineDustNode: InvisibleInkDustNode?
     
     let textInputBackgroundNode: ASDisplayNode
     let textInputBackgroundImageNode: ASImageNode
@@ -633,17 +634,23 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
                 panelHeight = minimalHeight
                 
                 transition.updateAlpha(node: self.oneLineNode, alpha: inputHasText ? 1.0 : 0.0)
+                if let oneLineDustNode = self.oneLineDustNode {
+                    transition.updateAlpha(node: oneLineDustNode, alpha: inputHasText ? 1.0 : 0.0)
+                }
                 if let textInputNode = self.textInputNode {
                     transition.updateAlpha(node: textInputNode, alpha: inputHasText ? 0.0 : 1.0)
                 }
             } else {
                 self.oneLineNode.alpha = 0.0
+                self.oneLineDustNode?.alpha = 0.0
                 self.textInputNode?.alpha = 1.0
             }
             
             let oneLineSize = self.oneLineNode.updateLayout(CGSize(width: baseWidth - textFieldInsets.left - textFieldInsets.right, height: CGFloat.greatestFiniteMagnitude))
             let oneLineFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: oneLineSize)
             self.oneLineNode.frame = oneLineFrame
+            
+            self.updateOneLineSpoiler()
         }
         self.textPlaceholderNode.isHidden = inputHasText
         
@@ -925,13 +932,19 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
             self.textPlaceholderNode.isHidden = inputHasText
         }
         
-        if let attributedText = self.textInputNode?.attributedText, let presentationInterfaceState = self.presentationInterfaceState {
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
+            let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
+            let textFont = Font.regular(baseFontSize)
+            let accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
+                    
+            let attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: false)
+            
             let range = (attributedText.string as NSString).range(of: "\n")
             if range.location != NSNotFound {
-                let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
-                let textFont = Font.regular(max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize))
                 let trimmedText = NSMutableAttributedString(attributedString: attributedText.attributedSubstring(from: NSMakeRange(0, range.location)))
                 trimmedText.append(NSAttributedString(string: "\u{2026}", font: textFont, textColor: textColor))
+                
                 self.oneLineNode.attributedText = trimmedText
             } else {
                 self.oneLineNode.attributedText = attributedText
@@ -941,6 +954,28 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
         }
         
         self.updateTextHeight(animated: animated)
+    }
+    
+    private func updateOneLineSpoiler() {
+        if let textLayout = self.oneLineNode.cachedLayout, !textLayout.spoilers.isEmpty {
+            if self.oneLineDustNode == nil {
+                let oneLineDustNode = InvisibleInkDustNode(textNode: nil)
+                self.oneLineDustNode = oneLineDustNode
+                self.oneLineNode.supernode?.insertSubnode(oneLineDustNode, aboveSubnode: self.oneLineNode)
+                
+            }
+            if let oneLineDustNode = self.oneLineDustNode {
+                let textFrame = self.oneLineNode.frame.insetBy(dx: 0.0, dy: -3.0)
+                
+                oneLineDustNode.update(size: textFrame.size, color: .white, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 0.0, dy: 3.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 0.0, dy: 3.0) })
+                oneLineDustNode.frame = textFrame
+            }
+        } else {
+            if let oneLineDustNode = self.oneLineDustNode {
+                self.oneLineDustNode = nil
+                oneLineDustNode.removeFromSupernode()
+            }
+        }
     }
     
     private func updateTextHeight(animated: Bool) {
