@@ -138,6 +138,12 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             }  else if let _ = media as? TelegramMediaDice {
                 hasUneditableAttributes = true
                 break
+            }  else if let _ = media as? TelegramMediaGame {
+                hasUneditableAttributes = true
+                break
+            }  else if let _ = media as? TelegramMediaInvoice {
+                hasUneditableAttributes = true
+                break
             }
         }
         
