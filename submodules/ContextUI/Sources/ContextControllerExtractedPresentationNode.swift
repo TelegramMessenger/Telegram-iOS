@@ -503,6 +503,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 reactionContextNode.animateIn(from: currentContentScreenFrame)
             }
             
+            self.actionsStackNode.animateIn()
+            
             contentNode.containingNode.isExtractedToContextPreview = true
             contentNode.containingNode.isExtractedToContextPreviewUpdated?(true)
             contentNode.containingNode.willUpdateIsExtractedToContextPreview?(true, transition)
