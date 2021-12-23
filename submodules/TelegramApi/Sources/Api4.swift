@@ -4592,11 +4592,11 @@ public extension Api {
                     })
                 }
             
-                public static func setDefaultReaction(emoji: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func setDefaultReaction(reaction: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1474910882)
-                    serializeString(emoji, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.setDefaultReaction", parameters: [("emoji", emoji)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(-647969580)
+                    serializeString(reaction, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.setDefaultReaction", parameters: [("reaction", reaction)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

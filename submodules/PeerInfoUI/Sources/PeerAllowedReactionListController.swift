@@ -162,6 +162,9 @@ private func peerAllowedReactionListControllerEntries(
         entries.append(.itemsHeader("AVAILABLE REACTIONS"))
         var index = 0
         for availableReaction in availableReactions.reactions {
+            if !availableReaction.isEnabled {
+                continue
+            }
             entries.append(.item(index: index, value: availableReaction.value, file: availableReaction.staticIcon, text: availableReaction.title, isEnabled: allowedReactions.contains(availableReaction.value)))
             index += 1
         }
@@ -217,6 +220,9 @@ public func peerAllowedReactionListController(
                     if var updatedAllowedReactions = state.updatedAllowedReactions {
                         if updatedAllowedReactions.isEmpty {
                             for availableReaction in availableReactions.reactions {
+                                if !availableReaction.isEnabled {
+                                    continue
+                                }
                                 updatedAllowedReactions.insert(availableReaction.value)
                             }
                         } else {

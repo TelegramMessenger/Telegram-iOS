@@ -2,14 +2,17 @@ import Foundation
 import Postbox
 
 public final class AdMessageAttribute: MessageAttribute {
+    public enum MessageTarget {
+        case peer(id: EnginePeer.Id, message: EngineMessage.Id?, startParam: String?)
+        case join(title: String, joinHash: String)
+    }
+    
     public let opaqueId: Data
-    public let startParam: String?
-    public let messageId: MessageId?
+    public let target: MessageTarget
 
-    public init(opaqueId: Data, startParam: String?, messageId: MessageId?) {
+    public init(opaqueId: Data, target: MessageTarget) {
         self.opaqueId = opaqueId
-        self.startParam = startParam
-        self.messageId = messageId
+        self.target = target
     }
 
     public init(decoder: PostboxDecoder) {

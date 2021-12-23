@@ -157,6 +157,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         }, updateChoosingSticker: { _ in
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
+        }, openJoinLink: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

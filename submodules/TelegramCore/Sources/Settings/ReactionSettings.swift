@@ -11,13 +11,17 @@ public struct ReactionSettings: Equatable, Codable {
     }
 }
 
+func updateReactionSettings(transaction: Transaction, _ f: (ReactionSettings) -> ReactionSettings) {
+    transaction.updatePreferencesEntry(key: PreferencesKeys.reactionSettings, { current in
+        let previous = current?.get(ReactionSettings.self) ?? ReactionSettings.default
+        let updated = f(previous)
+        return PreferencesEntry(updated)
+    })
+}
+
 public func updateReactionSettingsInteractively(postbox: Postbox, _ f: @escaping (ReactionSettings) -> ReactionSettings) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in
-        transaction.updatePreferencesEntry(key: PreferencesKeys.reactionSettings, { current in
-            let previous = current?.get(ReactionSettings.self) ?? ReactionSettings.default
-            let updated = f(previous)
-            return PreferencesEntry(updated)
-        })
+        updateReactionSettings(transaction: transaction, f)
     }
     |> ignoreValues
 }
