@@ -1061,7 +1061,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                         let messageString: NSAttributedString
-                        if !message.text.isEmpty {
+                        if !message.text.isEmpty && entities.count > 0 {
                             messageString = stringWithAppliedEntities(message.text, entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
                         } else {
                             messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)

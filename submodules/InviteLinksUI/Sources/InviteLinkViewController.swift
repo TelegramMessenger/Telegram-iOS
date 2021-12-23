@@ -582,7 +582,7 @@ public final class InviteLinkViewController: ViewController {
                 } else {
                     if !invitationAvailability(invite).isZero {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+                            return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             

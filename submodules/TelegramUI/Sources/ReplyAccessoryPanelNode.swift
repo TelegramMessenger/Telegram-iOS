@@ -134,7 +134,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         }
                     }
                     let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
-                    messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                    if entities.count > 0 {
+                        messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
+                    } else {
+                        messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
+                    }
                 } else {
                     messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 }
