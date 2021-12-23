@@ -313,7 +313,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if let (_, _, rects, _) = self.currentParams {
+        if let (_, _, rects, _) = self.currentParams, !self.isRevealed {
             for rect in rects {
                 if rect.contains(point) {
                     return true
