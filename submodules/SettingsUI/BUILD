@@ -93,6 +93,7 @@ swift_library(
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/Translate:Translate",
+        "//submodules/QrCodeUI:QrCodeUI",
     ],
     visibility = [
         "//visibility:public",

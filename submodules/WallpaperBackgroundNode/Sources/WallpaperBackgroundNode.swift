@@ -1740,18 +1740,18 @@ private class WallpaperNewYearNode: ASDisplayNode {
             let cell1 = CAEmitterCell()
             cell1.contents = UIImage(bundleImageName: "Components/Snowflake")?.cgImage
             cell1.name = "snow"
-            cell1.birthRate = 352.0
+            cell1.birthRate = 252.0
             cell1.lifetime = 20.0
-            cell1.velocity = 39.0
-            cell1.velocityRange = -15.0
-            cell1.xAcceleration = 5.0
-            cell1.yAcceleration = 25.0
+            cell1.velocity = 19.0
+            cell1.velocityRange = -5.0
+            cell1.xAcceleration = 2.5
+            cell1.yAcceleration = 10.0
             cell1.emissionRange = .pi
             cell1.spin = -28.6 * (.pi / 180.0)
             cell1.spinRange = 57.2 * (.pi / 180.0)
             cell1.scale = 0.04
             cell1.scaleRange = 0.15
-            cell1.color = UIColor.white.withAlphaComponent(0.88).cgColor
+            cell1.color = UIColor.white.withAlphaComponent(0.58).cgColor
 //            cell1.alphaRange = -0.2
             
             particlesLayer.emitterCells = [cell1]

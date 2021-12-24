@@ -99,8 +99,11 @@ class CaptionScrollWrapperNode: ASDisplayNode {
         if result == self.view, let subnode = self.subnodes?.first {
             let convertedPoint = self.view.convert(point, to: subnode.view)
             if let subnodes = subnode.subnodes {
-                for node in subnodes {
-                    if node.frame.contains(convertedPoint) {
+                for node in subnodes.reversed() {
+                    if node.frame.contains(convertedPoint) && node.isUserInteractionEnabled {
+                        if let dustNode = node as? InvisibleInkDustNode, dustNode.isRevealed {
+                            continue
+                        }
                         return node.view
                     }
                 }
@@ -722,6 +725,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             if self.spoilerTextNode == nil {
                 let spoilerTextNode = ImmediateTextNode()
                 spoilerTextNode.attributedText = textNode.attributedText
+                spoilerTextNode.maximumNumberOfLines = 0
                 spoilerTextNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
                 spoilerTextNode.displaySpoilers = true
                 spoilerTextNode.isHidden = false
@@ -884,7 +888,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             transition.updateBounds(layer: scrubberView.layer, bounds: CGRect(origin: CGPoint(), size: scrubberFrame.size))
             transition.updatePosition(layer: scrubberView.layer, position: CGPoint(x: scrubberFrame.midX, y: scrubberFrame.midY))
         }
-        transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.scrollWrapperNode, alpha: displayCaption ? 1.0 : 0.0)
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         

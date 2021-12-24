@@ -18,6 +18,7 @@ import TelegramPermissionsUI
 import AppBundle
 import StickerResources
 import ContextUI
+import QrCodeUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
@@ -373,6 +374,43 @@ public class ContactsController: ViewController {
                         strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                 }
             })
+        }
+        
+        self.contactsNode.openQrScan = { [weak self] in
+            if let strongSelf = self {
+                let context = strongSelf.context
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                DeviceAccess.authorizeAccess(to: .camera(.qrCode), presentationData: presentationData, present: { c, a in
+                    c.presentationArguments = a
+                    context.sharedContext.mainWindow?.present(c, on: .root)
+                }, openSettings: {
+                    context.sharedContext.applicationBindings.openSettings()
+                }, { [weak self] granted in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard granted else {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                        return
+                    }
+                    let controller = QrCodeScanScreen(context: strongSelf.context, subject: .peer)
+                    controller.showMyCode = { [weak self, weak controller] in
+                        if let strongSelf = self {
+                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId)
+                            |> deliverOnMainQueue).start(next: { [weak self, weak controller] peer in
+                                if let strongSelf = self, let controller = controller {
+                                    controller.present(strongSelf.context.sharedContext.makeChatQrCodeScreen(context: strongSelf.context, peer: peer), in: .window(.root))
+                                }
+                            })
+                        }
+                    }
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: {
+                        if let strongSelf = self {
+                            strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                        }
+                    })
+                })
+            }
         }
         
         self.contactsNode.contactListNode.openSortMenu = { [weak self] in

@@ -14,6 +14,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/LegacyComponents:LegacyComponents",
     ],
     visibility = [
         "//visibility:public",

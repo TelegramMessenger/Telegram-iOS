@@ -8648,6 +8648,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.sendMessageActionsController?.dismiss()
         self.themeSceen?.dismiss()
         
+        self.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+        
         if let _ = self.peekData {
             self.peekTimerDisposable.set(nil)
         }
@@ -9868,6 +9870,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         let inputPanelNode = PeerSelectionTextInputPanelNode(presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { _ in })
+        inputPanelNode.context = self.context
         inputPanelNode.interfaceInteraction = interfaceInteraction
         inputPanelNode.effectivePresentationInterfaceState = {
             return presentationInterfaceState

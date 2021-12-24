@@ -177,8 +177,7 @@ private func quickReactionSetupControllerEntries(
     var entries: [QuickReactionSetupControllerEntry] = []
     
     if let availableReactions = availableReactions {
-        //TODO:localize
-        entries.append(.demoHeader("DOUBLE TAP ON MESSAGE TO REACT"))
+        entries.append(.demoHeader(presentationData.strings.Settings_QuickReactionSetup_DemoHeader))
         entries.append(.demoMessage(
             wallpaper: presentationData.chatWallpaper,
             fontSize: presentationData.chatFontSize,
@@ -188,9 +187,9 @@ private func quickReactionSetupControllerEntries(
             availableReactions: availableReactions,
             reaction: reactionSettings.quickReaction
         ))
-        entries.append(.demoDescription("You can double tap on message for a quick reaction."))
+        entries.append(.demoDescription(presentationData.strings.Settings_QuickReactionSetup_DemoInfo))
         
-        entries.append(.itemsHeader("QUICK REACTION"))
+        entries.append(.itemsHeader(presentationData.strings.Settings_QuickReactionSetup_ReactionListHeader))
         var index = 0
         for availableReaction in availableReactions.reactions {
             if !availableReaction.isEnabled {
@@ -298,8 +297,7 @@ public func quickReactionSetupController(
     )
     |> deliverOnMainQueue
     |> map { presentationData, _, availableReactions, settings, images -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        //TODO:localize
-        let title: String = "Quick Reaction"
+        let title: String = presentationData.strings.Settings_QuickReactionSetup_Title
         
         let entries = quickReactionSetupControllerEntries(
             presentationData: presentationData,

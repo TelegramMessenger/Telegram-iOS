@@ -7168,12 +7168,6 @@ Sorry for the inconvenience.";
 "Conversation.LargeEmojiEnable" = "Enable Large Emoji";
 "Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
 
-"GroupInfo.QRCode.Info" = "Everyone on Telegram can scan this code to join this group.";
-"ChannelInfo.QRCode.Info" = "Everyone on Telegram can scan this code to join this channel.";
-"UserInfo.QRCode.InfoYou" = "Everyone on Telegram can scan this code to message you.";
-"UserInfo.QRCode.InfoBot" = "Everyone on Telegram can scan this code to use this bot.";
-"UserInfo.QRCode.InfoOther" = "Everyone on Telegram can scan this code to message %@.";
-
 "PeerInfo.QRCode.Title" = "QR Code";
 
 "ChatList.Archive" = "Archive";
@@ -7190,11 +7184,43 @@ Sorry for the inconvenience.";
 "Localization.ShowTranslate" = "Show Translate Button";
 "Localization.ShowTranslateInfo" = "Show 'Translate' button in the message action menu.";
 "Localization.DoNotTranslate" = "Do Not Translate";
-"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language";
-"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages";
+"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language.";
+"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages.";
 "Localization.InterfaceLanguage" = "Interface Language";
 
 "DoNotTranslate.Title" = "Do Not Translate";
 
 "Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
 "Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";
+
+"Contacts.ScanQrCode" = "Scan QR Code";
+"Contacts.QrCode.MyCode" = "My QR Code";
+"Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
+
+"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+
+"Share.ShareToInstagramStories" = "Share to Instagram Stories";
+
+"PeerInfo.AllowedReactions.Title" = "Reactions";
+"PeerInfo.AllowedReactions.AllowAllText" = "Allow Reactions";
+"PeerInfo.AllowedReactions.AllowAllGroupInfo" = "Allow subscribers to react to group messages.";
+"PeerInfo.AllowedReactions.AllowAllChannelInfo" = "Allow subscribers to react to channel posts.";
+"PeerInfo.AllowedReactions.ReactionListHeader" = "AVAILABLE REACTIONS";
+
+"PeerInfo.Reactions" = "Reactions";
+"PeerInfo.ReactionsDisabled" = "Disabled";
+
+"Settings.QuickReactionSetup.NavigationTitle" = "Quick Reaction";
+"Settings.QuickReactionSetup.Title" = "Quick Reaction";
+"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON MESSAGE TO REACT";
+"Settings.QuickReactionSetup.DemoInfo" = "You can double tap on message for a quick reaction.";
+"Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
+"Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
+"Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
+
+"Chat.ContextReactionCount_1" = "1 reaction";
+"Chat.ContextReactionCount_any" = "%@ reactions";
+"Chat.OutgoingContextReactionCount_1" = "1 reacted";
+"Chat.OutgoingContextReactionCount_any" = "%@ reacted";
+"Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";

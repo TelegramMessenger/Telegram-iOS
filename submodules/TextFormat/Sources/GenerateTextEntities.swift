@@ -101,8 +101,12 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     var overlaps = false
     for entity in entities {
         if entity.range.overlaps(indexRange) {
-            overlaps = true
-            break
+            if case .Spoiler = entity.type {
+                
+            } else {
+                overlaps = true
+                break
+            }
         }
     }
     if !overlaps {

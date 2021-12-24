@@ -150,16 +150,23 @@ private struct PeerAllowedReactionListControllerState: Equatable {
 private func peerAllowedReactionListControllerEntries(
     presentationData: PresentationData,
     availableReactions: AvailableReactions?,
+    peer: Peer?,
     cachedData: CachedPeerData?,
     state: PeerAllowedReactionListControllerState
 ) -> [PeerAllowedReactionListControllerEntry] {
     var entries: [PeerAllowedReactionListControllerEntry] = []
     
     if let availableReactions = availableReactions, let allowedReactions = state.updatedAllowedReactions {
-        entries.append(.allowAll(text: "Allow Reactions", isEnabled: !allowedReactions.isEmpty))
-        entries.append(.allowAllInfo("Allow subscribers to reacts to channel posts."))
+        entries.append(.allowAll(text: presentationData.strings.PeerInfo_AllowedReactions_AllowAllText, isEnabled: !allowedReactions.isEmpty))
+        let allInfoText: String
+        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+            allInfoText = presentationData.strings.PeerInfo_AllowedReactions_AllowAllChannelInfo
+        } else {
+            allInfoText = presentationData.strings.PeerInfo_AllowedReactions_AllowAllGroupInfo
+        }
+        entries.append(.allowAllInfo(allInfoText))
         
-        entries.append(.itemsHeader("AVAILABLE REACTIONS"))
+        entries.append(.itemsHeader(presentationData.strings.PeerInfo_AllowedReactions_ReactionListHeader))
         var index = 0
         for availableReaction in availableReactions.reactions {
             if !availableReaction.isEnabled {
@@ -262,12 +269,12 @@ public func peerAllowedReactionListController(
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, availableReactions, peerView -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        //TODO:localize
-        let title: String = "Reactions"
+        let title: String = presentationData.strings.PeerInfo_AllowedReactions_Title
         
         let entries = peerAllowedReactionListControllerEntries(
             presentationData: presentationData,
             availableReactions: availableReactions,
+            peer: peerView.peers[peerId],
             cachedData: peerView.cachedData,
             state: state
         )

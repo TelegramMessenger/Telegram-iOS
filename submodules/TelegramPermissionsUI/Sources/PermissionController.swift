@@ -228,6 +228,8 @@ public final class PermissionController: ViewController {
         self.displayNode = PermissionControllerNode(context: self.context, splitTest: self.splitTest)
         self.displayNodeDidLoad()
         
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        
         self.controllerNode.allow = { [weak self] in
             self?.allow?()
         }

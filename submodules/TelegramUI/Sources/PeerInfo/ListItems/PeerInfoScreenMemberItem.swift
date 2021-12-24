@@ -192,7 +192,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             
         }, removePeer: { _ in
             
-        }, contextAction: item.contextAction, hasTopStripe: false, hasTopGroupInset: false, noInsets: true, displayDecorations: false)
+        }, contextAction: item.contextAction, hasTopStripe: false, hasTopGroupInset: false, noInsets: true, noCorners: true, displayDecorations: false)
         
         let params = ListViewItemLayoutParams(width: width, leftInset: safeInsets.left, rightInset: safeInsets.right, availableHeight: 1000.0)
         

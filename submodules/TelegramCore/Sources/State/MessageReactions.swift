@@ -232,15 +232,20 @@ private func synchronizeMessageReactions(transaction: Transaction, postbox: Post
 
 public extension EngineMessageReactionListContext.State {
     init(message: EngineMessage, reaction: String?) {
-        var totalCount: Int = 0
+        var totalCount = 0
+        var hasOutgoingReaction = false
         if let reactionsAttribute = message._asMessage().reactionsAttribute {
             for messageReaction in reactionsAttribute.reactions {
                 if reaction == nil || messageReaction.value == reaction {
+                    if messageReaction.isSelected {
+                        hasOutgoingReaction = true
+                    }
                     totalCount += Int(messageReaction.count)
                 }
             }
         }
         self.init(
+            hasOutgoingReaction: hasOutgoingReaction,
             totalCount: totalCount,
             items: [],
             canLoadMore: totalCount != 0
@@ -273,15 +278,18 @@ public final class EngineMessageReactionListContext {
     }
     
     public struct State: Equatable {
+        public var hasOutgoingReaction: Bool
         public var totalCount: Int
         public var items: [Item]
         public var canLoadMore: Bool
         
         public init(
+            hasOutgoingReaction: Bool,
             totalCount: Int,
             items: [Item],
             canLoadMore: Bool
         ) {
+            self.hasOutgoingReaction = hasOutgoingReaction
             self.totalCount = totalCount
             self.items = items
             self.canLoadMore = canLoadMore
@@ -290,6 +298,7 @@ public final class EngineMessageReactionListContext {
     
     private final class Impl {
         struct InternalState: Equatable {
+            var hasOutgoingReaction: Bool
             var totalCount: Int
             var items: [Item]
             var canLoadMore: Bool
@@ -316,7 +325,7 @@ public final class EngineMessageReactionListContext {
             self.reaction = reaction
             
             let initialState = EngineMessageReactionListContext.State(message: message, reaction: reaction)
-            self.state = InternalState(totalCount: initialState.totalCount, items: initialState.items, canLoadMore: true, nextOffset: nil)
+            self.state = InternalState(hasOutgoingReaction: initialState.hasOutgoingReaction, totalCount: initialState.totalCount, items: initialState.items, canLoadMore: true, nextOffset: nil)
             
             if initialState.canLoadMore {
                 self.loadMore()
@@ -347,10 +356,10 @@ public final class EngineMessageReactionListContext {
             }
             |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
                 if message.id.namespace != Namespaces.Message.Cloud {
-                    return .single(InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil))
+                    return .single(InternalState(hasOutgoingReaction: false, totalCount: 0, items: [], canLoadMore: false, nextOffset: nil))
                 }
                 guard let inputPeer = inputPeer else {
-                    return .single(InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil))
+                    return .single(InternalState(hasOutgoingReaction: false, totalCount: 0, items: [], canLoadMore: false, nextOffset: nil))
                 }
                 var flags: Int32 = 0
                 if reaction != nil {
@@ -394,9 +403,9 @@ public final class EngineMessageReactionListContext {
                                 }
                             }
                             
-                            return InternalState(totalCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset)
+                            return InternalState(hasOutgoingReaction: false, totalCount: Int(count), items: items, canLoadMore: nextOffset != nil, nextOffset: nextOffset)
                         case .none:
-                            return InternalState(totalCount: 0, items: [], canLoadMore: false, nextOffset: nil)
+                            return InternalState(hasOutgoingReaction: false, totalCount: 0, items: [], canLoadMore: false, nextOffset: nil)
                         }
                     }
                 }
@@ -441,6 +450,7 @@ public final class EngineMessageReactionListContext {
             self.impl.with { impl in
                 disposable.set(impl.statePromise.get().start(next: { state in
                     subscriber.putNext(State(
+                        hasOutgoingReaction: state.hasOutgoingReaction,
                         totalCount: state.totalCount,
                         items: state.items,
                         canLoadMore: state.canLoadMore

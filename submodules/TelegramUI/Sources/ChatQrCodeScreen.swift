@@ -23,6 +23,7 @@ import ShimmerEffect
 import WallpaperBackgroundNode
 import QrCode
 import AvatarNode
+import ShareController
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -554,7 +555,6 @@ final class ChatQrCodeScreen: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let animatedEmojiStickers: [String: [StickerPackItem]]
     private let peer: Peer
     
     private var presentationData: PresentationData
@@ -563,10 +563,9 @@ final class ChatQrCodeScreen: ViewController {
     
     var dismissed: (() -> Void)?
     
-    init(context: AccountContext, animatedEmojiStickers: [String: [StickerPackItem]], peer: Peer) {
+    init(context: AccountContext, peer: Peer) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.animatedEmojiStickers = animatedEmojiStickers
         self.peer = peer
                 
         super.init(navigationBarPresentationData: nil)
@@ -591,6 +590,8 @@ final class ChatQrCodeScreen: ViewController {
         })
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.ready.set(self.controllerNode.ready.get())
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -602,7 +603,7 @@ final class ChatQrCodeScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatQrCodeScreenNode(context: self.context, presentationData: self.presentationData, controller: self, animatedEmojiStickers: self.animatedEmojiStickers, peer: self.peer)
+        self.displayNode = ChatQrCodeScreenNode(context: self.context, presentationData: self.presentationData, controller: self, peer: self.peer)
         self.controllerNode.previewTheme = { [weak self] _, _, theme in
             self?.presentationThemePromise.set(.single(theme))
         }
@@ -659,10 +660,6 @@ final class ChatQrCodeScreen: ViewController {
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
-    
-    func dimTapped() {
-        self.controllerNode.dimTapped()
-    }
 }
 
 private func iconColors(theme: PresentationTheme) -> [String: UIColor] {
@@ -689,20 +686,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     private var presentationData: PresentationData
     private weak var controller: ChatQrCodeScreen?
     
-    private let dimNode: ASDisplayNode
-    private let containerNode: ASDisplayNode
-    private let wallpaperBackgroundNode: WallpaperBackgroundNode
-    private let codeBackgroundNode: ASDisplayNode
-    private let codeForegroundNode: ASDisplayNode
-    private var codeForegroundContentNode: ASDisplayNode?
-    private var codeForegroundDimNode: ASDisplayNode
-    private let codeMaskNode: ASDisplayNode
-    private let codeTextNode: ImmediateTextNode
-    private let codeImageNode: TransformImageNode
-    private let codeIconBackgroundNode: ASImageNode
-    private let codeIconNode: AnimatedStickerNode
-    private let avatarNode: ImageNode
-    private var qrCodeSize: Int?
+    private let contentNode: QrContentNode
     
     private let wrappingScrollNode: ASScrollNode
     private let contentContainerNode: ASDisplayNode
@@ -723,14 +707,17 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     private var initialized = false
     private var themes: [TelegramTheme] = []
     
+    let ready = Promise<Bool>()
+    
     private let peer: Peer
     
-    private var selectedEmoticon: String? {
+    private var initiallySelectedEmoticon: String?
+    private var selectedEmoticon: String? = nil {
         didSet {
             self.selectedEmoticonPromise.set(self.selectedEmoticon)
         }
     }
-    private var selectedEmoticonPromise: ValuePromise<String?>
+    private var selectedEmoticonPromise = ValuePromise<String?>(nil)
 
     private var isDarkAppearancePromise: ValuePromise<Bool>
     private var isDarkAppearance: Bool = false {
@@ -749,26 +736,19 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen, animatedEmojiStickers: [String: [StickerPackItem]], peer: Peer) {
+    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen, peer: Peer) {
         self.context = context
         self.controller = controller
         self.peer = peer
-        self.selectedEmoticon = defaultEmoticon
-        self.selectedEmoticonPromise = ValuePromise(self.selectedEmoticon)
         self.presentationData = presentationData
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
         self.wrappingScrollNode.view.delaysContentTouches = false
         self.wrappingScrollNode.view.canCancelContentTouches = true
-        
-        self.dimNode = ASDisplayNode()
-        self.dimNode.backgroundColor = .clear
-        
-        self.containerNode = ASDisplayNode()
-        
-        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: self.context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
                 
+        self.contentNode = QrContentNode(context: context, peer: peer, isStatic: false)
+        
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
         
@@ -812,62 +792,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
         
-        self.codeBackgroundNode = ASDisplayNode()
-        self.codeBackgroundNode.backgroundColor = .white
-        self.codeBackgroundNode.cornerRadius = 42.0
-        if #available(iOS 13.0, *) {
-            self.codeBackgroundNode.layer.cornerCurve = .continuous
-        }
-        self.codeForegroundNode = ASDisplayNode()
-        self.codeForegroundNode.backgroundColor = .black
-        
-        self.codeForegroundDimNode = ASDisplayNode()
-        self.codeForegroundDimNode.alpha = 0.3
-        self.codeForegroundDimNode.backgroundColor = .black
-        
-        self.codeMaskNode = ASDisplayNode()
-        
-        self.codeImageNode = TransformImageNode()
-        
-        self.codeIconBackgroundNode = ASImageNode()
-        
-        self.codeIconNode = AnimatedStickerNode()
-        self.codeIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 240, height: 240, mode: .direct(cachePathPrefix: nil))
-        self.codeIconNode.visibility = true
-                
-        self.codeTextNode = ImmediateTextNode()
-        self.codeTextNode.attributedText = NSAttributedString(string: "@\(peer.addressName ?? "")".uppercased(), font: Font.with(size: 24.0, design: .round, weight: .bold, traits: []), textColor: .black)
-        
-        self.avatarNode = ImageNode()
-        self.avatarNode.displaysAsynchronously = false
-        self.avatarNode.setSignal(peerAvatarCompleteImage(account: self.context.account, peer: EnginePeer(peer), size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
-        
         super.init()
         
         self.backgroundColor = nil
         self.isOpaque = false
-        
-        self.addSubnode(self.dimNode)
-        
-        self.wrappingScrollNode.view.delegate = self
+
         self.addSubnode(self.wrappingScrollNode)
         
-        self.wrappingScrollNode.addSubnode(self.containerNode)
-        
-        self.containerNode.addSubnode(self.wallpaperBackgroundNode)
-        
-        self.containerNode.addSubnode(self.codeBackgroundNode)
-        self.containerNode.addSubnode(self.codeForegroundNode)
-        
-        self.codeForegroundNode.addSubnode(self.codeForegroundDimNode)
-        
-        self.codeMaskNode.addSubnode(self.codeImageNode)
-        self.codeMaskNode.addSubnode(self.codeIconBackgroundNode)
-        self.codeMaskNode.addSubnode(self.codeTextNode)
-        
-        self.containerNode.addSubnode(self.avatarNode)
-        
-        self.wrappingScrollNode.addSubnode(self.codeIconNode)
+        self.wrappingScrollNode.addSubnode(self.contentNode)
         
         self.wrappingScrollNode.addSubnode(self.backgroundNode)
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
@@ -889,20 +821,119 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.doneButton.isUserInteractionEnabled = false
-                strongSelf.completion?(strongSelf.selectedEmoticon)
+                
+                strongSelf.contentNode.generateImage { [weak self] image in
+                    if let strongSelf = self, let image = image, let jpgData = image.jpegData(compressionQuality: 0.9) {
+                        let tempFilePath = NSTemporaryDirectory() + "t_me-\(peer.addressName ?? "").jpg"
+                        try? FileManager.default.removeItem(atPath: tempFilePath)
+                        let tempFileUrl = URL(fileURLWithPath: tempFilePath)
+                        try? jpgData.write(to: tempFileUrl)
+                        
+                        let activityController = UIActivityViewController(activityItems: [tempFileUrl], applicationActivities: [ShareToInstagramActivity(context: strongSelf.context)])
+                        activityController.completionWithItemsHandler = { [weak self] _, finished, _, _ in
+                            if let strongSelf = self {
+                                if finished {
+                                    strongSelf.completion?(strongSelf.selectedEmoticon)
+                                } else {
+                                    strongSelf.doneButton.isUserInteractionEnabled = true
+                                }
+                            }
+                        }
+                        if let window = strongSelf.view.window {
+                            activityController.popoverPresentationController?.sourceView = window
+                            activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                        }
+                        context.sharedContext.applicationBindings.presentNativeController(activityController)
+                    }
+                }
             }
         }
         
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] themes, selectedEmoticon, isDarkAppearance in
+        let animatedEmojiStickers = context.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
+        |> map { animatedEmoji -> [String: [StickerPackItem]] in
+            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+            switch animatedEmoji {
+                case let .result(_, items, _):
+                    for item in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
+                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
+                            if animatedEmojiStickers[strippedEmoji] == nil {
+                                animatedEmojiStickers[strippedEmoji] = [item]
+                            }
+                        }
+                    }
+                default:
+                    break
+            }
+            return animatedEmojiStickers
+        }
+        
+        let initiallySelectedEmoticon: Signal<String, NoError>
+        let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
+        |> take(1)
+        if self.peer.id == self.context.account.peerId {
+            initiallySelectedEmoticon = sharedData
+            |> map { sharedData -> String in
+                let themeSettings: PresentationThemeSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+                    themeSettings = current
+                } else {
+                    themeSettings = PresentationThemeSettings.defaultSettings
+                }
+                return themeSettings.theme.emoticon ?? defaultEmoticon
+            }
+        } else {
+            let cachedData = self.context.account.postbox.transaction { transaction in
+                return transaction.getPeerCachedData(peerId: peer.id)
+            }
+            initiallySelectedEmoticon = combineLatest(cachedData, sharedData)
+            |> map { cachedData, sharedData -> String in
+                let themeSettings: PresentationThemeSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+                    themeSettings = current
+                } else {
+                    themeSettings = PresentationThemeSettings.defaultSettings
+                }
+                let currentDefaultEmoticon = themeSettings.theme.emoticon ?? defaultEmoticon
+                
+                if let cachedData = cachedData as? CachedUserData {
+                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
+                } else if let cachedData = cachedData as? CachedGroupData {
+                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
+                } else if let cachedData = cachedData as? CachedChannelData {
+                    return cachedData.themeEmoticon ?? currentDefaultEmoticon
+                } else {
+                    return currentDefaultEmoticon
+                }
+            }
+        }
+        
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), animatedEmojiStickers, initiallySelectedEmoticon, self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] animatedEmojiStickers, initiallySelectedEmoticon, themes, selectedEmoticon, isDarkAppearance in
             guard let strongSelf = self else {
                 return
+            }
+            
+            var selectedEmoticon = selectedEmoticon
+            if strongSelf.initiallySelectedEmoticon == nil {
+                strongSelf.initiallySelectedEmoticon = initiallySelectedEmoticon
+                strongSelf.selectedEmoticon = initiallySelectedEmoticon
+                selectedEmoticon = initiallySelectedEmoticon
             }
             
             let isFirstTime = strongSelf.entries == nil
             let presentationData = strongSelf.presentationData
                 
             var entries: [ThemeSettingsThemeEntry] = []
-            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(.dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+            
+            let defaultWallpaper: TelegramWallpaper?
+            if isDarkAppearance {
+                let dayTheme = makeDefaultPresentationTheme(reference: .dayClassic, serviceBackgroundColor: nil)
+                defaultWallpaper = dayTheme.chat.defaultWallpaper.withUpdatedSettings(WallpaperSettings(blur: false, motion: false, colors: [0x00b3dd, 0x3b59f2, 0x358be2, 0xa434cf], intensity: -55, rotation: nil))
+            } else {
+                defaultWallpaper = nil
+            }
+            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: defaultWallpaper))
             for theme in themes {
                 guard let emoticon = theme.emoticon else {
                     continue
@@ -910,13 +941,18 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                 entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
             }
             
+            let wallpaper: TelegramWallpaper
             if selectedEmoticon == defaultEmoticon {
                 let presentationTheme = makeDefaultPresentationTheme(reference: isDarkAppearance ? .night : .dayClassic, serviceBackgroundColor: nil)
-                strongSelf.wallpaperBackgroundNode.update(wallpaper: presentationTheme.chat.defaultWallpaper)
-            } else if let theme = themes.first(where: { $0.emoticon == selectedEmoticon }) {
-                if let presentationTheme = makePresentationTheme(cloudTheme: theme, dark: isDarkAppearance) {
-                    strongSelf.wallpaperBackgroundNode.update(wallpaper: presentationTheme.chat.defaultWallpaper)
+                if isDarkAppearance {
+                    wallpaper = entries.first?.wallpaper ?? .color(0x000000)
+                } else {
+                    wallpaper = presentationTheme.chat.defaultWallpaper
                 }
+            } else if let theme = themes.first(where: { $0.emoticon == selectedEmoticon }), let presentationTheme = makePresentationTheme(cloudTheme: theme, dark: isDarkAppearance) {
+                wallpaper = presentationTheme.chat.defaultWallpaper
+            } else {
+                wallpaper = .color(0x000000)
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
@@ -946,16 +982,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             strongSelf.entries = entries
             strongSelf.themes = themes
             
-            if isDarkAppearance && selectedEmoticon == defaultEmoticon {
-                strongSelf.codeForegroundDimNode.alpha = 1.0
-            } else {
-                strongSelf.codeForegroundDimNode.alpha = isDarkAppearance ? 0.4 : 0.3
-            }
-            if strongSelf.codeForegroundContentNode == nil, let contentNode = strongSelf.wallpaperBackgroundNode.makeDimmedNode() {
-                contentNode.frame = CGRect(origin: CGPoint(x: -strongSelf.codeForegroundNode.frame.minX, y: -strongSelf.codeForegroundNode.frame.minY), size: strongSelf.wallpaperBackgroundNode.frame.size)
-                strongSelf.codeForegroundContentNode = contentNode
-                strongSelf.codeForegroundNode.insertSubnode(contentNode, at: 0)
-            }
+            strongSelf.contentNode.update(wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
             
             if isFirstTime {
                 for theme in themes {
@@ -1001,15 +1028,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             }
         }
         
-        self.codeImageNode.setSignal(qrCode(string: "https://t.me/\(peer.addressName ?? "")", color: .black, backgroundColor: nil, icon: .cutout, ecl: "Q") |> beforeNext { [weak self] size, _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.qrCodeSize = size
-            if let (layout, navigationHeight) = strongSelf.containerLayout {
-                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate)
-            }
-        } |> map { $0.1 }, attemptSynchronously: true)
+        self.ready.set(self.contentNode.isReady)
     }
     
     private func enqueueTransition(_ transition: ThemeSettingsThemeItemNodeTransition) {
@@ -1034,7 +1053,12 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized {
-            scrollToItem = ListViewScrollToItem(index: 0, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
+            if let index = transition.entries.firstIndex(where: { entry in
+                return entry.emoticon == self.initiallySelectedEmoticon
+            }) {
+                scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-57.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
+                self.initialized = true
+            }
             self.initialized = true
         }
         
@@ -1080,11 +1104,10 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     override func didLoad() {
         super.didLoad()
         
+        self.wrappingScrollNode.view.delegate = self
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.wrappingScrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        
-        self.codeForegroundNode.view.mask = self.codeMaskNode.view
         
         self.listNode.view.disablesInteractiveTransitionGestureRecognizer = true
     }
@@ -1092,11 +1115,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     @objc func cancelButtonPressed() {
         self.cancel?()
     }
-    
-    func dimTapped() {
-        self.cancelButtonPressed()
-    }
-    
+
     @objc func switchThemePressed() {
         self.switchThemeButton.isUserInteractionEnabled = false
         Queue.mainQueue().after(0.5) {
@@ -1131,8 +1150,8 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     }
     
     private func animateCrossfade(animateIcon: Bool) {
-        if let snapshotView = self.containerNode.view.snapshotView(afterScreenUpdates: false) {
-            self.wrappingScrollNode.view.insertSubview(snapshotView, aboveSubview: self.containerNode.view)
+        if let snapshotView = self.contentNode.containerNode.view.snapshotView(afterScreenUpdates: false) {
+            self.contentNode.view.insertSubview(snapshotView, aboveSubview: self.contentNode.containerNode.view)
             
             snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: ChatQrCodeScreen.themeCrossfadeDuration, delay: ChatQrCodeScreen.themeCrossfadeDelay, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                 snapshotView?.removeFromSuperview()
@@ -1180,15 +1199,12 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     private var animatedOut = false
     func animateIn() {
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
-        let dimPosition = self.dimNode.layer.position
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
         let targetBounds = self.bounds
         self.bounds = self.bounds.offsetBy(dx: 0.0, dy: -offset)
-        self.dimNode.position = CGPoint(x: dimPosition.x, y: dimPosition.y - offset)
         transition.animateView({
             self.bounds = targetBounds
-            self.dimNode.position = dimPosition
         })
     }
     
@@ -1234,16 +1250,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         if backgroundFrame.minY < contentFrame.minY {
             backgroundFrame.origin.y = contentFrame.minY
         }
-        transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.wallpaperBackgroundNode.updateLayout(size: layout.size, transition: transition)
-        
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let titleSize = self.titleNode.measure(CGSize(width: width - 90.0, height: titleHeight))
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 19.0 + UIScreenPixel), size: titleSize)
@@ -1276,10 +1287,263 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0 + titleHeight + 6.0)
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        let codeInset: CGFloat = 45.0
-        let codeBackgroundWidth = layout.size.width - codeInset * 2.0
+        self.contentNode.updateLayout(size: layout.size, topInset: 44.0, bottomInset: contentHeight, transition: transition)
+        transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+    }
+}
+
+private class QrContentNode: ASDisplayNode {
+    private let context: AccountContext
+    private let peer: Peer
+    private let isStatic: Bool
+    
+    fileprivate let containerNode: ASDisplayNode
+    fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
+    private let codeBackgroundNode: ASDisplayNode
+    private let codeForegroundNode: ASDisplayNode
+    private var codeForegroundContentNode: ASDisplayNode?
+    private var codeForegroundDimNode: ASDisplayNode
+    private let codeMaskNode: ASDisplayNode
+    private let codeTextNode: ImmediateTextNode
+    private let codeImageNode: TransformImageNode
+    private let codeIconBackgroundNode: ASImageNode
+    private let codeStaticIconNode: ASImageNode?
+    private let codeAnimatedIconNode: AnimatedStickerNode?
+    private let avatarNode: ImageNode
+    private var qrCodeSize: Int?
+        
+    private var currentParams: (TelegramWallpaper, Bool, String?)?
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    
+    private let _ready = Promise<Bool>()
+    var isReady: Signal<Bool, NoError> {
+        return self._ready.get()
+    }
+    
+    init(context: AccountContext, peer: Peer, isStatic: Bool = false) {
+        self.context = context
+        self.peer = peer
+        self.isStatic = isStatic
+        
+        self.containerNode = ASDisplayNode()
+        
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        
+        self.codeBackgroundNode = ASDisplayNode()
+        self.codeBackgroundNode.backgroundColor = .white
+        self.codeBackgroundNode.cornerRadius = 42.0
+        if #available(iOS 13.0, *) {
+            self.codeBackgroundNode.layer.cornerCurve = .continuous
+        }
+        
+        self.codeForegroundNode = ASDisplayNode()
+        self.codeForegroundNode.backgroundColor = .black
+        
+        self.codeForegroundDimNode = ASDisplayNode()
+        self.codeForegroundDimNode.alpha = 0.3
+        self.codeForegroundDimNode.backgroundColor = .black
+        
+        self.codeMaskNode = ASDisplayNode()
+        
+        self.codeImageNode = TransformImageNode()
+        self.codeIconBackgroundNode = ASImageNode()
+        
+        if isStatic {
+            let codeStaticIconNode = ASImageNode()
+            codeStaticIconNode.displaysAsynchronously = false
+            codeStaticIconNode.contentMode = .scaleToFill
+            codeStaticIconNode.image = UIImage(bundleImageName: "Share/QrPlaneIcon")
+            self.codeStaticIconNode = codeStaticIconNode
+            self.codeAnimatedIconNode = nil
+        } else {
+            let codeAnimatedIconNode = AnimatedStickerNode()
+            codeAnimatedIconNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "PlaneLogoPlain"), width: 120, height: 120, mode: .direct(cachePathPrefix: nil))
+            codeAnimatedIconNode.visibility = true
+            self.codeAnimatedIconNode = codeAnimatedIconNode
+            self.codeStaticIconNode = nil
+        }
+        
+        self.codeTextNode = ImmediateTextNode()
+        self.codeTextNode.displaysAsynchronously = false
+        self.codeTextNode.attributedText = NSAttributedString(string: "@\(peer.addressName ?? "")".uppercased(), font: Font.with(size: 23.0, design: .round, weight: .bold, traits: []), textColor: .black)
+        self.codeTextNode.truncationMode = .byCharWrapping
+        self.codeTextNode.maximumNumberOfLines = 2
+        self.codeTextNode.textAlignment = .center
+        if isStatic {
+            self.codeTextNode.setNeedsDisplayAtScale(3.0)
+        }
+        
+        self.avatarNode = ImageNode()
+        self.avatarNode.displaysAsynchronously = false
+        self.avatarNode.setSignal(peerAvatarCompleteImage(account: context.account, peer: EnginePeer(peer), size: CGSize(width: 180.0, height: 180.0), font: avatarPlaceholderFont(size: 78.0), fullSize: true))
+        
+        super.init()
+        
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.addSubnode(self.wallpaperBackgroundNode)
+        
+        self.containerNode.addSubnode(self.codeBackgroundNode)
+        self.containerNode.addSubnode(self.codeForegroundNode)
+        
+        self.codeForegroundNode.addSubnode(self.codeForegroundDimNode)
+        
+        self.codeMaskNode.addSubnode(self.codeImageNode)
+        self.codeMaskNode.addSubnode(self.codeIconBackgroundNode)
+        self.codeMaskNode.addSubnode(self.codeTextNode)
+        
+        self.containerNode.addSubnode(self.avatarNode)
+        
+        if let codeStaticIconNode = self.codeStaticIconNode {
+            self.containerNode.addSubnode(codeStaticIconNode)
+        } else if let codeAnimatedIconNode = self.codeAnimatedIconNode {
+            self.addSubnode(codeAnimatedIconNode)
+        }
+        
+        let codeReadyPromise = ValuePromise<Bool>()
+        self.codeImageNode.setSignal(qrCode(string: "https://t.me/\(peer.addressName ?? "")", color: .black, backgroundColor: nil, icon: .cutout, ecl: "Q") |> beforeNext { [weak self] size, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.qrCodeSize = size
+            if let (size, topInset, bottomInset) = strongSelf.validLayout {
+                strongSelf.updateLayout(size: size, topInset: topInset, bottomInset: bottomInset, transition: .immediate)
+            }
+            codeReadyPromise.set(true)
+        } |> map { $0.1 }, attemptSynchronously: true)
+        
+        self._ready.set(combineLatest(codeReadyPromise.get(), self.wallpaperBackgroundNode.isReady)
+        |> map { codeReady, wallpaperReady in
+            return codeReady && wallpaperReady
+        })
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.codeForegroundNode.view.mask = self.codeMaskNode.view
+    }
+    
+    func generateImage(completion: @escaping (UIImage?) -> Void) {
+        guard let (wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
+            return
+        }
+        
+        let size = CGSize(width: 390.0, height: 844.0)
+        let scale: CGFloat = 3.0
+        
+        let copyNode = QrContentNode(context: self.context, peer: self.peer, isStatic: true)
+        
+        func prepare(view: UIView, scale: CGFloat) {
+            view.contentScaleFactor = scale
+            for subview in view.subviews {
+                prepare(view: subview, scale: scale)
+            }
+        }
+        prepare(view: copyNode.view, scale: scale)
+        
+        copyNode.updateLayout(size: size, topInset: 0.0, bottomInset: 0.0, transition: .immediate)
+        copyNode.update(wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+        copyNode.frame = CGRect(x: -1000, y: -1000, width: size.width, height: size.height)
+        
+        self.addSubnode(copyNode)
+
+        
+        let _ = (copyNode.isReady
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak copyNode] _ in
+            Queue.mainQueue().after(0.1) {
+                if #available(iOS 10.0, *) {
+                    let format = UIGraphicsImageRendererFormat()
+                    format.scale = scale
+                    let renderer = UIGraphicsImageRenderer(size: size, format: format)
+                    let image = renderer.image { rendererContext in
+                        copyNode?.containerNode.layer.render(in: rendererContext.cgContext)
+                    }
+                    completion(image)
+                } else {
+                    UIGraphicsBeginImageContextWithOptions(size, true, scale)
+                    copyNode?.containerNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: true)
+                    let image = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+                    completion(image)
+                }
+                copyNode?.removeFromSupernode()
+            }
+        })
+    }
+        
+    func update(wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
+        self.currentParams = (wallpaper, isDarkAppearance, selectedEmoticon)
+        
+        self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
+        
+        if isDarkAppearance && selectedEmoticon == defaultEmoticon {
+            self.codeForegroundDimNode.alpha = 1.0
+        } else {
+            self.codeForegroundDimNode.alpha = isDarkAppearance ? 0.4 : 0.3
+        }
+        if self.codeForegroundContentNode == nil, let contentNode = self.wallpaperBackgroundNode.makeDimmedNode() {
+            contentNode.frame = CGRect(origin: CGPoint(x: -self.codeForegroundNode.frame.minX, y: -self.codeForegroundNode.frame.minY), size: self.wallpaperBackgroundNode.frame.size)
+            self.codeForegroundContentNode = contentNode
+            self.codeForegroundNode.insertSubnode(contentNode, at: 0)
+        }
+        if isDarkAppearance && selectedEmoticon == defaultEmoticon, let codeForegroundContentNode = self.codeForegroundContentNode {
+            codeForegroundContentNode.removeFromSupernode()
+            self.codeForegroundContentNode = nil
+        }
+    }
+    
+    func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, topInset, bottomInset)
+        
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        
+        let textLength = self.codeTextNode.attributedText?.string.count ?? 0
+        
+        var topInset = topInset
+        let avatarSize: CGSize
+        let codeInset: CGFloat
+        let imageSide: CGFloat
+        let fontSize: CGFloat
+        if size.width > 320.0 {
+            avatarSize = CGSize(width: 100.0, height: 100.0)
+            codeInset = 45.0
+            imageSide = 220.0
+            
+            if size.width > 375.0 {
+                if textLength > 12 {
+                    fontSize = 22.0
+                } else {
+                    fontSize = 24.0
+                }
+            } else {
+                if textLength > 12 {
+                    fontSize = 21.0
+                } else {
+                    fontSize = 23.0
+                }
+            }
+        } else {
+            avatarSize = CGSize(width: 70.0, height: 70.0)
+            codeInset = 55.0
+            imageSide = 160.0
+            topInset = floor(topInset * 0.6)
+            if textLength > 12 {
+                fontSize = 18.0
+            } else {
+                fontSize = 20.0
+            }
+        }
+        
+        self.codeTextNode.attributedText = NSAttributedString(string: self.codeTextNode.attributedText?.string ?? "", font: Font.with(size: fontSize, design: .round, weight: .bold, traits: []), textColor: .black)
+        
+        let codeBackgroundWidth = size.width - codeInset * 2.0
         let codeBackgroundHeight = floor(codeBackgroundWidth * 1.1)
-        let codeBackgroundFrame = CGRect(x: codeInset, y: floor((layout.size.height - contentHeight - codeBackgroundHeight) / 2.0) + 44.0, width: codeBackgroundWidth, height: codeBackgroundHeight)
+        let codeBackgroundFrame = CGRect(x: codeInset, y: topInset + floor((size.height - bottomInset - codeBackgroundHeight) / 2.0), width: codeBackgroundWidth, height: codeBackgroundHeight)
         transition.updateFrame(node: self.codeBackgroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeForegroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeMaskNode, frame: CGRect(origin: CGPoint(), size: codeBackgroundFrame.size))
@@ -1290,33 +1554,38 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         }
         
         let makeImageLayout = self.codeImageNode.asyncLayout()
-        let imageSide: CGFloat = 220.0
+        
         let imageSize = CGSize(width: imageSide, height: imageSide)
-        let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
+        let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, scale: self.isStatic ? 3.0 : nil ))
         let _ = imageApply()
         
         let imageFrame = CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - imageSize.width) / 2.0), y: floor((codeBackgroundFrame.width - imageSize.height) / 2.0)), size: imageSize)
         transition.updateFrame(node: self.codeImageNode, frame: imageFrame)
 
-        let codeTextSize = self.codeTextNode.updateLayout(codeBackgroundFrame.size)
-        transition.updateFrame(node: self.codeTextNode, frame: CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - codeTextSize.width) / 2.0), y: imageFrame.maxY + floor((codeBackgroundHeight - imageFrame.maxY - codeTextSize.height) / 2.0) - 7.0), size: codeTextSize))
+        let codeTextSize = self.codeTextNode.updateLayout(CGSize(width: codeBackgroundFrame.width - floor(imageFrame.minX * 1.5), height: codeBackgroundFrame.height))
+        transition.updateFrame(node: self.codeTextNode, frame: CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - codeTextSize.width) / 2.0), y: imageFrame.maxY + floor((codeBackgroundHeight - imageFrame.maxY - codeTextSize.height) / 2.0) - 5.0), size: codeTextSize))
         
-        let avatarSize = CGSize(width: 100.0, height: 100.0)
-        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - avatarSize.width) / 2.0), y: codeBackgroundFrame.minY - 70.0), size: avatarSize))
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarSize.width) / 2.0), y: codeBackgroundFrame.minY - floor(avatarSize.height * 0.7)), size: avatarSize))
         
         if let qrCodeSize = self.qrCodeSize {
             let (_, cutoutFrame, _) = qrCodeCutout(size: qrCodeSize, dimensions: imageSize, scale: nil)
-            self.codeIconNode.updateLayout(size: cutoutFrame.size)
+            let imageCenter = imageFrame.center.offsetBy(dx: codeBackgroundFrame.minX, dy: codeBackgroundFrame.minY)
+            
+            if let codeStaticIconNode = self.codeStaticIconNode {
+                transition.updateBounds(node: codeStaticIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
+                transition.updatePosition(node: codeStaticIconNode, position: imageCenter.offsetBy(dx: 0.0, dy: -1.0))
+            } else if let codeAnimatedIconNode = self.codeAnimatedIconNode {
+                codeAnimatedIconNode.updateLayout(size: cutoutFrame.size)
+                
+                transition.updateBounds(node: codeAnimatedIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
+                transition.updatePosition(node: codeAnimatedIconNode, position: imageCenter.offsetBy(dx: 0.0, dy: -1.0))
+            }
             
             let backgroundSize = CGSize(width: floorToScreenPixels(cutoutFrame.width - 8.0), height: floorToScreenPixels(cutoutFrame.height - 8.0))
             transition.updateFrame(node: self.codeIconBackgroundNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(imageFrame.center.x - backgroundSize.width / 2.0), y: floorToScreenPixels(imageFrame.center.y - backgroundSize.height / 2.0)), size: backgroundSize))
             if self.codeIconBackgroundNode.image == nil {
                 self.codeIconBackgroundNode.image = generateFilledCircleImage(diameter: backgroundSize.width, color: .black)
             }
-            
-            let imageCenter = imageFrame.center.offsetBy(dx: codeBackgroundFrame.minX, dy: codeBackgroundFrame.minY)
-            transition.updateBounds(node: self.codeIconNode, bounds: CGRect(origin: CGPoint(), size: cutoutFrame.size))
-            transition.updatePosition(node: self.codeIconNode, position: imageCenter.offsetBy(dx: 0.0, dy: -1.0))
         }
     }
 }

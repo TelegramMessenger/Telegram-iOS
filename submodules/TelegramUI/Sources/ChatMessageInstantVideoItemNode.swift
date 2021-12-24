@@ -549,9 +549,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
             let reactions: ReactionsMessageAttribute
             if shouldDisplayInlineDateReactions(message: item.message) {
-                reactions = ReactionsMessageAttribute(reactions: [], recentPeers: [])
+                reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
-                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
+                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             }
             
             var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
@@ -1254,7 +1254,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         let animationProgress: CGFloat = (currentValue - initialHeight) / (targetHeight - initialHeight)
         let scaleProgress: CGFloat
         var effectiveAvatarInset = avatarInset
-        if abs(targetHeight - initialHeight) > 100.0 {
+        if abs(targetHeight - initialHeight) > 80.0 {
             if currentValue < targetHeight {
                 initialSize = displaySize
                 targetSize = maximumDisplaySize

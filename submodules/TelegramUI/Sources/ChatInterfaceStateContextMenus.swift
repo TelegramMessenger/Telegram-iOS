@@ -138,6 +138,12 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             }  else if let _ = media as? TelegramMediaDice {
                 hasUneditableAttributes = true
                 break
+            }  else if let _ = media as? TelegramMediaGame {
+                hasUneditableAttributes = true
+                break
+            }  else if let _ = media as? TelegramMediaInvoice {
+                hasUneditableAttributes = true
+                break
             }
         }
         
@@ -1978,13 +1984,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         if let currentStats = self.currentStats {
             if currentStats.peers.isEmpty {
                 if reactionCount != 0 {
-                    //TODO:localize
-                    let text: String
-                    if reactionCount == 1 {
-                        text = "1 reaction"
-                    } else {
-                        text = "\(reactionCount) reactions"
-                    }
+                    let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))
                     self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 } else {
                     var text = self.presentationData.strings.Conversation_ContextMenuNoViews
@@ -2002,29 +2002,18 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 }
             } else if currentStats.peers.count == 1 {
                 if reactionCount != 0 {
-                    //TODO:localize
-                    let text: String
-                    if reactionCount == 1 {
-                        text = "1 reacted"
-                    } else {
-                        text = "\(reactionCount) reacted"
-                    }
+                    let text: String = self.presentationData.strings.Chat_OutgoingContextReactionCount(Int32(reactionCount))
                     self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 } else {
                     self.textNode.attributedText = NSAttributedString(string: currentStats.peers[0].displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder), font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 }
             } else {
                 if reactionCount != 0 {
-                    //TODO:localize
                     let text: String
                     if reactionCount >= currentStats.peers.count {
-                        if reactionCount == 1 {
-                            text = "1 reacted"
-                        } else {
-                            text = "\(reactionCount) reacted"
-                        }
+                        text = self.presentationData.strings.Chat_OutgoingContextReactionCount(Int32(reactionCount))
                     } else {
-                        text = "\(reactionCount)/\(currentStats.peers.count) reacted"
+                        text = self.presentationData.strings.Chat_OutgoingContextMixedReactionCount("\(reactionCount)", "\(currentStats.peers.count)").string
                     }
                     self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor)
                 } else {

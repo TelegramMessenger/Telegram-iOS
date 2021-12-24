@@ -29,15 +29,19 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         init() {
             self.highlightBackgroundNode = ASDisplayNode()
+            self.highlightBackgroundNode.isAccessibilityElement = false
             self.highlightBackgroundNode.alpha = 0.0
             
             self.titleLabelNode = ImmediateTextNode()
+            self.titleLabelNode.isAccessibilityElement = false
             self.titleLabelNode.maximumNumberOfLines = 1
             self.titleLabelNode.isUserInteractionEnabled = false
             
             self.iconNode = ASImageNode()
+            self.iconNode.isAccessibilityElement = false
             
             self.separatorNode = ASDisplayNode()
+            self.separatorNode.isAccessibilityElement = false
             
             super.init()
             
@@ -45,6 +49,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.addSubnode(self.highlightBackgroundNode)
             self.addSubnode(self.titleLabelNode)
             self.addSubnode(self.iconNode)
+            
+            self.isAccessibilityElement = true
             
             self.highligthedChanged = { [weak self] highlighted in
                 guard let strongSelf = self else {
@@ -74,6 +80,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             if self.theme !== presentationData.theme {
                 self.theme = presentationData.theme
                 self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: presentationData.theme.contextMenu.primaryColor)
+                
+                self.accessibilityLabel = presentationData.strings.Common_Back
             }
             
             self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
@@ -286,22 +294,31 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             var reactionIconNode: ReactionImageNode?
             let action: () -> Void
             
+            private var item: EngineMessageReactionListContext.Item?
+            
             init(context: AccountContext, availableReactions: AvailableReactions?, action: @escaping () -> Void) {
                 self.action = action
                 self.context = context
                 self.availableReactions = availableReactions
+                
                 self.avatarNode = AvatarNode(font: avatarFont)
+                self.avatarNode.isAccessibilityElement = false
                 
                 self.highlightBackgroundNode = ASDisplayNode()
+                self.highlightBackgroundNode.isAccessibilityElement = false
                 self.highlightBackgroundNode.alpha = 0.0
                 
                 self.titleLabelNode = ImmediateTextNode()
+                self.titleLabelNode.isAccessibilityElement = false
                 self.titleLabelNode.maximumNumberOfLines = 1
                 self.titleLabelNode.isUserInteractionEnabled = false
                 
                 self.separatorNode = ASDisplayNode()
+                self.separatorNode.isAccessibilityElement = false
                 
                 super.init()
+                
+                self.isAccessibilityElement = true
                 
                 self.addSubnode(self.separatorNode)
                 self.addSubnode(self.highlightBackgroundNode)
@@ -343,6 +360,12 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     }
                 } else if let reactionIconNode = self.reactionIconNode {
                     reactionIconNode.removeFromSupernode()
+                }
+                
+                if self.item != item {
+                    self.item = item
+                    
+                    self.accessibilityLabel = "\(item.peer.debugDisplayTitle) \(item.reaction ?? "")"
                 }
                 
                 self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
@@ -398,9 +421,14 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 if !self.listState.canLoadMore {
                     return self.mergedItems.count
                 } else {
-                    var value = self.listState.totalCount
+                    let reactionCount = self.listState.totalCount
+                    var value = reactionCount
                     if let readStats = self.readStats {
-                        value = max(value, readStats.peers.count)
+                        if reactionCount < readStats.peers.count && self.listState.hasOutgoingReaction {
+                            value = readStats.peers.count + 1
+                        } else {
+                            value = max(reactionCount, readStats.peers.count)
+                        }
                     }
                     return value
                 }

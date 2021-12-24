@@ -79,7 +79,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         } else {
             badgeFillColor = UIColor(rgb: 0xeb5545)
             badgeTextColor = UIColor(rgb: 0xffffff)
-            if initialAccentColor.lightness > 0.7 {
+            if initialAccentColor.lightness > 0.735 {
                 secondaryBadgeTextColor = UIColor(rgb: 0x000000)
             } else {
                 secondaryBadgeTextColor = UIColor(rgb: 0xffffff)
@@ -153,7 +153,7 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         outgoingBubbleFillColors = bubbleColors.map(UIColor.init(rgb:))
      
         let lightnessColor = topBubbleColor.mixedWith(bottomBubbleColor, alpha: 0.5)
-        if lightnessColor.lightness > 0.7 {
+        if lightnessColor.lightness > 0.735 {
             outgoingPrimaryTextColor = UIColor(rgb: 0x000000)
             outgoingSecondaryTextColor = UIColor(rgb: 0x000000, alpha: 0.5)
             outgoingLinkTextColor = UIColor(rgb: 0x000000)

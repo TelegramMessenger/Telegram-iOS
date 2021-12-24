@@ -309,20 +309,6 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             }
         }
         
-        let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
-        let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
-        let textSize = textLayout.size
-        
-        if case .multiLine = item.textBehavior, textLayout.truncated, !self.isExpanded {
-            self.expandBackgroundNode.isHidden = false
-            self.expandNode.isHidden = false
-            self.expandButonNode.isHidden = false
-        } else {
-            self.expandBackgroundNode.isHidden = true
-            self.expandNode.isHidden = true
-            self.expandButonNode.isHidden = true
-        }
-        
         if let icon = item.icon {
             let iconImage: UIImage?
             switch icon {
@@ -335,6 +321,21 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         } else {
             self.iconNode.isHidden = true
             self.iconButtonNode.isHidden = true
+        }
+        
+        let additionalSideInset: CGFloat = !self.iconNode.isHidden ? 32.0 : 0.0
+        let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0 - additionalSideInset, height: .greatestFiniteMagnitude))
+        let textSize = textLayout.size
+        
+        if case .multiLine = item.textBehavior, textLayout.truncated, !self.isExpanded {
+            self.expandBackgroundNode.isHidden = false
+            self.expandNode.isHidden = false
+            self.expandButonNode.isHidden = false
+        } else {
+            self.expandBackgroundNode.isHidden = true
+            self.expandNode.isHidden = true
+            self.expandButonNode.isHidden = true
         }
         
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: labelSize)

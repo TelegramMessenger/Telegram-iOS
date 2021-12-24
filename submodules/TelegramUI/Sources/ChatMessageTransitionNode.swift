@@ -635,7 +635,8 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         func dismiss() {
             if let contextController = self.contextController {
                 contextController.cancelReactionAnimation()
-                contextController.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                contextController.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak contextController] _ in
+                    contextController?.dismissNow()
                 })
             }
             if let standaloneReactionAnimation = self.standaloneReactionAnimation {

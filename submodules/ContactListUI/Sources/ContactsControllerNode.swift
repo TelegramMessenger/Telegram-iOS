@@ -56,6 +56,7 @@ final class ContactsControllerNode: ASDisplayNode {
     var requestAddContact: ((String) -> Void)?
     var openPeopleNearby: (() -> Void)?
     var openInvite: (() -> Void)?
+    var openQrScan: (() -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -70,6 +71,7 @@ final class ContactsControllerNode: ASDisplayNode {
         
         var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
+        
         let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: {
             addNearbyImpl?()
         }), ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {

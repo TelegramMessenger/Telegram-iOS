@@ -105,6 +105,11 @@ public final class AccountStateManager {
         return self.notificationMessagesPipe.signal()
     }
     
+    private let reactionNotificationsPipe = ValuePipe<[(reactionAuthor: Peer, message: Message)]>()
+    public var reactionNotifications: Signal<[(reactionAuthor: Peer, message: Message)], NoError> {
+        return self.reactionNotificationsPipe.signal()
+    }
+    
     private let displayAlertsPipe = ValuePipe<[(text: String, isDropAuth: Bool)]>()
     public var displayAlerts: Signal<[(text: String, isDropAuth: Bool)], NoError> {
         return self.displayAlertsPipe.signal()
@@ -738,6 +743,19 @@ public final class AccountStateManager {
                 }, completed: {
                     completed()
                 })
+            
+                let timestamp = Int32(Date().timeIntervalSince1970)
+                let minReactionTimestamp = timestamp - 20
+                let reactionEvents = events.addedReactionEvents.compactMap { event -> (reactionAuthor: Peer, message: Message)? in
+                    if event.timestamp >= minReactionTimestamp {
+                        return (event.reactionAuthor, event.message)
+                    } else {
+                        return nil
+                    }
+                }
+                if !reactionEvents.isEmpty {
+                    self.reactionNotificationsPipe.putNext(reactionEvents)
+                }
             
                 if !events.displayAlerts.isEmpty {
                     self.displayAlertsPipe.putNext(events.displayAlerts)

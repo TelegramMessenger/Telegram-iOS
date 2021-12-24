@@ -63,6 +63,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     
     private let backgroundNode: NavigationBackgroundNode
     private let dismissTapNode: ASDisplayNode
+    private let dismissAccessibilityArea: AccessibilityAreaNode
     private let clippingNode: ASDisplayNode
     private let scrollNode: ASScrollNode
     
@@ -74,6 +75,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private let actionsStackNode: ContextControllerActionsStackNode
     
     private var animatingOutState: AnimatingOutState?
+    
+    private var strings: PresentationStrings?
     
     init(
         getController: @escaping () -> ContextControllerProtocol?,
@@ -91,6 +94,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: false)
         
         self.dismissTapNode = ASDisplayNode()
+        
+        self.dismissAccessibilityArea = AccessibilityAreaNode()
+        self.dismissAccessibilityArea.accessibilityTraits = .button
+        
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
         
@@ -120,6 +127,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.addSubnode(self.clippingNode)
         self.clippingNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.dismissTapNode)
+        self.scrollNode.addSubnode(self.dismissAccessibilityArea)
         self.scrollNode.addSubnode(self.actionsStackNode)
         
         /*#if DEBUG
@@ -129,6 +137,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.scrollNode.view.delegate = self
         
         self.dismissTapNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dismissTapGesture(_:))))
+        
+        self.dismissAccessibilityArea.activate = { [weak self] in
+            self?.requestDismiss(.default)
+            
+            return true
+        }
     }
     
     @objc func dismissTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -223,6 +237,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         
         let contentNode: ContentNode
         var contentTransition = transition
+        
+        if self.strings !== presentationData.strings {
+            self.strings = presentationData.strings
+            
+            self.dismissAccessibilityArea.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
+        }
         
         self.backgroundNode.updateColor(
             color: presentationData.theme.contextMenu.dimColor,
@@ -413,6 +433,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
             
             self.dismissTapNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: max(contentSize.height, layout.size.height)))
+            self.dismissAccessibilityArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: max(contentSize.height, layout.size.height)))
         }
         
         switch stateTransition {
@@ -481,6 +502,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let reactionContextNode = self.reactionContextNode {
                 reactionContextNode.animateIn(from: currentContentScreenFrame)
             }
+            
+            self.actionsStackNode.animateIn()
             
             contentNode.containingNode.isExtractedToContextPreview = true
             contentNode.containingNode.isExtractedToContextPreviewUpdated?(true)

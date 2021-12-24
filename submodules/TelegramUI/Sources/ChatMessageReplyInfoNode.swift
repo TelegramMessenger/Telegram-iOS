@@ -105,7 +105,11 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         return false
                     }
                 }
-                messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                if entities.count > 0 {
+                    messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                } else {
+                    messageText = NSAttributedString(string: textString, font: textFont, textColor: textColor)
+                }
             } else {
                 messageText = NSAttributedString(string: textString, font: textFont, textColor: textColor)
             }
