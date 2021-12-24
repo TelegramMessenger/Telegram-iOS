@@ -1343,6 +1343,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         if let reactionButtonsNode = self.reactionButtonsNode {
             let reactionButtonsSize = reactionButtonsNode.frame.size
             let reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSize)
+            if !incoming {
+                reactionButtonsFrame.origin.x = videoFrame.maxX - reactionButtonsSize.width
+            }
+            if let actionButtonsNode = self.actionButtonsNode {
+                let actionButtonsSize = actionButtonsNode.frame.size
+                reactionButtonsFrame.origin.y += 4.0 + actionButtonsSize.height
+            }
             reactionButtonsNode.frame = reactionButtonsFrame
         }
     }
