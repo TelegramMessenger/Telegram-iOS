@@ -459,6 +459,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         private let scrollNode: ASScrollNode
         private var ignoreScrolling: Bool = false
+        private var animateIn: Bool = false
         
         private var presentationData: PresentationData?
         private var currentSize: CGSize?
@@ -520,6 +521,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     animateIn = true
                 }
                 strongSelf.state = updatedState
+                strongSelf.animateIn = true
                 strongSelf.requestUpdate(strongSelf, animateIn ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
                 if animateIn {
                     for (_, itemNode) in strongSelf.itemNodes {
@@ -624,7 +626,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             for (id, placeholderLayer) in self.placeholderLayers {
                 if !validPlaceholderIds.contains(id) {
                     removePlaceholderIds.append(id)
-                    if animated {
+                    if animated || self.animateIn {
                         placeholderLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak placeholderLayer] _ in
                             placeholderLayer?.removeFromSuperlayer()
                         })
@@ -697,6 +699,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             self.ignoreScrolling = false
             
             self.updateVisibleItems(animated: transition.isAnimated, syncronousLoad: !transition.isAnimated)
+            
+            self.animateIn = false
             
             var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
             apparentHeight = max(apparentHeight, 44.0)
