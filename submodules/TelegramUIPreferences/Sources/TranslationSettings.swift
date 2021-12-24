@@ -8,7 +8,7 @@ public struct TranslationSettings: Codable, Equatable {
     public var ignoredLanguages: [String]?
     
     public static var defaultSettings: TranslationSettings {
-        return TranslationSettings(showTranslate: true, ignoredLanguages: nil)
+        return TranslationSettings(showTranslate: false, ignoredLanguages: nil)
     }
     
     init(showTranslate: Bool, ignoredLanguages: [String]?) {
@@ -19,7 +19,7 @@ public struct TranslationSettings: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        self.showTranslate = try container.decodeIfPresent(Bool.self, forKey: "showTranslate") ?? true
+        self.showTranslate = try container.decodeIfPresent(Bool.self, forKey: "showTranslate") ?? false
         self.ignoredLanguages = try container.decodeIfPresent([String].self, forKey: "ignoredLanguages")
     }
     
