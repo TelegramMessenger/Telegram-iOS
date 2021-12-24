@@ -276,7 +276,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.scrollToTabReaction = nil
                 for itemNode in self.itemNodes {
                     if itemNode.reaction == scrollToTabReaction.value {
-                        self.scrollNode.view.scrollRectToVisible(itemNode.frame.insetBy(dx: -sideInset, dy: 0.0), animated: transition.isAnimated)
+                        self.scrollNode.view.scrollRectToVisible(itemNode.frame.insetBy(dx: -sideInset - 8.0, dy: 0.0), animated: transition.isAnimated)
                         break
                     }
                 }

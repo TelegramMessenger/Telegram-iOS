@@ -7402,6 +7402,7 @@ private final class SettingsTabBarContextExtractedContentSource: ContextExtracte
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
+    let centerActionsHorizontally: Bool = true
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
