@@ -337,7 +337,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     }
 }
 
-private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
+final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let presentationData: PresentationData
     private var effectView: UIVisualEffectView?
     private let textNode: TextNode
