@@ -126,30 +126,6 @@ final class MessageReactionButtonsNode: ASDisplayNode {
             )
         }
         
-        /*switch type {
-        case .incoming:
-            reactionColors = ReactionButtonComponent.Colors(
-                deselectedBackground: presentationData.theme.theme.chat.message.incoming.accentControlColor.withMultipliedAlpha(0.1).argb,
-                selectedBackground: presentationData.theme.theme.chat.message.incoming.accentControlColor.withMultipliedAlpha(1.0).argb,
-                deselectedForeground: presentationData.theme.theme.chat.message.incoming.accentTextColor.argb,
-                selectedForeground: presentationData.theme.theme.chat.message.incoming.bubble.withWallpaper.fill.last!.argb
-            )
-        case .outgoing:
-            reactionColors = ReactionButtonComponent.Colors(
-                deselectedBackground: presentationData.theme.theme.chat.message.outgoing.accentControlColor.withMultipliedAlpha(0.1).argb,
-                selectedBackground: presentationData.theme.theme.chat.message.outgoing.accentControlColor.withMultipliedAlpha(1.0).argb,
-                deselectedForeground: presentationData.theme.theme.chat.message.outgoing.accentTextColor.argb,
-                selectedForeground: presentationData.theme.theme.chat.message.outgoing.bubble.withWallpaper.fill.last!.argb
-            )
-        case .freeform:
-            reactionColors = ReactionButtonComponent.Colors(
-                deselectedBackground: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper).argb,
-                selectedBackground: UIColor(white: 1.0, alpha: 0.8).argb,
-                deselectedForeground: UIColor(white: 1.0, alpha: 1.0).argb,
-                selectedForeground: UIColor(white: 0.0, alpha: 0.1).argb
-            )
-        }*/
-        
         var totalReactionCount: Int = 0
         for reaction in reactions.reactions {
             totalReactionCount += Int(reaction.count)

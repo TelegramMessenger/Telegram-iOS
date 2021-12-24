@@ -825,7 +825,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }
                         case .Remote:
-                            self.videoNode?.fetchControl(.fetch)
+                            if let file = self.media {
+                                self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: file, userInitiated: true).start())
+                            }
                         case .Local:
                             self.activateVideoPlayback()
                     }
