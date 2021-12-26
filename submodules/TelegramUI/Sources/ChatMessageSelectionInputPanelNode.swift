@@ -31,7 +31,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         didSet {
             if oldValue != self.selectedMessages {
                 self.forwardButton.isEnabled = self.selectedMessages.count != 0
-                self.cloudButton.isEnabled = self.selectedMessages.count != 0
+                self.cloudButton.isEnabled = self.forwardButton.isEnabled
+                self.copyForwardButton.isEnabled = self.forwardButton.isEnabled
 
                 if self.selectedMessages.isEmpty {
                     self.actions = nil
@@ -77,7 +78,6 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.cloudButton.accessibilityLabel = "Save To Favourites"
         
         self.copyForwardButton = HighlightableButtonNode(pointerStyle: .default)
-        self.copyForwardButton.isEnabled = false
         self.copyForwardButton.isAccessibilityElement = true
         self.copyForwardButton.accessibilityLabel = "Forward As Copy"
         
@@ -169,11 +169,25 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func cloudButtonPressed() {
-        self.interfaceInteraction?.cloudMessages(nil)
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.copyForwardButton, false)
+        } else {
+            self.interfaceInteraction?.cloudMessages(nil)
+        }
     }
     
     @objc func copyForwardButtonPressed() {
-        self.interfaceInteraction?.copyForwardMessages(nil)
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.copyForwardButton, false)
+        } else {
+            self.interfaceInteraction?.copyForwardMessages(nil)
+        }
     }
     
     @objc func shareButtonPressed() {
