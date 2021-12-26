@@ -195,10 +195,10 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private let selectionHighlightNode: ASDisplayNode
         private let itemNodes: [ItemNode]
         
-        private struct ScrollToTabReaction {
+        struct ScrollToTabReaction {
             var value: String?
         }
-        private var scrollToTabReaction: ScrollToTabReaction?
+        var scrollToTabReaction: ScrollToTabReaction?
         
         var action: ((String?) -> Void)?
         
@@ -211,6 +211,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             if #available(iOS 11.0, *) {
                 self.scrollNode.view.contentInsetAdjustmentBehavior = .never
             }
+            self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
             
             self.itemNodes = reactions.map { reaction, count in
                 return ItemNode(context: context, availableReactions: availableReactions, reaction: reaction, count: count)
@@ -275,7 +276,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.scrollToTabReaction = nil
                 for itemNode in self.itemNodes {
                     if itemNode.reaction == scrollToTabReaction.value {
-                        self.scrollNode.view.scrollRectToVisible(itemNode.frame.insetBy(dx: -sideInset, dy: 0.0), animated: transition.isAnimated)
+                        self.scrollNode.view.scrollRectToVisible(itemNode.frame.insetBy(dx: -sideInset - 8.0, dy: 0.0), animated: transition.isAnimated)
                         break
                     }
                 }
@@ -458,6 +459,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         
         private let scrollNode: ASScrollNode
         private var ignoreScrolling: Bool = false
+        private var animateIn: Bool = false
         
         private var presentationData: PresentationData?
         private var currentSize: CGSize?
@@ -519,6 +521,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     animateIn = true
                 }
                 strongSelf.state = updatedState
+                strongSelf.animateIn = true
                 strongSelf.requestUpdate(strongSelf, animateIn ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
                 if animateIn {
                     for (_, itemNode) in strongSelf.itemNodes {
@@ -623,7 +626,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             for (id, placeholderLayer) in self.placeholderLayers {
                 if !validPlaceholderIds.contains(id) {
                     removePlaceholderIds.append(id)
-                    if animated {
+                    if animated || self.animateIn {
                         placeholderLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak placeholderLayer] _ in
                             placeholderLayer?.removeFromSuperlayer()
                         })
@@ -641,7 +644,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
         }
         
-        func update(presentationData: PresentationData, constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> (size: CGSize, apparentHeight: CGFloat) {
+        func update(presentationData: PresentationData, constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> (height: CGFloat, apparentHeight: CGFloat) {
             let itemHeight: CGFloat = 44.0
             
             if self.presentationData?.theme !== presentationData.theme {
@@ -697,18 +700,22 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             self.updateVisibleItems(animated: transition.isAnimated, syncronousLoad: !transition.isAnimated)
             
+            self.animateIn = false
+            
             var apparentHeight = -self.scrollNode.view.contentOffset.y + self.scrollNode.view.contentSize.height
             apparentHeight = max(apparentHeight, 44.0)
             apparentHeight = min(apparentHeight, containerSize.height + 100.0)
             self.apparentHeight = apparentHeight
             
-            return (containerSize, apparentHeight)
+            return (containerSize.height, apparentHeight)
         }
     }
     
-    final class ItemsNode: ASDisplayNode, ContextControllerItemsNode {
+    final class ItemsNode: ASDisplayNode, ContextControllerItemsNode, UIGestureRecognizerDelegate {
         private let context: AccountContext
         private let availableReactions: AvailableReactions?
+        private let message: EngineMessage
+        private let readStats: MessageReadStats?
         private let reactions: [(String?, Int)]
         private let requestUpdate: (ContainedViewLayoutTransition) -> Void
         private let requestUpdateApparentHeight: (ContainedViewLayoutTransition) -> Void
@@ -718,9 +725,15 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         private var backButtonNode: BackButtonNode?
         private var separatorNode: ASDisplayNode?
         private var tabListNode: ReactionTabListNode?
-        private var currentTabNode: ReactionsTabNode
         
-        private var dismissedTabNode: ReactionsTabNode?
+        private var currentTabIndex: Int = 0
+        private var visibleTabNodes: [Int: ReactionsTabNode] = [:]
+        
+        private struct InteractiveTransitionState {
+            var toIndex: Int
+            var progress: CGFloat
+        }
+        private var interactiveTransitionState: InteractiveTransitionState?
         
         private let openPeer: (PeerId) -> Void
         
@@ -739,14 +752,16 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
         ) {
             self.context = context
             self.availableReactions = availableReactions
+            self.message = message
+            self.readStats = readStats
             self.openPeer = openPeer
             self.presentationData = context.sharedContext.currentPresentationData.with({ $0 })
             
             self.requestUpdate = requestUpdate
             self.requestUpdateApparentHeight = requestUpdateApparentHeight
             
-            var requestUpdateTab: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
-            var requestUpdateTabApparentHeight: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
+            //var requestUpdateTab: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
+            //var requestUpdateTabApparentHeight: ((ReactionsTabNode, ContainedViewLayoutTransition) -> Void)?
             
             if let back = back {
                 self.backButtonNode = BackButtonNode()
@@ -775,23 +790,6 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             
             self.reactions = reactions
             
-            self.currentTabNode = ReactionsTabNode(
-                context: context,
-                availableReactions: availableReactions,
-                message: message,
-                reaction: reaction,
-                readStats: readStats,
-                requestUpdate: { tab, transition in
-                    requestUpdateTab?(tab, transition)
-                },
-                requestUpdateApparentHeight: { tab, transition in
-                    requestUpdateTabApparentHeight?(tab, transition)
-                },
-                openPeer: { id in
-                    openPeer(id)
-                }
-            )
-            
             super.init()
             
             if self.backButtonNode != nil || self.tabListNode != nil {
@@ -807,41 +805,46 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             if let separatorNode = self.separatorNode {
                 self.addSubnode(separatorNode)
             }
-            self.addSubnode(self.currentTabNode)
             
             self.tabListNode?.action = { [weak self] reaction in
                 guard let strongSelf = self else {
                     return
                 }
-                if strongSelf.currentTabNode.reaction != reaction {
-                    strongSelf.dismissedTabNode = strongSelf.currentTabNode
-                    let currentTabNode = ReactionsTabNode(
-                        context: context,
-                        availableReactions: availableReactions,
-                        message: message,
-                        reaction: reaction,
-                        readStats: nil,
-                        requestUpdate: { tab, transition in
-                            requestUpdateTab?(tab, transition)
-                        },
-                        requestUpdateApparentHeight: { tab, transition in
-                            requestUpdateTabApparentHeight?(tab, transition)
-                        },
-                        openPeer: { id in
-                            openPeer(id)
-                        }
-                    )
-                    strongSelf.currentTabNode = currentTabNode
-                    strongSelf.addSubnode(currentTabNode)
-                    strongSelf.requestUpdate(.animated(duration: 0.45, curve: .spring))
+                guard let tabIndex = strongSelf.reactions.firstIndex(where: { $0.0 == reaction }) else {
+                    return
                 }
+                guard strongSelf.currentTabIndex != tabIndex else {
+                    return
+                }
+                strongSelf.tabListNode?.scrollToTabReaction = ReactionTabListNode.ScrollToTabReaction(value: reaction)
+                strongSelf.currentTabIndex = tabIndex
+                
+                /*let currentTabNode = ReactionsTabNode(
+                    context: context,
+                    availableReactions: availableReactions,
+                    message: message,
+                    reaction: reaction,
+                    readStats: nil,
+                    requestUpdate: { tab, transition in
+                        requestUpdateTab?(tab, transition)
+                    },
+                    requestUpdateApparentHeight: { tab, transition in
+                        requestUpdateTabApparentHeight?(tab, transition)
+                    },
+                    openPeer: { id in
+                        openPeer(id)
+                    }
+                )
+                strongSelf.currentTabNode = currentTabNode
+                strongSelf.addSubnode(currentTabNode)*/
+                strongSelf.requestUpdate(.animated(duration: 0.45, curve: .spring))
             }
             
-            requestUpdateTab = { [weak self] tab, transition in
+            /*requestUpdateTab = { [weak self] tab, transition in
                 guard let strongSelf = self else {
                     return
                 }
-                if strongSelf.currentTabNode == tab {
+                if strongSelf.visibleTabNodes.contains(where: { $0.value === tab }) {
                     strongSelf.requestUpdate(transition)
                 }
             }
@@ -850,9 +853,67 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 guard let strongSelf = self else {
                     return
                 }
-                if strongSelf.currentTabNode == tab {
+                if strongSelf.visibleTabNodes.contains(where: { $0.value === tab }) {
                     strongSelf.requestUpdateApparentHeight(transition)
                 }
+            }*/
+            
+            let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
+                guard let strongSelf = self else {
+                    return []
+                }
+                if strongSelf.currentTabIndex == 0 {
+                    return .left
+                }
+                return [.left, .right]
+            })
+            panRecognizer.delegate = self
+            self.view.addGestureRecognizer(panRecognizer)
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return false
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+                return false
+            }
+            if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+                return true
+            }
+            return false
+        }
+        
+        @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            switch recognizer.state {
+            case .began:
+                break
+            case .changed:
+                let translation = recognizer.translation(in: self.view)
+                if !self.bounds.isEmpty {
+                    let progress = translation.x / self.bounds.width
+                    var toIndex: Int
+                    if progress < 0.0 {
+                        toIndex = self.currentTabIndex + 1
+                    } else {
+                        toIndex = self.currentTabIndex - 1
+                    }
+                    toIndex = max(0, min(toIndex, self.reactions.count - 1))
+                    self.interactiveTransitionState = InteractiveTransitionState(toIndex: toIndex, progress: abs(progress))
+                    self.requestUpdate(.immediate)
+                }
+            case .cancelled, .ended:
+                if let interactiveTransitionState = self.interactiveTransitionState {
+                    self.interactiveTransitionState = nil
+                    if interactiveTransitionState.progress >= 0.2 {
+                        self.currentTabIndex = interactiveTransitionState.toIndex
+                        self.tabListNode?.scrollToTabReaction = ReactionTabListNode.ScrollToTabReaction(value: self.reactions[self.currentTabIndex].0)
+                    }
+                    self.requestUpdate(.animated(duration: 0.45, curve: .spring))
+                }
+            default:
+                break
             }
         }
         
@@ -868,7 +929,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
             }
             if let tabListNode = self.tabListNode {
                 let tabListFrame = CGRect(origin: CGPoint(x: 0.0, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: 44.0))
-                tabListNode.update(size: tabListFrame.size, presentationData: self.presentationData, selectedReaction: self.currentTabNode.reaction, transition: transition)
+                let selectedReaction: String? = self.reactions[self.currentTabIndex].0
+                tabListNode.update(size: tabListFrame.size, presentationData: self.presentationData, selectedReaction: selectedReaction, transition: transition)
                 transition.updateFrame(node: tabListNode, frame: tabListFrame)
                 topContentHeight += tabListFrame.height
             }
@@ -879,7 +941,108 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 topContentHeight += separatorFrame.height
             }
             
-            var currentTabTransition = transition
+            var tabLayouts: [Int: (height: CGFloat, apparentHeight: CGFloat)] = [:]
+            
+            var visibleIndices: [Int] = []
+            visibleIndices.append(self.currentTabIndex)
+            if let interactiveTransitionState = self.interactiveTransitionState {
+                visibleIndices.append(interactiveTransitionState.toIndex)
+            }
+            
+            let previousVisibleTabFrames: [(Int, CGRect)] = self.visibleTabNodes.map { key, value -> (Int, CGRect) in
+                return (key, value.frame)
+            }
+            
+            for index in visibleIndices {
+                var tabTransition = transition
+                let tabNode: ReactionsTabNode
+                var initialReferenceFrame: CGRect?
+                if let current = self.visibleTabNodes[index] {
+                    tabNode = current
+                } else {
+                    for (previousIndex, previousFrame) in previousVisibleTabFrames {
+                        if index > previousIndex {
+                            initialReferenceFrame = previousFrame.offsetBy(dx: constrainedSize.width, dy: 0.0)
+                        } else {
+                            initialReferenceFrame = previousFrame.offsetBy(dx: -constrainedSize.width, dy: 0.0)
+                        }
+                        break
+                    }
+                    
+                    tabNode = ReactionsTabNode(
+                        context: self.context,
+                        availableReactions: self.availableReactions,
+                        message: self.message,
+                        reaction: self.reactions[index].0,
+                        readStats: self.reactions[index].0 == nil ? self.readStats : nil,
+                        requestUpdate: { [weak self] tab, transition in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if strongSelf.visibleTabNodes.contains(where: { $0.value === tab }) {
+                                var transition = transition
+                                if strongSelf.interactiveTransitionState != nil {
+                                    transition = .immediate
+                                }
+                                strongSelf.requestUpdate(transition)
+                            }
+                        },
+                        requestUpdateApparentHeight: { [weak self] tab, transition in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if strongSelf.visibleTabNodes.contains(where: { $0.value === tab }) {
+                                var transition = transition
+                                if strongSelf.interactiveTransitionState != nil {
+                                    transition = .immediate
+                                }
+                                strongSelf.requestUpdateApparentHeight(transition)
+                            }
+                        },
+                        openPeer: self.openPeer
+                    )
+                    self.addSubnode(tabNode)
+                    self.visibleTabNodes[index] = tabNode
+                    tabTransition = .immediate
+                }
+                
+                let tabLayout = tabNode.update(presentationData: presentationData, constrainedSize: CGSize(width: constrainedSize.width, height: constrainedSize.height - topContentHeight), transition: tabTransition)
+                tabLayouts[index] = tabLayout
+                let currentFractionalTabIndex: CGFloat
+                if let interactiveTransitionState = self.interactiveTransitionState {
+                    currentFractionalTabIndex = CGFloat(self.currentTabIndex) * (1.0 - interactiveTransitionState.progress) + CGFloat(interactiveTransitionState.toIndex) * interactiveTransitionState.progress
+                } else {
+                    currentFractionalTabIndex = CGFloat(self.currentTabIndex)
+                }
+                let xOffset: CGFloat = (CGFloat(index) - currentFractionalTabIndex) * constrainedSize.width
+                let tabFrame = CGRect(origin: CGPoint(x: xOffset, y: topContentHeight), size: CGSize(width: constrainedSize.width, height: tabLayout.height + 100.0))
+                tabTransition.updateFrame(node: tabNode, frame: tabFrame)
+                if let initialReferenceFrame = initialReferenceFrame {
+                    transition.animatePositionAdditive(node: tabNode, offset: CGPoint(x: initialReferenceFrame.minX - tabFrame.minX, y: 0.0))
+                }
+            }
+            
+            var removedIndices: [Int] = []
+            for (index, tabNode) in self.visibleTabNodes {
+                if tabLayouts[index] == nil {
+                    removedIndices.append(index)
+                    
+                    var xOffset: CGFloat
+                    if index > self.currentTabIndex {
+                        xOffset = constrainedSize.width
+                    } else {
+                        xOffset = -constrainedSize.width
+                    }
+                    transition.updateFrame(node: tabNode, frame: CGRect(origin: CGPoint(x: xOffset, y: tabNode.frame.minY), size: tabNode.bounds.size), completion: { [weak tabNode] _ in
+                        tabNode?.removeFromSupernode()
+                    })
+                }
+            }
+            for index in removedIndices {
+                self.visibleTabNodes.removeValue(forKey: index)
+            }
+            
+            /*var currentTabTransition = transition
             if self.currentTabNode.bounds.isEmpty {
                 currentTabTransition = .immediate
             }
@@ -900,11 +1063,21 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     })
                     self.currentTabNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
+            }*/
+            
+            var contentSize = CGSize(width: constrainedSize.width, height: topContentHeight)
+            var apparentHeight = topContentHeight
+            
+            if let interactiveTransitionState = self.interactiveTransitionState, let fromTabLayout = tabLayouts[self.currentTabIndex], let toTabLayout = tabLayouts[interactiveTransitionState.toIndex] {
+                let megedTabLayoutHeight = fromTabLayout.height * (1.0 - interactiveTransitionState.progress) + toTabLayout.height * interactiveTransitionState.progress
+                let megedTabLayoutApparentHeight = fromTabLayout.apparentHeight * (1.0 - interactiveTransitionState.progress) + toTabLayout.apparentHeight * interactiveTransitionState.progress
+                
+                contentSize.height += megedTabLayoutHeight
+                apparentHeight += megedTabLayoutApparentHeight
+            } else if let tabLayout = tabLayouts[self.currentTabIndex] {
+                contentSize.height += tabLayout.height
+                apparentHeight += tabLayout.apparentHeight
             }
-            
-            let contentSize = CGSize(width: currentTabLayout.size.width, height: topContentHeight + currentTabLayout.size.height)
-            
-            let apparentHeight = topContentHeight + currentTabLayout.apparentHeight
             
             return (contentSize, apparentHeight)
         }

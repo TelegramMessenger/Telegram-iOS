@@ -480,7 +480,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             let actionsSize = self.actionsStackNode.bounds.size
             
-            let actionsPositionDeltaXDistance: CGFloat = 0.0
+            var actionsPositionDeltaXDistance: CGFloat = 0.0
+            if self.source.centerActionsHorizontally {
+                actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
+            }
+            
             let actionsVerticalTransitionDirection: CGFloat
             if contentNode.frame.minY < self.actionsStackNode.frame.minY {
                 actionsVerticalTransitionDirection = -1.0
@@ -643,7 +647,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             let actionsSize = self.actionsStackNode.bounds.size
             
-            let actionsPositionDeltaXDistance: CGFloat = 0.0
+            var actionsPositionDeltaXDistance: CGFloat = 0.0
+            if self.source.centerActionsHorizontally {
+                actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
+            }
             let actionsPositionDeltaYDistance = -animationInContentDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
             self.actionsStackNode.layer.animate(
                 from: NSValue(cgPoint: CGPoint()),

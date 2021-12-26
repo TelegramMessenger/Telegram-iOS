@@ -7157,14 +7157,14 @@ Sorry for the inconvenience.";
 "ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
 
 "Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
-"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
+"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the number that called.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
 
 "Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
 
 "Contacts.AddContact" = "Add Contact";
 
-"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
+"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in the chat.";
 "Conversation.LargeEmojiEnable" = "Enable Large Emoji";
 "Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
 
@@ -7176,16 +7176,16 @@ Sorry for the inconvenience.";
 
 "Conversation.ContextMenuTranslate" = "Translate";
 
-"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need them again.";
 
 "ChatSettings.StickersAndReactions" = "Stickers and Emoji";
 
 "Localization.TranslateMessages" = "Translate Messages";
 "Localization.ShowTranslate" = "Show Translate Button";
-"Localization.ShowTranslateInfo" = "Show 'Translate' button in the message action menu.";
+"Localization.ShowTranslateInfo" = "Show a 'Translate' button in the message action menu.";
 "Localization.DoNotTranslate" = "Do Not Translate";
-"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language.";
-"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages.";
+"Localization.DoNotTranslateInfo" = "Do not show the 'Translate' button in the message action menu for this language.";
+"Localization.DoNotTranslateManyInfo" = "Do not show the 'Translate' button in the message action menu for these languages.";
 "Localization.InterfaceLanguage" = "Interface Language";
 
 "DoNotTranslate.Title" = "Do Not Translate";
@@ -7197,8 +7197,8 @@ Sorry for the inconvenience.";
 "Contacts.QrCode.MyCode" = "My QR Code";
 "Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
 
-"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
-"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Telegram to ON.";
 
 "Share.ShareToInstagramStories" = "Share to Instagram Stories";
 
@@ -7213,7 +7213,7 @@ Sorry for the inconvenience.";
 
 "Settings.QuickReactionSetup.NavigationTitle" = "Quick Reaction";
 "Settings.QuickReactionSetup.Title" = "Quick Reaction";
-"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON MESSAGE TO REACT";
+"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON A MESSAGE TO REACT";
 "Settings.QuickReactionSetup.DemoInfo" = "You can double tap on message for a quick reaction.";
 "Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
 "Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";

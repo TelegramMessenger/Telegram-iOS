@@ -677,12 +677,12 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> Co
 }
 
 final class ContextControllerActionsStackNode: ASDisplayNode {
-    final class NavigationContainer: ASDisplayNode {
+    final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
         var requestPop: (() -> Void)?
         var transitionFraction: CGFloat = 0.0
         
-        private var panRecognizer: UIPanGestureRecognizer?
+        private var panRecognizer: InteractiveTransitionGestureRecognizer?
         
         var isNavigationEnabled: Bool = false {
             didSet {
@@ -696,9 +696,30 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             self.clipsToBounds = true
             self.cornerRadius = 14.0
             
-            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-            self.panRecognizer = panRecognizer
+            let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] point in
+                guard let strongSelf = self else {
+                    return []
+                }
+                let _ = strongSelf
+                return [.right]
+            })
+            panRecognizer.delegate = self
             self.view.addGestureRecognizer(panRecognizer)
+            self.panRecognizer = panRecognizer
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return false
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+                return false
+            }
+            if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+                return true
+            }
+            return false
         }
         
         @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
