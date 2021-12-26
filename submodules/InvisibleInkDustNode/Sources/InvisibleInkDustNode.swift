@@ -15,33 +15,30 @@ private func createEmitterBehavior(type: String) -> NSObject {
     return castedBehaviorWithType(behaviorClass, NSSelectorFromString(selector), type)
 }
 
-private func generateTextMaskImage(size: CGSize, position: CGPoint) -> UIImage? {
-    return generateImage(size, rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        var locations: [CGFloat] = [0.0, 0.7, 0.95, 1.0]
-        let colors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        
-        let center = position
-        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: min(10.0, min(size.width, size.height) * 0.4), options: .drawsAfterEndLocation)
-    })!
-}
-
-private func generateEmitterMaskImage(size: CGSize, position: CGPoint) -> UIImage? {
+private func generateMaskImage(size originalSize: CGSize, position: CGPoint, inverse: Bool) -> UIImage? {
+    var size = originalSize
+    var position = position
+    var scale: CGFloat = 1.0
+    if max(size.width, size.height) > 640.0 {
+        size = size.aspectFitted(CGSize(width: 640.0, height: 640.0))
+        scale = size.width / originalSize.width
+        position = CGPoint(x: position.x * scale, y: position.y * scale)
+    }
     return generateImage(size, rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
                 
+        
+        let startAlpha: CGFloat = inverse ? 0.0 : 1.0
+        let endAlpha: CGFloat = inverse ? 1.0 : 0.0
+        
         var locations: [CGFloat] = [0.0, 0.7, 0.95, 1.0]
-        let colors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: 0.0).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor]
+        let colors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: startAlpha).cgColor, UIColor(rgb: 0xffffff, alpha: startAlpha).cgColor, UIColor(rgb: 0xffffff, alpha: endAlpha).cgColor, UIColor(rgb: 0xffffff, alpha: endAlpha).cgColor]
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
         
         let center = position
-        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: min(10.0, min(size.width, size.height) * 0.4), options: .drawsAfterEndLocation)
+        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: min(10.0, min(size.width, size.height) * 0.4) * scale, options: .drawsAfterEndLocation)
     })
 }
 
@@ -70,7 +67,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         self.textMaskNode = ASDisplayNode()
         self.textSpotNode = ASImageNode()
-                
+        self.textSpotNode.contentMode = .scaleToFill
+        
         self.emitterMaskNode = ASDisplayNode()
         self.emitterSpotNode = ASImageNode()
         self.emitterSpotNode.contentMode = .scaleToFill
@@ -166,15 +164,24 @@ public class InvisibleInkDustNode: ASDisplayNode {
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
         self.emitterLayer?.setValue(position, forKeyPath: "emitterBehaviors.fingerAttractor.position")
+        
+        let maskSize = self.emitterNode.frame.size
+        Queue.concurrentDefaultQueue().async {
+            let textMaskImage = generateMaskImage(size: maskSize, position: position, inverse: false)
+            let emitterMaskImage = generateMaskImage(size: maskSize, position: position, inverse: true)
+            
+            Queue.mainQueue().async {
+                self.textSpotNode.image = textMaskImage
+                self.emitterSpotNode.image = emitterMaskImage
+            }
+        }
            
         Queue.mainQueue().after(0.1 * UIView.animationDurationFactor()) {
             textNode.alpha = 1.0
             
             textNode.view.mask = self.textMaskNode.view
             self.textSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
-            let txtImg = generateTextMaskImage(size: self.emitterNode.frame.size, position: position)
-            self.textSpotNode.image = txtImg
-            
+                
             let xFactor = (position.x / self.emitterNode.frame.width - 0.5) * 2.0
             let yFactor = (position.y / self.emitterNode.frame.height - 0.5) * 2.0
             let maxFactor = max(abs(xFactor), abs(yFactor))
@@ -195,8 +202,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
             
             self.emitterNode.view.mask = self.emitterMaskNode.view
             self.emitterSpotNode.frame = CGRect(x: 0.0, y: 0.0, width: self.emitterMaskNode.frame.width * 3.0, height: self.emitterMaskNode.frame.height * 3.0)
-            let img = generateEmitterMaskImage(size: self.emitterNode.frame.size, position: position)
-            self.emitterSpotNode.image = img
             
             self.emitterSpotNode.layer.anchorPoint = CGPoint(x: position.x / self.emitterMaskNode.frame.width, y: position.y / self.emitterMaskNode.frame.height)
             self.emitterSpotNode.position = position
@@ -217,7 +222,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
             self.emitterMaskFillNode.layer.removeAllAnimations()
         }
         
-        
         var spoilersLength: Int = 0
         if let spoilers = textNode.cachedLayout?.spoilers {
             for spoiler in spoilers {
@@ -227,8 +231,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
         Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
-//            self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
-            
             if let (_, color, _, _) = self.currentParams {
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let animation = POPBasicAnimation()
