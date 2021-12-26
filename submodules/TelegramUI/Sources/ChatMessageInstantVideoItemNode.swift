@@ -788,6 +788,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                             let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
                             var reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSizeAndApply.0)
+                            if !incoming {
+                                reactionButtonsFrame.origin.x = videoFrame.maxX - reactionButtonsSizeAndApply.0.width
+                            }
                             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                                 reactionButtonsFrame.origin.y += 4.0 + actionButtonsSizeAndApply.0.height
                             }
@@ -1339,7 +1342,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         
         if let reactionButtonsNode = self.reactionButtonsNode {
             let reactionButtonsSize = reactionButtonsNode.frame.size
-            let reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSize)
+            var reactionButtonsFrame = CGRect(origin: CGPoint(x: videoFrame.minX, y: videoFrame.maxY + 6.0), size: reactionButtonsSize)
+            if !incoming {
+                reactionButtonsFrame.origin.x = videoFrame.maxX - reactionButtonsSize.width
+            }
+            if let actionButtonsNode = self.actionButtonsNode {
+                let actionButtonsSize = actionButtonsNode.frame.size
+                reactionButtonsFrame.origin.y += 4.0 + actionButtonsSize.height
+            }
             reactionButtonsNode.frame = reactionButtonsFrame
         }
     }

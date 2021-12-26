@@ -1478,19 +1478,12 @@ private class QrContentNode: ASDisplayNode {
         
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
         
-        if isDarkAppearance && selectedEmoticon == defaultEmoticon {
-            self.codeForegroundDimNode.alpha = 1.0
-        } else {
-            self.codeForegroundDimNode.alpha = isDarkAppearance ? 0.4 : 0.3
-        }
+        self.codeForegroundDimNode.alpha = isDarkAppearance ? 0.5 : 0.3
+        
         if self.codeForegroundContentNode == nil, let contentNode = self.wallpaperBackgroundNode.makeDimmedNode() {
             contentNode.frame = CGRect(origin: CGPoint(x: -self.codeForegroundNode.frame.minX, y: -self.codeForegroundNode.frame.minY), size: self.wallpaperBackgroundNode.frame.size)
             self.codeForegroundContentNode = contentNode
             self.codeForegroundNode.insertSubnode(contentNode, at: 0)
-        }
-        if isDarkAppearance && selectedEmoticon == defaultEmoticon, let codeForegroundContentNode = self.codeForegroundContentNode {
-            codeForegroundContentNode.removeFromSupernode()
-            self.codeForegroundContentNode = nil
         }
     }
     

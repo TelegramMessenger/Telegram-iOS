@@ -1228,6 +1228,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         for reaction in mergedMessageReactionsAndPeers(message: message).reactions {
             reactionCount += Int(reaction.count)
         }
+        if let reactionsAttribute = message.reactionsAttribute {
+            if !reactionsAttribute.canViewList {
+                reactionCount = 0
+            }
+        }
 
         if let peer = message.peers[message.id.peerId], (canViewStats || reactionCount != 0) {
             var hasReadReports = false
