@@ -6,7 +6,7 @@ import MtProtoKit
 
 private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribute?, _ updatedReactions: ReactionsMessageAttribute?, message: Message, transaction: Transaction) -> (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)? {
     
-    if let updatedReactions = updatedReactions, !message.flags.contains(.Incoming) {
+    if let updatedReactions = updatedReactions, !message.flags.contains(.Incoming), message.id.peerId.namespace == Namespaces.Peer.CloudUser {
         let prev = previousReactions?.reactions ?? []
         
         let updated = updatedReactions.reactions.filter { value in
@@ -33,14 +33,8 @@ private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribu
         }.first?.value
         
         if !updated.isEmpty && myUpdated == myPrevious, updatedCount >= previousCount, let value = newReaction {
-            if let topPeer = updatedReactions.recentPeers.last {
-                if let reactionAuthor = transaction.getPeer(topPeer.peerId) {
-                    return (reactionAuthor: reactionAuthor, reaction: value, message: message, timestamp: Int32(Date().timeIntervalSince1970))
-                }
-            } else {
-                if let reactionAuthor = transaction.getPeer(message.id.peerId) {
-                    return (reactionAuthor: reactionAuthor, reaction: value, message: message, timestamp: Int32(Date().timeIntervalSince1970))
-                }
+            if let reactionAuthor = transaction.getPeer(message.id.peerId) {
+                return (reactionAuthor: reactionAuthor, reaction: value, message: message, timestamp: Int32(Date().timeIntervalSince1970))
             }
         }
     }
@@ -3311,14 +3305,9 @@ func replayFinalState(
                     if !added {
                         attributes.append(updatedReactions)
                     }
-                    
-                    generatedEvent = reactionGeneratedEvent(previousReactions, updatedReactions, message: currentMessage, transaction: transaction)
-                    
+                                        
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
-                if let generatedEvent = generatedEvent {
-                    addedReactionEvents.append(generatedEvent)
-                }
         }
     }
     
