@@ -176,6 +176,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             cloudSourcePoint = max(rect.minX + rect.height / 2.0, anchorRect.minX)
         }
         
+        if self.highlightedReaction != nil {
+            rect.origin.x -= 2.0
+        }
+        
         return (rect, isLeftAligned, cloudSourcePoint)
     }
     
@@ -193,6 +197,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let visibleBounds = self.scrollNode.view.bounds
         self.previewingItemContainer.bounds = visibleBounds
         
+        let highlightedReactionIndex = self.items.firstIndex(where: { $0.reaction == self.highlightedReaction })
+        
         var validIndices = Set<Int>()
         for i in 0 ..< self.items.count {
             let columnIndex = i
@@ -200,15 +206,24 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             let itemOffsetY: CGFloat = -1.0
             
-            let baseItemFrame = CGRect(origin: CGPoint(x: sideInset + column * (itemSize + itemSpacing), y: verticalInset + floor((rowHeight - itemSize) / 2.0) + itemOffsetY), size: CGSize(width: itemSize, height: itemSize))
+            var baseItemFrame = CGRect(origin: CGPoint(x: sideInset + column * (itemSize + itemSpacing), y: verticalInset + floor((rowHeight - itemSize) / 2.0) + itemOffsetY), size: CGSize(width: itemSize, height: itemSize))
+            if let highlightedReactionIndex = highlightedReactionIndex {
+                if i > highlightedReactionIndex {
+                    baseItemFrame.origin.x += 4.0
+                } else if i == highlightedReactionIndex {
+                    baseItemFrame.origin.x += 2.0
+                }
+            }
+            
             if visibleBounds.intersects(baseItemFrame) {
                 validIndices.insert(i)
                 
                 var itemFrame = baseItemFrame
-                let isPreviewing = false
+                var isPreviewing = false
                 if self.highlightedReaction == self.items[i].reaction {
-                    itemFrame = itemFrame.insetBy(dx: -4.0, dy: -4.0).offsetBy(dx: 0.0, dy: 0.0)
-                    //isPreviewing = true
+                    let updatedSize = CGSize(width: floor(itemFrame.width * 1.66), height: floor(itemFrame.height * 1.66))
+                    itemFrame = CGRect(origin: CGPoint(x: itemFrame.midX - updatedSize.width / 2.0, y: itemFrame.maxY + 4.0 - updatedSize.height), size: updatedSize)
+                    isPreviewing = true
                 }
                 
                 var animateIn = false
@@ -226,16 +241,24 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 if !itemNode.isExtracted {
                     if isPreviewing {
-                        /*if itemNode.supernode !== self.previewingItemContainer {
+                        if itemNode.supernode !== self.previewingItemContainer {
                             self.previewingItemContainer.addSubnode(itemNode)
-                        }*/
-                    } else {
-                        /*if itemNode.supernode !== self.scrollNode {
-                            self.scrollNode.addSubnode(itemNode)
-                        }*/
+                        }
                     }
                     
-                    transition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true)
+                    transition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true, completion: { [weak self, weak itemNode] completed in
+                        guard let strongSelf = self, let itemNode = itemNode else {
+                            return
+                        }
+                        if !completed {
+                            return
+                        }
+                        if !isPreviewing {
+                            if itemNode.supernode !== strongSelf.scrollNode {
+                                strongSelf.scrollNode.addSubnode(itemNode)
+                            }
+                        }
+                    })
                     itemNode.updateLayout(size: itemFrame.size, isExpanded: false, isPreviewing: isPreviewing, transition: transition)
                     
                     if animateIn {
@@ -272,6 +295,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         if visibleContentWidth > size.width - sideInset * 2.0 {
             visibleContentWidth = size.width - sideInset * 2.0
         }
+        if self.highlightedReaction != nil {
+            visibleContentWidth += 4.0
+        }
         
         let contentHeight = verticalInset * 2.0 + rowHeight
         
@@ -282,10 +308,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let (backgroundFrame, isLeftAligned, cloudSourcePoint) = self.calculateBackgroundFrame(containerSize: CGSize(width: size.width, height: size.height), insets: backgroundInsets, anchorRect: anchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight))
         self.isLeftAligned = isLeftAligned
         
-        transition.updateFrame(node: self.contentContainer, frame: backgroundFrame)
-        transition.updateFrame(view: self.contentContainerMask, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
-        transition.updateFrame(node: self.previewingItemContainer, frame: backgroundFrame)
+        transition.updateFrame(node: self.contentContainer, frame: backgroundFrame, beginWithCurrentState: true)
+        transition.updateFrame(view: self.contentContainerMask, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size), beginWithCurrentState: true)
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size), beginWithCurrentState: true)
+        transition.updateFrame(node: self.previewingItemContainer, frame: backgroundFrame, beginWithCurrentState: true)
         self.scrollNode.view.contentSize = CGSize(width: completeContentWidth, height: backgroundFrame.size.height)
         
         self.updateScrolling(transition: transition)
@@ -436,12 +462,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 targetView.isHidden = true
             }
             
+            let itemSize: CGFloat = 40.0
+            
             itemNode.isExtracted = true
             let selfSourceRect = itemNode.view.convert(itemNode.view.bounds, to: self.view)
             let selfTargetRect = self.view.convert(targetView.bounds, from: targetView)
             
             let expandedScale: CGFloat = 4.0
-            let expandedSize = CGSize(width: floor(selfSourceRect.width * expandedScale), height: floor(selfSourceRect.height * expandedScale))
+            let expandedSize = CGSize(width: floor(itemSize * expandedScale), height: floor(itemSize * expandedScale))
             
             var expandedFrame = CGRect(origin: CGPoint(x: floor(selfTargetRect.midX - expandedSize.width / 2.0), y: floor(selfTargetRect.midY - expandedSize.height / 2.0)), size: expandedSize)
             if expandedFrame.minX < -floor(expandedFrame.width * 0.05) {
@@ -518,7 +546,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func highlightGestureMoved(location: CGPoint) {
-        let highlightedReaction = self.reaction(at: location)?.reaction
+        let highlightedReaction = self.previewReaction(at: location)?.reaction
         if self.highlightedReaction != highlightedReaction {
             self.highlightedReaction = highlightedReaction
             if self.hapticFeedback == nil {
@@ -543,6 +571,38 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
+    }
+    
+    private func previewReaction(at point: CGPoint) -> ReactionContextItem? {
+        let scrollPoint = self.view.convert(point, to: self.scrollNode.view)
+        if !self.scrollNode.bounds.contains(scrollPoint) {
+            return nil
+        }
+        
+        let itemSize: CGFloat = 40.0
+        
+        var closestItem: (index: Int, distance: CGFloat)?
+        
+        for (index, itemNode) in self.visibleItemNodes {
+            let intersectionItemFrame = CGRect(origin: CGPoint(x: itemNode.frame.midX - itemSize / 2.0, y: itemNode.frame.midY - 1.0), size: CGSize(width: itemSize, height: 2.0))
+            
+            if !self.scrollNode.bounds.contains(intersectionItemFrame) {
+                continue
+            }
+            
+            let distance = abs(scrollPoint.x - intersectionItemFrame.midX)
+            if let (_, currentDistance) = closestItem {
+                if currentDistance > distance {
+                    closestItem = (index, distance)
+                }
+            } else {
+                closestItem = (index, distance)
+            }
+        }
+        if let closestItem = closestItem {
+            return self.visibleItemNodes[closestItem.index]?.item
+        }
+        return nil
     }
     
     public func reaction(at point: CGPoint) -> ReactionContextItem? {
