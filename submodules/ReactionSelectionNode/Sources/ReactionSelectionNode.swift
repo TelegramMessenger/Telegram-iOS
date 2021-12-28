@@ -189,11 +189,18 @@ final class ReactionNode: ASDisplayNode {
                 stillAnimationNode.position = animationFrame.center
                 stillAnimationNode.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
                 stillAnimationNode.updateLayout(size: animationFrame.size)
-                stillAnimationNode.started = { [weak self] in
-                    guard let strongSelf = self else {
+                stillAnimationNode.started = { [weak self, weak stillAnimationNode] in
+                    guard let strongSelf = self, let stillAnimationNode = stillAnimationNode, strongSelf.stillAnimationNode === stillAnimationNode else {
                         return
                     }
                     strongSelf.staticAnimationNode.alpha = 0.0
+                    
+                    if let animateInAnimationNode = strongSelf.animateInAnimationNode, !animateInAnimationNode.alpha.isZero {
+                        animateInAnimationNode.alpha = 0.0
+                        animateInAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1)
+                        
+                        strongSelf.staticAnimationNode.isHidden = false
+                    }
                 }
                 stillAnimationNode.visibility = true
                 
@@ -213,7 +220,7 @@ final class ReactionNode: ASDisplayNode {
             transition.updateTransformScale(node: stillAnimationNode, scale: animationFrame.size.width / stillAnimationNode.bounds.width, beginWithCurrentState: true)
             
             stillAnimationNode.alpha = 0.0
-            stillAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.14, completion: { [weak self, weak stillAnimationNode] _ in
+            stillAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, completion: { [weak self, weak stillAnimationNode] _ in
                 guard let strongSelf = self, let stillAnimationNode = stillAnimationNode else {
                     return
                 }
