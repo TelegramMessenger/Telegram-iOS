@@ -233,6 +233,7 @@ public extension EngineMessageReactionListContext.State {
     init(message: EngineMessage, reaction: String?) {
         var totalCount = 0
         var hasOutgoingReaction = false
+        var items: [EngineMessageReactionListContext.Item] = []
         if let reactionsAttribute = message._asMessage().reactionsAttribute {
             for messageReaction in reactionsAttribute.reactions {
                 if reaction == nil || messageReaction.value == reaction {
@@ -242,12 +243,20 @@ public extension EngineMessageReactionListContext.State {
                     totalCount += Int(messageReaction.count)
                 }
             }
+            for recentPeer in reactionsAttribute.recentPeers {
+                if let peer = message.peers[recentPeer.peerId] {
+                    items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value))
+                }
+            }
+        }
+        if items.count != totalCount {
+            items.removeAll()
         }
         self.init(
             hasOutgoingReaction: hasOutgoingReaction,
             totalCount: totalCount,
-            items: [],
-            canLoadMore: totalCount != 0
+            items: items,
+            canLoadMore: items.count != totalCount && totalCount != 0
         )
     }
 }
