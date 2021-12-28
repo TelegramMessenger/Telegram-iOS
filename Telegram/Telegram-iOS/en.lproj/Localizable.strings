@@ -7224,3 +7224,7 @@ Sorry for the inconvenience.";
 "Chat.OutgoingContextReactionCount_1" = "1 reacted";
 "Chat.OutgoingContextReactionCount_any" = "%@ reacted";
 "Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";
+
+"Contacts.Sort" = "Sort";
+"Contacts.Sort.ByName" = "by Name";
+"Contacts.Sort.ByLastSeen" = "by Last Seen";

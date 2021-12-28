@@ -43,7 +43,7 @@ private func generateMaskImage(size originalSize: CGSize, position: CGPoint, inv
 }
 
 public class InvisibleInkDustNode: ASDisplayNode {
-    private var currentParams: (size: CGSize, color: UIColor, rects: [CGRect], wordRects: [CGRect])?
+    private var currentParams: (size: CGSize, color: UIColor, textColor: UIColor, rects: [CGRect], wordRects: [CGRect])?
     private var animColor: CGColor?
     
     private weak var textNode: TextNode?
@@ -155,7 +155,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     @objc private func tap(_ gestureRecognizer: UITapGestureRecognizer) {
-        guard let (_, _, _, _) = self.currentParams, let textNode = self.textNode, !self.isRevealed else {
+        guard let (_, _, textColor, _, _) = self.currentParams, let textNode = self.textNode, !self.isRevealed else {
             return
         }
         
@@ -209,7 +209,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
                 self?.alpha = 0.0
                 self?.emitterNode.view.mask = nil
                 
-                self?.emitter?.color = UIColor(rgb: 0x000000).cgColor
+                self?.emitter?.color = textColor.cgColor
             })
             self.emitterMaskFillNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
         }
@@ -231,7 +231,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
         let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
         Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
-            if let (_, color, _, _) = self.currentParams {
+            if let (_, color, _, _, _) = self.currentParams {
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let animation = POPBasicAnimation()
                 animation.property = (POPAnimatableProperty.property(withName: "color", initializer: { property in
@@ -277,10 +277,10 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     private func updateEmitter() {
-        guard let (size, color, _, wordRects) = self.currentParams else {
+        guard let (size, color, _, _, wordRects) = self.currentParams else {
             return
         }
-                
+        
         self.emitter?.color = self.animColor ?? color.cgColor
         self.emitterLayer?.setValue(wordRects, forKey: "emitterRects")
         self.emitterLayer?.frame = CGRect(origin: CGPoint(), size: size)
@@ -299,8 +299,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
     }
     
-    public func update(size: CGSize, color: UIColor, rects: [CGRect], wordRects: [CGRect]) {
-        self.currentParams = (size, color, rects, wordRects)
+    public func update(size: CGSize, color: UIColor, textColor: UIColor, rects: [CGRect], wordRects: [CGRect]) {
+        self.currentParams = (size, color, textColor, rects, wordRects)
                 
         self.emitterNode.frame = CGRect(origin: CGPoint(), size: size)
         self.emitterMaskNode.frame = self.emitterNode.bounds
@@ -313,7 +313,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     }
     
     public override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if let (_, _, rects, _) = self.currentParams, !self.isRevealed {
+        if let (_, _, _, rects, _) = self.currentParams, !self.isRevealed {
             for rect in rects {
                 if rect.contains(point) {
                     return true
