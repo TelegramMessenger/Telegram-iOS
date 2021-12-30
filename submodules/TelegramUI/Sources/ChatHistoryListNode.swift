@@ -1785,6 +1785,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
         var topVisibleMessageRange: ChatTopVisibleMessageRange?
+        
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
             if indexRange.0 > indexRange.1 {
@@ -1798,7 +1799,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
-            var messageIdsWithPossibleReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
@@ -1834,11 +1834,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 contentRequiredValidation = true
                             }
                         }
-                        var hasAction = false
                         for media in message.media {
-                            if let _ = media as? TelegramMediaAction {
-                                hasAction = true
-                            } else if let _ = media as? TelegramMediaUnsupported {
+                            if let _ = media as? TelegramMediaUnsupported {
                                 contentRequiredValidation = true
                             } else if message.flags.contains(.Incoming), let media = media as? TelegramMediaMap, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
                                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -1863,14 +1860,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         }
                                     }
                                 }
-                            }
-                        }
-                        if !hasAction {
-                            switch message.id.peerId.namespace {
-                            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
-                                messageIdsWithPossibleReactions.append(message.id)
-                            default:
-                                break
                             }
                         }
                         if contentRequiredValidation {
@@ -1929,6 +1918,46 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     default:
                         break
                     }
+                }
+            }
+            
+            var messageIdsWithPossibleReactions: [MessageId] = []
+            for entry in historyView.filteredEntries {
+                switch entry {
+                case let .MessageEntry(message, _, _, _, _, _):
+                    var hasAction = false
+                    for media in message.media {
+                        if let _ = media as? TelegramMediaAction {
+                            hasAction = true
+                        }
+                    }
+                    if !hasAction {
+                        switch message.id.peerId.namespace {
+                        case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                            messageIdsWithPossibleReactions.append(message.id)
+                        default:
+                            break
+                        }
+                    }
+                case let .MessageGroupEntry(_, messages, _):
+                    for (message, _, _, _, _) in messages {
+                        var hasAction = false
+                        for media in message.media {
+                            if let _ = media as? TelegramMediaAction {
+                                hasAction = true
+                            }
+                        }
+                        if !hasAction {
+                            switch message.id.peerId.namespace {
+                            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                                messageIdsWithPossibleReactions.append(message.id)
+                            default:
+                                break
+                            }
+                        }
+                    }
+                default:
+                    break
                 }
             }
             
