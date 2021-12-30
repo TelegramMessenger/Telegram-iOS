@@ -162,7 +162,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         rect.origin.x = max(sideInset, rect.origin.x)
         rect.origin.y = max(insets.top + sideInset, rect.origin.y)
         rect.origin.x = min(containerSize.width - contentSize.width - sideInset, rect.origin.x)
-        if rect.maxX > containerSize.width - sideInset {
+        
+        let rightEdge = containerSize.width - sideInset
+        if rect.maxX > rightEdge {
             rect.origin.x = containerSize.width - sideInset - rect.width
         }
         if rect.minX < sideInset {
@@ -178,6 +180,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         if self.highlightedReaction != nil {
             rect.origin.x -= 2.0
+            rect.size.width += 4.0
         }
         
         return (rect, isLeftAligned, cloudSourcePoint)
@@ -294,9 +297,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         var visibleContentWidth = floor(minVisibleItemCount * itemSize + (minVisibleItemCount - 1.0) * itemSpacing + sideInset * 2.0)
         if visibleContentWidth > size.width - sideInset * 2.0 {
             visibleContentWidth = size.width - sideInset * 2.0
-        }
-        if self.highlightedReaction != nil {
-            visibleContentWidth += 4.0
         }
         
         let contentHeight = verticalInset * 2.0 + rowHeight
