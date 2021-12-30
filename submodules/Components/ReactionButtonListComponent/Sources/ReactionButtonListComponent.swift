@@ -31,8 +31,17 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             var counter: Counter?
         }
         
+        private struct AnimationState {
+            var fromCounter: Counter
+            var startTime: Double
+            var duration: Double
+        }
+        
         private var isExtracted: Bool = false
         private var currentLayout: Layout?
+        
+        private var animationState: AnimationState?
+        private var animator: ConstantDisplayLinkAnimator?
         
         init() {
             super.init(pointerStyle: nil)
@@ -40,7 +49,42 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         
         func update(layout: Layout) {
             if self.currentLayout != layout {
+                if let currentLayout = self.currentLayout, let counter = currentLayout.counter {
+                    self.animationState = AnimationState(fromCounter: counter, startTime: CACurrentMediaTime(), duration: 0.15 * UIView.animationDurationFactor())
+                }
+                
                 self.currentLayout = layout
+                
+                self.updateBackgroundImage(animated: false)
+                
+                self.updateAnimation()
+            }
+        }
+        
+        private func updateAnimation() {
+            if let animationState = self.animationState {
+                let timestamp = CACurrentMediaTime()
+                if timestamp >= animationState.startTime + animationState.duration {
+                    self.animationState = nil
+                }
+            }
+            
+            if self.animationState != nil {
+                if self.animator == nil {
+                    let animator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.updateBackgroundImage(animated: false)
+                        strongSelf.updateAnimation()
+                    })
+                    self.animator = animator
+                    animator.isPaused = false
+                }
+            } else if let animator = self.animator {
+                animator.invalidate()
+                self.animator = nil
+                
                 self.updateBackgroundImage(animated: false)
             }
         }
@@ -87,10 +131,52 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                     }
                     
                     var textOrigin: CGFloat = size.width - counter.frame.width - 8.0 + floorToScreenPixels((counter.frame.width - totalComponentWidth) / 2.0)
-                    for component in counter.components {
-                        let string = NSAttributedString(string: component.string, font: Font.medium(11.0), textColor: foregroundColor)
-                        string.draw(at: component.bounds.origin.offsetBy(dx: textOrigin, dy: floorToScreenPixels(size.height - component.bounds.height) / 2.0))
-                        textOrigin += component.bounds.width
+                    textOrigin = max(textOrigin, layout.baseSize.height / 2.0 + UIScreenPixel)
+                    
+                    var rightTextOrigin = textOrigin + totalComponentWidth
+                    
+                    let animationFraction: CGFloat
+                    if let animationState = self.animationState {
+                        animationFraction = max(0.0, min(1.0, (CACurrentMediaTime() - animationState.startTime) / animationState.duration))
+                    } else {
+                        animationFraction = 1.0
+                    }
+                    
+                    for i in (0 ..< counter.components.count).reversed() {
+                        let component = counter.components[i]
+                        var componentAlpha: CGFloat = 1.0
+                        var componentVerticalOffset: CGFloat = 0.0
+                        
+                        if let animationState = self.animationState {
+                            let reverseIndex = counter.components.count - 1 - i
+                            if reverseIndex < animationState.fromCounter.components.count {
+                                let previousComponent = animationState.fromCounter.components[animationState.fromCounter.components.count - 1 - reverseIndex]
+                                
+                                if previousComponent != component {
+                                    componentAlpha = animationFraction
+                                    componentVerticalOffset = (1.0 - animationFraction) * 8.0
+                                    if previousComponent.string < component.string {
+                                        componentVerticalOffset = -componentVerticalOffset
+                                    }
+                                    
+                                    let previousComponentAlpha = 1.0 - componentAlpha
+                                    var previousComponentVerticalOffset = -animationFraction * 8.0
+                                    if previousComponent.string < component.string {
+                                        previousComponentVerticalOffset = -previousComponentVerticalOffset
+                                    }
+                                    
+                                    let componentOrigin = rightTextOrigin - previousComponent.bounds.width
+                                    let string = NSAttributedString(string: previousComponent.string, font: Font.medium(11.0), textColor: foregroundColor.mixedWith(backgroundColor, alpha: 1.0 - previousComponentAlpha))
+                                    string.draw(at: previousComponent.bounds.origin.offsetBy(dx: componentOrigin, dy: floorToScreenPixels(size.height - previousComponent.bounds.height) / 2.0 + previousComponentVerticalOffset))
+                                }
+                            }
+                        }
+                        
+                        let componentOrigin = rightTextOrigin - component.bounds.width
+                        let string = NSAttributedString(string: component.string, font: Font.medium(11.0), textColor: foregroundColor.mixedWith(backgroundColor, alpha: 1.0 - componentAlpha))
+                        string.draw(at: component.bounds.origin.offsetBy(dx: componentOrigin, dy: floorToScreenPixels(size.height - component.bounds.height) / 2.0 + componentVerticalOffset))
+                        
+                        rightTextOrigin -= component.bounds.width
                     }
                 }
                 
@@ -120,7 +206,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         
         private static let maxDigitWidth: CGFloat = {
             var maxWidth: CGFloat = 0.0
-            for i in 0 ..< 9 {
+            for i in 0 ... 9 {
                 let string = NSAttributedString(string: "\(i)", font: Font.medium(11.0), textColor: .black)
                 let boundingRect = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                 maxWidth = max(maxWidth, boundingRect.width)
@@ -151,13 +237,19 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             } else {
                 var resultSize = CGSize()
                 var resultComponents: [Component] = []
-                for component in spec.stringComponents {
+                for i in 0 ..< spec.stringComponents.count {
+                    let component = spec.stringComponents[i]
+                    
                     let string = NSAttributedString(string: component, font: Font.medium(11.0), textColor: .black)
                     let boundingRect = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                     
                     resultComponents.append(Component(string: component, bounds: boundingRect))
                     
-                    resultSize.width += CounterLayout.maxDigitWidth
+                    if spec.stringComponents.count <= 2 {
+                        resultSize.width += CounterLayout.maxDigitWidth
+                    } else {
+                        resultSize.width += boundingRect.width
+                    }
                     resultSize.height = max(resultSize.height, boundingRect.height)
                 }
                 size = CGSize(width: ceil(resultSize.width), height: ceil(resultSize.height))
@@ -242,75 +334,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             let backgroundColor = spec.component.isSelected ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground
             
             let imageFrame = CGRect(origin: CGPoint(x: sideInsets, y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
-            
-            /*var previousDisplayCounter: String?
-            if let currentLayout = currentLayout {
-                if currentLayout.spec.component.avatarPeers.isEmpty {
-                    previousDisplayCounter = countString(Int64(spec.component.count))
-                }
-            }
-            var currentDisplayCounter: String?
-            if spec.component.avatarPeers.isEmpty {
-                currentDisplayCounter = countString(Int64(spec.component.count))
-            }*/
-            
-            /*let backgroundImage: UIImage
-            let extractedBackgroundImage: UIImage
-            if let currentLayout = currentLayout, currentLayout.spec.component.isSelected == spec.component.isSelected, currentLayout.spec.component.colors == spec.component.colors, previousDisplayCounter == currentDisplayCounter {
-                backgroundImage = currentLayout.backgroundImage
-                extractedBackgroundImage = currentLayout.extractedBackgroundImage
-            } else {
-                backgroundImage = generateImage(CGSize(width: height + 18.0, height: height), rotatedContext: { size, context in
-                    UIGraphicsPushContext(context)
-                    
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setBlendMode(.copy)
-                    
-                    context.setFillColor(UIColor(argb: backgroundColor).cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: height, height: height)))
-                    context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - height, y: 0.0), size: CGSize(width: height, height: size.height)))
-                    context.fill(CGRect(origin: CGPoint(x: height / 2.0, y: 0.0), size: CGSize(width: size.width - height, height: size.height)))
-                    
-                    context.setBlendMode(.normal)
-                    
-                    if let currentDisplayCounter = currentDisplayCounter {
-                        let textColor = UIColor(argb: spec.component.isSelected ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground)
-                        let string = NSAttributedString(string: currentDisplayCounter, font: Font.medium(11.0), textColor: textColor)
-                        let boundingRect = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                        if textColor.alpha < 1.0 {
-                            context.setBlendMode(.copy)
-                        }
-                        string.draw(at: CGPoint(x: size.width - sideInsets - boundingRect.width, y: (size.height - boundingRect.height) / 2.0))
-                    }
-                    
-                    UIGraphicsPopContext()
-                })!.stretchableImage(withLeftCapWidth: Int(height / 2.0), topCapHeight: Int(height / 2.0))
-                extractedBackgroundImage = generateImage(CGSize(width: height + 18.0, height: height), rotatedContext: { size, context in
-                    UIGraphicsPushContext(context)
-                    
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setBlendMode(.copy)
-                    
-                    context.setFillColor(UIColor(argb: spec.component.colors.extractedBackground).cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: height, height: height)))
-                    context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - height, y: 0.0), size: CGSize(width: height, height: size.height)))
-                    context.fill(CGRect(origin: CGPoint(x: height / 2.0, y: 0.0), size: CGSize(width: size.width - height, height: size.height)))
-                    
-                    context.setBlendMode(.normal)
-                    
-                    if let currentDisplayCounter = currentDisplayCounter {
-                        let textColor = UIColor(argb: spec.component.colors.extractedForeground)
-                        let string = NSAttributedString(string: currentDisplayCounter, font: Font.medium(11.0), textColor: textColor)
-                        let boundingRect = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-                        if textColor.alpha < 1.0 {
-                            context.setBlendMode(.copy)
-                        }
-                        string.draw(at: CGPoint(x: size.width - sideInsets - boundingRect.width, y: (size.height - boundingRect.height) / 2.0))
-                    }
-                    
-                    UIGraphicsPopContext()
-                })!.stretchableImage(withLeftCapWidth: Int(height / 2.0), topCapHeight: Int(height / 2.0))
-            }*/
             
             var counterLayout: CounterLayout?
             var counterFrame: CGRect?

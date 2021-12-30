@@ -18,6 +18,7 @@ import AccountContext
 import ChatInterfaceState
 import ChatListUI
 import ComponentFlow
+import ReactionSelectionNode
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -2316,6 +2317,77 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
+                var newIncomingReactions: [MessageId: String] = [:]
+                if case let .peer(peerId) = strongSelf.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser, let previousHistoryView = strongSelf.historyView {
+                    var updatedIncomingReactions: [MessageId: String] = [:]
+                    for entry in transition.historyView.filteredEntries {
+                        switch entry {
+                        case let .MessageEntry(message, _, _, _, _, _):
+                            if message.flags.contains(.Incoming) {
+                                continue
+                            }
+                            if let reactions = message.reactionsAttribute {
+                                for reaction in reactions.reactions {
+                                    if !reaction.isSelected {
+                                        updatedIncomingReactions[message.id] = reaction.value
+                                    }
+                                }
+                            }
+                        case let .MessageGroupEntry(_, messages, _):
+                            for message in messages {
+                                if message.0.flags.contains(.Incoming) {
+                                    continue
+                                }
+                                if let reactions = message.0.reactionsAttribute {
+                                    for reaction in reactions.reactions {
+                                        if !reaction.isSelected {
+                                            updatedIncomingReactions[message.0.id] = reaction.value
+                                        }
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    for entry in previousHistoryView.filteredEntries {
+                        switch entry {
+                        case let .MessageEntry(message, _, _, _, _, _):
+                            if let updatedReaction = updatedIncomingReactions[message.id] {
+                                var previousReaction: String?
+                                if let reactions = message.reactionsAttribute {
+                                    for reaction in reactions.reactions {
+                                        if !reaction.isSelected {
+                                            previousReaction = reaction.value
+                                        }
+                                    }
+                                }
+                                if previousReaction != updatedReaction {
+                                    newIncomingReactions[message.id] = updatedReaction
+                                }
+                            }
+                        case let .MessageGroupEntry(_, messages, _):
+                            for message in messages {
+                                if let updatedReaction = updatedIncomingReactions[message.0.id] {
+                                    var previousReaction: String?
+                                    if let reactions = message.0.reactionsAttribute {
+                                        for reaction in reactions.reactions {
+                                            if !reaction.isSelected {
+                                                previousReaction = reaction.value
+                                            }
+                                        }
+                                    }
+                                    if previousReaction != updatedReaction {
+                                        newIncomingReactions[message.0.id] = updatedReaction
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                
                 strongSelf.historyView = transition.historyView
                 
                 let loadState: ChatHistoryNodeLoadState
@@ -2360,7 +2432,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let visible = visibleRange.visibleRange {
                         let visibleFirstIndex = visible.firstIndex
                         if visibleFirstIndex <= visible.lastIndex {
-                            let (incomingIndex, overallIndex) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                            let (incomingIndex, overallIndex) = maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
                             
                             let messageIndex: MessageIndex?
                             switch strongSelf.chatLocation {
@@ -2460,6 +2532,39 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let foundItemNode = foundItemNode {
                         strongSelf.currentSendAnimationCorrelationId = nil
                         strongSelf.animationCorrelationMessageFound?(foundItemNode, currentSendAnimationCorrelationId)
+                    }
+                }
+                
+                if !newIncomingReactions.isEmpty, let chatDisplayNode = strongSelf.controllerInteraction.chatControllerNode() as? ChatControllerNode {
+                    strongSelf.forEachVisibleItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let updatedReaction = newIncomingReactions[item.content.firstMessage.id], let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                            for reaction in availableReactions.reactions {
+                                if reaction.value == updatedReaction {
+                                    let standaloneReactionAnimation = StandaloneReactionAnimation()
+                                    
+                                    chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                    
+                                    chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                    standaloneReactionAnimation.frame = chatDisplayNode.bounds
+                                    standaloneReactionAnimation.animateReactionSelection(
+                                        context: strongSelf.context,
+                                        theme: item.presentationData.theme.theme,
+                                        reaction: ReactionContextItem(
+                                            reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                            appearAnimation: reaction.appearAnimation,
+                                            stillAnimation: reaction.selectAnimation,
+                                            listAnimation: reaction.activateAnimation,
+                                            applicationAnimation: reaction.effectAnimation
+                                        ),
+                                        targetView: targetView,
+                                        hideNode: true,
+                                        completion: { [weak standaloneReactionAnimation] in
+                                            standaloneReactionAnimation?.removeFromSupernode()
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 
