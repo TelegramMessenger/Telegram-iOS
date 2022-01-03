@@ -626,7 +626,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
 
-    func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+    func updateFrame(layer: CALayer, frame: CGRect, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if layer.frame.equalTo(frame) {
             completion?(true)
         } else {
@@ -637,7 +637,12 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                let previousFrame = layer.frame
+                let previousFrame: CGRect
+                if beginWithCurrentState, let presentation = layer.presentation() {
+                    previousFrame = presentation.frame
+                } else {
+                    previousFrame = layer.frame
+                }
                 layer.frame = frame
                 layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {

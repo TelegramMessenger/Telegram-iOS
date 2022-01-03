@@ -316,7 +316,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.updateScrolling(transition: transition)
         
-        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame, beginWithCurrentState: true)
         self.backgroundNode.update(
             theme: self.theme,
             size: backgroundFrame.size,
