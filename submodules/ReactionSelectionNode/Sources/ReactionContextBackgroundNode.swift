@@ -163,11 +163,11 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateIn() {
-        let smallCircleDuration: Double = 0.35
-        let largeCircleDuration: Double = 0.35
-        let largeCircleDelay: Double = 0.13
-        let mainCircleDuration: Double = 0.25
-        let mainCircleDelay: Double = 0.16
+        let smallCircleDuration: Double = 0.4
+        let largeCircleDuration: Double = 0.4
+        let largeCircleDelay: Double = 0.0
+        let mainCircleDuration: Double = 0.3
+        let mainCircleDelay: Double = 0.0
         
         self.smallCircleLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration, delay: 0.0)
         
@@ -181,9 +181,9 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateInFromAnchorRect(size: CGSize, sourceBackgroundFrame: CGRect) {
-        let springDuration: Double = 0.2
+        let springDuration: Double = 0.3
         let springDamping: CGFloat = 104.0
-        let springDelay: Double = 0.25
+        let springDelay: Double = 0.05
         let shadowInset: CGFloat = 15.0
         
         let contentBounds = self.backgroundNode.frame

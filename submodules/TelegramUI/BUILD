@@ -251,6 +251,7 @@ swift_library(
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/Components/ReactionListContextMenuContent:ReactionListContextMenuContent",
+        "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
         "//submodules/Translate:Translate",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],

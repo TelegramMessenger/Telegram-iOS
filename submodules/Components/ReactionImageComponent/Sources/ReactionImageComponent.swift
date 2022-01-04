@@ -9,6 +9,65 @@ import AccountContext
 import TelegramPresentationData
 import UIKit
 import WebPBinding
+import RLottieBinding
+import GZip
+
+public func reactionStaticImage(context: AccountContext, animation: TelegramMediaFile, pixelSize: CGSize) -> Signal<EngineMediaResource.ResourceData, NoError> {
+    return context.engine.resources.custom(id: "\(animation.resource.id.stringRepresentation):reaction-static-v7", fetch: EngineMediaResource.Fetch {
+        return Signal { subscriber in
+            let fetchDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: MediaResourceReference.standalone(resource: animation.resource)).start()
+            let dataDisposable = context.account.postbox.mediaBox.resourceData(animation.resource).start(next: { data in
+                if !data.complete {
+                    return
+                }
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                    return
+                }
+                guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
+                    return
+                }
+                guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, cacheKey: "") else {
+                    return
+                }
+                
+                let innerInsets = UIEdgeInsets(top: 2.4, left: 2.4, bottom: 2.4, right: 2.4)
+                let renderContext = DrawingContext(size: CGSize(width: floor(pixelSize.width * (1.0 + innerInsets.left + innerInsets.right)), height: floor(pixelSize.height * (1.0 + innerInsets.bottom + innerInsets.top))), scale: 1.0, clear: true)
+
+                instance.renderFrame(with: Int32(instance.frameCount - 1), into: renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(renderContext.size.width * renderContext.scale), height: Int32(renderContext.size.height * renderContext.scale), bytesPerRow: Int32(renderContext.bytesPerRow))
+                
+                guard let image = renderContext.generateImage() else {
+                    return
+                }
+                
+                let clippingContext = DrawingContext(size: pixelSize, scale: 1.0, clear: true)
+                clippingContext.withContext { context in
+                    UIGraphicsPushContext(context)
+                    
+                    image.draw(at: CGPoint(x: -innerInsets.left * pixelSize.width, y: -innerInsets.top * pixelSize.height))
+                    
+                    UIGraphicsPopContext()
+                }
+                
+                guard let pngData = clippingContext.generateImage()?.pngData() else {
+                    return
+                }
+                
+                let tempFile = TempBox.shared.tempFile(fileName: "image.png")
+                guard let _ = try? pngData.write(to: URL(fileURLWithPath: tempFile.path)) else {
+                    return
+                }
+                
+                subscriber.putNext(.moveTempFile(file: tempFile))
+                subscriber.putCompletion()
+            })
+            
+            return ActionDisposable {
+                fetchDisposable.dispose()
+                dataDisposable.dispose()
+            }
+        }
+    })
+}
 
 public final class ReactionImageNode: ASImageNode {
     private var disposable: Disposable?

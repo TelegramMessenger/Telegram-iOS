@@ -10,6 +10,27 @@ import TelegramPresentationData
 import UIKit
 import WebPBinding
 import AnimatedAvatarSetNode
+import ReactionImageComponent
+
+public final class ReactionIconView: PortalSourceView {
+    fileprivate let imageView: UIImageView
+    
+    override public init(frame: CGRect) {
+        self.imageView = UIImageView()
+        
+        super.init(frame: frame)
+        
+        self.addSubview(self.imageView)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: size))
+    }
+}
 
 public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
     fileprivate final class ContainerButtonNode: HighlightTrackingButtonNode {
@@ -272,7 +293,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         let spec: Spec
         
         let backgroundColor: UInt32
-        let clippingHeight: CGFloat
         let sideInsets: CGFloat
         
         let imageFrame: CGRect
@@ -281,46 +301,37 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         let counterFrame: CGRect?
         
         let backgroundLayout: ContainerButtonNode.Layout
-        //let backgroundImage: UIImage
-        //let extractedBackgroundImage: UIImage
         
         let size: CGSize
         
         init(
             spec: Spec,
             backgroundColor: UInt32,
-            clippingHeight: CGFloat,
             sideInsets: CGFloat,
             imageFrame: CGRect,
             counterLayout: CounterLayout?,
             counterFrame: CGRect?,
             backgroundLayout: ContainerButtonNode.Layout,
-            //backgroundImage: UIImage,
-            //extractedBackgroundImage: UIImage,
             size: CGSize
         ) {
             self.spec = spec
             self.backgroundColor = backgroundColor
-            self.clippingHeight = clippingHeight
             self.sideInsets = sideInsets
             self.imageFrame = imageFrame
             self.counterLayout = counterLayout
             self.counterFrame = counterFrame
             self.backgroundLayout = backgroundLayout
-            //self.backgroundImage = backgroundImage
-            //self.extractedBackgroundImage = extractedBackgroundImage
             self.size = size
         }
         
         static func calculate(spec: Spec, currentLayout: Layout?) -> Layout {
-            let clippingHeight: CGFloat = 22.0
             let sideInsets: CGFloat = 8.0
             let height: CGFloat = 30.0
             let spacing: CGFloat = 4.0
             
-            let defaultImageSize = CGSize(width: 22.0, height: 22.0)
+            let defaultImageSize = CGSize(width: 26.0, height: 26.0)
             let imageSize: CGSize
-            if let file = spec.component.reaction.iconFile {
+            if let file = spec.component.reaction.centerAnimation {
                 imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
             } else {
                 imageSize = defaultImageSize
@@ -386,14 +397,11 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             return Layout(
                 spec: spec,
                 backgroundColor: backgroundColor,
-                clippingHeight: clippingHeight,
                 sideInsets: sideInsets,
                 imageFrame: imageFrame,
                 counterLayout: counterLayout,
                 counterFrame: counterFrame,
                 backgroundLayout: backgroundLayout,
-                //backgroundImage: backgroundImage,
-                //extractedBackgroundImage: extractedBackgroundImage,
                 size: size
             )
         }
@@ -403,7 +411,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
     
     public let containerNode: ContextExtractedContentContainingNode
     private let buttonNode: ContainerButtonNode
-    public let iconView: UIImageView
+    public let iconView: ReactionIconView
     private var avatarsView: AnimatedAvatarSetView?
     
     private let iconImageDisposable = MetaDisposable()
@@ -412,7 +420,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         self.containerNode = ContextExtractedContentContainingNode()
         self.buttonNode = ContainerButtonNode()
         
-        self.iconView = UIImageView()
+        self.iconView = ReactionIconView()
         self.iconView.isUserInteractionEnabled = false
         
         super.init()
@@ -480,18 +488,19 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         self.buttonNode.update(layout: layout.backgroundLayout)
         
         animation.animator.updateFrame(layer: self.iconView.layer, frame: layout.imageFrame, completion: nil)
+        self.iconView.update(size: layout.imageFrame.size, transition: animation.transition)
         
         if self.layout?.spec.component.reaction != layout.spec.component.reaction {
-            if let file = layout.spec.component.reaction.iconFile {
-                self.iconImageDisposable.set((layout.spec.component.context.account.postbox.mediaBox.resourceData(file.resource)
+            if let file = layout.spec.component.reaction.centerAnimation {
+                self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0))
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                        if let image = WebP.convert(fromWebP: dataValue) {
-                            strongSelf.iconView.image = image
+                    if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                        if let image = UIImage(data: dataValue) {
+                            strongSelf.iconView.imageView.image = image
                         }
                     }
                 }))
@@ -564,29 +573,21 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
     }
 }
 
-public final class ReactionButtonComponent: Component {
-    public struct ViewTag: Equatable {
-        public var value: String
-        
-        public init(value: String) {
-            self.value = value
-        }
-    }
-    
+public final class ReactionButtonComponent: Equatable {
     public struct Reaction: Equatable {
         public var value: String
-        public var iconFile: TelegramMediaFile?
+        public var centerAnimation: TelegramMediaFile?
         
-        public init(value: String, iconFile: TelegramMediaFile?) {
+        public init(value: String, centerAnimation: TelegramMediaFile?) {
             self.value = value
-            self.iconFile = iconFile
+            self.centerAnimation = centerAnimation
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
             if lhs.value != rhs.value {
                 return false
             }
-            if lhs.iconFile?.fileId != rhs.iconFile?.fileId {
+            if lhs.centerAnimation?.fileId != rhs.centerAnimation?.fileId {
                 return false
             }
             return true
@@ -664,153 +665,6 @@ public final class ReactionButtonComponent: Component {
             return false
         }
         return true
-    }
-
-    public final class View: UIButton, ComponentTaggedView {
-        public let iconView: UIImageView
-        private let textView: ComponentHostView<Empty>
-        private let measureTextView: ComponentHostView<Empty>
-        
-        private var currentComponent: ReactionButtonComponent?
-        
-        private let iconImageDisposable = MetaDisposable()
-        
-        init() {
-            self.iconView = UIImageView()
-            self.iconView.isUserInteractionEnabled = false
-            
-            self.textView = ComponentHostView<Empty>()
-            self.textView.isUserInteractionEnabled = false
-            
-            self.measureTextView = ComponentHostView<Empty>()
-            self.measureTextView.isUserInteractionEnabled = false
-            
-            super.init(frame: CGRect())
-            
-            self.addSubview(self.iconView)
-            self.addSubview(self.textView)
-            
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-        
-        deinit {
-            self.iconImageDisposable.dispose()
-        }
-        
-        @objc private func pressed() {
-            guard let currentComponent = self.currentComponent else {
-                return
-            }
-            currentComponent.action(currentComponent.reaction.value)
-        }
-        
-        public func matches(tag: Any) -> Bool {
-            guard let tag = tag as? ViewTag else {
-                return false
-            }
-            guard let currentComponent = self.currentComponent else {
-                return false
-            }
-            if currentComponent.reaction.value == tag.value {
-                return true
-            }
-            return false
-        }
-
-        func update(component: ReactionButtonComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let sideInsets: CGFloat = 8.0
-            let height: CGFloat = 30.0
-            let spacing: CGFloat = 4.0
-            
-            let defaultImageSize = CGSize(width: 22.0, height: 22.0)
-            
-            let imageSize: CGSize
-            if self.currentComponent?.reaction != component.reaction {
-                if let file = component.reaction.iconFile {
-                    self.iconImageDisposable.set((component.context.account.postbox.mediaBox.resourceData(file.resource)
-                    |> deliverOnMainQueue).start(next: { [weak self] data in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                            if let image = WebP.convert(fromWebP: dataValue) {
-                                strongSelf.iconView.image = image
-                            }
-                        }
-                    }))
-                    imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
-                } else {
-                    imageSize = defaultImageSize
-                }
-            } else {
-                imageSize = self.iconView.bounds.size
-            }
-            
-            self.iconView.frame = CGRect(origin: CGPoint(x: sideInsets, y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
-            
-            let text = countString(Int64(component.count))
-            var measureText = ""
-            for _ in 0 ..< text.count {
-                measureText.append("0")
-            }
-            
-            let minTextWidth = self.measureTextView.update(
-                transition: .immediate,
-                component: AnyComponent(Text(
-                    text: measureText,
-                    font: Font.regular(11.0),
-                    color: .black
-                )),
-                environment: {},
-                containerSize: CGSize(width: 100.0, height: 100.0)
-            ).width + 2.0
-            
-            let actualTextSize: CGSize
-            if self.currentComponent?.count != component.count || self.currentComponent?.colors != component.colors || self.currentComponent?.isSelected != component.isSelected {
-                actualTextSize = self.textView.update(
-                    transition: .immediate,
-                    component: AnyComponent(Text(
-                        text: text,
-                        font: Font.medium(11.0),
-                        color: UIColor(argb: component.isSelected ? component.colors.selectedForeground : component.colors.deselectedForeground)
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 100.0, height: 100.0)
-                )
-            } else {
-                actualTextSize = self.textView.bounds.size
-            }
-            let layoutTextSize = CGSize(width: max(actualTextSize.width, minTextWidth), height: actualTextSize.height)
-            
-            if self.currentComponent?.colors != component.colors || self.currentComponent?.isSelected != component.isSelected {
-                if component.isSelected {
-                    self.backgroundColor = UIColor(argb: component.colors.selectedBackground)
-                } else {
-                    self.backgroundColor = UIColor(argb: component.colors.deselectedBackground)
-                }
-            }
-            
-            self.layer.cornerRadius = height / 2.0
-            
-            self.textView.frame = CGRect(origin: CGPoint(x: sideInsets + imageSize.width + spacing, y: floorToScreenPixels((height - actualTextSize.height) / 2.0)), size: actualTextSize)
-            
-            self.currentComponent = component
-            
-            return CGSize(width: imageSize.width + spacing + layoutTextSize.width + sideInsets * 2.0, height: height)
-        }
-    }
-
-    public func makeView() -> View {
-        return View()
-    }
-
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
 

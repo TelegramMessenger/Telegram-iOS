@@ -14,6 +14,8 @@ public final class AvailableReactions: Equatable, Codable {
             case selectAnimation
             case activateAnimation
             case effectAnimation
+            case aroundAnimation
+            case centerAnimation
         }
         
         public let isEnabled: Bool
@@ -24,6 +26,8 @@ public final class AvailableReactions: Equatable, Codable {
         public let selectAnimation: TelegramMediaFile
         public let activateAnimation: TelegramMediaFile
         public let effectAnimation: TelegramMediaFile
+        public let aroundAnimation: TelegramMediaFile?
+        public let centerAnimation: TelegramMediaFile?
         
         public init(
             isEnabled: Bool,
@@ -33,7 +37,9 @@ public final class AvailableReactions: Equatable, Codable {
             appearAnimation: TelegramMediaFile,
             selectAnimation: TelegramMediaFile,
             activateAnimation: TelegramMediaFile,
-            effectAnimation: TelegramMediaFile
+            effectAnimation: TelegramMediaFile,
+            aroundAnimation: TelegramMediaFile?,
+            centerAnimation: TelegramMediaFile?
         ) {
             self.isEnabled = isEnabled
             self.value = value
@@ -43,6 +49,8 @@ public final class AvailableReactions: Equatable, Codable {
             self.selectAnimation = selectAnimation
             self.activateAnimation = activateAnimation
             self.effectAnimation = effectAnimation
+            self.aroundAnimation = aroundAnimation
+            self.centerAnimation = centerAnimation
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
@@ -70,6 +78,12 @@ public final class AvailableReactions: Equatable, Codable {
             if lhs.effectAnimation != rhs.effectAnimation {
                 return false
             }
+            if lhs.aroundAnimation != rhs.aroundAnimation {
+                return false
+            }
+            if lhs.centerAnimation != rhs.centerAnimation {
+                return false
+            }
             return true
         }
         
@@ -95,6 +109,18 @@ public final class AvailableReactions: Equatable, Codable {
             
             let effectAnimationData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .effectAnimation)
             self.effectAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: effectAnimationData.data)))
+            
+            if let aroundAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .aroundAnimation) {
+                self.aroundAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: aroundAnimationData.data)))
+            } else {
+                self.aroundAnimation = nil
+            }
+            
+            if let centerAnimationData = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .centerAnimation) {
+                self.centerAnimation = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: centerAnimationData.data)))
+            } else {
+                self.centerAnimation = nil
+            }
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -110,6 +136,12 @@ public final class AvailableReactions: Equatable, Codable {
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.selectAnimation), forKey: .selectAnimation)
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.activateAnimation), forKey: .activateAnimation)
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.effectAnimation), forKey: .effectAnimation)
+            if let aroundAnimation = self.aroundAnimation {
+                try container.encode(PostboxEncoder().encodeObjectToRawData(aroundAnimation), forKey: .aroundAnimation)
+            }
+            if let centerAnimation = self.centerAnimation {
+                try container.encode(PostboxEncoder().encodeObjectToRawData(centerAnimation), forKey: .centerAnimation)
+            }
         }
     }
     
@@ -157,7 +189,7 @@ public final class AvailableReactions: Equatable, Codable {
 private extension AvailableReactions.Reaction {
     convenience init?(apiReaction: Api.AvailableReaction) {
         switch apiReaction {
-        case let .availableReaction(flags, reaction, title, staticIcon, appearAnimation, selectAnimation, activateAnimation, effectAnimation):
+        case let .availableReaction(flags, reaction, title, staticIcon, appearAnimation, selectAnimation, activateAnimation, effectAnimation, aroundAnimation, centerIcon):
             guard let staticIconFile = telegramMediaFileFromApiDocument(staticIcon) else {
                 return nil
             }
@@ -173,6 +205,8 @@ private extension AvailableReactions.Reaction {
             guard let effectAnimationFile = telegramMediaFileFromApiDocument(effectAnimation) else {
                 return nil
             }
+            let aroundAnimationFile = aroundAnimation.flatMap(telegramMediaFileFromApiDocument)
+            let centerAnimationFile = centerIcon.flatMap(telegramMediaFileFromApiDocument)
             let isEnabled = (flags & (1 << 0)) == 0
             self.init(
                 isEnabled: isEnabled,
@@ -182,7 +216,9 @@ private extension AvailableReactions.Reaction {
                 appearAnimation: appearAnimationFile,
                 selectAnimation: selectAnimationFile,
                 activateAnimation: activateAnimationFile,
-                effectAnimation: effectAnimationFile
+                effectAnimation: effectAnimationFile,
+                aroundAnimation: aroundAnimationFile,
+                centerAnimation: centerAnimationFile
             )
         }
     }
@@ -251,6 +287,12 @@ func managedSynchronizeAvailableReactions(postbox: Postbox, network: Network) ->
                             resources.append(reaction.selectAnimation.resource)
                             resources.append(reaction.activateAnimation.resource)
                             resources.append(reaction.effectAnimation.resource)
+                            if let centerAnimation = reaction.centerAnimation {
+                                resources.append(centerAnimation.resource)
+                            }
+                            if let aroundAnimation = reaction.aroundAnimation {
+                                resources.append(aroundAnimation.resource)
+                            }
                         }
                         
                         for resource in resources {

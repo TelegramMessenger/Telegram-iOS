@@ -55,6 +55,9 @@ final class ReactionNode: ASDisplayNode {
     
     var didSetupStillAnimation: Bool = false
     
+    private var isLongPressing: Bool = false
+    private var longPressAnimator: DisplayLinkAnimator?
+    
     init(context: AccountContext, theme: PresentationTheme, item: ReactionContextItem) {
         self.context = context
         self.item = item
@@ -94,8 +97,12 @@ final class ReactionNode: ASDisplayNode {
         self.fetchFullAnimationDisposable?.dispose()
     }
     
-    func animateIn() {
-        self.animateInAnimationNode?.visibility = true
+    func appear(animated: Bool) {
+        if animated {
+            self.animateInAnimationNode?.visibility = true
+        } else {
+            self.animateInAnimationNode?.completed(true)
+        }
     }
     
     func updateLayout(size: CGSize, isExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
@@ -113,14 +120,18 @@ final class ReactionNode: ASDisplayNode {
         var animationFrame = CGRect(origin: CGPoint(x: floor((intrinsicSize.width - animationDisplaySize.width) / 2.0), y: floor((intrinsicSize.height - animationDisplaySize.height) / 2.0)), size: animationDisplaySize)
         animationFrame.origin.y = floor(animationFrame.origin.y + animationFrame.height * offsetFactor)
         
+        let expandedInset: CGFloat = floor(size.width / 32.0 * 60.0)
+        let expandedAnimationFrame = animationFrame.insetBy(dx: -expandedInset, dy: -expandedInset)
+        
         if isExpanded, self.animationNode == nil {
             let animationNode = AnimatedStickerNode()
+            animationNode.automaticallyLoadFirstFrame = true
             self.animationNode = animationNode
             self.addSubnode(animationNode)
             
-            animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
-            animationNode.frame = animationFrame
-            animationNode.updateLayout(size: animationFrame.size)
+            animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
+            animationNode.frame = expandedAnimationFrame
+            animationNode.updateLayout(size: expandedAnimationFrame.size)
             
             if transition.isAnimated {
                 if let stillAnimationNode = self.stillAnimationNode, !stillAnimationNode.frame.isEmpty {
@@ -172,7 +183,9 @@ final class ReactionNode: ASDisplayNode {
                 }
                 self.staticAnimationNode.isHidden = true
             }
-            animationNode.visibility = true
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.17, execute: {
+                animationNode.visibility = true
+            })
         }
         
         if self.validSize != size {
@@ -260,6 +273,34 @@ final class ReactionNode: ASDisplayNode {
                 transition.updatePosition(node: animateInAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
                 transition.updateTransformScale(node: animateInAnimationNode, scale: animationFrame.size.width / animateInAnimationNode.bounds.width, beginWithCurrentState: true)
             }
+        }
+    }
+    
+    func updateIsLongPressing(isLongPressing: Bool) {
+        if self.isLongPressing == isLongPressing {
+            return
+        }
+        self.isLongPressing = isLongPressing
+        
+        if isLongPressing {
+            if self.longPressAnimator == nil {
+                let longPressAnimator = DisplayLinkAnimator(duration: 2.0, from: 1.0, to: 2.0, update: { [weak self] value in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let transition: ContainedViewLayoutTransition = .immediate
+                    transition.updateSublayerTransformScale(node: strongSelf, scale: value)
+                }, completion: {
+                })
+                self.longPressAnimator = longPressAnimator
+            }
+        } else if let longPressAnimator = self.longPressAnimator {
+            self.longPressAnimator = nil
+            
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+            transition.updateSublayerTransformScale(node: self, scale: 1.0)
+            
+            longPressAnimator.invalidate()
         }
     }
 }

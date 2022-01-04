@@ -17,6 +17,8 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AccountContext:AccountContext",
         "//submodules/WebPBinding:WebPBinding",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

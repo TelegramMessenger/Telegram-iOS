@@ -24,7 +24,7 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
         stateTransition: ContextControllerPresentationNodeStateTransition?
     )
     
-    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void)
+    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, completion: @escaping () -> Void)
     func cancelReactionAnimation()
     
     func highlightGestureMoved(location: CGPoint)
