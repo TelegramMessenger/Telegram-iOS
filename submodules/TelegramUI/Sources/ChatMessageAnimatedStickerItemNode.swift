@@ -32,7 +32,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 protocol GenericAnimatedStickerNode: ASDisplayNode {
-    func setOverlayColor(_ color: UIColor?, animated: Bool)
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool)
 
     var currentFrameIndex: Int { get }
     func setFrameIndex(_ frameIndex: Int)
@@ -58,7 +58,7 @@ private class VideoStickerNode: ASDisplayNode, GenericAnimatedStickerNode {
     private var layerHolder: SampleBufferLayer?
     var manager: SoftwareVideoLayerFrameManager?
     
-    func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
         
     }
     
@@ -2189,10 +2189,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if highlighted {
                     self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
-                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
+                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, replace: false, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
-                    self.animationNode?.setOverlayColor(nil, animated: false)
+                    self.animationNode?.setOverlayColor(nil, replace: false, animated: false)
                 }
             }
         }

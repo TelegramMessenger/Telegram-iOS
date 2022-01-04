@@ -1330,7 +1330,7 @@ public final class CalendarMessageScreen: ViewController {
                     selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
                 } else {
                     selectionToolbarNode = ToolbarNode(
-                        theme: TabBarControllerTheme(
+                        theme: ToolbarTheme(
                         rootControllerTheme: self.presentationData.theme),
                         displaySeparator: true,
                         left: {

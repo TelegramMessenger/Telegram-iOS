@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -14,6 +15,8 @@ import AccountContext
 import ItemListPeerItem
 import DeleteChatPeerActionSheetItem
 import UndoUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 private func totalDiskSpace() -> Int64 {
     do {
@@ -275,15 +278,15 @@ private enum StorageUsageEntry: ItemListNodeEntry {
     }
 }
 
-private struct StoragUsageState: Equatable {
+private struct StorageUsageState: Equatable {
     let peerIdWithRevealedOptions: PeerId?
 
-    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> StoragUsageState {
-        return StoragUsageState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
+    func withUpdatedPeerIdWithRevealedOptions(_ peerIdWithRevealedOptions: PeerId?) -> StorageUsageState {
+        return StorageUsageState(peerIdWithRevealedOptions: peerIdWithRevealedOptions)
     }
 }
 
-private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StoragUsageState) -> [StorageUsageEntry] {
+private func storageUsageControllerEntries(presentationData: PresentationData, cacheSettings: CacheStorageSettings, cacheStats: CacheUsageStatsResult?, state: StorageUsageState) -> [StorageUsageEntry] {
     var entries: [StorageUsageEntry] = []
     
     entries.append(.keepMediaHeader(presentationData.theme, presentationData.strings.Cache_KeepMedia.uppercased()))
@@ -398,9 +401,9 @@ func cacheUsageStats(context: AccountContext) -> Signal<CacheUsageStatsResult?, 
 }
 
 public func storageUsageController(context: AccountContext, cacheUsagePromise: Promise<CacheUsageStatsResult?>? = nil, isModal: Bool = false) -> ViewController {
-    let statePromise = ValuePromise(StoragUsageState(peerIdWithRevealedOptions: nil))
-    let stateValue = Atomic(value: StoragUsageState(peerIdWithRevealedOptions: nil))
-    let updateState: ((StoragUsageState) -> StoragUsageState) -> Void = { f in
+    let statePromise = ValuePromise(StorageUsageState(peerIdWithRevealedOptions: nil))
+    let stateValue = Atomic(value: StorageUsageState(peerIdWithRevealedOptions: nil))
+    let updateState: ((StorageUsageState) -> StorageUsageState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
@@ -546,7 +549,9 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 selectedSize = totalSize
                 
                 if !items.isEmpty {
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").string, action: {
+                    var cancelImpl: (() -> Void)?
+                    
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").string, action: { [weak controller] in
                         if let statsPromise = statsPromise {
                             let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                             
@@ -582,20 +587,37 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             var updatedTempPaths = stats.tempPaths
                             var updatedTempSize = stats.tempSize
                             
-                            var signal: Signal<Void, NoError> = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
+                            var signal: Signal<Float, NoError> = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
                             if otherSize.0 {
-                                let removeTempFiles: Signal<Void, NoError> = Signal { subscriber in
+                                let removeTempFiles: Signal<Float, NoError> = Signal { subscriber in
                                     let fileManager = FileManager.default
+                                    var count: Int = 0
+                                    let totalCount = stats.tempPaths.count
+                                    
+                                    let reportProgress: (Int) -> Void = { count in
+                                        Queue.mainQueue().async {
+                                            subscriber.putNext(min(1.0, Float(count) / Float(totalCount)))
+                                        }
+                                    }
+                                    
+                                    if totalCount == 0 {
+                                        subscriber.putNext(1.0)
+                                        subscriber.putCompletion()
+                                        return EmptyDisposable
+                                    }
+                                    
                                     for path in stats.tempPaths {
                                         let _ = try? fileManager.removeItem(atPath: path)
+                                        count += 1
+                                        reportProgress(count)
                                     }
                                     
                                     subscriber.putCompletion()
                                     return EmptyDisposable
                                 } |> runOn(Queue.concurrentDefaultQueue())
-                                signal = signal
-                                |> then(context.account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths))
-                                |> then(removeTempFiles)
+                                signal = (signal |> map { $0 * 0.7 })
+                                |> then(context.account.postbox.mediaBox.removeOtherCachedResources(paths: stats.otherPaths) |> map { 0.7 + 0.2 * $0 })
+                                |> then(removeTempFiles |> map { 0.9 + 0.1 * $0 })
                             }
                             
                             if otherSize.0 {
@@ -606,49 +628,39 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 updatedTempSize = 0
                             }
                             
+                            let progressPromise = ValuePromise<Float>(0.0)
+                            let overlayNode = StorageUsageClearProgressOverlayNode(presentationData: presentationData)
+                            overlayNode.setProgressSignal(progressPromise.get())
+                            controller?.setItemGroupOverlayNode(groupIndex: 0, node: overlayNode)
+                            
                             let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: updatedOtherSize, otherPaths: updatedOtherPaths, cacheSize: updatedCacheSize, tempPaths: updatedTempPaths, tempSize: updatedTempSize, immutableSize: stats.immutableSize)
                             
-                            var cancelImpl: (() -> Void)?
-                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let progressSignal = Signal<Never, NoError> { subscriber in
-                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                    cancelImpl?()
-                                }))
-                                presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                                return ActionDisposable { [weak controller] in
-                                    Queue.mainQueue().async() {
-                                        controller?.dismiss()
-                                    }
-                                }
-                            }
-                            |> runOn(Queue.mainQueue())
-                            |> delay(0.15, queue: Queue.mainQueue())
-                            let progressDisposable = progressSignal.start()
-                            
-                            signal = signal
-                            |> afterDisposed {
-                                Queue.mainQueue().async {
-                                    progressDisposable.dispose()
-                                }
-                            }
                             cancelImpl = {
                                 clearDisposable.set(nil)
                                 resetStats()
                             }
+                            statsPromise.set(.single(.result(resultStats)))
                             clearDisposable.set((signal
-                            |> deliverOnMainQueue).start(completed: {
+                            |> deliverOnMainQueue).start(next: { progress in
+                                progressPromise.set(progress)
+                            }, completed: {
                                 statsPromise.set(.single(.result(resultStats)))
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                                progressPromise.set(1.0)
+                                Queue.mainQueue().after(1.0) {
+                                    dismissAction()
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                                }
                             }))
                         }
-                        
-                        dismissAction()
                     }))
                     
                     controller.setItemGroups([
                         ActionSheetItemGroup(items: items),
-                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                        ])
+                        ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: {
+                            cancelImpl?()
+                            dismissAction()
+                        })])
+                    ])
                     presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }
@@ -743,7 +755,9 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     selectedSize = totalSize
                     
                     if !items.isEmpty {
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").string, action: {
+                        var cancelImpl: (() -> Void)?
+                        
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))").string, action: { [weak controller] in
                             if let statsPromise = statsPromise {
                                 let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
                                 var clearMediaIds = Set<MediaId>()
@@ -785,50 +799,39 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                     }
                                 }
                                 
-                                var signal = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
+                                let signal = context.engine.resources.clearCachedMediaResources(mediaResourceIds: clearResourceIds)
+                                
+                                let progressPromise = ValuePromise<Float>(0.0)
+                                let overlayNode = StorageUsageClearProgressOverlayNode(presentationData: presentationData)
+                                overlayNode.setProgressSignal(progressPromise.get())
+                                controller?.setItemGroupOverlayNode(groupIndex: 0, node: overlayNode)
                                 
                                 let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
                                 
-                                var cancelImpl: (() -> Void)?
-                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                let progressSignal = Signal<Never, NoError> { subscriber in
-                                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                                        cancelImpl?()
-                                    }))
-                                    presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                                    return ActionDisposable { [weak controller] in
-                                        Queue.mainQueue().async() {
-                                            controller?.dismiss()
-                                        }
-                                    }
-                                }
-                                |> runOn(Queue.mainQueue())
-                                |> delay(0.15, queue: Queue.mainQueue())
-                                let progressDisposable = progressSignal.start()
-                                
-                                signal = signal
-                                |> afterDisposed {
-                                    Queue.mainQueue().async {
-                                        progressDisposable.dispose()
-                                    }
-                                }
                                 cancelImpl = {
                                     clearDisposable.set(nil)
                                     resetStats()
                                 }
                                 clearDisposable.set((signal
-                                |> deliverOnMainQueue).start(completed: {
+                                |> deliverOnMainQueue).start(next: { progress in
+                                    progressPromise.set(progress)
+                                }, completed: {
                                     statsPromise.set(.single(.result(resultStats)))
-                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                                    progressPromise.set(1.0)
+                                    Queue.mainQueue().after(1.0) {
+                                        dismissAction()
+                                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                                    }
                                 }))
                             }
-                            
-                            dismissAction()
                         }))
                         
                         controller.setItemGroups([
                             ActionSheetItemGroup(items: items),
-                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: {
+                                cancelImpl?()
+                                dismissAction()
+                            })])
                         ])
                         presentControllerImpl?(controller, .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
@@ -994,4 +997,106 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
         controller?.dismiss()
     }
     return controller
+}
+
+private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGroupOverlayNode {
+    private let presentationData: PresentationData
+    
+    private let animationNode: AnimatedStickerNode
+    private let progressTextNode: ImmediateTextNode
+    private let descriptionTextNode: ImmediateTextNode
+    private let progressBackgroundNode: ASDisplayNode
+    private let progressForegroundNode: ASDisplayNode
+    
+    private let progressDisposable = MetaDisposable()
+    
+    private var validLayout: CGSize?
+    
+    init(presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.animationNode = AnimatedStickerNode()
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearCache"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
+        
+        self.progressTextNode = ImmediateTextNode()
+        self.progressTextNode.textAlignment = .center
+        
+        self.descriptionTextNode = ImmediateTextNode()
+        self.descriptionTextNode.textAlignment = .center
+        self.descriptionTextNode.maximumNumberOfLines = 0
+        
+        self.progressBackgroundNode = ASDisplayNode()
+        self.progressBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.controlAccentColor.withMultipliedAlpha(0.2)
+        self.progressBackgroundNode.cornerRadius = 3.0
+        
+        self.progressForegroundNode = ASDisplayNode()
+        self.progressForegroundNode.backgroundColor = self.presentationData.theme.actionSheet.controlAccentColor
+        self.progressForegroundNode.cornerRadius = 3.0
+        
+        super.init()
+        
+        self.addSubnode(self.animationNode)
+        self.addSubnode(self.progressTextNode)
+        self.addSubnode(self.descriptionTextNode)
+        self.addSubnode(self.progressBackgroundNode)
+        self.addSubnode(self.progressForegroundNode)
+    }
+    
+    deinit {
+        self.progressDisposable.dispose()
+    }
+    
+    func setProgressSignal(_ signal: Signal<Float, NoError>) {
+        self.progressDisposable.set((signal
+        |> deliverOnMainQueue).start(next: { [weak self] progress in
+            if let strongSelf = self {
+                strongSelf.setProgress(progress)
+            }
+        }))
+    }
+    
+    private var progress: Float = 0.0
+    private func setProgress(_ progress: Float) {
+        self.progress = progress
+        
+        if let size = self.validLayout {
+            self.updateLayout(size: size, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+        
+        let inset: CGFloat = 24.0
+        let progressHeight: CGFloat = 6.0
+        let spacing: CGFloat = 16.0
+        
+        let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
+        self.progressBackgroundNode.frame = progressFrame
+        let progressForegroundFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
+        if !self.progressForegroundNode.frame.width.isZero {
+            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame)
+        } else {
+            self.progressForegroundNode.frame = progressForegroundFrame
+        }
+        
+        self.descriptionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_KeepOpenedDescription, font: Font.regular(15.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
+        let descriptionTextSize = self.descriptionTextNode.updateLayout(CGSize(width: size.width - inset * 3.0, height: size.height))
+        let descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: progressFrame.minY - spacing - 9.0 - descriptionTextSize.height), size: descriptionTextSize)
+        self.descriptionTextNode.frame = descriptionTextFrame
+        
+        self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_Progress(Int(progress * 100.0)).string, font: Font.with(size: 17.0, design: .regular, weight: .bold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        let progressTextSize = self.progressTextNode.updateLayout(size)
+        let progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
+        self.progressTextNode.frame = progressTextFrame
+        
+        let availableHeight = progressTextFrame.minY
+        let imageSide = min(160.0, availableHeight - 30.0)
+        let imageSize = CGSize(width: imageSide, height: imageSide)
+        
+        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floorToScreenPixels((progressTextFrame.minY - imageSize.height) / 2.0)), size: imageSize)
+        self.animationNode.frame = animationFrame
+        self.animationNode.updateLayout(size: imageSize)
+    }
 }

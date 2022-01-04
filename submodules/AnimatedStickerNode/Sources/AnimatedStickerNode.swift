@@ -869,6 +869,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     public var isPlayingChanged: (Bool) -> Void = { _ in }
     
+    private var overlayColor: (UIColor?, Bool)? = nil
+    private var size: CGSize?
+    
     override public init() {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
@@ -900,9 +903,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.renderer = SoftwareAnimationRenderer()
         //self.renderer = MetalAnimationRenderer()
         #endif
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.size ?? self.bounds.size)
         if let contents = self.nodeToCopyFrameFrom?.renderer?.contents {
             self.renderer?.contents = contents
+        }
+        if let (overlayColor, replace) = self.overlayColor {
+            self.renderer?.setOverlayColor(overlayColor, replace: replace, animated: false)
         }
         self.nodeToCopyFrameFrom = nil
         self.addSubnode(self.renderer!)
@@ -1347,10 +1353,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     public func updateLayout(size: CGSize) {
+        self.size = size
         self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
     }
     
-    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
-        self.renderer?.setOverlayColor(color, animated: animated)
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
+        self.overlayColor = (color, replace)
+        self.renderer?.setOverlayColor(color, replace: replace, animated: animated)
     }
 }

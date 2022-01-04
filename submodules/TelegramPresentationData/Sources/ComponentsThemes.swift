@@ -38,10 +38,10 @@ public extension PresentationFontSize {
     }
 }
 
-public extension TabBarControllerTheme {
+public extension ToolbarTheme {
     convenience init(rootControllerTheme: PresentationTheme) {
         let theme = rootControllerTheme.rootController.tabBar
-        self.init(backgroundColor: rootControllerTheme.list.plainBackgroundColor, tabBarBackgroundColor: theme.backgroundColor, tabBarSeparatorColor: theme.separatorColor, tabBarIconColor: theme.iconColor, tabBarSelectedIconColor: theme.selectedIconColor, tabBarTextColor: theme.textColor, tabBarSelectedTextColor: theme.selectedTextColor, tabBarBadgeBackgroundColor: theme.badgeBackgroundColor, tabBarBadgeStrokeColor: theme.badgeStrokeColor, tabBarBadgeTextColor: theme.badgeTextColor, tabBarExtractedIconColor: rootControllerTheme.contextMenu.extractedContentTintColor, tabBarExtractedTextColor: rootControllerTheme.contextMenu.extractedContentTintColor)
+        self.init(barBackgroundColor: theme.backgroundColor, barSeparatorColor: theme.separatorColor, barTextColor: theme.textColor, barSelectedTextColor: theme.selectedTextColor)
     }
 }
 

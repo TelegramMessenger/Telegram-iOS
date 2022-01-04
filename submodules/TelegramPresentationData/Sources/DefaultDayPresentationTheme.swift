@@ -163,7 +163,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
             outgoingBubbleStrokeColor = .clear
         }
         
-        outgoingBubbleHighlightedFill = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.054, saturation: 1.589, brightness: 0.96)
+        outgoingBubbleHighlightedFill = outgoingBubbleFillColors?.first?.withMultiplied(hue: 1.00, saturation: 1.589, brightness: 0.96)
         
         let lightnessColor = UIColor.average(of: bubbleColors.map(UIColor.init(rgb:)))
         if lightnessColor.lightness > 0.705 {

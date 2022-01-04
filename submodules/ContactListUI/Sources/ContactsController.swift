@@ -192,6 +192,7 @@ public class ContactsController: ViewController {
         
         self.tabBarItem.image = icon
         self.tabBarItem.selectedImage = icon
+        self.tabBarItem.animationName = "TabContacts"
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         

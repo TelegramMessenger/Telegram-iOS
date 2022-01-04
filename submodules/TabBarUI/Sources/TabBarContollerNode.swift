@@ -1,11 +1,12 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import Display
 
-public enum ToolbarActionOption {
-    case left
-    case right
-    case middle
+private extension ToolbarTheme {
+    convenience init(tabBarTheme theme: TabBarControllerTheme) {
+        self.init(barBackgroundColor: theme.tabBarBackgroundColor, barSeparatorColor: theme.tabBarSeparatorColor, barTextColor: theme.tabBarTextColor, barSelectedTextColor: theme.tabBarSelectedTextColor)
+    }
 }
 
 final class TabBarControllerNode: ASDisplayNode {
@@ -65,7 +66,7 @@ final class TabBarControllerNode: ASDisplayNode {
         
         self.tabBarNode.updateTheme(theme)
         self.disabledOverlayNode.backgroundColor = theme.backgroundColor.withAlphaComponent(0.5)
-        self.toolbarNode?.updateTheme(theme)
+        self.toolbarNode?.updateTheme(ToolbarTheme(tabBarTheme: theme))
     }
     
     func updateIsTabBarEnabled(_ value: Bool, transition: ContainedViewLayoutTransition) {
@@ -99,7 +100,7 @@ final class TabBarControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
-                let toolbarNode = ToolbarNode(theme: self.theme, left: { [weak self] in
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(tabBarTheme: self.theme), left: { [weak self] in
                     self?.toolbarActionSelected(.left)
                 }, right: { [weak self] in
                     self?.toolbarActionSelected(.right)

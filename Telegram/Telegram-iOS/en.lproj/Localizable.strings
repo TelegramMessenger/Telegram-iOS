@@ -7228,3 +7228,6 @@ Sorry for the inconvenience.";
 "Contacts.Sort" = "Sort";
 "Contacts.Sort.ByName" = "by Name";
 "Contacts.Sort.ByLastSeen" = "by Last Seen";
+
+"ClearCache.Progress" = "Clearing the Cache • %d%";
+"ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";

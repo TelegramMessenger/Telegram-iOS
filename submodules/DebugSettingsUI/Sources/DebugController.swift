@@ -940,7 +940,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
         entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
         entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
-        entries.append(.snow(experimentalSettings.snow))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

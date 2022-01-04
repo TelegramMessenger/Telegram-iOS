@@ -191,7 +191,7 @@ public enum TabBarItemContextActionType {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
-    private(set) var toolbar: Toolbar?
+    public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true
     open var navigationBarRequiresEntireLayoutUpdate: Bool {

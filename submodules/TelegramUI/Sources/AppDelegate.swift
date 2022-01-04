@@ -2035,7 +2035,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                             if result {
                                 Queue.mainQueue().async {
                                     let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
-                                    
+                                                                        
                                     let unknownMessageCategory: UNNotificationCategory
                                     let replyMessageCategory: UNNotificationCategory
                                     let replyLegacyMessageCategory: UNNotificationCategory
