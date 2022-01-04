@@ -66,6 +66,7 @@ public struct ProxyServerSettings: Codable, Equatable, Hashable {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(self.host)
+        hasher.combine(self.port)
         hasher.combine(self.connection)
     }
 }
