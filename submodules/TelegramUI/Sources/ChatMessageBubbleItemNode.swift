@@ -807,6 +807,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     return .fail
                 }
                 
+                if let actionButtonsNode = strongSelf.actionButtonsNode {
+                    if let _ = actionButtonsNode.hitTest(strongSelf.view.convert(point, to: actionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
+                
                 if let reactionButtonsNode = strongSelf.reactionButtonsNode {
                     if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
                         return .fail
@@ -1181,6 +1187,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let isAd = item.content.firstMessage.adAttribute != nil
         if isAd {
             needsShareButton = false
+        }
+        for attribute in item.content.firstMessage.attributes {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
+                needsShareButton = false
+            }
         }
         
         var tmpWidth: CGFloat
@@ -3435,7 +3446,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if !self.backgroundNode.frame.contains(point) {
-            if self.actionButtonsNode == nil || !self.actionButtonsNode!.frame.contains(point) {
+            if let actionButtonsNode = self.actionButtonsNode, let result = actionButtonsNode.hitTest(self.view.convert(point, to: actionButtonsNode.view), with: event) {
+                return result
             }
         }
         

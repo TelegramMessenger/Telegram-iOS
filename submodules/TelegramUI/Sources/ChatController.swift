@@ -1008,6 +1008,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if !reaction.isEnabled {
                                 continue
                             }
+                            guard let centerAnimation = reaction.centerAnimation else {
+                                continue
+                            }
+                            guard let aroundAnimation = reaction.aroundAnimation else {
+                                continue
+                            }
                             
                             switch allowedReactions {
                             case let .set(set):
@@ -1021,8 +1027,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
-                                listAnimation: reaction.activateAnimation,
-                                applicationAnimation: reaction.effectAnimation
+                                listAnimation: centerAnimation,
+                                applicationAnimation: aroundAnimation
                             ))
                         }
                     }
@@ -1038,6 +1044,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         var updatedReaction: String? = value.reaction.rawValue
+                        var isFirst = true
                         for attribute in topMessage.attributes {
                             if let attribute = attribute as? ReactionsMessageAttribute {
                                 for reaction in attribute.reactions {
@@ -1045,6 +1052,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         if reaction.isSelected {
                                             updatedReaction = nil
                                         }
+                                        isFirst = false
                                     }
                                 }
                             } else if let attribute = attribute as? PendingReactionsMessageAttribute {
@@ -1065,7 +1073,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             if let itemNode = itemNode, let targetView = itemNode.targetReactionView(value: updatedReaction) {
                                                 strongSelf.chatDisplayNode.messageTransitionNode.addMessageContextController(messageId: item.message.id, contextController: controller)
                                                 
-                                                controller.dismissWithReaction(value: updatedReaction, targetView: targetView, hideNode: true, completion: { [weak itemNode, weak targetView] in
+                                                var hideTargetButton: UIView?
+                                                if isFirst {
+                                                    hideTargetButton = targetView.superview
+                                                }
+                                                
+                                                controller.dismissWithReaction(value: updatedReaction, targetView: targetView, hideNode: true, animateTargetContainer: hideTargetButton, completion: { [weak itemNode, weak targetView] in
                                                     guard let strongSelf = self, let itemNode = itemNode, let targetView = targetView else {
                                                         return
                                                     }
@@ -1242,6 +1255,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             if let itemNode = itemNode, let item = itemNode.item, let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
                                 for reaction in availableReactions.reactions {
+                                    guard let centerAnimation = reaction.centerAnimation else {
+                                        continue
+                                    }
+                                    guard let aroundAnimation = reaction.aroundAnimation else {
+                                        continue
+                                    }
+                                    
                                     if reaction.value == updatedReaction {
                                         let standaloneReactionAnimation = StandaloneReactionAnimation()
                                         
@@ -1256,8 +1276,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
                                                 appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
-                                                listAnimation: reaction.activateAnimation,
-                                                applicationAnimation: reaction.effectAnimation
+                                                listAnimation: centerAnimation,
+                                                applicationAnimation: aroundAnimation
                                             ),
                                             targetView: targetView,
                                             hideNode: true,

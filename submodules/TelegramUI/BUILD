@@ -251,6 +251,7 @@ swift_library(
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/Components/ReactionListContextMenuContent:ReactionListContextMenuContent",
+        "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
         "//submodules/Translate:Translate",
         "//submodules/TabBarUI:TabBarUI",
     ] + select({

@@ -10,6 +10,7 @@ import AccountContext
 import AppBundle
 import ReactionButtonListComponent
 import WebPBinding
+import ReactionImageComponent
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -73,14 +74,14 @@ private final class StatusReactionNode: ASDisplayNode {
             let defaultImageSize = CGSize(width: 17.0, height: 17.0)
             let imageSize: CGSize
             if let file = file {
-                self.iconImageDisposable.set((context.account.postbox.mediaBox.resourceData(file.resource)
+                self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0))
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                        if let image = WebP.convert(fromWebP: dataValue) {
+                    if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                        if let image = UIImage(data: dataValue) {
                             strongSelf.iconView.image = image
                         }
                     }
@@ -667,12 +668,12 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             strongSelf.reactionSelected?(value)
                         },
                         reactions: arguments.reactions.map { reaction in
-                            var iconFile: TelegramMediaFile?
+                            var centerAnimation: TelegramMediaFile?
                             
                             if let availableReactions = arguments.availableReactions {
                                 for availableReaction in availableReactions.reactions {
                                     if availableReaction.value == reaction.value {
-                                        iconFile = availableReaction.staticIcon
+                                        centerAnimation = availableReaction.centerAnimation
                                         break
                                     }
                                 }
@@ -691,7 +692,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             return ReactionButtonsAsyncLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
-                                    iconFile: iconFile
+                                    centerAnimation: centerAnimation
                                 ),
                                 count: Int(reaction.count),
                                 peers: peers,
@@ -1027,18 +1028,18 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 }
                                 validReactions.insert(reaction.value)
                                 
-                                var iconFile: TelegramMediaFile?
+                                var centerAnimation: TelegramMediaFile?
                                 
                                 if let availableReactions = arguments.availableReactions {
                                     for availableReaction in availableReactions.reactions {
                                         if availableReaction.value == reaction.value {
-                                            iconFile = availableReaction.staticIcon
+                                            centerAnimation = availableReaction.centerAnimation
                                             break
                                         }
                                     }
                                 }
                                 
-                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: iconFile, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
+                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: centerAnimation, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
                                 if node.supernode == nil {
                                     strongSelf.addSubnode(node)
                                     if animation.isAnimated {

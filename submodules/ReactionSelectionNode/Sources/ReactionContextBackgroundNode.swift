@@ -150,32 +150,30 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         
         let contentBounds = backgroundFrame.insetBy(dx: -10.0, dy: -10.0).union(largeCircleFrame).union(smallCircleFrame)
         
-        transition.updateFrame(layer: self.backgroundLayer, frame: backgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY))
-        transition.updateFrame(layer: self.largeCircleLayer, frame: largeCircleFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY))
-        transition.updateFrame(layer: self.smallCircleLayer, frame: smallCircleFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY))
+        transition.updateFrame(layer: self.backgroundLayer, frame: backgroundFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
+        transition.updateFrame(layer: self.largeCircleLayer, frame: largeCircleFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
+        transition.updateFrame(layer: self.smallCircleLayer, frame: smallCircleFrame.offsetBy(dx: -contentBounds.minX, dy: -contentBounds.minY), beginWithCurrentState: true)
         
-        transition.updateFrame(layer: self.backgroundShadowLayer, frame: backgroundFrame.insetBy(dx: -shadowInset, dy: -shadowInset))
-        transition.updateFrame(layer: self.largeCircleShadowLayer, frame: largeCircleFrame.insetBy(dx: -shadowInset, dy: -shadowInset))
-        transition.updateFrame(layer: self.smallCircleShadowLayer, frame: smallCircleFrame.insetBy(dx: -shadowInset, dy: -shadowInset))
+        transition.updateFrame(layer: self.backgroundShadowLayer, frame: backgroundFrame.insetBy(dx: -shadowInset, dy: -shadowInset), beginWithCurrentState: true)
+        transition.updateFrame(layer: self.largeCircleShadowLayer, frame: largeCircleFrame.insetBy(dx: -shadowInset, dy: -shadowInset), beginWithCurrentState: true)
+        transition.updateFrame(layer: self.smallCircleShadowLayer, frame: smallCircleFrame.insetBy(dx: -shadowInset, dy: -shadowInset), beginWithCurrentState: true)
         
-        transition.updateFrame(node: self.backgroundNode, frame: contentBounds)
+        transition.updateFrame(node: self.backgroundNode, frame: contentBounds, beginWithCurrentState: true)
         self.backgroundNode.update(size: contentBounds.size, transition: transition)
     }
     
     func animateIn() {
-        let smallCircleDuration: Double = 0.35
-        let largeCircleDuration: Double = 0.35
-        let largeCircleDelay: Double = 0.13
-        let mainCircleDuration: Double = 0.25
-        let mainCircleDelay: Double = 0.16
+        let smallCircleDuration: Double = 0.4
+        let largeCircleDuration: Double = 0.4
+        let largeCircleDelay: Double = 0.0
+        let mainCircleDuration: Double = 0.3
+        let mainCircleDelay: Double = 0.0
         
-        //self.smallCircleLayer.animate(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: smallCircleDuration)
         self.smallCircleLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: smallCircleDuration, delay: 0.0)
         
         self.largeCircleLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.01, delay: largeCircleDelay)
         self.largeCircleLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
         self.largeCircleShadowLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: largeCircleDuration, delay: largeCircleDelay)
-        //self.largeCircleLayer.animate(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: largeCircleDuration)
         
         self.backgroundLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.01, delay: mainCircleDelay)
         self.backgroundLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: mainCircleDuration, delay: mainCircleDelay)
@@ -183,9 +181,9 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
     }
     
     func animateInFromAnchorRect(size: CGSize, sourceBackgroundFrame: CGRect) {
-        let springDuration: Double = 0.2
+        let springDuration: Double = 0.3
         let springDamping: CGFloat = 104.0
-        let springDelay: Double = 0.25
+        let springDelay: Double = 0.05
         let shadowInset: CGFloat = 15.0
         
         let contentBounds = self.backgroundNode.frame

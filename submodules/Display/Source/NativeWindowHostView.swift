@@ -234,6 +234,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var updateToInterfaceOrientation: ((UIInterfaceOrientation) -> Void)?
     var presentController: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentControllerInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
+    var addGlobalPortalHostViewImpl: ((PortalSourceView) -> Void)?
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
@@ -321,6 +322,10 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.presentControllerInGlobalOverlay?(controller)
     }
     
+    func addGlobalPortalHostView(sourceView: PortalSourceView) {
+        self.addGlobalPortalHostViewImpl?(sourceView)
+    }
+    
     func presentNative(_ controller: UIViewController) {
         self.presentNativeImpl?(controller)
     }
@@ -394,6 +399,10 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     
     window.presentControllerInGlobalOverlay = { [weak hostView] controller in
         hostView?.presentInGlobalOverlay?(controller)
+    }
+    
+    window.addGlobalPortalHostViewImpl = { [weak hostView] sourceView in
+        hostView?.addGlobalPortalHostViewImpl?(sourceView)
     }
     
     window.presentNativeImpl = { [weak hostView] controller in

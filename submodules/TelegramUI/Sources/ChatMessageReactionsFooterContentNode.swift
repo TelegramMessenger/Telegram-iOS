@@ -140,12 +140,12 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 strongSelf.reactionSelected?(value)
             },
             reactions: reactions.reactions.map { reaction in
-                var iconFile: TelegramMediaFile?
+                var centerAnimation: TelegramMediaFile?
                 
                 if let availableReactions = availableReactions {
                     for availableReaction in availableReactions.reactions {
                         if availableReaction.value == reaction.value {
-                            iconFile = availableReaction.staticIcon
+                            centerAnimation = availableReaction.centerAnimation
                             break
                         }
                     }
@@ -170,7 +170,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 return ReactionButtonsAsyncLayoutContainer.Reaction(
                     reaction: ReactionButtonComponent.Reaction(
                         value: reaction.value,
-                        iconFile: iconFile
+                        centerAnimation: centerAnimation
                     ),
                     count: Int(reaction.count),
                     peers: peers,

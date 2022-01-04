@@ -19,6 +19,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/StickerResources:StickerResources",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/Components/ReactionButtonListComponent:ReactionButtonListComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import WebPBinding
+import ReactionImageComponent
 
 private final class QuickReactionSetupControllerArguments {
     let context: AccountContext
