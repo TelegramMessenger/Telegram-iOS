@@ -16,13 +16,16 @@ import ReactionImageComponent
 private final class QuickReactionSetupControllerArguments {
     let context: AccountContext
     let selectItem: (String) -> Void
+    let toggleReaction: () -> Void
     
     init(
         context: AccountContext,
-        selectItem: @escaping (String) -> Void
+        selectItem: @escaping (String) -> Void,
+        toggleReaction: @escaping () -> Void
     ) {
         self.context = context
         self.selectItem = selectItem
+        self.toggleReaction = toggleReaction
     }
 }
 
@@ -141,7 +144,10 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
                 dateTimeFormat: dateTimeFormat,
                 nameDisplayOrder: nameDisplayOrder,
                 availableReactions: availableReactions,
-                reaction: reaction
+                reaction: reaction,
+                toggleReaction: {
+                    arguments.toggleReaction()
+                }
             )
         case let .demoDescription(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -167,13 +173,15 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
 }
 
 private struct QuickReactionSetupControllerState: Equatable {
+    var hasReaction: Bool = false
 }
 
 private func quickReactionSetupControllerEntries(
     presentationData: PresentationData,
     availableReactions: AvailableReactions?,
     images: [String: UIImage],
-    reactionSettings: ReactionSettings
+    reactionSettings: ReactionSettings,
+    state: QuickReactionSetupControllerState
 ) -> [QuickReactionSetupControllerEntry] {
     var entries: [QuickReactionSetupControllerEntry] = []
     
@@ -186,7 +194,7 @@ private func quickReactionSetupControllerEntries(
             dateTimeFormat: presentationData.dateTimeFormat,
             nameDisplayOrder: presentationData.nameDisplayOrder,
             availableReactions: availableReactions,
-            reaction: reactionSettings.quickReaction
+            reaction: state.hasReaction ? reactionSettings.quickReaction : nil
         ))
         entries.append(.demoDescription(presentationData.strings.Settings_QuickReactionSetup_DemoInfo))
         
@@ -224,14 +232,24 @@ public func quickReactionSetupController(
     var dismissImpl: (() -> Void)?
     let _ = dismissImpl
     
-    let _ = updateState
-    
     let actionsDisposable = DisposableSet()
     
     let arguments = QuickReactionSetupControllerArguments(
         context: context,
-        selectItem: { reaction in            
+        selectItem: { reaction in
+            updateState { state in
+                var state = state
+                state.hasReaction = false
+                return state
+            }
             let _ = context.engine.stickers.updateQuickReaction(reaction: reaction).start()
+        },
+        toggleReaction: {
+            updateState { state in
+                var state = state
+                state.hasReaction = !state.hasReaction
+                return state
+            }
         }
     )
     
@@ -297,14 +315,15 @@ public func quickReactionSetupController(
         images
     )
     |> deliverOnMainQueue
-    |> map { presentationData, _, availableReactions, settings, images -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, availableReactions, settings, images -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let title: String = presentationData.strings.Settings_QuickReactionSetup_Title
         
         let entries = quickReactionSetupControllerEntries(
             presentationData: presentationData,
             availableReactions: availableReactions,
             images: images,
-            reactionSettings: settings
+            reactionSettings: settings,
+            state: state
         )
         
         let controllerState = ItemListControllerState(

@@ -2568,6 +2568,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.forEachVisibleItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let updatedReaction = newIncomingReactions[item.content.firstMessage.id], let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
                             for reaction in availableReactions.reactions {
+                                guard let centerAnimation = reaction.centerAnimation else {
+                                    continue
+                                }
+                                guard let aroundAnimation = reaction.aroundAnimation else {
+                                    continue
+                                }
+                                
                                 if reaction.value == updatedReaction {
                                     let standaloneReactionAnimation = StandaloneReactionAnimation()
                                     
@@ -2582,8 +2589,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
                                             appearAnimation: reaction.appearAnimation,
                                             stillAnimation: reaction.selectAnimation,
-                                            listAnimation: reaction.activateAnimation,
-                                            applicationAnimation: reaction.effectAnimation
+                                            listAnimation: centerAnimation,
+                                            applicationAnimation: aroundAnimation
                                         ),
                                         targetView: targetView,
                                         hideNode: true,

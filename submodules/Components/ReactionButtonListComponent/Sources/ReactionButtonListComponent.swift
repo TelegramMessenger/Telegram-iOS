@@ -13,7 +13,7 @@ import AnimatedAvatarSetNode
 import ReactionImageComponent
 
 public final class ReactionIconView: PortalSourceView {
-    fileprivate let imageView: UIImageView
+    public let imageView: UIImageView
     
     override public init(frame: CGRect) {
         self.imageView = UIImageView()
@@ -23,11 +23,11 @@ public final class ReactionIconView: PortalSourceView {
         self.addSubview(self.imageView)
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: size))
     }
 }
@@ -42,7 +42,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         }
         
         struct Counter: Equatable {
-            var frame: CGRect
             var components: [CounterLayout.Component]
         }
         
@@ -122,7 +121,19 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                 return
             }
             
-            let image = generateImage(layout.baseSize, rotatedContext: { size, context in
+            var totalComponentWidth: CGFloat = 0.0
+            if let counter = layout.counter {
+                for component in counter.components {
+                    totalComponentWidth += component.bounds.width
+                }
+            }
+            
+            var imageWidth = layout.baseSize.width
+            while imageWidth < layout.baseSize.height / 2.0 + 1.0 + totalComponentWidth + 8.0 {
+                imageWidth += 2.0
+            }
+            
+            let image = generateImage(CGSize(width: imageWidth, height: layout.baseSize.height), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 UIGraphicsPushContext(context)
                 
@@ -143,15 +154,18 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
                 context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
                 
+                #if DEBUG && false
+                context.setFillColor(UIColor.blue.withAlphaComponent(0.5).cgColor)
+                context.fill(CGRect(origin: CGPoint(x: layout.baseSize.height / 2.0 + 1.0, y: 0.0), size: CGSize(width: size.width - (layout.baseSize.height / 2.0 + 1.0 + 8.0), height: size.height)))
+                #endif
+                
                 if let counter = layout.counter {
-                    context.setBlendMode(foregroundColor.alpha < 1.0 ? .copy : .normal)
+                    let isForegroundTransparent = foregroundColor.alpha < 1.0
+                    context.setBlendMode(isForegroundTransparent ? .copy : .normal)
                     
-                    var totalComponentWidth: CGFloat = 0.0
-                    for component in counter.components {
-                        totalComponentWidth += component.bounds.width
-                    }
+                    //let textAreaWidth = size.width - (layout.baseSize.height / 2.0 + 1.0 + 8.0)
                     
-                    var textOrigin: CGFloat = size.width - counter.frame.width - 8.0 + floorToScreenPixels((counter.frame.width - totalComponentWidth) / 2.0)
+                    var textOrigin: CGFloat = layout.baseSize.height / 2.0 + 1.0
                     textOrigin = max(textOrigin, layout.baseSize.height / 2.0 + UIScreenPixel)
                     
                     var rightTextOrigin = textOrigin + totalComponentWidth
@@ -186,15 +200,28 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                                         previousComponentVerticalOffset = -previousComponentVerticalOffset
                                     }
                                     
-                                    let componentOrigin = rightTextOrigin - previousComponent.bounds.width
-                                    let string = NSAttributedString(string: previousComponent.string, font: Font.medium(11.0), textColor: foregroundColor.mixedWith(backgroundColor, alpha: 1.0 - previousComponentAlpha))
+                                    var componentOrigin = rightTextOrigin - previousComponent.bounds.width
+                                    componentOrigin = max(componentOrigin, layout.baseSize.height / 2.0 + UIScreenPixel)
+                                    let previousColor: UIColor
+                                    if isForegroundTransparent {
+                                        previousColor = foregroundColor.mixedWith(backgroundColor, alpha: 1.0 - previousComponentAlpha)
+                                    } else {
+                                        previousColor = foregroundColor.withMultipliedAlpha(previousComponentAlpha)
+                                    }
+                                    let string = NSAttributedString(string: previousComponent.string, font: Font.medium(11.0), textColor: previousColor)
                                     string.draw(at: previousComponent.bounds.origin.offsetBy(dx: componentOrigin, dy: floorToScreenPixels(size.height - previousComponent.bounds.height) / 2.0 + previousComponentVerticalOffset))
                                 }
                             }
                         }
                         
                         let componentOrigin = rightTextOrigin - component.bounds.width
-                        let string = NSAttributedString(string: component.string, font: Font.medium(11.0), textColor: foregroundColor.mixedWith(backgroundColor, alpha: 1.0 - componentAlpha))
+                        let currentColor: UIColor
+                        if isForegroundTransparent {
+                            currentColor = foregroundColor.mixedWith(backgroundColor, alpha: 1.0 - componentAlpha)
+                        } else {
+                            currentColor = foregroundColor.withMultipliedAlpha(componentAlpha)
+                        }
+                        let string = NSAttributedString(string: component.string, font: Font.medium(11.0), textColor: currentColor)
                         string.draw(at: component.bounds.origin.offsetBy(dx: componentOrigin, dy: floorToScreenPixels(size.height - component.bounds.height) / 2.0 + componentVerticalOffset))
                         
                         rightTextOrigin -= component.bounds.width
@@ -266,7 +293,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                     
                     resultComponents.append(Component(string: component, bounds: boundingRect))
                     
-                    if spec.stringComponents.count <= 2 {
+                    if i == spec.stringComponents.count - 1 && component.count == 1 && component[component.startIndex].isNumber {
                         resultSize.width += CounterLayout.maxDigitWidth
                     } else {
                         resultSize.width += boundingRect.width
@@ -296,9 +323,9 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         let sideInsets: CGFloat
         
         let imageFrame: CGRect
+        let imageSize: CGSize
         
         let counterLayout: CounterLayout?
-        let counterFrame: CGRect?
         
         let backgroundLayout: ContainerButtonNode.Layout
         
@@ -309,8 +336,8 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             backgroundColor: UInt32,
             sideInsets: CGFloat,
             imageFrame: CGRect,
+            imageSize: CGSize,
             counterLayout: CounterLayout?,
-            counterFrame: CGRect?,
             backgroundLayout: ContainerButtonNode.Layout,
             size: CGSize
         ) {
@@ -318,18 +345,19 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             self.backgroundColor = backgroundColor
             self.sideInsets = sideInsets
             self.imageFrame = imageFrame
+            self.imageSize = imageSize
             self.counterLayout = counterLayout
-            self.counterFrame = counterFrame
             self.backgroundLayout = backgroundLayout
             self.size = size
         }
         
         static func calculate(spec: Spec, currentLayout: Layout?) -> Layout {
-            let sideInsets: CGFloat = 8.0
+            let sideInsets: CGFloat = 11.0
             let height: CGFloat = 30.0
-            let spacing: CGFloat = 4.0
+            let spacing: CGFloat = 2.0
             
-            let defaultImageSize = CGSize(width: 26.0, height: 26.0)
+            let boundingImageSize = CGSize(width: 20.0, height: 20.0)
+            let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
             let imageSize: CGSize
             if let file = spec.component.reaction.centerAnimation {
                 imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
@@ -341,15 +369,20 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
             for character in countString(Int64(spec.component.count)) {
                 counterComponents.append(String(character))
             }
+            #if DEBUG && false
+            counterComponents.removeAll()
+            for character in "42" {
+                counterComponents.append(String(character))
+            }
+            #endif
             
             let backgroundColor = spec.component.isSelected ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground
             
-            let imageFrame = CGRect(origin: CGPoint(x: sideInsets, y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
+            let imageFrame = CGRect(origin: CGPoint(x: sideInsets + floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
             
             var counterLayout: CounterLayout?
-            var counterFrame: CGRect?
             
-            var size = CGSize(width: imageSize.width + sideInsets * 2.0, height: height)
+            var size = CGSize(width: boundingImageSize.width + sideInsets * 2.0, height: height)
             if !spec.component.avatarPeers.isEmpty {
                 size.width += 4.0 + 24.0
                 if spec.component.avatarPeers.count > 1 {
@@ -372,7 +405,6 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                 }
                 counterLayout = counterValue
                 size.width += spacing + counterValue.size.width
-                counterFrame = CGRect(origin: CGPoint(x: size.width - sideInsets - counterValue.size.width, y: floorToScreenPixels((height - counterValue.size.height) / 2.0)), size: counterValue.size)
             }
             
             let backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
@@ -382,15 +414,14 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                 extractedForeground: spec.component.colors.extractedForeground
             )
             var backgroundCounter: ReactionButtonAsyncNode.ContainerButtonNode.Counter?
-            if let counterLayout = counterLayout, let counterFrame = counterFrame {
+            if let counterLayout = counterLayout {
                 backgroundCounter = ReactionButtonAsyncNode.ContainerButtonNode.Counter(
-                    frame: counterFrame,
                     components: counterLayout.components
                 )
             }
             let backgroundLayout = ContainerButtonNode.Layout(
                 colors: backgroundColors,
-                baseSize: CGSize(width: height + 18.0, height: height),
+                baseSize: CGSize(width: height + 2.0, height: height),
                 counter: backgroundCounter
             )
             
@@ -399,8 +430,8 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                 backgroundColor: backgroundColor,
                 sideInsets: sideInsets,
                 imageFrame: imageFrame,
+                imageSize: boundingImageSize,
                 counterLayout: counterLayout,
-                counterFrame: counterFrame,
                 backgroundLayout: backgroundLayout,
                 size: size
             )
@@ -492,7 +523,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
         
         if self.layout?.spec.component.reaction != layout.spec.component.reaction {
             if let file = layout.spec.component.reaction.centerAnimation {
-                self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0))
+                self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 64.0 * UIScreenScale, height: 64.0 * UIScreenScale))
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     guard let strongSelf = self else {
                         return
@@ -526,7 +557,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                 animation: animation,
                 synchronousLoad: false
             )
-            animation.animator.updateFrame(layer: avatarsView.layer, frame: CGRect(origin: CGPoint(x: layout.imageFrame.maxX + 4.0, y: floorToScreenPixels((layout.size.height - avatarsSize.height) / 2.0)), size: CGSize(width: avatarsSize.width, height: avatarsSize.height)), completion: nil)
+            animation.animator.updateFrame(layer: avatarsView.layer, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(layout.imageFrame.midX + layout.imageSize.width / 2.0) + 4.0, y: floorToScreenPixels((layout.size.height - avatarsSize.height) / 2.0)), size: CGSize(width: avatarsSize.width, height: avatarsSize.height)), completion: nil)
         } else if let avatarsView = self.avatarsView {
             self.avatarsView = nil
             if animation.isAnimated {

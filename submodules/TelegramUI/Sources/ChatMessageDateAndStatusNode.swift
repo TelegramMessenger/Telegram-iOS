@@ -47,7 +47,7 @@ private let reactionCountFont = Font.semibold(11.0)
 private let reactionFont = Font.regular(12.0)
 
 private final class StatusReactionNode: ASDisplayNode {
-    let iconView: UIImageView
+    let iconView: ReactionIconView
     
     private let iconImageDisposable = MetaDisposable()
     
@@ -56,7 +56,7 @@ private final class StatusReactionNode: ASDisplayNode {
     private var isSelected: Bool?
     
     override init() {
-        self.iconView = UIImageView()
+        self.iconView = ReactionIconView()
         
         super.init()
         
@@ -71,7 +71,8 @@ private final class StatusReactionNode: ASDisplayNode {
         if self.value != value {
             self.value = value
             
-            let defaultImageSize = CGSize(width: 17.0, height: 17.0)
+            let boundingImageSize = CGSize(width: 17.0, height: 17.0)
+            let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
             let imageSize: CGSize
             if let file = file {
                 self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0))
@@ -82,7 +83,7 @@ private final class StatusReactionNode: ASDisplayNode {
                     
                     if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                         if let image = UIImage(data: dataValue) {
-                            strongSelf.iconView.image = image
+                            strongSelf.iconView.imageView.image = image
                         }
                     }
                 }))
@@ -91,7 +92,9 @@ private final class StatusReactionNode: ASDisplayNode {
                 imageSize = defaultImageSize
             }
             
-            self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((defaultImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((defaultImageSize.height - imageSize.height) / 2.0)), size: imageSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - imageSize.height) / 2.0)), size: imageSize)
+            self.iconView.frame = iconFrame
+            self.iconView.update(size: iconFrame.size, transition: .immediate)
         }
     }
 }
