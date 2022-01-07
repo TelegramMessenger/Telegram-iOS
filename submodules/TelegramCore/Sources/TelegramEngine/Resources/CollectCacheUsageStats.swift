@@ -290,6 +290,6 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
     }
 }
 
-func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<MediaResourceId>) -> Signal<Void, NoError> {
+func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
     return account.postbox.mediaBox.removeCachedResources(mediaResourceIds)
 }

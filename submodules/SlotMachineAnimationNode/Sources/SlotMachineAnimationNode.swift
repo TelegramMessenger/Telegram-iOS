@@ -246,7 +246,7 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
         }
     }
     
-    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
 }
 
@@ -352,6 +352,6 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         self.animationNode.frame = self.bounds
     }
     
-    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
 }

@@ -79,7 +79,7 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
     return formContext.generateImage()!
 }
 
-public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false) -> UIImage {
+public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
     let topLeftRadius: CGFloat
     let topRightRadius: CGFloat
     let bottomLeftRadius: CGFloat
@@ -346,6 +346,12 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             if !onlyOutline {
                 context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: formImage.cgImage!)
                 context.fill(CGRect(origin: CGPoint(), size: rawSize))
+                
+                if alwaysFillColor && drawWithClearColor {
+                    context.setBlendMode(.normal)
+                    context.setFillColor(fillColor.cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: rawSize))
+                }
             } else {
                 context.setFillColor(strokeColor.cgColor)
                 context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: outlineImage.cgImage!)

@@ -142,7 +142,7 @@ public extension TelegramEngine {
             return _internal_collectCacheUsageStats(account: self.account, peerId: peerId, additionalCachePaths: additionalCachePaths, logFilesPath: logFilesPath)
         }
 
-        public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Void, NoError> {
+        public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
             return _internal_clearCachedMediaResources(account: self.account, mediaResourceIds: mediaResourceIds)
         }
 

@@ -279,7 +279,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             textColorValue = presentationData.theme.list.itemAccentColor
         }
         
-        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand, font: Font.medium(15.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
         let expandSize = self.expandNode.updateLayout(CGSize(width: width, height: 100.0))
         
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: Font.regular(14.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
@@ -341,7 +341,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: labelSize)
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: labelFrame.maxY + 3.0), size: textSize)
         
-        let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height - 1.0), size: expandSize)
+        let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height), size: expandSize)
         self.expandNode.frame = expandFrame
         self.expandButonNode.frame = expandFrame.insetBy(dx: -8.0, dy: -8.0)
         

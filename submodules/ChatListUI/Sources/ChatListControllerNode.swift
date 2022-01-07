@@ -1116,7 +1116,7 @@ final class ChatListControllerNode: ASDisplayNode {
         self.searchDisplayController?.updatePresentationData(presentationData)
         
         if let toolbarNode = self.toolbarNode {
-            toolbarNode.updateTheme(TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
+            toolbarNode.updateTheme(ToolbarTheme(rootControllerTheme: self.presentationData.theme))
         }
     }
     
@@ -1149,7 +1149,7 @@ final class ChatListControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
-                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
                     self?.toolbarActionSelected?(.left)
                 }, right: { [weak self] in
                     self?.toolbarActionSelected?(.right)
