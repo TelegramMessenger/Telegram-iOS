@@ -230,7 +230,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
             
-            if visibleBounds.intersects(baseItemFrame) {
+            if appearBounds.intersects(baseItemFrame) || (self.visibleItemNodes[i] != nil && visibleBounds.intersects(baseItemFrame)) {
                 validIndices.insert(i)
                 
                 var itemFrame = baseItemFrame
@@ -280,13 +280,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     itemNode.updateLayout(size: itemFrame.size, isExpanded: false, isPreviewing: isPreviewing, transition: transition)
                     
                     if animateIn {
-                        if !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion {
-                            if appearBounds.intersects(baseItemFrame) {
-                                itemNode.appear(animated: true)
-                            }
-                        } else {
-                            itemNode.appear(animated: false)
-                        }
+                        itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion)
                     }
                 }
             }
