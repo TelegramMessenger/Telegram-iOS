@@ -819,6 +819,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private let eventsNode: AnimatedStickerNodeDisplayEvents
     
     public var automaticallyLoadFirstFrame: Bool = false
+    public var automaticallyLoadLastFrame: Bool = false
     public var playToCompletionOnStop: Bool = false
     
     public var started: () -> Void = {}
@@ -993,25 +994,30 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private func updateIsPlaying() {
-        guard !self.autoplay else {
-            return
-        }
-        let isPlaying = self.visibility && self.isDisplaying
-        if self.isPlaying != isPlaying {
-            self.isPlaying = isPlaying
-            if isPlaying {
-                self.play()
-            } else{
-                self.pause()
+        if !self.autoplay {
+            let isPlaying = self.visibility && self.isDisplaying
+            if self.isPlaying != isPlaying {
+                self.isPlaying = isPlaying
+                if isPlaying {
+                    self.play()
+                } else{
+                    self.pause()
+                }
+                
+                self.isPlayingChanged(isPlaying)
             }
-            
-            self.isPlayingChanged(isPlaying)
         }
-        let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
-        if self.canDisplayFirstFrame != canDisplayFirstFrame {
-            self.canDisplayFirstFrame = canDisplayFirstFrame
-            if canDisplayFirstFrame {
-                self.play(firstFrame: true)
+        if self.automaticallyLoadLastFrame {
+            if self.isDisplaying {
+                self.seekTo(.end)
+            }
+        } else {
+            let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
+            if self.canDisplayFirstFrame != canDisplayFirstFrame {
+                self.canDisplayFirstFrame = canDisplayFirstFrame
+                if canDisplayFirstFrame {
+                    self.play(firstFrame: true)
+                }
             }
         }
     }

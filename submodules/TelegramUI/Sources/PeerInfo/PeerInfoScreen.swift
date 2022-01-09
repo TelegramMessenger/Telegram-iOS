@@ -5478,7 +5478,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return
         }
 
-        controller.present(ChatQrCodeScreen(context: self.context, peer: peer), in: .window(.root))
+        controller.present(ChatQrCodeScreen(context: self.context, subject: .peer(peer)), in: .window(.root))
     }
     
     fileprivate func openSettings(section: PeerInfoSettingsSection) {

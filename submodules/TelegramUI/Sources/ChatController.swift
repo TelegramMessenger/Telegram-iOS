@@ -1965,7 +1965,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, openMessageShareMenu: { [weak self] id in
             if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let _ = messages.first {
-                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData)
+                let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
+                shareController.openShareAsImage = { [weak self] messages in
+                    if let strongSelf = self {
+                        strongSelf.present(ChatQrCodeScreen(context: strongSelf.context, subject: .messages(messages)), in: .window(.root))
+                    }
+                }
                 shareController.dismissed = { [weak self] shared in
                     if shared {
                         self?.commitPurposefulAction()

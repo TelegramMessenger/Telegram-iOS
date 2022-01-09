@@ -1316,7 +1316,7 @@ private let qrIconImage: UIImage = {
     })!
 }()
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false, message: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1568,7 +1568,9 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     }
                 }
                 
-                if qr {
+                if message {
+                    
+                } else if qr {
                     if let image = qrIconImage.cgImage {
                         c.draw(image, in: CGRect(x: floor((drawingRect.width - 36.0) / 2.0), y: floor((drawingRect.height - 36.0) / 2.0), width: 36.0, height: 36.0))
                     }
