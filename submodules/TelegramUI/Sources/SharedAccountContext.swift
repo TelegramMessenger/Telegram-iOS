@@ -1419,7 +1419,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController {
-        return ChatQrCodeScreen(context: context, peer: peer)
+        return ChatQrCodeScreen(context: context, subject: .peer(peer))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {

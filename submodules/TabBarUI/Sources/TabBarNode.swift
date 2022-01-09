@@ -110,7 +110,8 @@ private final class TabBarItemNode: ASDisplayNode {
         self.animationContainerNode = ASDisplayNode()
         
         self.animationNode = AnimatedStickerNode()
-        self.animationNode.automaticallyLoadFirstFrame = true
+        self.animationNode.autoplay = true
+        self.animationNode.automaticallyLoadLastFrame = true
         
         self.textImageNode = ASImageNode()
         self.textImageNode.isUserInteractionEnabled = false
@@ -150,17 +151,11 @@ private final class TabBarItemNode: ASDisplayNode {
                 return
             }
             transition.updateAlpha(node: strongSelf.imageNode, alpha: isExtracted ? 0.0 : 1.0)
+            transition.updateAlpha(node: strongSelf.animationNode, alpha: isExtracted ? 0.0 : 1.0)
             transition.updateAlpha(node: strongSelf.textImageNode, alpha: isExtracted ? 0.0 : 1.0)
             transition.updateAlpha(node: strongSelf.contextImageNode, alpha: isExtracted ? 1.0 : 0.0)
             transition.updateAlpha(node: strongSelf.contextTextImageNode, alpha: isExtracted ? 1.0 : 0.0)
         }
-        
-        /*let leftSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
-        leftSwipe.direction = .left
-        self.containerNode.view.addGestureRecognizer(leftSwipe)
-        let rightSwipe = UISwipeGestureRecognizer(target: self, action: #selector(self.swipeGesture(_:)))
-        rightSwipe.direction = .right
-        self.containerNode.view.addGestureRecognizer(rightSwipe)*/
     }
     
     override func didLoad() {

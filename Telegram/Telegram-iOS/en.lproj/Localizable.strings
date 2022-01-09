@@ -7231,3 +7231,11 @@ Sorry for the inconvenience.";
 
 "ClearCache.Progress" = "Clearing the Cache • %d%";
 "ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";
+
+"Share.ShareAsLink" = "Share as Link";
+"Share.ShareAsImage" = "Share as Image";
+
+"Share.MessagePreview" = "Message Preview";
+"Share.ShareMessage" = "Share Message";
+
+"Conversation.UserSendMessage" = "SEND MESSAGE";

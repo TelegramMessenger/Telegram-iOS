@@ -24,6 +24,9 @@ import WallpaperBackgroundNode
 import QrCode
 import AvatarNode
 import ShareController
+import TelegramStringFormatting
+import PhotoResources
+import TextFormat
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -56,6 +59,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
+    let message: Bool
     
     var stableId: Int {
         return index
@@ -87,6 +91,9 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.wallpaper != rhs.wallpaper {
             return false
         }
+        if lhs.message != rhs.message {
+            return false
+        }
         return true
     }
     
@@ -95,7 +102,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (String?) -> Void) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
+        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, message: self.message, action: action)
     }
 }
 
@@ -110,9 +117,10 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
+    let message: Bool
     let action: (String?) -> Void
     
-    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, nightMode: Bool, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
+    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, nightMode: Bool, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, message: Bool, action: @escaping (String?) -> Void) {
         self.context = context
         self.emoticon = emoticon
         self.emojiFile = emojiFile
@@ -122,6 +130,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         self.theme = theme
         self.strings = strings
         self.wallpaper = wallpaper
+        self.message = message
         self.action = action
     }
     
@@ -433,7 +442,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         
                     if updatedThemeReference || updatedWallpaper || updatedNightMode {
                         if let themeReference = item.themeReference {
-                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true, qr: true))
+                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true, qr: !item.message, message: item.message))
                             strongSelf.imageNode.backgroundColor = nil
                         }
                     }
@@ -548,6 +557,26 @@ final class ChatQrCodeScreen: ViewController {
     static let themeCrossfadeDuration: Double = 0.3
     static let themeCrossfadeDelay: Double = 0.05
     
+    enum Subject {
+        case peer(Peer)
+        case messages([Message])
+        
+        var fileName: String {
+            switch self {
+            case let .peer(peer):
+                return "t_me-\(peer.addressName ?? "")"
+            case let .messages(messages):
+                if let message = messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
+                    return "t_me-\(addressName)-\(message.id.id)"
+                } else if let message = messages.first {
+                    return "t_me-\(message.id.id)"
+                } else {
+                    return "telegram_message"
+                }
+            }
+        }
+    }
+    
     private var controllerNode: ChatQrCodeScreenNode {
         return self.displayNode as! ChatQrCodeScreenNode
     }
@@ -555,7 +584,7 @@ final class ChatQrCodeScreen: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peer: Peer
+    fileprivate let subject: ChatQrCodeScreen.Subject
     
     private var presentationData: PresentationData
     private var presentationThemePromise = Promise<PresentationTheme?>()
@@ -563,10 +592,10 @@ final class ChatQrCodeScreen: ViewController {
     
     var dismissed: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer) {
+    init(context: AccountContext, subject: ChatQrCodeScreen.Subject) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.peer = peer
+        self.subject = subject
                 
         super.init(navigationBarPresentationData: nil)
         
@@ -603,7 +632,7 @@ final class ChatQrCodeScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatQrCodeScreenNode(context: self.context, presentationData: self.presentationData, controller: self, peer: self.peer)
+        self.displayNode = ChatQrCodeScreenNode(context: self.context, presentationData: self.presentationData, controller: self)
         self.controllerNode.previewTheme = { [weak self] _, _, theme in
             self?.presentationThemePromise.set(.single(theme))
         }
@@ -686,7 +715,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     private var presentationData: PresentationData
     private weak var controller: ChatQrCodeScreen?
     
-    private let contentNode: QrContentNode
+    private let contentNode: ContentNode
     
     private let wrappingScrollNode: ASScrollNode
     private let contentContainerNode: ASDisplayNode
@@ -708,8 +737,6 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     private var themes: [TelegramTheme] = []
     
     let ready = Promise<Bool>()
-    
-    private let peer: Peer
     
     private var initiallySelectedEmoticon: String?
     private var selectedEmoticon: String? = nil {
@@ -736,10 +763,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen, peer: Peer) {
+    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen) {
         self.context = context
         self.controller = controller
-        self.peer = peer
         self.presentationData = presentationData
         
         self.wrappingScrollNode = ASScrollNode()
@@ -747,7 +773,13 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.wrappingScrollNode.view.delaysContentTouches = false
         self.wrappingScrollNode.view.canCancelContentTouches = true
                 
-        self.contentNode = QrContentNode(context: context, peer: peer, isStatic: false)
+        switch controller.subject {
+            case let .peer(peer):
+                self.contentNode = QrContentNode(context: context, peer: peer, isStatic: false)
+            case let .messages(messages):
+                self.contentNode = MessageContentNode(context: context, messages: messages)
+        }
+        
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
@@ -774,7 +806,14 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PeerInfo_QRCode_Title, font: Font.semibold(16.0), textColor: textColor)
+        let title: String
+        switch controller.subject {
+        case .peer:
+            title = self.presentationData.strings.PeerInfo_QRCode_Title
+        case .messages:
+            title = self.presentationData.strings.Share_MessagePreview
+        }
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(16.0), textColor: textColor)
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
@@ -787,7 +826,12 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.animationNode.isUserInteractionEnabled = false
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
-        self.doneButton.title = self.presentationData.strings.InviteLink_QRCode_Share
+        switch controller.subject {
+        case .peer:
+            self.doneButton.title = self.presentationData.strings.InviteLink_QRCode_Share
+        case .messages:
+            self.doneButton.title = self.presentationData.strings.Share_ShareMessage
+        }
         
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
@@ -818,13 +862,15 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.switchThemeButton.addTarget(self, action: #selector(self.switchThemePressed), forControlEvents: .touchUpInside)
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
+        
+        let fileName = controller.subject.fileName
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self {
                 strongSelf.doneButton.isUserInteractionEnabled = false
                 
                 strongSelf.contentNode.generateImage { [weak self] image in
                     if let strongSelf = self, let image = image, let jpgData = image.jpegData(compressionQuality: 0.9) {
-                        let tempFilePath = NSTemporaryDirectory() + "t_me-\(peer.addressName ?? "").jpg"
+                        let tempFilePath = NSTemporaryDirectory() + "\(fileName).jpg"
                         try? FileManager.default.removeItem(atPath: tempFilePath)
                         let tempFileUrl = URL(fileURLWithPath: tempFilePath)
                         try? jpgData.write(to: tempFileUrl)
@@ -872,18 +918,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let initiallySelectedEmoticon: Signal<String, NoError>
         let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> take(1)
-        if self.peer.id == self.context.account.peerId {
-            initiallySelectedEmoticon = sharedData
-            |> map { sharedData -> String in
-                let themeSettings: PresentationThemeSettings
-                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
-                    themeSettings = current
-                } else {
-                    themeSettings = PresentationThemeSettings.defaultSettings
-                }
-                return themeSettings.theme.emoticon ?? defaultEmoticon
-            }
-        } else {
+        if case let .peer(peer) = controller.subject, peer.id != self.context.account.peerId {
             let cachedData = self.context.account.postbox.transaction { transaction in
                 return transaction.getPeerCachedData(peerId: peer.id)
             }
@@ -907,8 +942,23 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                     return currentDefaultEmoticon
                 }
             }
+        } else {
+            initiallySelectedEmoticon = sharedData
+            |> map { sharedData -> String in
+                let themeSettings: PresentationThemeSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+                    themeSettings = current
+                } else {
+                    themeSettings = PresentationThemeSettings.defaultSettings
+                }
+                return themeSettings.theme.emoticon ?? defaultEmoticon
+            }
         }
         
+        var isMessage = false
+        if case .messages = controller.subject {
+            isMessage = true
+        }
         self.disposable.set(combineLatest(queue: Queue.mainQueue(), animatedEmojiStickers, initiallySelectedEmoticon, self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] animatedEmojiStickers, initiallySelectedEmoticon, themes, selectedEmoticon, isDarkAppearance in
             guard let strongSelf = self else {
                 return
@@ -933,15 +983,16 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             } else {
                 defaultWallpaper = nil
             }
-            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: defaultWallpaper))
+            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: defaultWallpaper, message: isMessage))
             for theme in themes {
                 guard let emoticon = theme.emoticon else {
                     continue
                 }
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil, message: isMessage))
             }
             
             let wallpaper: TelegramWallpaper
+            let previewTheme: PresentationTheme
             if selectedEmoticon == defaultEmoticon {
                 let presentationTheme = makeDefaultPresentationTheme(reference: isDarkAppearance ? .night : .dayClassic, serviceBackgroundColor: nil)
                 if isDarkAppearance {
@@ -949,10 +1000,13 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                 } else {
                     wallpaper = presentationTheme.chat.defaultWallpaper
                 }
+                previewTheme = presentationTheme
             } else if let theme = themes.first(where: { $0.emoticon == selectedEmoticon }), let presentationTheme = makePresentationTheme(cloudTheme: theme, dark: isDarkAppearance) {
                 wallpaper = presentationTheme.chat.defaultWallpaper
+                previewTheme = presentationTheme
             } else {
                 wallpaper = .color(0x000000)
+                previewTheme = defaultPresentationTheme
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
@@ -982,7 +1036,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             strongSelf.entries = entries
             strongSelf.themes = themes
             
-            strongSelf.contentNode.update(wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+            strongSelf.contentNode.update(theme: previewTheme, wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
             
             if isFirstTime {
                 for theme in themes {
@@ -1292,7 +1346,17 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     }
 }
 
-private class QrContentNode: ASDisplayNode {
+private protocol ContentNode: ASDisplayNode {
+    var containerNode: ASDisplayNode { get }
+    var wallpaperBackgroundNode: WallpaperBackgroundNode { get }
+    var isReady: Signal<Bool, NoError> { get }
+    
+    func generateImage(completion: @escaping (UIImage?) -> Void)
+    func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?)
+    func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition)
+}
+
+private class QrContentNode: ASDisplayNode, ContentNode {
     private let context: AccountContext
     private let peer: Peer
     private let isStatic: Bool
@@ -1312,7 +1376,7 @@ private class QrContentNode: ASDisplayNode {
     private let avatarNode: ImageNode
     private var qrCodeSize: Int?
         
-    private var currentParams: (TelegramWallpaper, Bool, String?)?
+    private var currentParams: (PresentationTheme, TelegramWallpaper, Bool, String?)?
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private let _ready = Promise<Bool>()
@@ -1425,7 +1489,7 @@ private class QrContentNode: ASDisplayNode {
     }
     
     func generateImage(completion: @escaping (UIImage?) -> Void) {
-        guard let (wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
+        guard let (theme, wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
             return
         }
         
@@ -1443,11 +1507,10 @@ private class QrContentNode: ASDisplayNode {
         prepare(view: copyNode.view, scale: scale)
         
         copyNode.updateLayout(size: size, topInset: 0.0, bottomInset: 0.0, transition: .immediate)
-        copyNode.update(wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+        copyNode.update(theme: theme, wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
         copyNode.frame = CGRect(x: -1000, y: -1000, width: size.width, height: size.height)
         
         self.addSubnode(copyNode)
-
         
         let _ = (copyNode.isReady
         |> take(1)
@@ -1473,8 +1536,8 @@ private class QrContentNode: ASDisplayNode {
         })
     }
         
-    func update(wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
-        self.currentParams = (wallpaper, isDarkAppearance, selectedEmoticon)
+    func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
+        self.currentParams = (theme, wallpaper, isDarkAppearance, selectedEmoticon)
         
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
         
@@ -1555,7 +1618,7 @@ private class QrContentNode: ASDisplayNode {
         let imageFrame = CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - imageSize.width) / 2.0), y: floor((codeBackgroundFrame.width - imageSize.height) / 2.0)), size: imageSize)
         transition.updateFrame(node: self.codeImageNode, frame: imageFrame)
 
-        let codeTextSize = self.codeTextNode.updateLayout(CGSize(width: codeBackgroundFrame.width - floor(imageFrame.minX * 1.5), height: codeBackgroundFrame.height))
+        let codeTextSize = self.codeTextNode.updateLayout(CGSize(width: codeBackgroundFrame.width - floor(imageFrame.minX * 1.2), height: codeBackgroundFrame.height))
         transition.updateFrame(node: self.codeTextNode, frame: CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - codeTextSize.width) / 2.0), y: imageFrame.maxY + floor((codeBackgroundHeight - imageFrame.maxY - codeTextSize.height) / 2.0) - 5.0), size: codeTextSize))
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarSize.width) / 2.0), y: codeBackgroundFrame.minY - floor(avatarSize.height * 0.7)), size: avatarSize))
@@ -1580,5 +1643,297 @@ private class QrContentNode: ASDisplayNode {
                 self.codeIconBackgroundNode.image = generateFilledCircleImage(diameter: backgroundSize.width, color: .black)
             }
         }
+    }
+}
+
+private class MessageContentNode: ASDisplayNode, ContentNode {
+    private let context: AccountContext
+    private let messages: [Message]
+    
+    fileprivate let containerNode: ASDisplayNode
+    fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
+    
+    private let backgroundNode: ASDisplayNode
+    private let backgroundImageNode: ASImageNode
+    private let avatarNode: ImageNode
+    private let titleNode: ImmediateTextNode
+    private let dateNode: ImmediateTextNode
+    private let imageNode: TransformImageNode
+    private let textNode: ImmediateTextNode
+    
+    private let linkBackgroundNode: ASDisplayNode
+    private var linkBackgroundContentNode: ASDisplayNode?
+    private var linkBackgroundDimNode: ASDisplayNode
+    private let linkIconNode: ASImageNode
+    private let linkTextNode: ImmediateTextNode
+    
+    private var currentParams: (PresentationTheme, TelegramWallpaper, Bool, String?)?
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    
+    private let _ready = Promise<Bool>()
+    var isReady: Signal<Bool, NoError> {
+        return self._ready.get()
+    }
+    
+    init(context: AccountContext, messages: [Message]) {
+        self.context = context
+        self.messages = messages
+        
+        self.containerNode = ASDisplayNode()
+        
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundImageNode = ASImageNode()
+        
+        self.avatarNode = ImageNode()
+        self.titleNode = ImmediateTextNode()
+        self.dateNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 0
+        self.imageNode = TransformImageNode()
+        
+        self.linkBackgroundNode = ASDisplayNode()
+        self.linkBackgroundNode.clipsToBounds = true
+        self.linkBackgroundNode.cornerRadius = 16.5
+        
+        self.linkBackgroundDimNode = ASDisplayNode()
+        self.linkBackgroundDimNode.alpha = 0.3
+        self.linkBackgroundDimNode.backgroundColor = .black
+        
+        self.linkIconNode = ASImageNode()
+        self.linkIconNode.displaysAsynchronously = false
+        self.linkIconNode.image = UIImage(bundleImageName: "Share/QrPlaneIcon")
+
+        self.linkTextNode = ImmediateTextNode()
+        self.linkTextNode.textAlignment = .center
+        
+        super.init()
+        
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.addSubnode(self.wallpaperBackgroundNode)
+        self.containerNode.addSubnode(self.linkBackgroundNode)
+        
+        self.containerNode.addSubnode(self.backgroundNode)
+        self.backgroundNode.addSubnode(self.backgroundImageNode)
+        self.backgroundNode.addSubnode(self.avatarNode)
+        self.backgroundNode.addSubnode(self.titleNode)
+        self.backgroundNode.addSubnode(self.dateNode)
+        self.backgroundNode.addSubnode(self.textNode)
+        self.backgroundNode.addSubnode(self.imageNode)
+        
+        self.linkBackgroundNode.addSubnode(self.linkBackgroundDimNode)
+        self.linkBackgroundNode.addSubnode(self.linkIconNode)
+        self.linkBackgroundNode.addSubnode(self.linkTextNode)
+      
+        self._ready.set(self.wallpaperBackgroundNode.isReady)
+        
+        if let message = messages.first, let peer = message.peers[message.id.peerId] {
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: context.account, peer: EnginePeer(peer), size: CGSize(width: 36.0, height: 36.0), font: avatarPlaceholderFont(size: 14.0), fullSize: true))
+        }
+    }
+    
+    func generateImage(completion: @escaping (UIImage?) -> Void) {
+        guard let (theme, wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
+            return
+        }
+        
+        let size = CGSize(width: 390.0, height: 844.0)
+        let scale: CGFloat = 3.0
+        
+        let copyNode = MessageContentNode(context: self.context, messages: self.messages)
+        
+        func prepare(view: UIView, scale: CGFloat) {
+            view.contentScaleFactor = scale
+            for subview in view.subviews {
+                prepare(view: subview, scale: scale)
+            }
+        }
+        prepare(view: copyNode.view, scale: scale)
+        
+        copyNode.updateLayout(size: size, topInset: 0.0, bottomInset: 0.0, transition: .immediate)
+        copyNode.update(theme: theme, wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+        copyNode.frame = CGRect(x: -1000, y: -1000, width: size.width, height: size.height)
+        
+        self.addSubnode(copyNode)
+
+        let _ = (copyNode.isReady
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak copyNode] _ in
+            Queue.mainQueue().after(0.1) {
+                if #available(iOS 10.0, *) {
+                    let format = UIGraphicsImageRendererFormat()
+                    format.scale = scale
+                    let renderer = UIGraphicsImageRenderer(size: size, format: format)
+                    let image = renderer.image { rendererContext in
+                        copyNode?.containerNode.layer.render(in: rendererContext.cgContext)
+                    }
+                    completion(image)
+                } else {
+                    UIGraphicsBeginImageContextWithOptions(size, true, scale)
+                    copyNode?.containerNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: true)
+                    let image = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+                    completion(image)
+                }
+                copyNode?.removeFromSupernode()
+            }
+        })
+    }
+        
+    func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
+        self.currentParams = (theme, wallpaper, isDarkAppearance, selectedEmoticon)
+        
+        self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
+        
+        self.linkBackgroundDimNode.alpha = isDarkAppearance ? 0.6 : 0.2
+        
+        if self.linkBackgroundContentNode == nil, let contentNode = self.wallpaperBackgroundNode.makeDimmedNode() {
+            contentNode.frame = CGRect(origin: CGPoint(x: -self.linkBackgroundNode.frame.minX, y: -self.linkBackgroundNode.frame.minY), size: self.wallpaperBackgroundNode.frame.size)
+            self.linkBackgroundContentNode = contentNode
+            self.linkBackgroundNode.insertSubnode(contentNode, at: 0)
+        }
+        
+        if let (size, topInset, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, topInset: topInset, bottomInset: bottomInset, transition: .immediate)
+        }
+    }
+
+    private var initialized = false
+    func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, topInset, bottomInset)
+        
+        guard let (theme, wallpaper, _, _) = self.currentParams else {
+            return
+        }
+        
+        let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: wallpaper, bubbleCorners: defaultPresentationData().chatBubbleCorners)
+        self.backgroundImageNode.image = graphics.chatMessageBackgroundIncomingImage
+        
+        let wasInitialized = self.initialized
+        self.initialized = true
+        
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        
+        let inset: CGFloat = 24.0
+        let contentInset: CGFloat = 16.0
+        
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let messageTheme = theme.chat.message.incoming
+        
+        let title: String
+        if let message = self.messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel {
+            title = EnginePeer(chatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        } else {
+            title = ""
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: messageTheme.primaryTextColor)
+        let titleSize = self.titleNode.updateLayout(size)
+        let titleFrame = CGRect(origin: CGPoint(x: 62.0, y: 14.0), size: titleSize)
+        self.titleNode.frame = titleFrame
+        
+        let dateString: String
+        if let message = self.messages.first {
+            dateString = stringForMediumDate(timestamp: message.timestamp, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+        } else {
+            dateString = ""
+        }
+        self.dateNode.attributedText = NSAttributedString(string: dateString, font: Font.regular(14.0), textColor: messageTheme.secondaryTextColor)
+        let dateSize = self.dateNode.updateLayout(size)
+        let dateFrame = CGRect(origin: CGPoint(x: 62.0, y: 35.0), size: dateSize)
+        self.dateNode.frame = dateFrame
+        
+        self.avatarNode.frame = CGRect(x: contentInset, y: 14.0, width: 36.0, height: 36.0)
+                
+        var mediaSize = CGSize()
+        if let message = self.messages.first {
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let representation = largestRepresentationForPhoto(image) {
+                    mediaSize = representation.dimensions.cgSize.aspectFitted(CGSize(width: size.width - inset * 2.0 - 5.0, height: size.width - inset * 2.0))
+                    if !wasInitialized {
+                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true, highQuality: true))
+                        let imageLayout = self.imageNode.asyncLayout()
+                        
+                        let arguments = TransformImageArguments(corners: ImageCorners(radius: 0.0), imageSize: mediaSize, boundingSize: mediaSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .black, custom: nil)
+                        let imageApply = imageLayout(arguments)
+                        imageApply()
+                    }
+                    
+                    self.imageNode.frame = CGRect(origin: CGPoint(x: 3.0, y: 60.0), size: mediaSize)
+                    mediaSize.height += 10.0
+                }
+            }
+        }
+        
+        if let message = messages.first {
+            let textFont = Font.regular(17.0)
+            let boldFont = Font.bold(17.0)
+            let italicFont = Font.italic(17.0)
+            let boldItalicFont = Font.semiboldItalic(17.0)
+            let fixedFont = Font.monospace(17.0)
+            let blockQuoteFont = textFont
+            
+            var entities: [MessageTextEntity]?
+            for attribute in message.attributes {
+                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                    entities = attribute.entities
+                }
+            }
+            
+            let attributedText: NSAttributedString
+            if let entities = entities {
+                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false)
+            } else if !message.text.isEmpty {
+                attributedText = NSAttributedString(string: message.text, font: textFont, textColor: messageTheme.primaryTextColor)
+            } else {
+                attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
+            }
+            
+            self.textNode.attributedText = attributedText
+        }
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - inset * 2.0 - contentInset * 2.0, height: size.height))
+        let textFrame = CGRect(origin: CGPoint(x: contentInset, y: 55.0 + mediaSize.height + 4.0), size: textSize)
+        self.textNode.frame = textFrame
+        
+        var contentHeight: CGFloat = 55.0 + 18.0
+        if !mediaSize.height.isZero {
+            contentHeight += mediaSize.height
+        }
+        if !textSize.height.isZero {
+            contentHeight += textSize.height
+        }
+        
+        let backgroundSize = CGSize(width: size.width - inset * 2.0, height: contentHeight)
+        let backgroundFrame = CGRect(origin: CGPoint(x: inset, y: max(20.0, floorToScreenPixels((size.height - bottomInset - backgroundSize.height) / 2.0))), size: backgroundSize)
+        self.backgroundNode.frame = backgroundFrame
+        self.backgroundImageNode.frame = CGRect(x: -5.0, y: 0.0, width: backgroundSize.width + 5.0, height: backgroundSize.height)
+        
+        let link: String
+        if let message = self.messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
+            link = "t.me/\(addressName)/\(message.id.id)"
+        } else {
+            link = ""
+        }
+        
+        self.linkTextNode.attributedText = NSAttributedString(string: link, font: Font.medium(17.0), textColor: .white)
+        let linkSize = self.linkTextNode.updateLayout(size)
+        
+        let linkBackgroundSize = CGSize(width: linkSize.width + 49.0, height: 33.0)
+        let linkBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - linkBackgroundSize.width) / 2.0), y: backgroundFrame.maxY + 10.0), size: linkBackgroundSize)
+        self.linkBackgroundNode.frame = linkBackgroundFrame
+        self.linkBackgroundDimNode.frame = CGRect(origin: CGPoint(), size: linkBackgroundSize)
+        
+        if let linkBackgroundContentNode = self.linkBackgroundContentNode {
+            linkBackgroundContentNode.frame = CGRect(origin: CGPoint(x: -self.linkBackgroundNode.frame.minX, y: -self.linkBackgroundNode.frame.minY), size: self.wallpaperBackgroundNode.frame.size)
+        }
+
+        self.linkIconNode.frame = CGRect(x: 2.0, y: -5.0, width: 42.0, height: 42.0)
+        self.linkTextNode.frame = CGRect(origin: CGPoint(x: 37.0, y: floorToScreenPixels((linkBackgroundSize.height - linkSize.height) / 2.0)), size: linkSize)
     }
 }
