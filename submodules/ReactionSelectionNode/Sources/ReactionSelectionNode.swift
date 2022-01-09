@@ -120,8 +120,7 @@ final class ReactionNode: ASDisplayNode {
         var animationFrame = CGRect(origin: CGPoint(x: floor((intrinsicSize.width - animationDisplaySize.width) / 2.0), y: floor((intrinsicSize.height - animationDisplaySize.height) / 2.0)), size: animationDisplaySize)
         animationFrame.origin.y = floor(animationFrame.origin.y + animationFrame.height * offsetFactor)
         
-        let expandedInset: CGFloat = floor(size.width / 32.0 * 60.0)
-        let expandedAnimationFrame = animationFrame.insetBy(dx: -expandedInset, dy: -expandedInset)
+        let expandedAnimationFrame = animationFrame
         
         if isExpanded, self.animationNode == nil {
             let animationNode = AnimatedStickerNode()
@@ -176,16 +175,19 @@ final class ReactionNode: ASDisplayNode {
                 }
                 
                 animationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.17, execute: {
+                    animationNode.visibility = true
+                })
             } else {
                 if let stillAnimationNode = self.stillAnimationNode {
                     self.stillAnimationNode = nil
                     stillAnimationNode.removeFromSupernode()
                 }
                 self.staticAnimationNode.isHidden = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.17, execute: {
+                
                 animationNode.visibility = true
-            })
+            }
         }
         
         if self.validSize != size {

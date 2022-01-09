@@ -840,6 +840,10 @@ public class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
+    override public func didLoad() {
+        super.didLoad()
+    }
+    
     public func attributesAtPoint(_ point: CGPoint, orNearest: Bool = false) -> (Int, [NSAttributedString.Key: Any])? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.attributesAtPoint(point, orNearest: orNearest)

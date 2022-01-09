@@ -605,6 +605,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.commitPurposefulAction()
             strongSelf.dismissAllTooltips()
             
+            strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+            
             var openMessageByAction = false
             var isLocation = false
             for media in message.media {

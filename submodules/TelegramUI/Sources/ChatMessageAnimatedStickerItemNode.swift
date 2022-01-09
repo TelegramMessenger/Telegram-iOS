@@ -373,9 +373,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if false, strongSelf.telegramFile == nil {
+                if strongSelf.telegramFile == nil {
                     if let animationNode = strongSelf.animationNode, animationNode.frame.contains(point) {
-                        return .waitForDoubleTap
+                        return .waitForSingleTap
                     }
                 }
             }
@@ -1516,6 +1516,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 } else if case .tap = gesture {
                     item.controllerInteraction.clickThroughMessage()
+                } else if case .doubleTap = gesture {
+                    if canAddMessageReactions(message: item.message) {
+                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                    }
                 }
             }
         default:

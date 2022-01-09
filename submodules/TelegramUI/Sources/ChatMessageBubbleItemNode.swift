@@ -858,7 +858,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 if !strongSelf.backgroundNode.frame.contains(point) {
-                    return .waitForSingleTap
+                    return .waitForDoubleTap
                 }
             }
             
@@ -1321,9 +1321,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var isItemEdited = false
         
         switch item.content {
-            case let .message(message, value, _, _, _):
+            case let .message(message, value, _, attributes, _):
                 read = value
                 isItemPinned = message.tags.contains(.pinned)
+                if attributes.isCentered {
+                    alignment = .center
+                }
             case let .group(messages):
                 read = messages[0].1
                 for message in messages {
@@ -3037,6 +3040,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 } else if case .tap = gesture {
                     item.controllerInteraction.clickThroughMessage()
+                } else if case .doubleTap = gesture {
+                    if canAddMessageReactions(message: item.message) {
+                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                    }
                 }
             }
         default:
