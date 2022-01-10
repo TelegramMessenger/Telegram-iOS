@@ -1,5 +1,7 @@
 #import <LegacyComponents/TGPhotoEditorButton.h>
 
+#import <LegacyComponents/LegacyComponentsContext.h>
+
 typedef NS_OPTIONS(NSUInteger, TGPhotoEditorTab) {
     TGPhotoEditorNoneTab        = 0,
     TGPhotoEditorCropTab        = 1 << 0,
@@ -50,7 +52,7 @@ typedef enum
 @property (nonatomic, assign) TGPhotoEditorBackButton backButtonType;
 @property (nonatomic, assign) TGPhotoEditorDoneButton doneButtonType;
 
-- (instancetype)initWithBackButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context backButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground;
 
 - (void)transitionInAnimated:(bool)animated;
 - (void)transitionInAnimated:(bool)animated transparent:(bool)transparent;

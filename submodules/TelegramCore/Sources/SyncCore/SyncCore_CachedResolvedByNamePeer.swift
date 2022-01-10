@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public final class CachedResolvedByNamePeer: PostboxCoding {
+public final class CachedResolvedByNamePeer: Codable {
     public let peerId: PeerId?
     public let timestamp: Int32
     
@@ -9,7 +9,9 @@ public final class CachedResolvedByNamePeer: PostboxCoding {
         let key: ValueBoxKey
         if let nameData = name.data(using: .utf8) {
             key = ValueBoxKey(length: nameData.count)
-            nameData.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+            nameData.withUnsafeBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
                 memcpy(key.memory, bytes, nameData.count)
             }
         } else {
@@ -23,21 +25,17 @@ public final class CachedResolvedByNamePeer: PostboxCoding {
         self.timestamp = timestamp
     }
     
-    public init(decoder: PostboxDecoder) {
-        if let peerId = decoder.decodeOptionalInt64ForKey("p") {
-            self.peerId = PeerId(peerId)
-        } else {
-            self.peerId = nil
-        }
-        self.timestamp = decoder.decodeInt32ForKey("t", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.peerId = (try container.decodeIfPresent(Int64.self, forKey: "p")).flatMap(PeerId.init)
+        self.timestamp = try container.decode(Int32.self, forKey: "t")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let peerId = self.peerId {
-            encoder.encodeInt64(peerId.toInt64(), forKey: "p")
-        } else {
-            encoder.encodeNil(forKey: "p")
-        }
-        encoder.encodeInt32(self.timestamp, forKey: "t")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.peerId?.toInt64(), forKey: "p")
+        try container.encode(self.timestamp, forKey: "t")
     }
 }

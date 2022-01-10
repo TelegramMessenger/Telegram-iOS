@@ -119,6 +119,40 @@ final class VoiceChatTimerNode: ASDisplayNode {
         }
     }
     
+    func update(size: CGSize, participants: Int32, groupingSeparator: String, transition: ContainedViewLayoutTransition) {
+        if self.validLayout == nil {
+            self.updateAnimations()
+        }
+        self.validLayout = size
+        
+        self.foregroundView.frame = CGRect(origin: CGPoint(), size: size)
+        self.foregroundGradientLayer.frame = self.foregroundView.bounds
+        self.maskView.frame = self.foregroundView.bounds
+        
+        let text: String = presentationStringsFormattedNumber(participants, groupingSeparator)
+        let subtitle = "listening"
+        
+        self.titleNode.attributedText = NSAttributedString(string: "", font: Font.with(size: 23.0, design: .round, weight: .semibold, traits: []), textColor: .white)
+        let titleSize = self.titleNode.updateLayout(size)
+        self.titleNode.frame = CGRect(x: floor((size.width - titleSize.width) / 2.0), y: 48.0, width: titleSize.width, height: titleSize.height)
+        
+        self.timerNode.attributedText = NSAttributedString(string: text, font: Font.with(size: 68.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
+        
+        var timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
+        if timerSize.width > size.width - 32.0 {
+            self.timerNode.attributedText = NSAttributedString(string: text, font: Font.with(size: 60.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
+            timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
+        }
+        
+        self.timerNode.frame = CGRect(x: floor((size.width - timerSize.width) / 2.0), y: 78.0, width: timerSize.width, height: timerSize.height)
+        
+        self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.with(size: 21.0, design: .round, weight: .semibold, traits: []), textColor: .white)
+        let subtitleSize = self.subtitleNode.updateLayout(size)
+        self.subtitleNode.frame = CGRect(x: floor((size.width - subtitleSize.width) / 2.0), y: 164.0, width: subtitleSize.width, height: subtitleSize.height)
+        
+        self.foregroundView.frame = CGRect(origin: CGPoint(), size: size)
+    }
+    
     func update(size: CGSize, scheduleTime: Int32?, transition: ContainedViewLayoutTransition) {
         if self.validLayout == nil {
             self.updateAnimations()

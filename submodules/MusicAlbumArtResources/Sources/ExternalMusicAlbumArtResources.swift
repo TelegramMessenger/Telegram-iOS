@@ -2,10 +2,9 @@ import Foundation
 import UIKit
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import UrlEscaping
 
-public struct ExternalMusicAlbumArtResourceId: MediaResourceId {
+public struct ExternalMusicAlbumArtResourceId {
     public let title: String
     public let performer: String
     public let isThumbnail: Bool
@@ -23,17 +22,9 @@ public struct ExternalMusicAlbumArtResourceId: MediaResourceId {
     public var hashValue: Int {
         return self.title.hashValue &* 31 &+ self.performer.hashValue
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? ExternalMusicAlbumArtResourceId {
-            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
-        } else {
-            return false
-        }
-    }
 }
 
-public class ExternalMusicAlbumArtResource: TelegramMediaResource {
+public class ExternalMusicAlbumArtResource: Equatable {
     public let title: String
     public let performer: String
     public let isThumbnail: Bool
@@ -44,38 +35,28 @@ public class ExternalMusicAlbumArtResource: TelegramMediaResource {
         self.isThumbnail = isThumbnail
     }
     
-    public required init(decoder: PostboxDecoder) {
-        self.title = decoder.decodeStringForKey("t", orElse: "")
-        self.performer = decoder.decodeStringForKey("p", orElse: "")
-        self.isThumbnail = decoder.decodeInt32ForKey("th", orElse: 1) != 0
+    public var id: EngineMediaResource.Id {
+        return EngineMediaResource.Id(ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail).uniqueId)
     }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.title, forKey: "t")
-        encoder.encodeString(self.performer, forKey: "p")
-        encoder.encodeInt32(self.isThumbnail ? 1 : 0, forKey: "th")
-    }
-    
-    public var id: MediaResourceId {
-        return ExternalMusicAlbumArtResourceId(title: self.title, performer: self.performer, isThumbnail: self.isThumbnail)
-    }
-    
-    public func isEqual(to: MediaResource) -> Bool {
-        if let to = to as? ExternalMusicAlbumArtResource {
-            return self.title == to.title && self.performer == to.performer && self.isThumbnail == to.isThumbnail
-        } else {
+
+    public static func ==(lhs: ExternalMusicAlbumArtResource, rhs: ExternalMusicAlbumArtResource) -> Bool {
+        if lhs.title != rhs.title {
             return false
         }
+        if lhs.performer != rhs.performer {
+            return false
+        }
+        if lhs.isThumbnail != rhs.isThumbnail {
+            return false
+        }
+        return true
     }
 }
 
-public func fetchExternalMusicAlbumArtResource(account: Account, resource: ExternalMusicAlbumArtResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchExternalMusicAlbumArtResource(engine: TelegramEngine, resource: ExternalMusicAlbumArtResource) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
     return Signal { subscriber in
-        subscriber.putNext(.reset)
-        
         if resource.performer.isEmpty || resource.performer.lowercased().trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) == "unknown artist" || resource.title.isEmpty {
-            subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-            subscriber.putCompletion()
+            subscriber.putError(.generic)
             return EmptyDisposable
         } else {
             let excludeWords: [String] = [
@@ -111,14 +92,12 @@ public func fetchExternalMusicAlbumArtResource(account: Account, resource: Exter
             let disposable = fetchHttpResource(url: metaUrl).start(next: { result in
                 if case let .dataPart(_, data, _, complete) = result, complete {
                     guard let dict = (try? JSONSerialization.jsonObject(with: data, options: [])) as? [String: Any] else {
-                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        subscriber.putCompletion()
+                        subscriber.putError(.generic)
                         return
                     }
                     
                     guard let results = dict["results"] as? [Any] else {
-                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        subscriber.putCompletion()
+                        subscriber.putError(.generic)
                         return
                     }
                     
@@ -139,14 +118,12 @@ public func fetchExternalMusicAlbumArtResource(account: Account, resource: Exter
                     }
                     
                     guard let result = matchingResult as? [String: Any] else {
-                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        subscriber.putCompletion()
+                        subscriber.putError(.generic)
                         return
                     }
                     
                     guard var artworkUrl = result["artworkUrl100"] as? String else {
-                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        subscriber.putCompletion()
+                        subscriber.putError(.generic)
                         return
                     }
                     
@@ -155,12 +132,13 @@ public func fetchExternalMusicAlbumArtResource(account: Account, resource: Exter
                     }
                     
                     if artworkUrl.isEmpty {
-                        subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: true))
-                        subscriber.putCompletion()
+                        subscriber.putError(.generic)
                         return
                     } else {
-                        fetchDisposable.set(fetchHttpResource(url: artworkUrl).start(next: { next in
-                            subscriber.putNext(next)
+                        fetchDisposable.set(engine.resources.httpData(url: artworkUrl).start(next: { next in
+                            let file = EngineTempBox.shared.tempFile(fileName: "image.jpg")
+                            let _ = try? next.write(to: URL(fileURLWithPath: file.path))
+                            subscriber.putNext(.moveTempFile(file: file))
                         }, completed: {
                             subscriber.putCompletion()
                         }))

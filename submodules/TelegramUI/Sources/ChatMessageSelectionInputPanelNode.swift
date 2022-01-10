@@ -70,7 +70,6 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.forwardButton.accessibilityLabel = strings.VoiceOver_MessageContextForward
         
         self.shareButton = HighlightableButtonNode(pointerStyle: .default)
-        self.shareButton.isEnabled = false
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = strings.VoiceOver_MessageContextShare
         
@@ -94,7 +93,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.shareButton)
         self.addSubnode(self.separatorNode)
         
-        self.forwardButton.isEnabled = false
+        self.forwardButton.isImplicitlyDisabled = true
+        self.shareButton.isImplicitlyDisabled = true
         
         self.deleteButton.addTarget(self, action: #selector(self.deleteButtonPressed), forControlEvents: .touchUpInside)
         self.reportButton.addTarget(self, action: #selector(self.reportButtonPressed), forControlEvents: .touchUpInside)
@@ -116,6 +116,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             
             self.separatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         }
@@ -130,11 +132,25 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     }
     
     @objc func forwardButtonPressed() {
-        self.interfaceInteraction?.forwardSelectedMessages()
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.forwardButton, false)
+        } else {
+            self.interfaceInteraction?.forwardSelectedMessages()
+        }
     }
     
     @objc func shareButtonPressed() {
-        self.interfaceInteraction?.shareSelectedMessages()
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.shareButton, true)
+        } else {
+            self.interfaceInteraction?.shareSelectedMessages()
+        }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
@@ -148,15 +164,14 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         if let actions = self.actions {
             self.deleteButton.isEnabled = false
             self.reportButton.isEnabled = false
-            self.forwardButton.isEnabled = actions.options.contains(.forward)
-            self.shareButton.isEnabled = false
+            self.forwardButton.isImplicitlyDisabled = !actions.options.contains(.forward)
             
             if self.peerMedia {
                 self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
             } else {
                 self.deleteButton.isEnabled = !actions.disableDelete
             }
-            self.shareButton.isEnabled = !actions.options.intersection([.forward]).isEmpty
+            self.shareButton.isImplicitlyDisabled = actions.options.intersection([.forward]).isEmpty
             self.reportButton.isEnabled = !actions.options.intersection([.report]).isEmpty
             
             if self.peerMedia {
@@ -170,8 +185,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.deleteButton.isHidden = self.peerMedia
             self.reportButton.isEnabled = false
             self.reportButton.isHidden = true
-            self.forwardButton.isEnabled = false
-            self.shareButton.isEnabled = false
+            self.forwardButton.isImplicitlyDisabled = true
+            self.shareButton.isImplicitlyDisabled = true
         }
         
         if self.reportButton.isHidden || (self.peerMedia && self.deleteButton.isHidden && self.reportButton.isHidden) {

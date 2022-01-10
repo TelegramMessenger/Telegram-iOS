@@ -48,7 +48,7 @@ public func addSynchronizePinnedChatsOperation(transaction: Transaction, groupId
     var previousItemIds = transaction.getPinnedItemIds(groupId: groupId)
     var updateLocalIndex: Int32?
     
-    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt32Value(rawId)), tag: OperationLogTags.SynchronizePinnedChats, { entry in
+    transaction.operationLogEnumerateEntries(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(Int64(rawId))), tag: OperationLogTags.SynchronizePinnedChats, { entry in
         updateLocalIndex = entry.tagLocalIndex
         if let contents = entry.contents as? SynchronizePinnedChatsOperation {
             previousItemIds = contents.previousItemIds
@@ -57,7 +57,7 @@ public func addSynchronizePinnedChatsOperation(transaction: Transaction, groupId
     })
     let operationContents = SynchronizePinnedChatsOperation(previousItemIds: previousItemIds)
     if let updateLocalIndex = updateLocalIndex {
-        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt32Value(rawId)), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: updateLocalIndex)
+        let _ = transaction.operationLogRemoveEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(Int64(rawId))), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: updateLocalIndex)
     }
-    transaction.operationLogAddEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt32Value(rawId)), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
+    transaction.operationLogAddEntry(peerId: PeerId(namespace: PeerId.Namespace._internalFromInt32Value(0), id: PeerId.Id._internalFromInt64Value(Int64(rawId))), tag: OperationLogTags.SynchronizePinnedChats, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: operationContents)
 }

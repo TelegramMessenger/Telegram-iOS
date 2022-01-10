@@ -24,7 +24,7 @@ func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32
     }
     
     return account.postbox.transaction { transaction -> CachedResolvedByNamePeer? in
-        return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName))) as? CachedResolvedByNamePeer
+        return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)))?.get(CachedResolvedByNamePeer.self)
     } |> mapToSignal { cachedEntry -> Signal<PeerId?, NoError> in
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
         if let cachedEntry = cachedEntry, cachedEntry.timestamp <= timestamp && cachedEntry.timestamp >= timestamp - ageLimit {
@@ -64,7 +64,9 @@ func _internal_resolvePeerByName(account: Account, name: String, ageLimit: Int32
                     }
                     
                     let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: CachedResolvedByNamePeer(peerId: peerId, timestamp: timestamp), collectionSpec: resolvedByNamePeersCollectionSpec)
+                    if let entry = CodableEntry(CachedResolvedByNamePeer(peerId: peerId, timestamp: timestamp)) {
+                        transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: entry, collectionSpec: resolvedByNamePeersCollectionSpec)
+                    }
                     return peerId
                 }
                 |> castError(Void.self)

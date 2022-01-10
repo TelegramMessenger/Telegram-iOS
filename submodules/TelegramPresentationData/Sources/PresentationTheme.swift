@@ -639,16 +639,50 @@ public final class PresentationThemeBubbleColorComponents {
     public let highlightedFill: UIColor
     public let stroke: UIColor
     public let shadow: PresentationThemeBubbleShadow?
+    public let reactionInactiveBackground: UIColor
+    public let reactionInactiveForeground: UIColor
+    public let reactionActiveBackground: UIColor
+    public let reactionActiveForeground: UIColor
     
-    public init(fill: [UIColor], highlightedFill: UIColor, stroke: UIColor, shadow: PresentationThemeBubbleShadow?) {
+    public init(
+        fill: [UIColor],
+        highlightedFill: UIColor,
+        stroke: UIColor,
+        shadow: PresentationThemeBubbleShadow?,
+        reactionInactiveBackground: UIColor,
+        reactionInactiveForeground: UIColor,
+        reactionActiveBackground: UIColor,
+        reactionActiveForeground: UIColor
+    ) {
         self.fill = fill
         self.highlightedFill = highlightedFill
         self.stroke = stroke
         self.shadow = shadow
+        self.reactionInactiveBackground = reactionInactiveBackground
+        self.reactionInactiveForeground = reactionInactiveForeground
+        self.reactionActiveBackground = reactionActiveBackground
+        self.reactionActiveForeground = reactionActiveForeground
     }
     
-    public func withUpdated(fill: [UIColor]? = nil, highlightedFill: UIColor? = nil, stroke: UIColor? = nil) -> PresentationThemeBubbleColorComponents {
-        return PresentationThemeBubbleColorComponents(fill: fill ?? self.fill, highlightedFill: highlightedFill ?? self.highlightedFill, stroke: stroke ?? self.stroke, shadow: self.shadow)
+    public func withUpdated(
+        fill: [UIColor]? = nil,
+        highlightedFill: UIColor? = nil,
+        stroke: UIColor? = nil,
+        reactionInactiveBackground: UIColor? = nil,
+        reactionInactiveForeground: UIColor? = nil,
+        reactionActiveBackground: UIColor? = nil,
+        reactionActiveForeground: UIColor? = nil
+    ) -> PresentationThemeBubbleColorComponents {
+        return PresentationThemeBubbleColorComponents(
+            fill: fill ?? self.fill,
+            highlightedFill: highlightedFill ?? self.highlightedFill,
+            stroke: stroke ?? self.stroke,
+            shadow: self.shadow,
+            reactionInactiveBackground: reactionInactiveBackground ?? self.reactionInactiveBackground,
+            reactionInactiveForeground: reactionInactiveForeground ?? self.reactionInactiveForeground,
+            reactionActiveBackground: reactionActiveBackground ?? self.reactionActiveBackground,
+            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground
+        )
     }
 }
 
@@ -1270,10 +1304,16 @@ public final class PresentationTheme: Equatable {
     public let inAppNotification: PresentationThemeInAppNotification
     public let chart: PresentationThemeChart
     public let preview: Bool
+    public var forceSync: Bool = false
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
     public init(name: PresentationThemeName, index: Int64, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, chart: PresentationThemeChart, preview: Bool = false) {
+        var overallDarkAppearance = overallDarkAppearance
+        if [.night, .tinted].contains(referenceTheme.baseTheme) {
+            overallDarkAppearance = true
+        }
+        
         self.name = name
         self.index = index
         self.referenceTheme = referenceTheme
@@ -1322,6 +1362,10 @@ public final class PresentationTheme: Equatable {
             }
         }
         return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdated(defaultWallpaper: defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+    }
+    
+    public func withUpdated(referenceTheme: PresentationBuiltinThemeReference) -> PresentationTheme {
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
     }
     
     public func withUpdated(preview: Bool) -> PresentationTheme {

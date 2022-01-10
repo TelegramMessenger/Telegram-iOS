@@ -17,6 +17,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     case iPhone12
     case iPhone12ProMax
     case iPad
+    case iPadMini
     case iPad102Inch
     case iPadPro10Inch
     case iPadPro11Inch
@@ -37,6 +38,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             .iPhone12,
             .iPhone12ProMax,
             .iPad,
+            .iPadMini,
             .iPad102Inch,
             .iPadPro10Inch,
             .iPadPro11Inch,
@@ -111,6 +113,8 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return CGSize(width: 428.0, height: 926.0)
             case .iPad:
                 return CGSize(width: 768.0, height: 1024.0)
+            case .iPadMini:
+                return CGSize(width: 744.0, height: 1133.0)
             case .iPad102Inch:
                 return CGSize(width: 810.0, height: 1080.0)
             case .iPadPro10Inch:
@@ -162,7 +166,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             return inLandscape ? 21.0 : 34.0
         case .iPadPro3rdGen, .iPadPro11Inch:
             return 21.0
-        case .iPad, .iPadPro, .iPadPro10Inch:
+        case .iPad, .iPadPro, .iPadPro10Inch, .iPadMini:
             if let systemOnScreenNavigationHeight = systemOnScreenNavigationHeight, !systemOnScreenNavigationHeight.isZero {
                 return 21.0
             } else {
@@ -192,7 +196,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         switch self {
             case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
                 return 44.0
-            case .iPadPro11Inch, .iPadPro3rdGen:
+            case .iPadPro11Inch, .iPadPro3rdGen, .iPadMini:
                 return 24.0
             case let .unknown(_, statusBarHeight, _):
                 return statusBarHeight
@@ -212,7 +216,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 172.0
                 case .iPad, .iPad102Inch, .iPadPro10Inch:
                     return 348.0
-                case .iPadPro11Inch:
+                case .iPadPro11Inch, .iPadMini:
                     return 368.0
                 case .iPadPro:
                     return 421.0
@@ -235,7 +239,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 263.0
                 case .iPadPro11Inch:
                     return 283.0
-                case .iPadPro:
+                case .iPadPro, .iPadMini:
                     return 328.0
                 case .iPadPro3rdGen:
                     return 348.0
@@ -250,7 +254,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             switch self {
                 case .iPhone4, .iPhone5, .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax:
                     return 37.0
-                case .iPad, .iPad102Inch, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
+                case .iPad, .iPad102Inch, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen, .iPadMini:
                     return 50.0
                 case .unknown:
                     return 37.0
@@ -263,7 +267,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                     return 44.0
                 case .iPhone6Plus:
                     return 45.0
-                case .iPad, .iPad102Inch, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
+                case .iPad, .iPad102Inch, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen, .iPadMini:
                     return 50.0
                 case .unknown:
                     return 44.0

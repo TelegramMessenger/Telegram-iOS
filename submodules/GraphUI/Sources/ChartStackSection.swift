@@ -16,10 +16,16 @@ private enum Constants {
 
 private class LeftAlignedIconButton: UIButton {
     override func titleRect(forContentRect contentRect: CGRect) -> CGRect {
-        let titleRect = super.titleRect(forContentRect: contentRect)
+        var titleRect = super.titleRect(forContentRect: contentRect)
         let imageSize = currentImage?.size ?? .zero
-        let availableWidth = contentRect.width - imageEdgeInsets.right - imageSize.width - titleRect.width
-        return titleRect.offsetBy(dx: round(availableWidth / 2) - imageEdgeInsets.left, dy: 0)
+        titleRect.origin.x = imageSize.width
+        return titleRect
+    }
+    
+    override func imageRect(forContentRect contentRect: CGRect) -> CGRect {
+        var imageRect = super.imageRect(forContentRect: contentRect)
+        imageRect.origin.x = 0.0
+        return imageRect
     }
 }
 
@@ -65,10 +71,11 @@ class ChartStackSection: UIView, ChartThemeContainer {
         backButton.addTarget(self, action: #selector(self.didTapBackButton), for: .touchUpInside)
         backButton.setTitle("Zoom Out", for: .normal)
         backButton.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .regular)
-        backButton.setTitleColor(UIColor(rgb: 0x007ee5), for: .normal)
+        backButton.setTitleColor(UIColor(rgb: 0x007aff), for: .normal)
         backButton.setImage(UIImage(bundleImageName: "Chart/arrow_left"), for: .normal)
         backButton.imageEdgeInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 3.0)
-        backButton.imageView?.tintColor = UIColor(rgb: 0x007ee5)
+        backButton.imageView?.tintColor = UIColor(rgb: 0x007aff)
+        backButton.adjustsImageWhenHighlighted = false
         
         backButton.setVisible(false, animated: false)
     }
@@ -169,7 +176,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
         
         self.rangeView.frame = CGRect(origin: CGPoint(x: 0.0, y: 310.0), size: CGSize(width: bounds.width, height: 42.0))
         self.visibilityView.frame = CGRect(origin: CGPoint(x: 0.0, y: self.displayRange ? 368.0 : 326.0), size: CGSize(width: bounds.width, height: 350.0))
-        self.backButton.frame = CGRect(x: 0.0, y: 0.0, width: 96.0, height: 38.0)
+        self.backButton.frame = CGRect(x: 8.0, y: 0.0, width: 96.0, height: 38.0)
         
         self.chartView.setNeedsDisplay()
     }

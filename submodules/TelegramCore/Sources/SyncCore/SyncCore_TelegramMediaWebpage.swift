@@ -56,13 +56,13 @@ public final class TelegraMediaWebpageThemeAttribute: PostboxCoding, Equatable {
     
     public init(decoder: PostboxDecoder) {
         self.files = decoder.decodeObjectArrayForKey("files")
-        self.settings = decoder.decodeObjectForKey("settings", decoder: { TelegramThemeSettings(decoder: $0) }) as? TelegramThemeSettings
+        self.settings = decoder.decode(TelegramThemeSettings.self, forKey: "settings")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObjectArray(self.files, forKey: "files")
         if let settings = self.settings {
-            encoder.encodeObject(settings, forKey: "settings")
+            encoder.encode(settings, forKey: "settings")
         } else {
             encoder.encodeNil(forKey: "settings")
         }

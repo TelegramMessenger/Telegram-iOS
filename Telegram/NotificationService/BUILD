@@ -7,13 +7,21 @@ swift_library(
         "Sources/*.swift",
     ]),
     deps = [
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/EncryptionProvider:EncryptionProvider",
         "//submodules/AppLockState:AppLockState",
         "//submodules/NotificationsPresentationData:NotificationsPresentationData",
-        "//Telegram/NotificationService/NotificationServiceObjC:NotificationServiceObjC",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/WebPBinding:WebPBinding",
+        "//submodules/rlottie:RLottieBinding",
+        "//submodules/GZip:GZip",
+        "//submodules/PersistentStringHash:PersistentStringHash",
+    
     ],
     visibility = [
         "//visibility:public",

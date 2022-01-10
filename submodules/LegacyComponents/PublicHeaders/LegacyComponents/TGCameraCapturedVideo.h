@@ -13,7 +13,7 @@
 @property (nonatomic, readonly) bool isAnimation;
 @property (nonatomic, readonly) TGMediaAsset *originalAsset;
 @property (nonatomic, readonly) CGSize dimensions;
-
+@property (nonatomic, readonly) NSString *uniformTypeIdentifier;
 
 - (instancetype)initWithURL:(NSURL *)url;
 - (instancetype)initWithAsset:(TGMediaAsset *)asset livePhoto:(bool)livePhoto;

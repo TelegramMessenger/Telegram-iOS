@@ -427,12 +427,31 @@ static NSData *base64_decode(NSString *str) {
 
 @implementation MTApiEnvironment
 
-- (instancetype)init
-{
+-(instancetype)init {
+    self = [self initWithResolvedDeviceName:nil];
+    if (self != nil)
+    {
+        
+    }
+    return self;
+}
+
+-(id _Nonnull)initWithResolvedDeviceName:(NSDictionary<NSString *, NSString *> * _Nullable)resolvedDeviceName {
     self = [super init];
     if (self != nil)
     {
-        _deviceModel = [self platformString];
+        if (resolvedDeviceName != nil) {
+            NSString *model = [self platformString];
+            NSString* resolved = resolvedDeviceName[model];
+            if (resolved != nil) {
+                _deviceModel = resolved;
+            } else {
+                _deviceModel = model;
+            }
+        } else {
+            _deviceModel = [self platformString];
+        }
+        _resolvedDeviceName = resolvedDeviceName;
 #if TARGET_OS_IPHONE
         _systemVersion = [[UIDevice currentDevice] systemVersion];
 #else
@@ -569,6 +588,14 @@ NSString *suffix = @"";
         return @"iPhone 12 Pro";
     if ([platform isEqualToString:@"iPhone13,4"])
         return @"iPhone 12 Pro Max";
+    if ([platform isEqualToString:@"iPhone14,2"])
+        return @"iPhone 13 Pro";
+    if ([platform isEqualToString:@"iPhone14,3"])
+        return @"iPhone 13 Pro Max";
+    if ([platform isEqualToString:@"iPhone14,4"])
+        return @"iPhone 13 Mini";
+    if ([platform isEqualToString:@"iPhone14,5"])
+        return @"iPhone 13";
     
     if ([platform hasPrefix:@"iPod1"])
         return @"iPod touch 1G";
@@ -751,7 +778,7 @@ NSString *suffix = @"";
 }
 
 - (MTApiEnvironment *)withUpdatedLangPackCode:(NSString *)langPackCode {
-    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    MTApiEnvironment *result = [[MTApiEnvironment alloc] initWithResolvedDeviceName:_resolvedDeviceName];
     
     result.apiId = self.apiId;
     result.appVersion = self.appVersion;
@@ -775,7 +802,7 @@ NSString *suffix = @"";
 }
 
 - (instancetype)copyWithZone:(NSZone *)__unused zone {
-    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    MTApiEnvironment *result =  [[MTApiEnvironment alloc] initWithResolvedDeviceName:_resolvedDeviceName];
     
     result.apiId = self.apiId;
     result.appVersion = self.appVersion;
@@ -799,7 +826,7 @@ NSString *suffix = @"";
 }
 
 - (MTApiEnvironment *)withUpdatedSocksProxySettings:(MTSocksProxySettings *)socksProxySettings {
-    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    MTApiEnvironment *result =  [[MTApiEnvironment alloc] initWithResolvedDeviceName:_resolvedDeviceName];
     
     result.apiId = self.apiId;
     result.appVersion = self.appVersion;
@@ -823,7 +850,7 @@ NSString *suffix = @"";
 }
 
 - (MTApiEnvironment *)withUpdatedNetworkSettings:(MTNetworkSettings *)networkSettings {
-    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    MTApiEnvironment *result =  [[MTApiEnvironment alloc] initWithResolvedDeviceName:_resolvedDeviceName];
     
     result.apiId = self.apiId;
     result.appVersion = self.appVersion;
@@ -847,7 +874,7 @@ NSString *suffix = @"";
 }
 
 - (MTApiEnvironment *)withUpdatedSystemCode:(NSData *)systemCode {
-    MTApiEnvironment *result = [[MTApiEnvironment alloc] init];
+    MTApiEnvironment *result =  [[MTApiEnvironment alloc] initWithResolvedDeviceName:_resolvedDeviceName];
     
     result.apiId = self.apiId;
     result.appVersion = self.appVersion;

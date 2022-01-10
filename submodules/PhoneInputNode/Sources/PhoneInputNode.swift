@@ -280,6 +280,9 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
             if !realRegionPrefix.hasPrefix("+") {
                 realRegionPrefix = "+" + realRegionPrefix
             }
+            if !text.hasPrefix("+") {
+                text = "+" + text
+            }
             numberText = cleanPrefix(String(text[realRegionPrefix.endIndex...]))
         } else {
             realRegionPrefix = text

@@ -7,7 +7,7 @@ import Display
 import Pdf
 import AVFoundation
 
-public struct ICloudFileResourceId: MediaResourceId {
+public struct ICloudFileResourceId {
     public let urlData: String
     public let thumbnail: Bool
     
@@ -21,14 +21,6 @@ public struct ICloudFileResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.uniqueId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? ICloudFileResourceId {
-            return self.urlData == to.urlData
-        } else {
-            return false
-        }
     }
 }
 
@@ -52,7 +44,7 @@ public class ICloudFileResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return ICloudFileResourceId(urlData: self.urlData, thumbnail: self.thumbnail)
+        return MediaResourceId(ICloudFileResourceId(urlData: self.urlData, thumbnail: self.thumbnail).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {

@@ -7,14 +7,17 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AnimatedStickerNode
-import AppBundle
+import TelegramAnimatedStickerNode
+import AccountContext
 
 class PeersNearbyHeaderItem: ListViewItem, ItemListItem {
+    let context: AccountContext
     let theme: PresentationTheme
     let text: String
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+    init(context: AccountContext, theme: PresentationTheme, text: String, sectionId: ItemListSectionId) {
+        self.context = context
         self.theme = theme
         self.text = text
         self.sectionId = sectionId
@@ -72,11 +75,7 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
         self.titleNode.contentsScale = UIScreen.main.scale
         
         self.animationNode = AnimatedStickerNode()
-        if let path = getAppBundle().path(forResource: "Compass", ofType: "tgs") {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-            self.animationNode.visibility = true
-        }
-        
+                
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
@@ -94,12 +93,16 @@ class PeersNearbyHeaderItemNode: ListViewItemNode {
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
+                    if strongSelf.item == nil {
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "Compass"), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.visibility = true
+                    }
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         

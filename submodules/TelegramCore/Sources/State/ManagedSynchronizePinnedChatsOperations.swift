@@ -82,7 +82,7 @@ func managedSynchronizePinnedChatsOperations(postbox: Postbox, network: Network,
                 let signal = withTakenOperation(postbox: postbox, peerId: entry.peerId, tagLocalIndex: entry.tagLocalIndex, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let operation = entry.contents as? SynchronizePinnedChatsOperation {
-                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, groupId: PeerGroupId(rawValue: entry.peerId.id._internalGetInt32Value()), operation: operation)
+                            return synchronizePinnedChats(transaction: transaction, postbox: postbox, network: network, accountPeerId: accountPeerId, stateManager: stateManager, groupId: PeerGroupId(rawValue: Int32(entry.peerId.id._internalGetInt64Value())), operation: operation)
                         } else {
                             assertionFailure()
                         }
@@ -115,8 +115,6 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
         switch item {
             case let .peer(peerId):
                 return peerId.namespace != Namespaces.Peer.SecretChat
-            default:
-                return true
         }
     }
     let localItemIds = transaction.getPinnedItemIds(groupId: groupId)
@@ -124,8 +122,6 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
         switch item {
             case let .peer(peerId):
                 return peerId.namespace != Namespaces.Peer.SecretChat
-            default:
-                return true
         }
     }
     
@@ -167,7 +163,7 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                     var apiChannelPts: Int32?
                     let apiNotificationSettings: Api.PeerNotifySettings
                     switch dialog {
-                        case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _, _):
+                        case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, peerNotificationSettings, pts, _, _):
                             apiPeer = peer
                             apiTopMessage = topMessage
                             apiReadInboxMaxId = readInboxMaxId

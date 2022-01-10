@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -29,7 +28,7 @@ public final class ContactItemHighlighting {
 
 public enum ContactsPeerItemStatus {
     case none
-    case presence(PeerPresence, PresentationDateTimeFormat)
+    case presence(EnginePeer.Presence, PresentationDateTimeFormat)
     case addressName(String)
     case custom(string: String, multiline: Bool)
 }
@@ -94,17 +93,17 @@ public struct ContactsPeerItemAction {
 }
 
 public enum ContactsPeerItemPeer: Equatable {
-    case peer(peer: Peer?, chatPeer: Peer?)
+    case peer(peer: EnginePeer?, chatPeer: EnginePeer?)
     case deviceContact(stableId: DeviceContactStableId, contact: DeviceContactBasicData)
     
     public static func ==(lhs: ContactsPeerItemPeer, rhs: ContactsPeerItemPeer) -> Bool {
         switch lhs {
         case let .peer(lhsPeer, lhsChatPeer):
             if case let .peer(rhsPeer, rhsChatPeer) = rhs {
-                if !arePeersEqual(lhsPeer, rhsPeer) {
+                if lhsPeer != rhsPeer {
                     return false
                 }
-                if !arePeersEqual(lhsChatPeer, rhsChatPeer) {
+                if lhsChatPeer != rhsChatPeer {
                     return false
                 }
                 return true
@@ -122,6 +121,11 @@ public enum ContactsPeerItemPeer: Equatable {
 }
 
 public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
+    public enum SortIndex {
+        case firstNameFirst
+        case lastNameFirst
+    }
+
     let presentationData: ItemListPresentationData
     let style: ItemListStyle
     public let sectionId: ItemListSectionId
@@ -141,8 +145,8 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     let actionIcon: ContactsPeerItemActionIcon
     let action: (ContactsPeerItemPeer) -> Void
     let disabledAction: ((ContactsPeerItemPeer) -> Void)?
-    let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
-    let deletePeer: ((PeerId) -> Void)?
+    let setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)?
+    let deletePeer: ((EnginePeer.Id) -> Void)?
     let itemHighlighting: ContactItemHighlighting?
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let arrowAction: (() -> Void)?
@@ -153,7 +157,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, style: ItemListStyle = .plain, sectionId: ItemListSectionId = 0, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, context: AccountContext, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, selectionPosition: ContactsPeerItemSelectionPosition = .right, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], additionalActions: [ContactsPeerItemAction] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: SortIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, disabledAction: ((ContactsPeerItemPeer) -> Void)? = nil, setPeerIdWithRevealedOptions: ((EnginePeer.Id?, EnginePeer.Id?) -> Void)? = nil, deletePeer: ((EnginePeer.Id) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, arrowAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.style = style
         self.sectionId = sectionId
@@ -185,7 +189,7 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
             var letter: String = "#"
             switch peer {
                 case let .peer(peer, _):
-                    if let user = peer as? TelegramUser {
+                    if case let .user(user) = peer {
                         switch index {
                             case .firstNameFirst:
                                 if let firstName = user.firstName, !firstName.isEmpty {
@@ -200,11 +204,11 @@ public class ContactsPeerItem: ItemListItem, ListViewItemWithHeader {
                                     letter = String(firstName.prefix(1)).uppercased()
                                 }
                         }
-                    } else if let group = peer as? TelegramGroup {
+                    } else if case let .legacyGroup(group) = peer {
                         if !group.title.isEmpty {
                             letter = String(group.title.prefix(1)).uppercased()
                         }
-                    } else if let channel = peer as? TelegramChannel {
+                    } else if case let .channel(channel) = peer {
                         if !channel.title.isEmpty {
                             letter = String(channel.title.prefix(1)).uppercased()
                         }
@@ -340,7 +344,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
 
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ContactsPeerItem, ListViewItemLayoutParams, Bool, Bool, Bool, ItemListNeighbors)?
-    public var chatPeer: Peer? {
+    public var chatPeer: EnginePeer? {
         if let peer = self.layoutParams?.0.peer {
             switch peer {
                 case let .peer(peer, chatPeer):
@@ -598,18 +602,18 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
             var multilineStatus: Bool = false
-            var userPresence: TelegramUserPresence?
+            var userPresence: EnginePeer.Presence?
             
             switch item.peer {
             case let .peer(peer, chatPeer):
                 if let peer = peer {
                     let textColor: UIColor
-                    if let _ = chatPeer as? TelegramSecretChat {
+                    if case .secretChat = chatPeer {
                         textColor = item.presentationData.theme.chatList.secretTitleColor
                     } else {
                         textColor = item.presentationData.theme.list.itemPrimaryTextColor
                     }
-                    if let user = peer as? TelegramUser {
+                    if case let .user(user) = peer {
                         if peer.id == item.context.account.peerId, case .generalSearch = item.peerMode {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: titleBoldFont, textColor: textColor)
                         } else if peer.id.isReplies {
@@ -634,9 +638,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             titleAttributedString = NSAttributedString(string: item.presentationData.strings.User_DeletedAccount, font: titleBoldFont, textColor: textColor)
                         }
-                    } else if let group = peer as? TelegramGroup {
+                    } else if case let .legacyGroup(group) = peer {
                         titleAttributedString = NSAttributedString(string: group.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-                    } else if let channel = peer as? TelegramChannel {
+                    } else if case let .channel(channel) = peer {
                         titleAttributedString = NSAttributedString(string: channel.title, font: titleBoldFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
                     }
                     
@@ -644,7 +648,6 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     case .none:
                         break
                     case let .presence(presence, dateTimeFormat):
-                        let presence = (presence as? TelegramUserPresence) ?? TelegramUserPresence(status: .none, lastActivity: 0)
                         userPresence = presence
                         let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                         let (string, activity) = stringAndActivityForUserPresence(strings: item.presentationData.strings, dateTimeFormat: dateTimeFormat, presence: presence, relativeTo: Int32(timestamp))
@@ -825,7 +828,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }
-                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: EnginePeer(peer), overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
                                     }
                                 case let .deviceContact(_, contact):
                                     let letters: [String]

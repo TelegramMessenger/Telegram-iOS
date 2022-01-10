@@ -4,12 +4,12 @@ final class MutableOrderedItemListView: MutablePostboxView {
     let collectionId: Int32
     var items: [OrderedItemListEntry]
     
-    init(postbox: Postbox, collectionId: Int32) {
+    init(postbox: PostboxImpl, collectionId: Int32) {
         self.collectionId = collectionId
         self.items = postbox.orderedItemListTable.getItems(collectionId: collectionId)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         if let operations = transaction.currentOrderedItemListOperations[self.collectionId] {
@@ -50,6 +50,10 @@ final class MutableOrderedItemListView: MutablePostboxView {
         }
         
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

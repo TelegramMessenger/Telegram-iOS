@@ -18,7 +18,7 @@ public func legacySuggestionContext(context: AccountContext, peerId: PeerId, cha
                     for peer in peers {
                         if case let .user(peer) = peer {
                             let user = TGUser()
-                            user.uid = peer.id.id._internalGetInt32Value()
+                            user.uid = peer.id.id._internalGetInt64Value()
                             user.firstName = peer.firstName
                             user.lastName = peer.lastName
                             user.userName = peer.addressName

@@ -3,7 +3,6 @@ import UIKit
 import SwiftSignalKit
 import ContextUI
 import AccountContext
-import Postbox
 import TelegramCore
 import Display
 import AlertUI
@@ -11,7 +10,7 @@ import PresentationDataUtils
 import OverlayStatusController
 import LocalizedPeerData
 
-func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsController: ContactsController?) -> Signal<[ContextMenuItem], NoError> {
+func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, contactsController: ContactsController?) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
     return context.account.postbox.transaction { [weak contactsController] transaction -> [ContextMenuItem] in
         var items: [ContextMenuItem] = []
@@ -32,9 +31,9 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
         
         if canStartSecretChat {
             items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_StartSecretChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                let _ = (context.account.postbox.transaction { transaction -> PeerId? in
+                let _ = (context.account.postbox.transaction { transaction -> EnginePeer.Id? in
                     let filteredPeerIds = Array(transaction.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
-                    var activeIndices: [ChatListIndex] = []
+                    var activeIndices: [EngineChatList.Item.Index] = []
                     for associatedId in filteredPeerIds {
                         if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
                             switch state {

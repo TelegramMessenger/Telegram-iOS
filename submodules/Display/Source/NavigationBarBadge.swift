@@ -31,7 +31,7 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: strokeColor, strokeWidth: 1.0)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: fillColor, backgroundColor: nil)
         
         super.init()
         
@@ -43,14 +43,19 @@ public final class NavigationBarBadgeNode: ASDisplayNode {
         self.fillColor = fillColor
         self.strokeColor = strokeColor
         self.textColor = textColor
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 18.0, color: fillColor, strokeColor: strokeColor, strokeWidth: 1.0)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: fillColor, backgroundColor: nil)
         self.textNode.attributedText = NSAttributedString(string: self.text, font: self.font, textColor: self.textColor)
         self.textNode.redrawIfPossible()
     }
     
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let badgeSize = self.textNode.updateLayout(constrainedSize)
-        let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
+        let backgroundSize: CGSize
+        if self.text.count < 2 {
+            backgroundSize = CGSize(width: 18.0, height: 18.0)
+        } else {
+            backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
+        }
         let backgroundFrame = CGRect(origin: CGPoint(), size: backgroundSize)
         self.backgroundNode.frame = backgroundFrame
         self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: floorToScreenPixels((backgroundFrame.size.height - badgeSize.height) / 2.0)), size: badgeSize)

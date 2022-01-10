@@ -8,20 +8,7 @@
 #import "NBPhoneMetaData.h"
 
 @interface NSArray (NBAdditions)
-- (id)safeObjectAtIndex:(NSUInteger)index;
-@end
-
-@implementation NSArray (NBAdditions)
-- (id)safeObjectAtIndex:(NSUInteger)index {
-    @synchronized(self) {
-        if (index >= [self count]) return nil;
-        id res = [self objectAtIndex:index];
-        if (res == nil || (NSNull*)res == [NSNull null]) {
-            return nil;
-        }
-        return res;
-    }
-}
+- (id)customSafeObjectAtIndex:(NSUInteger)index;
 @end
 
 #define kNBSRCDirectoryName @"src"
@@ -228,34 +215,34 @@ NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
             [contents appendString:@"    self = [super init];\n"];
             [contents appendString:@"    if (self) {\n"];
             
-            /*  1 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:1] name:@"self.generalDesc"]];
-            /*  2 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:2] name:@"self.fixedLine"]];
-            /*  3 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:3] name:@"self.mobile"]];
-            /*  4 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:4] name:@"self.tollFree"]];
-            /*  5 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:5] name:@"self.premiumRate"]];
-            /*  6 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:6] name:@"self.sharedCost"]];
-            /*  7 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:7] name:@"self.personalNumber"]];
-            /*  8 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:8] name:@"self.voip"]];
+            /*  1 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:1] name:@"self.generalDesc"]];
+            /*  2 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:2] name:@"self.fixedLine"]];
+            /*  3 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:3] name:@"self.mobile"]];
+            /*  4 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:4] name:@"self.tollFree"]];
+            /*  5 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:5] name:@"self.premiumRate"]];
+            /*  6 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:6] name:@"self.sharedCost"]];
+            /*  7 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:7] name:@"self.personalNumber"]];
+            /*  8 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:8] name:@"self.voip"]];
             
-            /* 21 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:21] name:@"self.pager"]];
-            /* 25 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:25] name:@"self.uan"]];
-            /* 27 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:27] name:@"self.emergency"]];
-            /* 28 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:28] name:@"self.voicemail"]];
-            /* 24 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata safeObjectAtIndex:24] name:@"self.noInternationalDialling"]];
-            /*  9 */ [contents appendFormat:@"        self.codeID = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:9])];
-            /* 10 */ [contents appendFormat:@"        self.countryCode = %@;\n", NUM_VAL([currentMetadata safeObjectAtIndex:10])];
-            /* 11 */ [contents appendFormat:@"        self.internationalPrefix = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:11])];
-            /* 17 */ [contents appendFormat:@"        self.preferredInternationalPrefix = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:17])];
-            /* 12 */ [contents appendFormat:@"        self.nationalPrefix = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:12])];
-            /* 13 */ [contents appendFormat:@"        self.preferredExtnPrefix = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:13])];
-            /* 15 */ [contents appendFormat:@"        self.nationalPrefixForParsing = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:15])];
-            /* 16 */ [contents appendFormat:@"        self.nationalPrefixTransformRule = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:16])];
-            /* 18 */ [contents appendFormat:@"        self.sameMobileAndFixedLinePattern = %@;\n", [[currentMetadata safeObjectAtIndex:18] boolValue] ? @"YES":@"NO"];
-            /* 19 */ [contents appendString:[self phoneNumberFormatArrayWithData:[currentMetadata safeObjectAtIndex:19] name:@"self.numberFormats"]]; // NBNumberFormat array
-            /* 20 */ [contents appendString:[self phoneNumberFormatArrayWithData:[currentMetadata safeObjectAtIndex:20] name:@"self.intlNumberFormats"]]; // NBNumberFormat array
-            /* 22 */ [contents appendFormat:@"        self.mainCountryForCode = %@;\n", [[currentMetadata safeObjectAtIndex:22] boolValue] ? @"YES":@"NO"];
-            /* 23 */ [contents appendFormat:@"        self.leadingDigits = %@;\n", STR_VAL([currentMetadata safeObjectAtIndex:23])];
-            /* 26 */ [contents appendFormat:@"        self.leadingZeroPossible = %@;\n", [[currentMetadata safeObjectAtIndex:26] boolValue] ? @"YES":@"NO"];
+            /* 21 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:21] name:@"self.pager"]];
+            /* 25 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:25] name:@"self.uan"]];
+            /* 27 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:27] name:@"self.emergency"]];
+            /* 28 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:28] name:@"self.voicemail"]];
+            /* 24 */ [contents appendString:[self phoneNumberDescWithData:[currentMetadata customSafeObjectAtIndex:24] name:@"self.noInternationalDialling"]];
+            /*  9 */ [contents appendFormat:@"        self.codeID = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:9])];
+            /* 10 */ [contents appendFormat:@"        self.countryCode = %@;\n", NUM_VAL([currentMetadata customSafeObjectAtIndex:10])];
+            /* 11 */ [contents appendFormat:@"        self.internationalPrefix = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:11])];
+            /* 17 */ [contents appendFormat:@"        self.preferredInternationalPrefix = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:17])];
+            /* 12 */ [contents appendFormat:@"        self.nationalPrefix = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:12])];
+            /* 13 */ [contents appendFormat:@"        self.preferredExtnPrefix = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:13])];
+            /* 15 */ [contents appendFormat:@"        self.nationalPrefixForParsing = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:15])];
+            /* 16 */ [contents appendFormat:@"        self.nationalPrefixTransformRule = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:16])];
+            /* 18 */ [contents appendFormat:@"        self.sameMobileAndFixedLinePattern = %@;\n", [[currentMetadata customSafeObjectAtIndex:18] boolValue] ? @"YES":@"NO"];
+            /* 19 */ [contents appendString:[self phoneNumberFormatArrayWithData:[currentMetadata customSafeObjectAtIndex:19] name:@"self.numberFormats"]]; // NBNumberFormat array
+            /* 20 */ [contents appendString:[self phoneNumberFormatArrayWithData:[currentMetadata customSafeObjectAtIndex:20] name:@"self.intlNumberFormats"]]; // NBNumberFormat array
+            /* 22 */ [contents appendFormat:@"        self.mainCountryForCode = %@;\n", [[currentMetadata customSafeObjectAtIndex:22] boolValue] ? @"YES":@"NO"];
+            /* 23 */ [contents appendFormat:@"        self.leadingDigits = %@;\n", STR_VAL([currentMetadata customSafeObjectAtIndex:23])];
+            /* 26 */ [contents appendFormat:@"        self.leadingZeroPossible = %@;\n", [[currentMetadata customSafeObjectAtIndex:26] boolValue] ? @"YES":@"NO"];
 
             [contents appendString:@"    }\n"];
             [contents appendString:@"    return self;\n"];
@@ -346,7 +333,7 @@ NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 - (NSString *)phoneNumberDescWithData:(id)value
 {
     NSString *initSentance = [NSString stringWithFormat:@"[[NBPhoneNumberDesc alloc] initWithNationalNumberPattern:%@ withPossibleNumberPattern:%@ withExample:%@]",
-                              STR_VAL([value safeObjectAtIndex:2]), STR_VAL([value safeObjectAtIndex:3]), STR_VAL([value safeObjectAtIndex:6])];
+                              STR_VAL([value customSafeObjectAtIndex:2]), STR_VAL([value customSafeObjectAtIndex:3]), STR_VAL([value customSafeObjectAtIndex:6])];
     return initSentance;
 }
 
@@ -359,15 +346,15 @@ NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     NSString *arrayName = [NSString stringWithFormat:@"%@_patternArray", cleanName];
     
     if (value != nil && [value isKindOfClass:[NSArray class]]) {
-        /* 1 */ NSString *pattern = [value safeObjectAtIndex:1];
-        /* 2 */ NSString *format = [value safeObjectAtIndex:2];
-        /* 4 */ NSString *nationalPrefixFormattingRule = [value safeObjectAtIndex:4];
-        /* 6 */ BOOL nationalPrefixOptionalWhenFormatting = [[value safeObjectAtIndex:6] boolValue];
-        /* 5 */ NSString *domesticCarrierCodeFormattingRule = [value safeObjectAtIndex:5];
+        /* 1 */ NSString *pattern = [value customSafeObjectAtIndex:1];
+        /* 2 */ NSString *format = [value customSafeObjectAtIndex:2];
+        /* 4 */ NSString *nationalPrefixFormattingRule = [value customSafeObjectAtIndex:4];
+        /* 6 */ BOOL nationalPrefixOptionalWhenFormatting = [[value customSafeObjectAtIndex:6] boolValue];
+        /* 5 */ NSString *domesticCarrierCodeFormattingRule = [value customSafeObjectAtIndex:5];
     
         [contents appendFormat:@"\n        NSMutableArray *%@ = [[NSMutableArray alloc] init];\n", arrayName];
         
-        /* 3 */ id tmpData = [value safeObjectAtIndex:3];
+        /* 3 */ id tmpData = [value customSafeObjectAtIndex:3];
     
         if (tmpData != nil && [tmpData isKindOfClass:[NSArray class]]) {
             for (id numFormat in tmpData) {

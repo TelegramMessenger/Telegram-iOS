@@ -9,7 +9,7 @@ public final class GalleryFooterNode: ASDisplayNode {
     private var currentThumbnailPanelHeight: CGFloat?
     private var currentFooterContentNode: GalleryFooterContentNode?
     private var currentOverlayContentNode: GalleryOverlayContentNode?
-    private var currentLayout: (ContainerViewLayout, CGFloat, Bool)?
+    private var currentLayout: (ContainerViewLayout, CGFloat, CGFloat, Bool)?
     
     private let controllerInteraction: GalleryControllerInteraction
     
@@ -32,8 +32,8 @@ public final class GalleryFooterNode: ASDisplayNode {
         self.currentOverlayContentNode?.setVisibilityAlpha(alpha)
     }
     
-    public func updateLayout(_ layout: ContainerViewLayout, footerContentNode: GalleryFooterContentNode?, overlayContentNode: GalleryOverlayContentNode?, thumbnailPanelHeight: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentLayout = (layout, thumbnailPanelHeight, isHidden)
+    public func updateLayout(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, footerContentNode: GalleryFooterContentNode?, overlayContentNode: GalleryOverlayContentNode?, thumbnailPanelHeight: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.currentLayout = (layout, navigationBarHeight, thumbnailPanelHeight, isHidden)
         let cleanInsets = layout.insets(options: [])
         
         var dismissedCurrentFooterContentNode: GalleryFooterContentNode?
@@ -48,8 +48,8 @@ public final class GalleryFooterNode: ASDisplayNode {
                 footerContentNode.setVisibilityAlpha(self.visibilityAlpha, animated: transition.isAnimated)
                 footerContentNode.controllerInteraction = self.controllerInteraction
                 footerContentNode.requestLayout = { [weak self] transition in
-                    if let strongSelf = self, let (currentLayout, currentThumbnailPanelHeight, isHidden) = strongSelf.currentLayout {
-                        strongSelf.updateLayout(currentLayout, footerContentNode: strongSelf.currentFooterContentNode, overlayContentNode: strongSelf.currentOverlayContentNode, thumbnailPanelHeight: currentThumbnailPanelHeight, isHidden: isHidden, transition: transition)
+                    if let strongSelf = self, let (currentLayout, navigationBarHeight, currentThumbnailPanelHeight, isHidden) = strongSelf.currentLayout {
+                        strongSelf.updateLayout(currentLayout, navigationBarHeight: navigationBarHeight, footerContentNode: strongSelf.currentFooterContentNode, overlayContentNode: strongSelf.currentOverlayContentNode, thumbnailPanelHeight: currentThumbnailPanelHeight, isHidden: isHidden, transition: transition)
                     }
                 }
                 self.addSubnode(footerContentNode)
@@ -101,7 +101,8 @@ public final class GalleryFooterNode: ASDisplayNode {
         
         let contentTransition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
         if let overlayContentNode = self.currentOverlayContentNode {
-            overlayContentNode.updateLayout(size: layout.size, metrics: layout.metrics, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: backgroundHeight, transition: transition)
+            let insets = UIEdgeInsets(top: navigationBarHeight, left: layout.safeInsets.left, bottom: isHidden ? layout.intrinsicInsets.bottom : backgroundHeight, right: layout.safeInsets.right)
+            overlayContentNode.updateLayout(size: layout.size, metrics: layout.metrics, insets: insets, isHidden: isHidden, transition: transition)
             transition.updateFrame(node: overlayContentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             
             if animateOverlayIn {

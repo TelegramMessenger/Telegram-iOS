@@ -173,7 +173,7 @@ private final class TimeBasedCleanupImpl {
             DispatchQueue.global(qos: .background).async {
                 var removedShortLivedCount: Int = 0
                 var removedGeneralCount: Int = 0
-                var removedGeneralLimitCount: Int = 0
+                let removedGeneralLimitCount: Int = 0
                 
                 let startTime = CFAbsoluteTimeGetCurrent()
                 

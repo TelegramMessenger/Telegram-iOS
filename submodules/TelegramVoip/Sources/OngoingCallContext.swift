@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import TelegramUIPreferences
 
 import TgVoip
@@ -670,8 +669,8 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    private let tempLogFile: TempBoxFile
-    private let tempStatsLogFile: TempBoxFile
+    private let tempLogFile: EngineTempBoxFile
+    private let tempStatsLogFile: EngineTempBoxFile
     
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
         var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
@@ -692,10 +691,10 @@ public final class OngoingCallContext {
         self.callSessionManager = callSessionManager
         self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         let logPath = self.logPath
-        self.tempLogFile = TempBox.shared.tempFile(fileName: "CallLog.txt")
+        self.tempLogFile = EngineTempBox.shared.tempFile(fileName: "CallLog.txt")
         let tempLogPath = self.tempLogFile.path
         
-        self.tempStatsLogFile = TempBox.shared.tempFile(fileName: "CallStats.json")
+        self.tempStatsLogFile = EngineTempBox.shared.tempFile(fileName: "CallStats.json")
         let tempStatsLogPath = self.tempStatsLogFile.path
         
         let queue = self.queue

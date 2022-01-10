@@ -251,7 +251,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             let separatorHeight = UIScreenPixel
             
             let contentSize = CGSize(width: params.width, height: max(titleLayout.size.height, measureTitleLayout.size.height) + 22.0)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

@@ -19,12 +19,12 @@ import GalleryUI
 import WallpaperBackgroundNode
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
-    return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false)
+    return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false)
 }
 
 class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
-    var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    var backgroundNode: WallpaperBubbleBackgroundNode?
     var backgroundColorNode: ASDisplayNode
     let backgroundMaskNode: ASImageNode
     var linkHighlightingNode: LinkHighlightingNode?
@@ -327,7 +327,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             var backgroundFrame = backgroundNode.frame
             backgroundFrame.origin.x += rect.minX
             backgroundFrame.origin.y += rect.minY
-            backgroundNode.update(rect: backgroundFrame, within: containerSize)
+            backgroundNode.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
     }
 

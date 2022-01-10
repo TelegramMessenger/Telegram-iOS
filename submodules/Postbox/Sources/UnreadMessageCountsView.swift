@@ -6,10 +6,42 @@ public enum UnreadMessageCountsItem: Equatable {
     case peer(PeerId)
 }
 
-private enum MutableUnreadMessageCountsItemEntry {
+private enum MutableUnreadMessageCountsItemEntry: Equatable {
     case total((ValueBoxKey, PreferencesEntry?)?, ChatListTotalUnreadState)
     case totalInGroup(PeerGroupId, ChatListTotalUnreadState)
     case peer(PeerId, CombinedPeerReadState?)
+
+    static func ==(lhs: MutableUnreadMessageCountsItemEntry, rhs: MutableUnreadMessageCountsItemEntry) -> Bool {
+        switch lhs {
+        case let .total(lhsKeyAndEntry, lhsUnreadState):
+            if case let .total(rhsKeyAndEntry, rhsUnreadState) = rhs {
+                if lhsKeyAndEntry?.0 != rhsKeyAndEntry?.0 {
+                    return false
+                }
+                if lhsKeyAndEntry?.1 != rhsKeyAndEntry?.1 {
+                    return false
+                }
+                if lhsUnreadState != rhsUnreadState {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .totalInGroup(groupId, state):
+            if case .totalInGroup(groupId, state) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .peer(peerId, readState):
+            if case .peer(peerId, readState) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 public enum UnreadMessageCountsItemEntry {
@@ -19,9 +51,12 @@ public enum UnreadMessageCountsItemEntry {
 }
 
 final class MutableUnreadMessageCountsView: MutablePostboxView {
+    private let items: [UnreadMessageCountsItem]
     fileprivate var entries: [MutableUnreadMessageCountsItemEntry]
     
-    init(postbox: Postbox, items: [UnreadMessageCountsItem]) {
+    init(postbox: PostboxImpl, items: [UnreadMessageCountsItem]) {
+        self.items = items
+
         self.entries = items.map { item in
             switch item {
             case let .total(preferencesKey):
@@ -34,7 +69,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         var updatedPreferencesEntry: PreferencesEntry?
@@ -79,6 +114,25 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
         }
         
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        let entries: [MutableUnreadMessageCountsItemEntry] = self.items.map { item -> MutableUnreadMessageCountsItemEntry in
+            switch item {
+            case let .total(preferencesKey):
+                return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: .root))
+            case let .totalInGroup(groupId):
+                return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
+            case let .peer(peerId):
+                return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+            }
+        }
+        if self.entries != entries {
+            self.entries = entries
+            return true
+        } else {
+            return false
+        }
     }
     
     func immutableView() -> PostboxView {
@@ -133,12 +187,12 @@ final class MutableCombinedReadStateView: MutablePostboxView {
     private let peerId: PeerId
     fileprivate var state: CombinedPeerReadState?
     
-    init(postbox: Postbox, peerId: PeerId) {
+    init(postbox: PostboxImpl, peerId: PeerId) {
         self.peerId = peerId
         self.state = postbox.readStateTable.getCombinedState(peerId)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
         if transaction.alteredInitialPeerCombinedReadStates[self.peerId] != nil {
@@ -150,6 +204,16 @@ final class MutableCombinedReadStateView: MutablePostboxView {
         }
         
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        let state = postbox.readStateTable.getCombinedState(self.peerId)
+        if state != self.state {
+            self.state = state
+            return true
+        } else {
+            return false
+        }
     }
     
     func immutableView() -> PostboxView {

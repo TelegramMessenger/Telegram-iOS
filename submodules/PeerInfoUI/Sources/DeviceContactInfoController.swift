@@ -396,7 +396,7 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, _, _, dateTimeFormat, peer, state, jobSummary, _):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .contact, peer: EnginePeer(peer), presence: nil, label: jobSummary, memberCount: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
                 }, avatarTapped: {
                 }, context: nil, call: nil)
@@ -614,7 +614,7 @@ private func filteredContactData(contactData: DeviceContactExtendedData, exclude
     return DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumbers: phoneNumbers), middleName: contactData.middleName, prefix: contactData.prefix, suffix: contactData.suffix, organization: includeJob ? contactData.organization : "", jobTitle: includeJob ? contactData.jobTitle : "", department: includeJob ? contactData.department : "", emailAddresses: emailAddresses, urls: urls, addresses: addresses, birthdayDate: includeBirthday ? contactData.birthdayDate : nil, socialProfiles: socialProfiles, instantMessagingProfiles: instantMessagingProfiles, note: includeNote ? contactData.note : "")
 }
 
-private func deviceContactInfoEntries(account: Account, presentationData: PresentationData, peer: Peer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool) -> [DeviceContactInfoEntry] {
+private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, presentationData: PresentationData, peer: Peer?, isShare: Bool, shareViaException: Bool, contactData: DeviceContactExtendedData, isContact: Bool, state: DeviceContactInfoState, selecting: Bool, editingPhoneNumbers: Bool) -> [DeviceContactInfoEntry] {
     var entries: [DeviceContactInfoEntry] = []
     
     var editingName: ItemListAvatarAndNameInfoItemName?
@@ -652,7 +652,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
         firstName = presentationData.strings.Message_Contact
     }
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
     
     if !selecting {
         if let _ = peer {
@@ -685,7 +685,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
             } else if !personName.1.isEmpty {
                 personCompactName = personName.1
             } else {
-                personCompactName = peer.compactDisplayTitle
+                personCompactName = EnginePeer(peer).compactDisplayTitle
             }
             
             if contactData.basicData.phoneNumbers.isEmpty {
@@ -731,7 +731,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
         |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
             if let (latitude, longitude) = coordinates {
                 let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)
-                return chatMapSnapshotImage(account: account, resource: resource)
+                return chatMapSnapshotImage(engine: engine, resource: resource)
             } else {
                 return .single({ _ in return nil })
             }
@@ -817,7 +817,7 @@ private final class DeviceContactInfoController: ItemListController, MFMessageCo
     }
 }
 
-public func deviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
+public func deviceContactInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
     var initialState = DeviceContactInfoState()
     if case let .create(peer, contactData, _, _, _) = subject {
         var peerPhoneNumber: String?
@@ -1036,8 +1036,9 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         }
     })
     
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), contactData)
+    let signal = combineLatest(presentationData, statePromise.get(), contactData)
     |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
@@ -1100,7 +1101,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                 if share, filteredPhoneNumbers.count <= 1, let peer = peer {
                                     addContactDisposable.set((context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers.first?.value ?? "", addToPrivacyExceptions: shareViaException && addToPrivacyExceptions)
                                     |> deliverOnMainQueue).start(error: { _ in
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
                                         let _ = (contactDataManager.createContactWithData(composedContactData)
                                         |> deliverOnMainQueue).start(next: { contactIdAndData in
@@ -1219,7 +1220,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             focusItemTag = DeviceContactInfoEntryTag.editingPhone(insertedPhoneId)
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deviceContactInfoEntries(account: context.account, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: deviceContactInfoEntries(account: context.account, engine: context.engine, presentationData: presentationData, peer: peerAndContactData.0, isShare: isShare, shareViaException: shareViaException, contactData: peerAndContactData.2, isContact: peerAndContactData.1 != nil, state: state, selecting: selecting, editingPhoneNumbers: editingPhones), style: isShare ? .blocks : .plain, focusItemTag: focusItemTag)
         
         return (controllerState, (listState, arguments))
     }
@@ -1360,15 +1361,16 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                         guard let contactData = contactData else {
                             return
                         }
-                        let _ = (context.account.postbox.contactPeersView(accountPeerId: nil, includePresences: false)
-                        |> take(1)
+                        let _ = (context.engine.data.get(
+                            TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+                        )
                         |> deliverOnMainQueue).start(next: { view in
                             let phones = Set<String>(contactData.basicData.phoneNumbers.map {
                                 return formatPhoneNumber($0.value)
                             })
-                            var foundPeer: Peer?
+                            var foundPeer: EnginePeer?
                             for peer in view.peers {
-                                if let user = peer as? TelegramUser, let phone = user.phone {
+                                if case let .user(user) = peer, let phone = user.phone {
                                     let phone = formatPhoneNumber(phone)
                                     if phones.contains(phone) {
                                         foundPeer = peer
@@ -1376,7 +1378,7 @@ private func addContactToExisting(context: AccountContext, parentController: Vie
                                     }
                                 }
                             }
-                            completion(foundPeer, stableId, contactData)
+                            completion(foundPeer?._asPeer(), stableId, contactData)
                         })
                     })
                 }

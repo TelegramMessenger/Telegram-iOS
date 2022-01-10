@@ -16,7 +16,7 @@ private struct FetchManagerLocationEntryId: Hashable {
         if lhs.location != rhs.location {
             return false
         }
-        if !lhs.resourceId.isEqual(to: rhs.resourceId) {
+        if lhs.resourceId != rhs.resourceId {
             return false
         }
         if lhs.locationKey != rhs.locationKey {
@@ -24,9 +24,10 @@ private struct FetchManagerLocationEntryId: Hashable {
         }
         return true
     }
-    
-    var hashValue: Int {
-        return self.resourceId.hashValue &* 31 &+ self.locationKey.hashValue
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.resourceId.hashValue)
+        hasher.combine(self.locationKey)
     }
 }
 
@@ -98,8 +99,12 @@ private final class FetchManagerStatusContext {
         if let originalStatus = self.originalStatus {
             if originalStatus == .Remote && self.hasEntry {
                 return .Fetching(isActive: false, progress: 0.0)
-            } else {
+            } else if self.hasEntry {
                 return originalStatus
+            } else if case .Local = originalStatus {
+                return originalStatus
+            } else {
+                return .Remote
             }
         } else {
             return nil
@@ -221,7 +226,6 @@ private final class FetchManagerCategoryContext {
                             return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                             |> castError(FetchResourceError.self)
                             |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                                return .complete()
                             }
                             |> then(.single(type))
                         }
@@ -238,7 +242,14 @@ private final class FetchManagerCategoryContext {
         
         if (previousPriorityKey != nil) != (updatedPriorityKey != nil) {
             if let statusContext = self.statusContexts[id] {
-                var hasForegroundPriorityKey = false
+                let previousStatus = statusContext.combinedStatus
+                statusContext.hasEntry = self.entries[id] != nil
+                if let combinedStatus = statusContext.combinedStatus, combinedStatus != previousStatus {
+                    for f in statusContext.subscribers.copyItems() {
+                        f(combinedStatus)
+                    }
+                }
+                /*var hasForegroundPriorityKey = false
                 if let updatedPriorityKey = updatedPriorityKey, let topReference = updatedPriorityKey.topReference {
                     switch topReference {
                         case .userInitiated:
@@ -270,7 +281,7 @@ private final class FetchManagerCategoryContext {
                             }
                         }
                     }
-                }
+                }*/
             }
         }
         
@@ -349,7 +360,7 @@ private final class FetchManagerCategoryContext {
                     if isVideoPreload {
                         activeContext.disposable = (preloadVideoResource(postbox: self.postbox, resourceReference: entry.resourceReference, duration: 4.0)
                         |> castError(FetchResourceError.self)
-                        |> map { _ -> FetchResourceSourceType in return .local }
+                        |> map { _ -> FetchResourceSourceType in }
                         |> then(.single(.local))
                         |> deliverOnMainQueue).start(next: { _ in
                             entryCompleted(topEntryId)
@@ -362,7 +373,6 @@ private final class FetchManagerCategoryContext {
                                 return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                                 |> castError(FetchResourceError.self)
                                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
-                                    return .complete()
                                 }
                                 |> then(.single(type))
                             }
@@ -389,7 +399,7 @@ private final class FetchManagerCategoryContext {
         var id: FetchManagerLocationEntryId = entryId
         if self.entries[id] == nil {
             for (key, _) in self.entries {
-                if key.resourceId.isEqual(to: entryId.resourceId) {
+                if key.resourceId == entryId.resourceId {
                     id = key
                     break
                 }

@@ -19,7 +19,7 @@ public enum AdditionalMessageHistoryViewDataEntry {
     case peerChatState(PeerId, PeerChatState?)
     case totalUnreadState(ChatListTotalUnreadState)
     case peerNotificationSettings(PeerNotificationSettings?)
-    case cacheEntry(ItemCacheEntryId, PostboxCoding?)
+    case cacheEntry(ItemCacheEntryId, CodableEntry?)
     case preferencesEntry(ValueBoxKey, PreferencesEntry?)
     case peerIsContact(PeerId, Bool)
     case peer(PeerId, Peer?)

@@ -4,7 +4,6 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import SwiftSignalKit
-import Postbox
 import TelegramPresentationData
 import CheckNode
 import PhotoResources
@@ -51,7 +50,7 @@ final class WebSearchItemNode: GridItemNode {
     
     private let fetchStatusDisposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
-    private var resourceStatus: MediaResourceStatus?
+    private var resourceStatus: EngineMediaResource.FetchStatus?
     
     override init() {
         self.imageNodeBackground = ASDisplayNode()
@@ -137,7 +136,7 @@ final class WebSearchItemNode: GridItemNode {
                 representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil))
             }
             if !representations.isEmpty {
-                let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+                let tmpImage = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage))
             } else {
                 updateImageSignal = .complete()

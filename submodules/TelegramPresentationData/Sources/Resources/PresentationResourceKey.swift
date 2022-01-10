@@ -20,9 +20,12 @@ public enum PresentationResourceKey: Int32 {
     case navigationShareIcon
     case navigationSearchIcon
     case navigationCompactSearchIcon
+    case navigationCalendarIcon
     case navigationMoreIcon
+    case navigationMoreCircledIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
+    case navigationQrCodeIcon
     
     case navigationLiveLocationIcon
     
@@ -53,9 +56,15 @@ public enum PresentationResourceKey: Int32 {
     case itemListCloseIconImage
     case itemListMakeVisibleIcon
     case itemListMakeInvisibleIcon
+    case itemListEditThemeIcon
     case itemListCornersTop
     case itemListCornersBottom
     case itemListCornersBoth
+    case itemListKnob
+    case itemListBlockAccentIcon
+    case itemListBlockDestructiveIcon
+    case itemListAddDeviceIcon
+    case itemListResetIcon
     
     case itemListVoiceCallIcon
     case itemListVideoCallIcon
@@ -159,8 +168,11 @@ public enum PresentationResourceKey: Int32 {
     
     case chatInputTextFieldBackgroundImage
     case chatInputTextFieldClearImage
+    case chatInputPanelSendIconImage
     case chatInputPanelSendButtonImage
+    case chatInputPanelApplyIconImage
     case chatInputPanelApplyButtonImage
+    case chatInputPanelScheduleIconImage
     case chatInputPanelScheduleButtonImage
     case chatInputPanelVoiceButtonImage
     case chatInputPanelVideoButtonImage

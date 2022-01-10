@@ -5,6 +5,10 @@ import Display
 import ContextUI
 import AnimatedStickerNode
 import SwiftSignalKit
+import ContextUI
+import Postbox
+import TelegramCore
+import ReactionSelectionNode
 
 private final class OverlayTransitionContainerNode: ViewControllerTracingNode {
     override init() {
@@ -172,6 +176,56 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
         case videoMessage(VideoMessage)
         case mediaInput(MediaInput)
     }
+            
+    final class DecorationItemNode: ASDisplayNode {
+        let itemNode: ChatMessageItemView
+        let contentView: UIView
+        private let getContentAreaInScreenSpace: () -> CGRect
+        
+        private let scrollingContainer: ASDisplayNode
+        private let containerNode: ASDisplayNode
+        private let clippingNode: ASDisplayNode
+        
+        fileprivate weak var overlayController: OverlayTransitionContainerController?
+        
+        init(itemNode: ChatMessageItemView, contentView: UIView, getContentAreaInScreenSpace: @escaping () -> CGRect) {
+            self.itemNode = itemNode
+            self.contentView = contentView
+            self.getContentAreaInScreenSpace = getContentAreaInScreenSpace
+            
+            self.clippingNode = ASDisplayNode()
+            self.clippingNode.clipsToBounds = true
+            
+            self.scrollingContainer = ASDisplayNode()
+            self.containerNode = ASDisplayNode()
+            
+            super.init()
+            
+            self.addSubnode(self.clippingNode)
+            self.clippingNode.addSubnode(self.scrollingContainer)
+            self.scrollingContainer.addSubnode(self.containerNode)
+            self.containerNode.view.addSubview(self.contentView)
+        }
+        
+        func updateLayout(size: CGSize) {
+            self.clippingNode.frame = CGRect(origin: CGPoint(), size: size)
+            
+            let absoluteRect = self.itemNode.view.convert(self.itemNode.view.bounds, to: self.itemNode.supernode?.supernode?.view)
+            self.containerNode.frame = absoluteRect
+        }
+        
+        func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+            if transition.isAnimated {
+                assert(true)
+            }
+            self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: -offset)
+            transition.animateOffsetAdditive(node: self.scrollingContainer, offset: offset)
+        }
+
+        func addContentOffset(offset: CGFloat) {
+            self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: offset)
+        }
+    }
 
     private final class AnimatingItemNode: ASDisplayNode {
         let itemNode: ChatMessageItemView
@@ -235,7 +289,7 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
 
                 var currentContentRect = self.contextSourceNode.contentRect
                 let contextSourceNode = self.contextSourceNode
-                self.contextSourceNode.layoutUpdated = { [weak self, weak contextSourceNode] size in
+                self.contextSourceNode.layoutUpdated = { [weak self, weak contextSourceNode] size, _ in
                     guard let strongSelf = self, let contextSourceNode = contextSourceNode, strongSelf.contextSourceNode === contextSourceNode else {
                         return
                     }
@@ -545,6 +599,54 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
             }
         }
     }
+    
+    private final class MessageReactionContext {
+        private(set) weak var itemNode: ListViewItemNode?
+        private(set) weak var contextController: ContextController?
+        private(set) weak var standaloneReactionAnimation: StandaloneReactionAnimation?
+        
+        var isEmpty: Bool {
+            return self.contextController == nil && self.standaloneReactionAnimation == nil
+        }
+        
+        init(itemNode: ListViewItemNode, contextController: ContextController?, standaloneReactionAnimation: StandaloneReactionAnimation?) {
+            self.itemNode = itemNode
+            self.contextController = contextController
+            self.standaloneReactionAnimation = standaloneReactionAnimation
+        }
+        
+        func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, itemNode: ListViewItemNode?) {
+            guard let currentItemNode = self.itemNode else {
+                return
+            }
+            if itemNode == nil || itemNode === currentItemNode {
+                if let contextController = self.contextController {
+                    contextController.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                }
+                if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                    standaloneReactionAnimation.addRelativeContentOffset(CGPoint(x: 0.0, y: -offset), transition: transition)
+                }
+            }
+        }
+
+        func addContentOffset(offset: CGFloat, itemNode: ListViewItemNode?) {
+        }
+        
+        func dismiss() {
+            if let contextController = self.contextController {
+                contextController.cancelReactionAnimation()
+                contextController.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak contextController] _ in
+                    contextController?.dismissNow()
+                })
+            }
+            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                standaloneReactionAnimation.cancel()
+                standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                    standaloneReactionAnimation?.removeFromSupernode()
+                })
+            }
+        }
+    }
 
     private let listNode: ChatHistoryListNode
     private let getContentAreaInScreenSpace: () -> CGRect
@@ -553,6 +655,8 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
     private var currentPendingItem: (Int64, Source, () -> Void)?
 
     private var animatingItemNodes: [AnimatingItemNode] = []
+    private var decorationItemNodes: [DecorationItemNode] = []
+    private var messageReactionContexts: [MessageReactionContext] = []
 
     var hasScheduledTransitions: Bool {
         return self.currentPendingItem != nil
@@ -584,6 +688,28 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
     func add(correlationId: Int64, source: Source, initiated: @escaping () -> Void) {
         self.currentPendingItem = (correlationId, source, initiated)
         self.listNode.setCurrentSendAnimationCorrelationId(correlationId)
+    }
+    
+    func add(decorationView: UIView, itemNode: ChatMessageItemView) -> DecorationItemNode {
+        let decorationItemNode = DecorationItemNode(itemNode: itemNode, contentView: decorationView, getContentAreaInScreenSpace: self.getContentAreaInScreenSpace)
+        decorationItemNode.updateLayout(size: self.bounds.size)
+       
+        self.decorationItemNodes.append(decorationItemNode)
+        self.addSubnode(decorationItemNode)
+        
+//        let overlayController = OverlayTransitionContainerController()
+//        overlayController.displayNode.isUserInteractionEnabled = false
+//        overlayController.displayNode.addSubnode(decorationItemNode)
+//        decorationItemNode.overlayController = overlayController
+//        itemNode.item?.context.sharedContext.mainWindow?.presentInGlobalOverlay(overlayController)
+                
+        return decorationItemNode
+    }
+    
+    func remove(decorationNode: DecorationItemNode) {
+        self.decorationItemNodes.removeAll(where: { $0 === decorationNode })
+        decorationNode.removeFromSupernode()
+        decorationNode.overlayController?.dismiss()
     }
 
     private func beginAnimation(itemNode: ChatMessageItemView, source: Source) {
@@ -641,16 +767,87 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         return nil
     }
+    
+    private func removeEmptyMessageReactionContexts() {
+        for i in (0 ..< self.messageReactionContexts.count).reversed() {
+            if self.messageReactionContexts[i].isEmpty {
+                self.messageReactionContexts.remove(at: i)
+            }
+        }
+    }
+    
+    func dismissMessageReactionContexts(itemNode: ListViewItemNode? = nil) {
+        for i in (0 ..< self.messageReactionContexts.count).reversed() {
+            let messageReactionContext = self.messageReactionContexts[i]
+            if itemNode == nil || messageReactionContext.itemNode === itemNode {
+                self.messageReactionContexts.remove(at: i)
+                messageReactionContext.dismiss()
+            }
+        }
+    }
+    
+    func addMessageContextController(messageId: MessageId, contextController: ContextController) {
+        self.addMessageReactionContextContext(messageId: messageId, contextController: contextController, standaloneReactionAnimation: nil)
+    }
+    
+    func addMessageStandaloneReactionAnimation(messageId: MessageId, standaloneReactionAnimation: StandaloneReactionAnimation) {
+        self.addMessageReactionContextContext(messageId: messageId, contextController: nil, standaloneReactionAnimation: standaloneReactionAnimation)
+    }
+    
+    private func addMessageReactionContextContext(messageId: MessageId, contextController: ContextController?, standaloneReactionAnimation: StandaloneReactionAnimation?) {
+        self.removeEmptyMessageReactionContexts()
+        
+        var messageItemNode: ListViewItemNode?
+        self.listNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView {
+                if let item = itemNode.item {
+                    for (message, _) in item.content {
+                        if message.id == messageId {
+                            messageItemNode = itemNode
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        
+        if let messageItemNode = messageItemNode {
+            for i in 0 ..< self.messageReactionContexts.count {
+                if self.messageReactionContexts[i].itemNode === messageItemNode {
+                    self.messageReactionContexts[i].dismiss()
+                    self.messageReactionContexts.remove(at: i)
+                    break
+                }
+            }
+            self.messageReactionContexts.append(MessageReactionContext(itemNode: messageItemNode, contextController: contextController, standaloneReactionAnimation: standaloneReactionAnimation))
+        }
+    }
 
     func addExternalOffset(offset: CGFloat, transition: ContainedViewLayoutTransition, itemNode: ListViewItemNode?) {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+        }
+        if itemNode == nil {
+            for decorationItemNode in self.decorationItemNodes {
+                decorationItemNode.addExternalOffset(offset: offset, transition: transition)
+            }
+        }
+        for messageReactionContext in self.messageReactionContexts {
+            messageReactionContext.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
     }
 
     func addContentOffset(offset: CGFloat, itemNode: ListViewItemNode?) {
         for animatingItemNode in self.animatingItemNodes {
             animatingItemNode.addContentOffset(offset: offset, itemNode: itemNode)
+        }
+        if itemNode == nil {
+            for decorationItemNode in self.decorationItemNodes {
+                decorationItemNode.addContentOffset(offset: offset)
+            }
+        }
+        for messageReactionContext in self.messageReactionContexts {
+            messageReactionContext.addContentOffset(offset: offset, itemNode: itemNode)
         }
     }
 

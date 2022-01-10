@@ -386,14 +386,14 @@ static int32_t fixedTimeDifferenceValue = 0;
             NSDictionary *datacenterAuthInfoById = [keychain objectForKey:@"datacenterAuthInfoById" group:@"persistent"];
             if (datacenterAuthInfoById != nil) {
                 _datacenterAuthInfoById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAuthInfoById];
-#if DEBUG
+/*#if DEBUG
                 NSArray<NSNumber *> *keys = [_datacenterAuthInfoById allKeys];
                 for (NSNumber *key in keys) {
                     if (parseAuthInfoMapKeyInteger(key).selector != MTDatacenterAuthInfoSelectorPersistent) {
                         [_datacenterAuthInfoById removeObjectForKey:key];
                     }
                 }
-#endif
+#endif*/
             }
             
             NSDictionary *datacenterPublicKeysById = [keychain objectForKey:@"datacenterPublicKeysById" group:@"ephemeral"];
@@ -1305,7 +1305,7 @@ static int32_t fixedTimeDifferenceValue = 0;
     }];
 }
 
-- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn selector:(MTDatacenterAuthInfoSelector)selector
+- (void)authInfoForDatacenterWithIdRequired:(NSInteger)datacenterId isCdn:(bool)isCdn selector:(MTDatacenterAuthInfoSelector)selector allowUnboundEphemeralKeys:(bool)allowUnboundEphemeralKeys
 {
     [[MTContext contextQueue] dispatchOnQueue:^
     {
@@ -1314,7 +1314,7 @@ static int32_t fixedTimeDifferenceValue = 0;
         if (_datacenterAuthActions[infoKey] == nil)
         {
             __weak MTContext *weakSelf = self;
-            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:selector isCdn:isCdn completion:^(MTDatacenterAuthAction *action, __unused bool success) {
+            MTDatacenterAuthAction *authAction = [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:selector isCdn:isCdn skipBind:allowUnboundEphemeralKeys completion:^(MTDatacenterAuthAction *action, __unused bool success) {
                 [[MTContext contextQueue] dispatchOnQueue:^{
                     __strong MTContext *strongSelf = weakSelf;
                     if (strongSelf == nil) {
@@ -1334,8 +1334,8 @@ static int32_t fixedTimeDifferenceValue = 0;
             switch (selector) {
                 case MTDatacenterAuthInfoSelectorEphemeralMain:
                 case MTDatacenterAuthInfoSelectorEphemeralMedia: {
-                    if ([self authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent] == nil) {
-                        [self authInfoForDatacenterWithIdRequired:datacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent];
+                    if ([self authInfoForDatacenterWithId:datacenterId selector:MTDatacenterAuthInfoSelectorPersistent] == nil && !allowUnboundEphemeralKeys) {
+                        [self authInfoForDatacenterWithIdRequired:datacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent allowUnboundEphemeralKeys:false];
                     } else {
                         [authAction execute:self datacenterId:datacenterId];
                     }

@@ -1,7 +1,26 @@
 import Foundation
 import UIKit
 
+private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
+    if let view = view as? ComponentTaggedView {
+        if view.matches(tag: tag) {
+            return view
+        }
+    }
+    
+    for subview in view.subviews {
+        if let result = findTaggedViewImpl(view: subview, tag: tag) {
+            return result
+        }
+    }
+    
+    return nil
+}
+
 public final class ComponentHostView<EnvironmentType>: UIView {
+    private var currentComponent: AnyComponent<EnvironmentType>?
+    private var currentContainerSize: CGSize?
+    private var currentSize: CGSize?
     private var componentView: UIView?
     private(set) var isUpdating: Bool = false
     
@@ -14,7 +33,16 @@ public final class ComponentHostView<EnvironmentType>: UIView {
     }
     
     public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, containerSize: CGSize) -> CGSize {
-        self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, containerSize: containerSize)
+        if let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
+            if currentContainerSize == containerSize && currentComponent == component {
+                return currentSize
+            }
+        }
+        self.currentComponent = component
+        self.currentContainerSize = containerSize
+        let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, containerSize: containerSize)
+        self.currentSize = size
+        return size
     }
 
     private func _update(transition: Transition, component: AnyComponent<EnvironmentType>, maybeEnvironment: () -> Environment<EnvironmentType>, updateEnvironment: Bool, containerSize: CGSize) -> CGSize {
@@ -54,7 +82,7 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             } as () -> Environment<EnvironmentType>, updateEnvironment: false, containerSize: containerSize)
         }
 
-        let updatedSize = component._update(view: componentView, availableSize: containerSize, transition: transition)
+        let updatedSize = component._update(view: componentView, availableSize: containerSize, environment: context.erasedEnvironment, transition: transition)
         transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: updatedSize))
 
         self.isUpdating = false
@@ -65,5 +93,13 @@ public final class ComponentHostView<EnvironmentType>: UIView {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
         return result
+    }
+    
+    public func findTaggedView(tag: Any) -> UIView? {
+        guard let componentView = self.componentView else {
+            return nil
+        }
+        
+        return findTaggedViewImpl(view: componentView, tag: tag)
     }
 }

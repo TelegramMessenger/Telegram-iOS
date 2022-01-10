@@ -98,27 +98,47 @@
     object_setClass(self, newClass);
 }
 
-static Class freedomMakeClass(Class superclass, Class subclass, SEL *copySelectors, int copySelectorsCount)
-{
-    if (superclass == Nil || subclass == Nil)
-        return nil;
-    
-    Class decoratedClass = objc_allocateClassPair(superclass, [[NSString alloc] initWithFormat:@"%@_%@", NSStringFromClass(superclass), NSStringFromClass(subclass)].UTF8String, 0);
-    
-    unsigned int count = 0;
-    Method *methodList = class_copyMethodList(subclass, &count);
-    if (methodList != NULL) {
-        for (unsigned int i = 0; i < count; i++) {
-            SEL methodName = method_getName(methodList[i]);
-            class_addMethod(decoratedClass, methodName, method_getImplementation(methodList[i]), method_getTypeEncoding(methodList[i]));
+- (NSNumber * _Nullable)floatValueForKeyPath:(NSString * _Nonnull)keyPath {
+    id value = [self valueForKeyPath:keyPath];
+    if (value != nil) {
+        if ([value respondsToSelector:@selector(floatValue)]) {
+            return @([value floatValue]);
+        } else {
+            return nil;
         }
-        
-        free(methodList);
+    } else {
+        return nil;
     }
-    
-    objc_registerClassPair(decoratedClass);
-    
-    return decoratedClass;
+}
+
++ (NSArray<NSString *> * _Nonnull)getIvarList:(Class _Nonnull)classValue {
+    NSMutableArray<NSString *> *result = [[NSMutableArray alloc] init];
+
+    unsigned int varCount;
+
+    Ivar *vars = class_copyIvarList(classValue, &varCount);
+
+    for (int i = 0; i < varCount; i++) {
+        Ivar var = vars[i];
+
+        const char* name = ivar_getName(var);
+        const char* typeEncoding = ivar_getTypeEncoding(var);
+
+        [result addObject:[NSString stringWithFormat:@"%s: %s", name, typeEncoding]];
+    }
+
+    free(vars);
+
+    return result;
+}
+
+- (id _Nullable)getIvarValue:(NSString * _Nonnull)name {
+    Ivar ivar = class_getInstanceVariable([self class], [name UTF8String]);
+    if (!ivar){
+       return nil;
+    }
+    id value = object_getIvar(self, ivar);
+    return value;
 }
 
 @end

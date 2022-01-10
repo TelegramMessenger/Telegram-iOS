@@ -18,14 +18,16 @@ final class VoiceChatRecordingSetupController: ViewController {
     }
     
     private let context: AccountContext
+    private let peer: Peer
     private let completion: (Bool?) -> Void
     
     private var animatedIn = false
     
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, completion: @escaping (Bool?) -> Void) {
+    init(context: AccountContext, peer: Peer, completion: @escaping (Bool?) -> Void) {
         self.context = context
+        self.peer = peer
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -53,7 +55,7 @@ final class VoiceChatRecordingSetupController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = VoiceChatRecordingSetupControllerNode(controller: self, context: self.context)
+        self.displayNode = VoiceChatRecordingSetupControllerNode(controller: self, context: self.context, peer: self.peer)
         self.controllerNode.completion = { [weak self] videoOrientation in
             self?.completion(videoOrientation)
         }
@@ -147,7 +149,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(controller: VoiceChatRecordingSetupController, context: AccountContext) {
+    init(controller: VoiceChatRecordingSetupController, context: AccountContext, peer: Peer) {
         self.controller = controller
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -180,7 +182,14 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         self.contentBackgroundNode = ASDisplayNode()
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
-        let title = "Record Voice Chat"
+        let isLivestream: Bool
+        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+            isLivestream = true
+        } else {
+            isLivestream = false
+        }
+        
+        let title = isLivestream ? self.presentationData.strings.LiveStream_RecordTitle : self.presentationData.strings.VoiceChat_RecordTitle
         
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
@@ -200,14 +209,14 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         
         self.videoAudioButton = HighlightTrackingButtonNode()
         self.videoAudioTitleNode = ImmediateTextNode()
-        self.videoAudioTitleNode.attributedText = NSAttributedString(string: "Video and Audio", font: Font.regular(17.0), textColor: .white, paragraphAlignment: .left)
+        self.videoAudioTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordVideoAndAudio, font: Font.regular(17.0), textColor: .white, paragraphAlignment: .left)
         self.videoAudioCheckNode = ASImageNode()
         self.videoAudioCheckNode.displaysAsynchronously = false
         self.videoAudioCheckNode.image = UIImage(bundleImageName: "Call/Check")
         
         self.audioButton = HighlightTrackingButtonNode()
         self.audioTitleNode = ImmediateTextNode()
-        self.audioTitleNode.attributedText = NSAttributedString(string: "Only Audio", font: Font.regular(17.0), textColor: .white, paragraphAlignment: .left)
+        self.audioTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordOnlyAudio, font: Font.regular(17.0), textColor: .white, paragraphAlignment: .left)
         self.audioCheckNode = ASImageNode()
         self.audioCheckNode.displaysAsynchronously = false
         self.audioCheckNode.image = UIImage(bundleImageName: "Call/Check")
@@ -217,14 +226,14 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         self.portraitButton.cornerRadius = 11.0
         self.portraitIconNode = PreviewIconNode()
         self.portraitTitleNode = ImmediateTextNode()
-        self.portraitTitleNode.attributedText = NSAttributedString(string: "Portrait", font: Font.semibold(15.0), textColor: UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
+        self.portraitTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordPortrait, font: Font.semibold(15.0), textColor: UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
         
         self.landscapeButton = HighlightTrackingButtonNode()
         self.landscapeButton.backgroundColor = UIColor(rgb: 0x303032)
         self.landscapeButton.cornerRadius = 11.0
         self.landscapeIconNode = PreviewIconNode()
         self.landscapeTitleNode = ImmediateTextNode()
-        self.landscapeTitleNode.attributedText = NSAttributedString(string: "Landscape", font: Font.semibold(15.0), textColor: UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
+        self.landscapeTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordLandscape, font: Font.semibold(15.0), textColor: UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
         
         self.selectionNode = ASImageNode()
         self.selectionNode.displaysAsynchronously = false
@@ -452,7 +461,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let innerContentHeight: CGFloat = 287.0
-        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
+        var width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         if isLandscape {
             contentHeight = layout.size.height
             width = layout.size.width
@@ -515,8 +524,8 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
         
         transition.updateAlpha(node: self.selectionNode, alpha: buttonsAlpha)
         
-        self.portraitTitleNode.attributedText = NSAttributedString(string: "Portrait", font: Font.semibold(15.0), textColor: self.videoMode == .portrait ? UIColor(rgb: 0xb56df4) : UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
-        self.landscapeTitleNode.attributedText = NSAttributedString(string: "Landscape", font: Font.semibold(15.0), textColor: self.videoMode == .landscape ? UIColor(rgb: 0xb56df4) : UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
+        self.portraitTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordPortrait, font: Font.semibold(15.0), textColor: self.videoMode == .portrait ? UIColor(rgb: 0xb56df4) : UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
+        self.landscapeTitleNode.attributedText = NSAttributedString(string: self.presentationData.strings.VoiceChat_RecordLandscape, font: Font.semibold(15.0), textColor: self.videoMode == .landscape ? UIColor(rgb: 0xb56df4) : UIColor(rgb: 0x8e8e93), paragraphAlignment: .left)
         
         let buttonWidth = floorToScreenPixels((contentFrame.width - inset * 2.0 - 11.0) / 2.0)
         let portraitButtonFrame = CGRect(x: inset, y: 56.0 + itemHeight * 2.0 + 25.0, width: buttonWidth, height: 140.0)
@@ -547,7 +556,7 @@ private class VoiceChatRecordingSetupControllerNode: ViewControllerTracingNode, 
             self.selectionNode.frame = landscapeButtonFrame.insetBy(dx: -1.0, dy: -1.0)
         }
                    
-        self.doneButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: .button(text: "Start Recording"), title: "", subtitle: "", dark: false, small: false)
+        self.doneButton.update(size: centralButtonSize, buttonSize: CGSize(width: 112.0, height: 112.0), state: .button(text: self.presentationData.strings.VoiceChat_RecordStartRecording), title: "", subtitle: "", dark: false, small: false)
         
         let cancelButtonHeight = self.cancelButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.cancelButton, frame: CGRect(x: buttonInset, y: contentHeight - cancelButtonHeight - insets.bottom - 16.0, width: contentFrame.width, height: cancelButtonHeight))

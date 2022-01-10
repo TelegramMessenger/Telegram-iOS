@@ -94,7 +94,7 @@
     bool _scheduledVideoPlayback;
     
     id<TGMediaEditAdjustments> _initialAdjustments;
-    NSString *_caption;
+    NSAttributedString *_caption;
     
     bool _viewFillingWholeScreen;
     bool _forceStatusBarVisible;
@@ -139,7 +139,7 @@
 
 @synthesize actionHandle = _actionHandle;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSAttributedString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -309,7 +309,7 @@
      
     TGPhotoEditorBackButton backButton = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButton = TGPhotoEditorDoneButtonCheck;
-    _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
+    _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:backButton doneButton:doneButton solidBackground:true];
     [_portraitToolbarView setToolbarTabs:_availableTabs animated:false];
     [_portraitToolbarView setActiveTab:_currentTab];
     _portraitToolbarView.cancelPressed = toolbarCancelPressed;
@@ -318,7 +318,7 @@
     _portraitToolbarView.tabPressed = toolbarTabPressed;
     [_wrapperView addSubview:_portraitToolbarView];
     
-    _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:backButton doneButton:doneButton solidBackground:true];
+    _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithContext:_context backButton:backButton doneButton:doneButton solidBackground:true];
     [_landscapeToolbarView setToolbarTabs:_availableTabs animated:false];
     [_landscapeToolbarView setActiveTab:_currentTab];
     _landscapeToolbarView.cancelPressed = toolbarCancelPressed;
@@ -2292,7 +2292,7 @@
         _documentController.delegate = self;
         [_documentController setUTI:@"com.instagram.exclusivegram"];
         if (_caption.length > 0)
-            [_documentController setAnnotation:@{@"InstagramCaption" : _caption}];
+            [_documentController setAnnotation:@{@"InstagramCaption" : _caption.string}];
         [_documentController presentOpenInMenuFromRect:self.view.frame inView:self.view animated:true];
     }];
 }

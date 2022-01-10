@@ -7,7 +7,7 @@ import TelegramApi
 
 public func secureIdConfiguration(postbox: Postbox, network: Network) -> Signal<SecureIdConfiguration, NoError> {
     let cached: Signal<CachedSecureIdConfiguration?, NoError> = postbox.transaction { transaction -> CachedSecureIdConfiguration? in
-        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSecureIdConfiguration, key: ValueBoxKey(length: 0))) as? CachedSecureIdConfiguration {
+        if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSecureIdConfiguration, key: ValueBoxKey(length: 0)))?.get(CachedSecureIdConfiguration.self) {
             return entry
         } else {
             return nil
@@ -35,7 +35,9 @@ public func secureIdConfiguration(postbox: Postbox, network: Network) -> Signal<
                     }
             }
             return postbox.transaction { transaction -> SecureIdConfiguration in
-                transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSecureIdConfiguration, key: ValueBoxKey(length: 0)), entry: parsed, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                if let entry = CodableEntry(parsed) {
+                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedSecureIdConfiguration, key: ValueBoxKey(length: 0)), entry: entry, collectionSpec: ItemCacheCollectionSpec(lowWaterItemCount: 1, highWaterItemCount: 1))
+                }
                 return parsed.value
             }
         }

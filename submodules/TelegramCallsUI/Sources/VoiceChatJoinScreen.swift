@@ -360,7 +360,7 @@ public final class VoiceChatJoinScreen: ViewController {
                 if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                     if let contentNode = contentNode, let previous = previous {
                         contentNode.frame = previous.frame
-                        contentNode.updateLayout(size: previous.bounds.size, bottomInset: bottomGridInset, transition: .immediate)
+                        contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                         
                         contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                             self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
@@ -443,7 +443,7 @@ public final class VoiceChatJoinScreen: ViewController {
             
             if let contentNode = self.contentNode {
                 transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-                contentNode.updateLayout(size: gridSize, bottomInset: bottomGridInset, transition: transition)
+                contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: transition)
             }
         }
         
@@ -672,7 +672,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         self.avatarNode.setPeer(context: context, theme: theme, peer: EnginePeer(peer), emptyColor: theme.list.mediaPlaceholderColor)
         
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: title ?? peer.displayTitle(strings: strings, displayOrder: displayOrder), font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title ?? EnginePeer(peer).displayTitle(strings: strings, displayOrder: displayOrder), font: Font.semibold(16.0), textColor: theme.actionSheet.primaryTextColor)
         
         self.addSubnode(self.countNode)
 
@@ -693,7 +693,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         self.contentOffsetUpdated = f
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let sideInset: CGFloat = 16.0
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))
         let countSize = self.countNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: size.height))

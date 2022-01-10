@@ -300,7 +300,7 @@ private func groupStickerPackSetupControllerEntries(presentationData: Presentati
     return entries
 }
 
-public func groupStickerPackSetupController(context: AccountContext, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
+public func groupStickerPackSetupController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, currentPackInfo: StickerPackCollectionInfo?) -> ViewController {
     let initialState = GroupStickerPackSetupControllerState(isSaving: false)
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -321,7 +321,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
                 case .fetching:
                     return nil
                 case let .result(info, items, _):
-                    return InitialStickerPackData.data(StickerPackData(info: info, item: items.first as? StickerPackItem))
+                    return InitialStickerPackData.data(StickerPackData(info: info, item: items.first))
             }
         })
     } else {
@@ -361,7 +361,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
                         case .none:
                             return .single((searchText, .notFound))
                         case let .result(info, items, _):
-                            return .single((searchText, .found(StickerPackData(info: info, item: items.first as? StickerPackItem))))
+                            return .single((searchText, .found(StickerPackData(info: info, item: items.first))))
                     }
                 })
             }
@@ -402,10 +402,11 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     
     let previousHadData = Atomic<Bool>(value: false)
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
     |> map { presentationData, state, initialData, view, searchState, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var stickerSettings = StickerSettings.defaultSettings
-        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
             stickerSettings = value
         }
         
@@ -482,7 +483,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     presentStickerPackController = { [weak controller] info in
         dismissInputImpl?()
         let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-        presentControllerImpl?(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller?.navigationController as? NavigationController), nil)
+        presentControllerImpl?(StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller?.navigationController as? NavigationController), nil)
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
         if let controller = controller, let navigationController = controller.navigationController as? NavigationController {

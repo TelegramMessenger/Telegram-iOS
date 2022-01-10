@@ -197,7 +197,6 @@ private final class ContactSyncManagerImpl {
                 disposable.add(
                     (syncContactsOnce(network: self.network, postbox: self.postbox, accountPeerId: self.accountPeerId)
                     |> mapToSignal { _ -> Signal<PushDeviceContactsResult, NoError> in
-                        return .complete()
                     }
                     |> then(importSignal)
                     |> deliverOn(self.queue)
@@ -250,8 +249,8 @@ private func pushDeviceContacts(postbox: Postbox, network: Network, importableCo
                         if let updatedData = importableContacts[number] {
                             if let value = value as? TelegramDeviceContactImportedData {
                                 switch value {
-                                    case let .imported(imported):
-                                        if imported.data != updatedData {
+                                    case let .imported(data, _):
+                                        if data != updatedData {
                                            updatedDataIdentifiers.insert(identifier)
                                         }
                                     case .retryLater:
@@ -344,7 +343,7 @@ private func pushDeviceContactData(postbox: Postbox, network: Network, contacts:
                                 for item in imported {
                                     switch item {
                                         case let .importedContact(userId, _):
-                                            addedContactPeerIds.insert(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)))
+                                            addedContactPeerIds.insert(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
                                     }
                                 }
                                 for item in retryContacts {
@@ -398,7 +397,7 @@ private func updateContactPresences(postbox: Postbox, network: Network, accountP
             for status in statuses {
                 switch status {
                     case let .contactStatus(userId, status):
-                        peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))] = TelegramUserPresence(apiStatus: status)
+                        peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))] = TelegramUserPresence(apiStatus: status)
                 }
             }
             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)

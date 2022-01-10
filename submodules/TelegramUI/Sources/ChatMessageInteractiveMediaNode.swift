@@ -68,8 +68,9 @@ struct ChatMessageDateAndStatus {
     var type: ChatMessageDateAndStatusType
     var edited: Bool
     var viewCount: Int?
-    var dateReplies: Int
     var dateReactions: [MessageReaction]
+    var dateReactionPeers: [(String, EnginePeer)]
+    var dateReplies: Int
     var isPinned: Bool
     var dateText: String
 }
@@ -91,7 +92,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     }
     let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var badgeNode: ChatMessageInteractiveMediaBadge?
-    private var tapRecognizer: UITapGestureRecognizer?
+    //private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
     private var context: AccountContext?
     private var message: Message?
@@ -150,6 +151,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     
     var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
     var activatePinch: ((PinchSourceContainerNode) -> Void)?
+    var updateMessageReaction: ((Message, ChatControllerInteractionReaction) -> Void)?
     
     override init() {
         self.pinchContainerNode = PinchSourceContainerNode()
@@ -267,9 +269,18 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     override func didLoad() {
         super.didLoad()
         
-        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:)))
-        self.imageNode.view.addGestureRecognizer(tapRecognizer)
-        self.tapRecognizer = tapRecognizer
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:)))
+        /*recognizer.tapActionAtPoint = { [weak self] point in
+            guard let strongSelf = self else {
+                return .fail
+            }
+            if !strongSelf.imageNode.bounds.contains(point) {
+                return .fail
+            }
+            return .waitForDoubleTap
+        }*/
+        self.imageNode.view.addGestureRecognizer(recognizer)
+        //self.tapRecognizer = recognizer
     }
     
     private func progressPressed(canActivate: Bool) {
@@ -343,9 +354,38 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 }
             }
         }
+        /*if case .ended = recognizer.state {
+            if let (gesture, point) = recognizer.lastRecognizedGestureAndLocation, let message = self.message {
+                if case .doubleTap = gesture {
+                    if canAddMessageReactions(message: message) {
+                        self.updateMessageReaction?(message, .default)
+                    }
+                } else {
+                    if let _ = self.attributes?.updatingMedia {
+                        if let statusNode = self.statusNode, statusNode.frame.contains(point) {
+                            self.progressPressed(canActivate: true)
+                        }
+                    } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
+                        var videoContentMatch = true
+                        if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
+                            videoContentMatch = self.message?.stableId == stableId && self.media?.id == mediaId
+                        }
+                        self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
+                    } else {
+                        if let message = self.message, message.flags.isSending {
+                            if let statusNode = self.statusNode, statusNode.frame.contains(point) {
+                                self.progressPressed(canActivate: true)
+                            }
+                        } else {
+                            self.progressPressed(canActivate: true)
+                        }
+                    }
+                }
+            }
+        }*/
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void))) {
+    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData,  _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -359,7 +399,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         let currentAutomaticDownload = self.automaticDownload
         let currentAutomaticPlayback = self.automaticPlayback
         
-        return { [weak self] context, presentationData, dateTimeFormat, message, attributes, media, dateAndStatus, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
+        return { [weak self] context, presentationData, dateTimeFormat, message, associatedData, attributes, media, dateAndStatus, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var nativeSize: CGSize
             
             let isSecretMedia = message.containsSecretMedia
@@ -465,10 +505,29 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
 
             var statusSize = CGSize()
-            var statusApply: ((Bool) -> Void)?
+            var statusApply: ((ListViewItemUpdateAnimation) -> Void)?
 
             if let dateAndStatus = dateAndStatus {
-                let (size, apply) = statusLayout(context, presentationData, dateAndStatus.edited, dateAndStatus.viewCount, dateAndStatus.dateText, dateAndStatus.type, CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateAndStatus.dateReactions, dateAndStatus.dateReplies, dateAndStatus.isPinned, message.isSelfExpiring)
+                let statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                    context: context,
+                    presentationData: presentationData,
+                    edited: dateAndStatus.edited,
+                    impressionCount: dateAndStatus.viewCount,
+                    dateText: dateAndStatus.dateText,
+                    type: dateAndStatus.type,
+                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                    constrainedSize: CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableReactions: associatedData.availableReactions,
+                    reactions: dateAndStatus.dateReactions,
+                    reactionPeers: dateAndStatus.dateReactionPeers,
+                    replyCount: dateAndStatus.dateReplies,
+                    isPinned: dateAndStatus.isPinned,
+                    hasAutoremove: message.isSelfExpiring,
+                    canViewReactionList: canViewMessageReactionList(message: message)
+                ))
+                
+                let (size, apply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
+                
                 statusSize = size
                 statusApply = apply
             }
@@ -614,10 +673,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
-                                    if !manual {
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: isSecretMedia ? nil : 600, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
-                                    } else if let representation = largestRepresentationForPhoto(image) {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: isSecretMedia ? nil : 600), storeToDownloadsPeerType: storeToDownloadsPeerType).start())
+                                    if let representation = largestRepresentationForPhoto(image) {
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: nil/*isSecretMedia ? nil : 600*/), userInitiated: manual, storeToDownloadsPeerType: storeToDownloadsPeerType).start())
                                     }
                                 }
                             }, cancel: {
@@ -817,6 +874,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
                     
                     let imageFrame = CGRect(origin: CGPoint(x: -arguments.insets.left, y: -arguments.insets.top), size: arguments.drawingSize).ensuredValid
+                    let cleanImageFrame = CGRect(origin: imageFrame.origin, size: CGSize(width: imageFrame.width - arguments.corners.extendedEdges.right, height: imageFrame.height))
                     
                     let imageApply = imageLayout(arguments)
                     
@@ -838,9 +896,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     strongSelf.pinchContainerNode.update(size: imageFrame.size, transition: .immediate)
                                     strongSelf.imageNode.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
                                 } else {
-                                    transition.updateFrame(node: strongSelf.pinchContainerNode, frame: imageFrame)
-                                    transition.updateFrame(node: strongSelf.imageNode, frame: CGRect(origin: CGPoint(), size: imageFrame.size))
-                                    strongSelf.pinchContainerNode.update(size: imageFrame.size, transition: transition)
+                                    transition.animator.updateFrame(layer: strongSelf.pinchContainerNode.layer, frame: imageFrame, completion: nil)
+                                    transition.animator.updateFrame(layer: strongSelf.imageNode.layer, frame: CGRect(origin: CGPoint(), size: imageFrame.size), completion: nil)
+                                    strongSelf.pinchContainerNode.update(size: imageFrame.size, transition: transition.transition)
                                     
                                 }
                             } else {
@@ -852,19 +910,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             imageApply()
 
                             if let statusApply = statusApply {
+                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: cleanImageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: cleanImageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.pinchContainerNode.contentNode.addSubnode(strongSelf.dateAndStatusNode)
+                                    statusApply(.None)
+                                    strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
+                                } else {
+                                    transition.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
+                                    statusApply(transition)
                                 }
-                                var hasAnimation = true
-                                if transition.isAnimated {
-                                    hasAnimation = false
-                                }
-                                statusApply(hasAnimation)
-
-                                let dateAndStatusFrame = CGRect(origin: CGPoint(x: imageFrame.width - layoutConstants.image.statusInsets.right - statusSize.width, y: imageFrame.height - layoutConstants.image.statusInsets.bottom - statusSize.height), size: statusSize)
-
-                                strongSelf.dateAndStatusNode.frame = dateAndStatusFrame
-                                strongSelf.dateAndStatusNode.bounds = CGRect(origin: CGPoint(), size: dateAndStatusFrame.size)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -893,7 +947,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     
                                     let streamVideo = isMediaStreamable(message: message, media: updatedVideoFile)
                                     let loopVideo = updatedVideoFile.isAnimated
-                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor)
+                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected())
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
@@ -971,6 +1025,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             
                             if let updateImageSignal = updateImageSignal {
+                                strongSelf.imageNode.captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected()
                                 strongSelf.imageNode.setSignal(updateImageSignal(synchronousLoads, false), attemptSynchronously: synchronousLoads)
 
                                 var imageDimensions: CGSize?
@@ -1103,12 +1158,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             return
         }
         
-        let automaticDownload: Bool
+        /*let automaticDownload: Bool
         if let autoDownload = self.automaticDownload, case .full = autoDownload {
             automaticDownload = true
         } else {
             automaticDownload = false
-        }
+        }*/
         
         var secretBeginTimeAndTimeout: (Double?, Double)?
         let isSecretMedia = message.containsSecretMedia
@@ -1391,10 +1446,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 case .Remote:
                     state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                     if let file = self.media as? TelegramMediaFile {
-                        if false, file.isAnimated && (!automaticDownload || !automaticPlayback) {
-                            let string = "\(gifTitle) " + dataSizeString(file.size ?? 0, formatting: formatting)
-                            badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: string, size: nil, muted: false, active: false)
-                        } else {
+                        do {
                             let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                             if wideLayout {
                                 if isMediaStreamable(message: message, media: file) {
@@ -1487,12 +1539,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> ChatMessageInteractiveMediaNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { context, presentationData, dateTimeFormat, message, attributes, media, dateAndStatus, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
+        return { context, presentationData, dateTimeFormat, message, associatedData, attributes, media, dateAndStatus, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode in
             var imageNode: ChatMessageInteractiveMediaNode
-            var imageLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ContainedViewLayoutTransition, Bool) -> Void)))
+            var imageLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 imageNode = node
@@ -1502,7 +1554,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 imageLayout = imageNode.asyncLayout()
             }
             
-            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, presentationData, dateTimeFormat, message, attributes, media, dateAndStatus, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, continueLayout) = imageLayout(context, presentationData, dateTimeFormat, message, associatedData, attributes, media, dateAndStatus, automaticDownload, peerType, sizeCalculation, layoutConstants, contentMode)
             
             return (unboundSize, initialWidth, { constrainedSize, automaticPlayback, wideLayout, corners in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize, automaticPlayback, wideLayout, corners)
@@ -1570,8 +1622,23 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 statusNode.isHidden = true
             }
             
-            let view = self?.view.snapshotContentTree(unhide: true)
-            
+            let view: UIView?
+            if let strongSelf = self, strongSelf.imageNode.captureProtected {
+                let imageView = UIImageView()
+                imageView.contentMode = .scaleToFill
+                imageView.image = strongSelf.imageNode.image
+                imageView.frame = strongSelf.imageNode.frame
+                if imageView.layer.contents == nil {
+                    imageView.layer.contents = imageView.image?.cgImage
+                }
+                strongSelf.imageNode.view.superview?.insertSubview(imageView, aboveSubview: strongSelf.imageNode.view)
+                
+                view = self?.view.snapshotContentTree(unhide: true)
+                imageView.removeFromSuperview()
+            } else {
+                view = self?.view.snapshotContentTree(unhide: true)
+            }
+                        
             if let badgeNode = self?.badgeNode, let badgeNodeHidden = badgeNodeHidden {
                 badgeNode.isHidden = badgeNodeHidden
             }

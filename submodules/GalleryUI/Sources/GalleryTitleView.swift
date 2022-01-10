@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import Postbox
+import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
 
@@ -33,7 +34,7 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
     }
     
     func setMessage(_ message: Message, presentationData: PresentationData, accountPeerId: PeerId) {
-        let authorNameText = stringForFullAuthorName(message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: accountPeerId)
+        let authorNameText = stringForFullAuthorName(message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, accountPeerId: accountPeerId)
         let dateText = humanReadableStringForTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, timestamp: message.timestamp).string
         
         self.authorNameNode.attributedText = NSAttributedString(string: authorNameText, font: titleFont, textColor: .white)
@@ -44,8 +45,8 @@ final class GalleryTitleView: UIView, NavigationBarTitleView {
         let leftInset: CGFloat = 0.0
         let rightInset: CGFloat = 0.0
         
-        let authorNameSize = self.authorNameNode.measure(CGSize(width: size.width - 8.0 * 2.0 - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude))
-        let dateSize = self.dateNode.measure(CGSize(width: size.width - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let authorNameSize = self.authorNameNode.measure(CGSize(width: max(1.0, size.width - 8.0 * 2.0 - leftInset - rightInset), height: CGFloat.greatestFiniteMagnitude))
+        let dateSize = self.dateNode.measure(CGSize(width: max(1.0, size.width - 8.0 * 2.0), height: CGFloat.greatestFiniteMagnitude))
         
         if authorNameSize.height.isZero {
             self.dateNode.frame = CGRect(origin: CGPoint(x: floor((size.width - dateSize.width) / 2.0), y: floor((size.height - dateSize.height) / 2.0)), size: dateSize)

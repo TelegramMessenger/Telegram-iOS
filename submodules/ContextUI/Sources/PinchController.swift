@@ -4,19 +4,8 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import TextSelectionNode
-import ReactionSelectionNode
 import TelegramCore
 import SwiftSignalKit
-
-private func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {
-    let sourceWindowFrame = fromView.convert(frame, to: nil)
-    var targetWindowFrame = toView.convert(sourceWindowFrame, from: nil)
-
-    if let fromWindow = fromView.window, let toWindow = toView.window {
-        targetWindowFrame.origin.x += toWindow.bounds.width - fromWindow.bounds.width
-    }
-    return targetWindowFrame
-}
 
 final class PinchSourceGesture: UIPinchGestureRecognizer {
     private final class Target {

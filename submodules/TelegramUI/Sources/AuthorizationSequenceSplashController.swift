@@ -154,7 +154,7 @@ final class AuthorizationSequenceSplashController: ViewController {
     
     private func activateLocalization(_ code: String) {
         let currentCode = self.accountManager.transaction { transaction -> String in
-            if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
+            if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
                 return current.primaryComponent.languageCode
             } else {
                 return "en"
@@ -187,7 +187,7 @@ final class AuthorizationSequenceSplashController: ViewController {
             strongSelf.activateLocalizationDisposable.set(TelegramEngineUnauthorized(account: strongSelf.account).localization.downloadAndApplyLocalization(accountManager: accountManager, languageCode: code).start(completed: {
                 let _ = (accountManager.transaction { transaction -> PresentationStrings? in
                     let localizationSettings: LocalizationSettings?
-                    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
+                    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
                         localizationSettings = current
                     } else {
                         localizationSettings = nil

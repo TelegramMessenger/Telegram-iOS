@@ -128,12 +128,12 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
             switch result {
                 case let .messages(messages, _, _):
                     return .single(messages.compactMap({ $0.id() }))
-                case let .channelMessages(channelMessages):
-                    return .single(channelMessages.messages.compactMap({ $0.id() }))
+                case let .channelMessages(_, _, _, _, messages, _, _):
+                    return .single(messages.compactMap({ $0.id() }))
                 case .messagesNotModified:
                     return .single([])
-                case let .messagesSlice(messagesSlice):
-                    return .single(messagesSlice.messages.compactMap({ $0.id() }))
+                case let .messagesSlice(_, _, _, _, messages, _, _):
+                    return .single(messages.compactMap({ $0.id() }))
             }
         }
         |> mapToSignal { ids -> Signal<Int32?, MTRpcError> in
@@ -181,8 +181,12 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
         )
         |> mapToSignal { resultId -> Signal<Void, GetUnseenIdsError> in
             if let resultId = resultId {
-                let _ = currentMaxId.swap(resultId)
-                return .complete()
+                let previous = currentMaxId.swap(resultId)
+                if previous == resultId {
+                    return .fail(.done)
+                } else {
+                    return .complete()
+                }
             } else {
                 return .fail(.done)
             }

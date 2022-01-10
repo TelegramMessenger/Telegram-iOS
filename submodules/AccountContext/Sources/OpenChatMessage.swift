@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import UniversalMediaPlayer
+import TelegramPresentationData
 
 public enum ChatControllerInteractionOpenMessageMode {
     case `default`
@@ -18,6 +19,7 @@ public enum ChatControllerInteractionOpenMessageMode {
 
 public final class OpenChatMessageParams {
     public let context: AccountContext
+    public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     public let chatLocation: ChatLocation?
     public let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?
     public let message: Message
@@ -44,6 +46,7 @@ public final class OpenChatMessageParams {
     
     public init(
         context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
         chatLocation: ChatLocation?,
         chatLocationContextHolder: Atomic<ChatLocationContextHolder?>?,
         message: Message,
@@ -69,6 +72,7 @@ public final class OpenChatMessageParams {
         centralItemUpdated: ((MessageId) -> Void)? = nil
     ) {
         self.context = context
+        self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
         self.message = message

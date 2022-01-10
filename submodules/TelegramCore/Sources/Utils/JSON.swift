@@ -2,7 +2,6 @@ import Foundation
 import Postbox
 import TelegramApi
 
-
 extension JSON {
     private init?(_ object: Any) {
         if let object = object as? JSONValue {

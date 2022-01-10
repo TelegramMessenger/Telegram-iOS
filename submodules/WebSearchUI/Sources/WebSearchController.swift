@@ -1,15 +1,15 @@
 import Foundation
 import UIKit
-import Postbox
 import SwiftSignalKit
 import Display
 import AsyncDisplayKit
 import TelegramCore
 import LegacyComponents
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
 
-public func requestContextResults(context: AccountContext, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
+public func requestContextResults(context: AccountContext, botId: EnginePeer.Id, query: String, peerId: EnginePeer.Id, offset: String = "", existingResults: ChatContextResultCollection? = nil, incompleteResults: Bool = false, staleCachedResults: Bool = false, limit: Int = 60) -> Signal<RequestChatContextResultsResult?, NoError> {
     return context.engine.messages.requestChatContextResults(botId: botId, peerId: peerId, query: query, offset: offset, incompleteResults: incompleteResults, staleCachedResults: staleCachedResults)
     |> `catch` { error -> Signal<RequestChatContextResultsResult?, NoError> in
         return .single(nil)
@@ -124,7 +124,7 @@ public final class WebSearchController: ViewController {
     
     private let context: AccountContext
     private let mode: WebSearchControllerMode
-    private let peer: Peer?
+    private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
     private let configuration: SearchBotsConfiguration
     
@@ -155,14 +155,20 @@ public final class WebSearchController: ViewController {
         }
     }
     
-    public init(context: AccountContext, peer: Peer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil } {
+        didSet {
+            self.controllerNode.getCaptionPanelView = self.getCaptionPanelView
+        }
+    }
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer
         self.chatLocation = chatLocation
         self.configuration = configuration
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.interfaceState = WebSearchInterfaceState(presentationData: presentationData)
         
         var searchQuery: String?
@@ -182,7 +188,7 @@ public final class WebSearchController: ViewController {
         
         let settings = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webSearchSettings])
         |> map { sharedData -> WebSearchSettings in
-            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings] as? WebSearchSettings {
+            if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webSearchSettings]?.get(WebSearchSettings.self) {
                 return current
             } else {
                 return WebSearchSettings.defaultSettings
@@ -191,7 +197,7 @@ public final class WebSearchController: ViewController {
         
         let gifProvider = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> String? in
-            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
                 return nil
             }
             let configuration = WebSearchConfiguration(appConfiguration: appConfiguration)
@@ -199,7 +205,7 @@ public final class WebSearchController: ViewController {
         }
         |> distinctUntilChanged
 
-        self.disposable = ((combineLatest(settings, context.sharedContext.presentationData, gifProvider))
+        self.disposable = ((combineLatest(settings, (updatedPresentationData?.signal ?? context.sharedContext.presentationData), gifProvider))
         |> deliverOnMainQueue).start(next: { [weak self] settings, presentationData, gifProvider in
             guard let strongSelf = self else {
                 return
@@ -445,11 +451,11 @@ public final class WebSearchController: ViewController {
         
         let context = self.context
         let contextBot = self.context.engine.peers.resolvePeerByName(name: name)
-        |> mapToSignal { peer -> Signal<Peer?, NoError> in
-            return .single(peer?._asPeer())
+        |> mapToSignal { peer -> Signal<EnginePeer?, NoError> in
+            return .single(peer)
         }
         |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
-            if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+            if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
                 let results = requestContextResults(context: context, botId: user.id, query: query, peerId: peerId, limit: 64)
                 |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                     return { _ in

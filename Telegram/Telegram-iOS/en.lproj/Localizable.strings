@@ -104,7 +104,8 @@
 "PUSH_ALBUM" = "%1$@|sent you an album";
 "PUSH_MESSAGE_FILES_TEXT_1" = "sent you a file";
 "PUSH_MESSAGE_FILES_TEXT_any" = "sent you %d files";
-"PUSH_MESSAGE_THEME" = "%1$@|changed theme to %2$@";
+"PUSH_MESSAGE_THEME" = "%1$@|changed chat theme to %2$@";
+"PUSH_MESSAGE_NOTHEME" = "%1$@|disabled chat theme";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -178,6 +179,8 @@
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_1" = "{author} sent a file";
 "PUSH_CHAT_MESSAGE_DOCS_TEXT_any" = "{author} sent %d files";
 "PUSH_CHAT_MESSAGE_THEME" = "%1$@|set theme to %3$@ in the group %2$@";
+"PUSH_CHAT_MESSAGE_NOTHEME" = "%1$@|disabled theme in the group %2$@";
+"PUSH_CHAT_REQ_JOINED" = "%1$@ was accepted into the group %2$@";
 
 "PUSH_PINNED_TEXT" = "%1$@|pinned \"%2$@\" ";
 "PUSH_PINNED_NOTEXT" = "%1$@|pinned a message";
@@ -214,8 +217,44 @@
 "PUSH_CHAT_MESSAGE_GAME_SCORE" = "%1$@ scored %4$@ in game %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_VIDEOS" = "%1$@ sent %3$@ videos to the group %2$@";
 
+"PUSH_REACT_TEXT" = "%1$@|%2$@ to your %3$@";
+"PUSH_REACT_NOTEXT" = "%1$@|%2$@ to your message";
+"PUSH_REACT_PHOTO" = "%1$@|%2$@ to your photo";
+"PUSH_REACT_VIDEO" = "%1$@|%2$@ to your video";
+"PUSH_REACT_ROUND" = "%1$@|%2$@ to your video message";
+"PUSH_REACT_DOC" = "%1$@|%2$@ to your file";
+"PUSH_REACT_STICKER" = "%1$@|%2$@ to your %3$@sticker";
+"PUSH_REACT_AUDIO" = "%1$@|%2$@ to your voice message";
+"PUSH_REACT_CONTACT" = "%1$@|%2$@ to your contact %3$@";
+"PUSH_REACT_GEO" = "%1$@|%2$@ to your map";
+"PUSH_REACT_GEOLIVE" = "%1$@|%2$@ to your live location";
+"PUSH_REACT_POLL" = "%1$@|%2$@ to your poll %3$@";
+"PUSH_REACT_QUIZ" = "%1$@|%2$@ to your quiz %3$@";
+"PUSH_REACT_GAME" = "%1$@|%2$@ to your game";
+"PUSH_REACT_INVOICE" = "%1$@|%2$@ to your invoice";
+"PUSH_REACT_GIF" = "%1$@|%2$@ to your GIF";
+
+"PUSH_CHAT_REACT_TEXT" = "%2$@|%1$@ %3$@ to your %4$@";
+"PUSH_CHAT_REACT_NOTEXT" = "%2$@|%1$@ %3$@ to your message";
+"PUSH_CHAT_REACT_PHOTO" = "%2$@|%1$@ %3$@ to your photo";
+"PUSH_CHAT_REACT_VIDEO" = "%2$@|%1$@ %3$@ to your video";
+"PUSH_CHAT_REACT_ROUND" = "%2$@|%1$@ %3$@ to your video message";
+"PUSH_CHAT_REACT_DOC" = "%2$@|%1$@ %3$@ to your file";
+"PUSH_CHAT_REACT_STICKER" = "%2$@|%1$@ %3$@ to your %4$@sticker";
+"PUSH_CHAT_REACT_AUDIO" = "%2$@|%1$@ %3$@ to your voice message";
+"PUSH_CHAT_REACT_CONTACT" = "%2$@|%1$@ %3$@ to your contact %4$@";
+"PUSH_CHAT_REACT_GEO" = "%2$@|%1$@ %3$@ to your map";
+"PUSH_CHAT_REACT_GEOLIVE" = "%2$@|%1$@ %3$@ to your live location";
+"PUSH_CHAT_REACT_POLL" = "%2$@|%1$@ %3$@ to your poll %4$@";
+"PUSH_CHAT_REACT_QUIZ" = "%2$@|%1$@ %3$@ to your quiz %4$@";
+"PUSH_CHAT_REACT_GAME" = "%2$@|%1$@ %3$@ to your game";
+"PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
+"PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
+
+"PUSH_CHAT_REQ_JOINED" = "%2$@|%1$@ was accepted into the group";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
@@ -294,6 +333,14 @@
 "Weekday.Today" = "Today";
 "Weekday.Yesterday" = "Yesterday";
 
+"Calendar.ShortMon" = "M";
+"Calendar.ShortTue" = "T";
+"Calendar.ShortWed" = "W";
+"Calendar.ShortThu" = "T";
+"Calendar.ShortFri" = "F";
+"Calendar.ShortSat" = "S";
+"Calendar.ShortSun" = "S";
+
 "Time.TodayAt" = "today at %@";
 "Time.YesterdayAt" = "yesterday at %@";
 
@@ -351,7 +398,7 @@
 "Login.HaveNotReceivedCodeInternal" = "Haven't received the code?";
 "Login.CodeSentSms" = "We have sent you an SMS with the code";
 "Login.Code" = "Code";
-"Login.WillCallYou" = "Telegram will call you in %@";
+"Login.WillCallYou" = "You can request a voice call in %@";
 "Login.CallRequestState2" = "Requesting a call from Telegram...";
 "Login.CallRequestState3" = "Telegram dialed your number\n[Didn't get the code?]";
 "Login.EmailNotConfiguredError" = "Please set up an email account.";
@@ -2060,7 +2107,7 @@
 
 "Login.CodeSentCall" = "We are calling your phone to dictate a code.";
 
-"Login.WillSendSms" = "Telegram will send you an SMS in %@";
+"Login.WillSendSms" = "You can request an SMS in %@";
 "Login.SmsRequestState2" = "Requesting an SMS from Telegram...";
 "Login.SmsRequestState3" = "Telegram sent you an SMS\n[Didn't get the code?]";
 
@@ -2644,6 +2691,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CaptionEdited" = "%@ edited caption:";
 "Channel.AdminLog.MessageDeleted" = "%@ deleted message:";
 "Channel.AdminLog.MessagePinned" = "%@ pinned message:";
+"Channel.AdminLog.MessageUnpinnedExtended" = "%@ unpinned message:";
 
 "Channel.AdminLog.MessageInvitedName" = "invited %1$@";
 "Channel.AdminLog.MessageInvitedNameUsername" = "invited %1$@ (%2$@)";
@@ -2878,6 +2926,7 @@ Unused sets are archived when you add more.";
 "FastTwoStepSetup.EmailHelp" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 
 "Conversation.ViewMessage" = "VIEW MESSAGE";
+"Conversation.ViewPost" = "VIEW POST";
 
 "GroupInfo.GroupHistory" = "History For New Members";
 "GroupInfo.GroupHistoryVisible" = "Visible";
@@ -3727,7 +3776,7 @@ Unused sets are archived when you add more.";
 "TwoStepAuth.RecoveryEmailAddDescription" = "Please add your valid e-mail. It is the only way to recover a forgotten password.";
 "TwoStepAuth.RecoveryEmailChangeDescription" = "Please enter your new recovery email. It is the only way to recover a forgotten password.";
 "TwoStepAuth.ChangeEmail" = "Change Email";
-"TwoStepAuth.ConfirmEmailDescription" = "Please enter the code we've just emailed at %1$@."; 
+"TwoStepAuth.ConfirmEmailDescription" = "Please enter the code we've just emailed at %1$@.";
 "TwoStepAuth.ConfirmEmailCodePlaceholder" = "Code";
 "TwoStepAuth.ConfirmEmailResendCode" = "Resend Code";
 
@@ -3749,7 +3798,9 @@ Unused sets are archived when you add more.";
 
 "AuthCode.Alert" = "Your login code is %@. Enter it in the Telegram app where you are trying to log in.\n\nDo not give this code to anyone.";
 "Login.CheckOtherSessionMessages" = "Check your Telegram messages";
-"Login.SendCodeViaSms" = "Send the code as an SMS";
+"Login.SendCodeViaSms" = "Get the code via SMS";
+"Login.SendCodeViaCall" = "Call me to dictate the code";
+"Login.SendCodeViaFlashCall" = "Get the code via phone call";
 "Login.CancelPhoneVerification" = "Do you want to stop the phone number verification process?";
 "Login.CancelPhoneVerificationStop" = "Stop";
 "Login.CancelPhoneVerificationContinue" = "Continue";
@@ -4095,6 +4146,7 @@ Unused sets are archived when you add more.";
 
 "ChatSettings.AutoDownloadSettings.TypePhoto" = "Photos";
 "ChatSettings.AutoDownloadSettings.TypeVideo" = "Videos (%@)";
+"ChatSettings.AutoDownloadSettings.TypeMedia" = "Media (%@)";
 "ChatSettings.AutoDownloadSettings.TypeFile" = "Files (%@)";
 "ChatSettings.AutoDownloadSettings.OffForAll" = "Disabled";
 "ChatSettings.AutoDownloadSettings.Delimeter" = ", ";
@@ -4287,6 +4339,7 @@ Unused sets are archived when you add more.";
 "Settings.CheckPhoneNumberText" = "Keep your number up to date to ensure you can always log in to Telegram. [Learn more]()";
 "Settings.KeepPhoneNumber" = "Keep %@";
 "Settings.ChangePhoneNumber" = "Change Number";
+"Settings.CheckPhoneNumberFAQAnchor" = "q-i-have-a-new-phone-number-what-do-i-do";
 
 "Undo.ChatDeletedForBothSides" = "Chat deleted for both sides";
 
@@ -4833,6 +4886,7 @@ Sorry for the inconvenience.";
 "ChatList.Context.Mute" = "Mute";
 "ChatList.Context.Unmute" = "Unmute";
 "ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.JoinChat" = "Join Chat";
 "ChatList.Context.Delete" = "Delete";
 
 "ContactList.Context.SendMessage" = "Send Message";
@@ -5835,8 +5889,11 @@ Sorry for the inconvenience.";
 "VoiceChat.StartRecordingText" = "Do you want to start recording this chat and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "LiveStream.StartRecordingText" = "Do you want to start recording this live stream and save the result into an audio file?\n\nOther members will see that the chat is being recorded.";
 "VoiceChat.StartRecordingStart" = "Start";
+"VoiceChat.StartRecordingTextVideo" = "Do you want to start recording this chat and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
+"LiveStream.StartRecordingTextVideo" = "Do you want to start recording this live stream and save the result into a video file?\n\nOther members will see that the chat is being recorded.";
 
 "VoiceChat.RecordingTitlePlaceholder" = "Audio Title (Optional)";
+"VoiceChat.RecordingTitlePlaceholderVideo" = "Video Title (Optional)";
 "VoiceChat.RecordingStarted" = "Voice chat recording started";
 "LiveStream.RecordingStarted" = "Live stream recording started";
 "VoiceChat.RecordingInProgress" = "Voice chat is being recorded";
@@ -6617,7 +6674,9 @@ Sorry for the inconvenience.";
 "VoiceChat.VideoPreviewShareScreenInfo" = "Everything on your screen\nwill be shared";
 
 "Gallery.SaveToGallery" = "Save to Gallery";
+"Gallery.ImageSaved" = "Image Saved";
 "Gallery.VideoSaved" = "Video Saved";
+"Gallery.ImagesAndVideosSaved" = "Media Saved";
 "Gallery.WaitForVideoDownoad" = "Please wait for the video to be fully downloaded.";
 
 "Gallery.SaveImage" = "Save Image";
@@ -6698,6 +6757,8 @@ Sorry for the inconvenience.";
 "Activity.ChoosingSticker" = "choosing sticker";
 "DialogList.SingleChoosingStickerSuffix" = "%@ is choosing sticker";
 
+"Activity.TappingInteractiveEmoji" = "tapping on %@";
+
 "WallpaperPreview.Animate" = "Animate";
 "WallpaperPreview.AnimateDescription" = "Colors will move when you send messages";
 
@@ -6713,11 +6774,17 @@ Sorry for the inconvenience.";
 "UserInfo.ChangeColors" = "Change Colors";
 
 "Conversation.Theme.Title" = "Select Theme";
+"Conversation.Theme.Subtitle" = "Theme will be also applied for %@";
 "Conversation.Theme.Apply" = "Apply Theme";
 "Conversation.Theme.NoTheme" = "No\nTheme";
 "Conversation.Theme.Reset" = "Reset Theme for This Chat";
+"Conversation.Theme.DontSetTheme" = "Do Not Set Theme";
 "Conversation.Theme.SwitchToDark" = "Switch to dark appearance";
 "Conversation.Theme.SwitchToLight" = "Switch to light appearance";
+"Conversation.Theme.PreviewDark" = "Tap to see how chat will appear to\n%@ when using night mode.";
+"Conversation.Theme.PreviewLight" = "Tap to see how chat will appear to\n%@ when using day mode.";
+"Conversation.Theme.DismissAlert" = "Do you want to apply the selected theme to the chat?";
+"Conversation.Theme.DismissAlertApply" = "Apply";
 
 "Notification.ChangedTheme" = "%1$@ changed chat theme to %2$@";
 "Notification.DisabledTheme" = "%@ disabled chat theme";
@@ -6766,9 +6833,10 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageChangedThemeRemove" = "%1$@ disabled chat theme";
 
 "SponsoredMessageMenu.Info" = "What are sponsored\nmessages?";
-"SponsoredMessageInfo.Text" = "See https://telegram.org";
+"SponsoredMessageInfoScreen.Title" = "What are sponsored messages?";
+"SponsoredMessageInfoScreen.Text" = "Unlike other apps, Telegram never uses your private data to target ads. You are seeing this message only because someone chose this public one-to many channel as a space to promote their messages. This means that no user data is mined or analyzed to display ads, and every user viewing a channel on Telegram sees the same sponsored message.\n\nUnline other apps, Telegram doesn't track whether you tapped on a sponsored message and doesn't profile you based on your activity. We also prevent external links in sponsored messages to ensure that third parties can't spy on our users. We believe that everyone has the right to privacy, and technological platforms should respect that.\n\nTelegram offers free and unlimited service to hundreds of millions of users, which involves significant server and traffic costs. In order to remain independent and stay true to its values, Telegram developed a paid tool to promote messages with user privacy in mind. We welcome responsible adverticers at:\n[url]\nAds should no longer be synonymous with abuse of user privacy. Let us redefine how a tech compony should operate — together.";
 "SponsoredMessageInfo.Action" = "Learn More";
-"SponsoredMessageInfo.ActionUrl" = "https://telegram.org";
+"SponsoredMessageInfo.Url" = "https://telegram.org/ads";
 
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
@@ -6793,3 +6861,366 @@ Sorry for the inconvenience.";
 "Gif.Emotion.Party" = "Party";
 
 "Conversation.ForwardFrom" = "From: %@";
+
+"Conversation.ContextMenuSeen_1" = "1 Seen";
+"Conversation.ContextMenuSeen_any" = "%@ Seen";
+"Conversation.ContextMenuListened_1" = "1 Listened";
+"Conversation.ContextMenuListened_any" = "%@ Listened";
+"Conversation.ContextMenuWatched_1" = "1 Watched";
+"Conversation.ContextMenuWatched_any" = "%@ Watched";
+
+"Conversation.ContextMenuNoViews" = "Nobody Viewed";
+"Conversation.ContextMenuNobodyListened" = "Nobody Listened";
+"Conversation.ContextMenuNobodyWatched" = "Nobody Watched";
+
+"VideoChat.RecordingSaved" = "Video chat recording saved to **Saved Messages**.";
+"LiveStream.RecordingSaved" = "Live stream recording saved to **Saved Messages**.";
+
+"ChatContextMenu.MessageViewsPrivacyTip" = "To protect privacy, views are only stored for 7 days.";
+
+"MESSAGE_NOTHEME" = "%1$@ changed theme to default one";
+"CHAT_MESSAGE_NOTHEME" = "%1$@ set theme to default one in the group %2$@";
+
+"Activity.EnjoyingAnimations" = "enjoying %@ animations";
+
+"Conversation.InteractiveEmojiSyncTip" = "If %@ was viewing the chat right now, he would also enjoy this animation.";
+
+"Contacts.Search.NoResults" = "No Results";
+"Contacts.Search.NoResultsQueryDescription" = "There were no results for \"%@\".\nTry a new search.";
+
+"LiveStream.Listening.Members_0" = "%@ listening";
+"LiveStream.Listening.Members_1" = "%@ listening";
+"LiveStream.Listening.Members_2" = "%@ listening";
+"LiveStream.Listening.Members_3_10" = "%@ listening";
+"LiveStream.Listening.Members_many" = "%@ listening";
+"LiveStream.Listening.Members_any" = "%@ listening";
+
+"LiveStream.Watching.Members_0" = "%@ watching";
+"LiveStream.Watching.Members_1" = "%@ watching";
+"LiveStream.Watching.Members_2" = "%@ watching";
+"LiveStream.Watching.Members_3_10" = "%@ watching";
+"LiveStream.Watching.Members_many" = "%@ watching";
+"LiveStream.Watching.Members_any" = "%@ watching";
+
+"VoiceChat.RecordTitle" = "Record Video Chat";
+"LiveStream.RecordTitle" = "Record Live Stream";
+"VoiceChat.RecordVideoAndAudio" = "Video and Audio";
+"VoiceChat.RecordOnlyAudio" = "Only Audio";
+"VoiceChat.RecordPortrait" = "Portrait";
+"VoiceChat.RecordLandscape" = "Landscape";
+"VoiceChat.RecordStartRecording" = "Start Recording";
+
+"MediaPicker.JpegConversionText" = "Do you want to convert photos to JPEG?";
+"MediaPicker.KeepHeic" = "Keep HEIC";
+"MediaPicker.ConvertToJpeg" = "Convert to JPEG";
+
+"GroupInfo.MemberRequests" = "Member Requests";
+
+"InviteLink.Create.RequestApproval" = "Request Admin Approval";
+"InviteLink.Create.RequestApprovalOffInfoGroup" = "New users will be able to join the group without being approved by the admins.";
+"InviteLink.Create.RequestApprovalOffInfoChannel" = "New users will be able to join the channel without being approved by the admins.";
+"InviteLink.Create.RequestApprovalOnInfoGroup" = "New users will be able to join the group only after having been approved by the admins.";
+"InviteLink.Create.RequestApprovalOnInfoChannel" = "New users will be able to join the channel only after having been approved by the admins.";
+
+"InviteLink.Create.LinkNameTitle" = "Link Name";
+"InviteLink.Create.LinkName" = "Link Name (Optional)";
+"InviteLink.Create.LinkNameInfo" = "Only you and other admins will see this name.";
+
+"MemberRequests.Title" = "Member Requests";
+"MemberRequests.DescriptionGroup" = "Some [additional links]() are set up to accept requests to join the group.";
+"MemberRequests.DescriptionChannel" = "Some [additional links]() are set up to accept requests to join the channel.";
+
+"MemberRequests.SearchPlaceholder" = "Search Join Requests";
+"MemberRequests.PeopleRequested_1" = "%@ requested to join";
+"MemberRequests.PeopleRequested_2" = "%@ requested to join";
+"MemberRequests.PeopleRequested_3_10" = "%@ requested to join";
+"MemberRequests.PeopleRequested_many" = "%@ requested to join";
+"MemberRequests.PeopleRequested_any" = "%@ requested to join";
+
+"MemberRequests.PeopleRequestedShort_1" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_2" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_3_10" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_many" = "%@ requested";
+"MemberRequests.PeopleRequestedShort_any" = "%@ requested";
+
+"MemberRequests.AddToGroup" = "Add to Group";
+"MemberRequests.AddToChannel" = "Add to Channel";
+"MemberRequests.Dismiss" = "Dismiss";
+
+"MemberRequests.UserAddedToGroup" = "%@ has been added to the group.";
+"MemberRequests.UserAddedToChannel" = "%@ has been added to the channel.";
+
+"MemberRequests.NoRequests" = "No Member Requests";
+"MemberRequests.NoRequestsDescriptionGroup" = "You have no pending requests to join the group.";
+"MemberRequests.NoRequestsDescriptionChannel" = "You have no pending requests to join the channel.";
+
+"Conversation.RequestsToJoin_1" = "%@ Request to Join";
+"Conversation.RequestsToJoin_2" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_3_10" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_many" = "%@ Requests to Join";
+"Conversation.RequestsToJoin_any" = "%@ Requests to Join";
+
+"MemberRequests.RequestToJoinGroup" = "Request to Join Group";
+"MemberRequests.RequestToJoinChannel" = "Request to Join Channel";
+
+"MemberRequests.RequestToJoinDescriptionGroup" = "This group accepts new members only after they are approved by its admins.";
+"MemberRequests.RequestToJoinDescriptionChannel" = "This channel accepts new subscribers only after they are approved by its admins.";
+
+"MemberRequests.RequestToJoinSent" = "Request to join Sent";
+"MemberRequests.RequestToJoinSentDescriptionGroup" = "You will be added to the group once it admins approve your request.";
+"MemberRequests.RequestToJoinSentDescriptionChannel" = "You will be added to the channel once it admins approve your request.";
+
+"Notification.JoinedChannelByRequestYou" = "Your request to join the channel was approved";
+"Notification.JoinedGroupByRequestYou" = "Your request to join the group was approved";
+"Notification.JoinedGroupByRequest" = "%@ was accepted to the group chat";
+
+"Notification.JoinedGroupByLinkYou" = "You joined the group via invite link";
+
+"InviteLink.InviteLinkForwardTooltip.Chat.One" = "Invite link forwarded to **%@**";
+"InviteLink.InviteLinkForwardTooltip.TwoChats.One" = "Invite link forwarded to **%@** and **%@**";
+"InviteLink.InviteLinkForwardTooltip.ManyChats.One" = "Invite link forwarded to **%@** and %@ others";
+"InviteLink.InviteLinkForwardTooltip.SavedMessages.One" = "Invite link forwarded to **Saved Messages**";
+
+"Conversation.RequestToJoinChannel" = "REQUEST TO JOIN";
+"Conversation.RequestToJoinGroup" = "REQUEST TO JOIN";
+
+"Channel.AdminLog.JoinedViaRequest" = "%1$@ joined via invite link %2$@, approved by %3$@";
+
+"Appearance.NightTheme" = "Night Mode";
+
+"Map.ETADays_0" = "%@ days";
+"Map.ETADays_1" = "%@ day";
+"Map.ETADays_2" = "%@ days";
+"Map.ETADays_3_10" = "%@ days";
+"Map.ETADays_many" = "%@ days";
+"Map.ETADays_any" = "%@ days";
+
+"ChatSettings.UseLessDataForCalls" = "Use Less Data for Calls";
+
+"Time.JustNow" = "just now";
+"Time.MinutesAgo_0" = "%@ minutes ago"; //three to ten
+"Time.MinutesAgo_1" = "%@ minute ago"; //one
+"Time.MinutesAgo_2" = "%@ minutes ago"; //two
+"Time.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
+"Time.MinutesAgo_many" = "%@ minutes ago"; // more than ten
+"Time.MinutesAgo_any" = "%@ minutes ago"; // more than ten
+"Time.HoursAgo_0" = "%@ hours ago";
+"Time.HoursAgo_1" = "%@ hour ago";
+"Time.HoursAgo_2" = "%@ hours ago";
+"Time.HoursAgo_3_10" = "%@ hours ago";
+"Time.HoursAgo_any" = "%@ hours ago";
+"Time.HoursAgo_many" = "%@ hours ago";
+"Time.HoursAgo_0" = "%@ hours ago";
+"Time.AtDate" = "%@";
+
+"Stickers.ShowMore" = "Show More";
+
+"Notifications.PrivateChats" = "Private Chats";
+"Notifications.GroupChats" = "Group Chats";
+"Notifications.Channels" = "Channels";
+
+"Notifications.PrivateChatsTitle" = "Private Chats";
+"Notifications.GroupChatsTitle" = "Group Chats";
+"Notifications.ChannelsTitle" = "Channels";
+
+"Notifications.CategoryExceptions_0" = "%@ exceptions";
+"Notifications.CategoryExceptions_1" = "%@ exception";
+"Notifications.CategoryExceptions_2" = "%@ exceptions";
+"Notifications.CategoryExceptions_3_10" = "%@ exceptions";
+"Notifications.CategoryExceptions_many" = "%@ exceptions";
+"Notifications.CategoryExceptions_any" = "%@ exceptions";
+
+"Notifications.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Notifications.Options" = "Options";
+
+"Notifications.On" = "On";
+"Notifications.Off" = "Off";
+
+"AuthSessions.View.Browser" = "Browser";
+"AuthSessions.View.Device" = "Device";
+"AuthSessions.View.Application" = "Application";
+"AuthSessions.View.OS" = "Operating System";
+"AuthSessions.View.Location" = "Location";
+"AuthSessions.View.IP" = "IP Address";
+"AuthSessions.View.TerminateSession" = "Terminate Session";
+"AuthSessions.View.Logout" = "Log Out";
+
+"MessageCalendar.Title" = "Calendar";
+"MessageCalendar.DaysSelectedTitle_1" = "1 day selected";
+"MessageCalendar.DaysSelectedTitle_any" = "%@ days selected";
+"MessageCalendar.DeleteAlertText_1" = "Are you sure you want to delete all messages for the selected day?";
+"MessageCalendar.DeleteAlertText_any" = "Are you sure you want to delete all messages for the selected %@ days?";
+
+"SharedMedia.PhotoCount_1" = "1 photo";
+"SharedMedia.PhotoCount_any" = "%@ photos";
+"SharedMedia.VideoCount_1" = "1 video";
+"SharedMedia.VideoCount_any" = "%@ videos";
+"SharedMedia.GifCount_1" = "1 gif";
+"SharedMedia.GifCount_any" = "%@ gifs";
+"SharedMedia.FileCount_1" = "1 file";
+"SharedMedia.FileCount_any" = "%@ files";
+"SharedMedia.MusicCount_1" = "1 music file";
+"SharedMedia.MusicCount_any" = "%@ music files";
+"SharedMedia.VoiceMessageCount_1" = "1 voice message";
+"SharedMedia.VoiceMessageCount_any" = "%@ voice messages";
+"SharedMedia.LinkCount_1" = "1 link";
+"SharedMedia.LinkCount_any" = "%@ links";
+
+"SharedMedia.FastScrollTooltip" = "You can hold and move this bar for faster scrolling";
+"SharedMedia.CalendarTooltip" = "Tap on this icon for calendar view";
+
+"SharedMedia.ZoomIn" = "Zoom In";
+"SharedMedia.ZoomOut" = "Zoom Out";
+"SharedMedia.ShowCalendar" = "Show Calendar";
+"SharedMedia.ShowPhotos" = "Show Photos";
+"SharedMedia.ShowVideos" = "Show Videos";
+
+"Settings.ChatThemes" = "Chat Themes";
+
+"Themes.Title" = "Chat Themes";
+"Themes.SelectTheme" = "Select Theme";
+"Themes.BuildOwn" = "Build Your Own Theme";
+"Themes.EditCurrentTheme" = "Edit Current Theme";
+"Themes.CreateNewTheme" = "Create a New Theme";
+
+"Chat.JumpToDate" = "Jump to Date";
+
+"VoiceChat.DiscussionGroup" = "discussion group";
+
+"Group.Edit.PrivatePublicLinkAlert" = "Please note that if you choose a public link for your group, anyone will be able to find it in search and join.\n\nDo not create this link if you want your group to stay private.";
+
+"Conversation.CopyProtectionInfoGroup" = "Admins restricted members to copy or forward content from this group.";
+"Conversation.CopyProtectionInfoChannel" = "Copying and forwarding is not allowed in this channel.";
+
+"Conversation.CopyProtectionForwardingDisabledGroup" = "Forwards from this group are restricted";
+"Conversation.CopyProtectionForwardingDisabledChannel" = "Forwards from this channel are restricted";
+"Conversation.CopyProtectionSavingDisabledGroup" = "Saving from this group is restricted";
+"Conversation.CopyProtectionSavingDisabledChannel" = "Saving from this channel is restricted";
+
+"Channel.AdminLog.MessageToggleNoForwardsOn" = "%@ restricted message forwarding";
+"Channel.AdminLog.MessageToggleNoForwardsOff" = "%@ allowed message forwarding";
+
+"Group.Setup.ForwardingGroupTitle" = "Forwarding From This Group";
+"Group.Setup.ForwardingChannelTitle" = "Saving And Copying Content";
+"Group.Setup.ForwardingEnabled" = "Allow Saving Content";
+"Group.Setup.ForwardingDisabled" = "Restrict Saving Content";
+"Group.Setup.ForwardingGroupInfo" = "Participants will be able copy, save and forward content from this group.";
+"Group.Setup.ForwardingChannelInfo" = "Participants will be able copy, save and forward content from this channel.";
+"Group.Setup.ForwardingGroupInfoDisabled" = "Participants won't be able to copy, save and forward content from this group.";
+"Group.Setup.ForwardingChannelInfoDisabled" = "Participants won't be able to copy, save and forward content from this channel.";
+
+"AuthSessions.TerminateIfAwayTitle" = "Automatically Terminate Old Sessions";
+"AuthSessions.TerminateIfAwayFor" = "If Inactive For";
+
+"AuthSessions.View.LocationInfo" = "This location estimate is based on the IP address and may not always be accurate.";
+
+"AuthSessions.View.AcceptTitle" = "Accept on This Device";
+"AuthSessions.View.AcceptSecretChats" = "New Secret Chats";
+"AuthSessions.View.AcceptIncomingCalls" = "Incoming Calls";
+
+"Conversation.SendMesageAs" = "Send Message As...";
+"Conversation.InviteRequestAdminGroup" = "%1$@ is an admin of %2$@, a group you requested to join.";
+"Conversation.InviteRequestAdminChannel" = "%1$@ is an admin of %2$@, a channel you requested to join.";
+"Conversation.InviteRequestInfo" = "You received this message because you requested to join %1$@ on %2$@.";
+"Conversation.InviteRequestInfoConfirm" = "I understand";
+
+"AuthSessions.HeaderInfo" = "Link [Telegram Desktop](desktop) or [Telegram Web](web) by scanning a QR code.";
+"AuthSessions.LinkDesktopDevice" = "Link Desktop Device";
+"AuthSessions.AddDevice.ScanInstallInfo" = "Go to [getdesktop.telegram.org](desktop) or [web.telegram.org](web) to get the QR code";
+
+"Channel.AdminLog.MessageSent" = "%@ sent message:";
+
+"ChatList.ClearSearchHistory" = "Are you sure you want to clear your search history?";
+
+"AuthSessions.TerminateSessionText" = "Are you sure you want to terminate this session?";
+"AuthSessions.TerminateOtherSessionsText" = "Are you sure you want to terminate all other sessions?";
+
+"Notifications.ResetAllNotificationsText" = "Are you sure you want to reset all notification settings to default?";
+
+"MessageCalendar.ClearHistoryForThisDay" = "Clear History For This Day";
+"MessageCalendar.ClearHistoryForTheseDays" = "Clear History For These Days";
+"MessageCalendar.EmptySelectionTooltip" = "Please select one or more days first.";
+"Chat.MessageRangeDeleted.ForMe_1" = "Messages for 1 day deleted.";
+"Chat.MessageRangeDeleted.ForMe_any" = "Messages for %@ days deleted.";
+"Chat.MessageRangeDeleted.ForBothSides_1" = "Messages for 1 day deleted for both sides.";
+"Chat.MessageRangeDeleted.ForBothSides_any" = "Messages for %@ days deleted for both sides.";
+
+"ForcedPasswordSetup.Intro.Title" = "Set a Password";
+"ForcedPasswordSetup.Intro.Text" = "If you want to log into your account frequently, please choose a password.";
+"ForcedPasswordSetup.Intro.Action" = "Set a Password";
+"ForcedPasswordSetup.Intro.DoneAction" = "Done";
+"ForcedPasswordSetup.Intro.DismissTitle" = "Warning";
+"ForcedPasswordSetup.Intro.DismissText_1" = "Proceed without a password? If you do not set a password, you will only be able to log into your account via SMS once every **day**.";
+"ForcedPasswordSetup.Intro.DismissText_any" = "Proceed without a password? If you do not set a password, you will only be able to log into your account via SMS once every **%@ days**.";
+"ForcedPasswordSetup.Intro.DismissActionCancel" = "No, let me set a password";
+"ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
+
+"Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
+"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
+"Login.EnterMissingDigits" = "Enter the missing digits";
+
+"Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
+
+"Contacts.AddContact" = "Add Contact";
+
+"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
+"Conversation.LargeEmojiEnable" = "Enable Large Emoji";
+"Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
+
+"PeerInfo.QRCode.Title" = "QR Code";
+
+"ChatList.Archive" = "Archive";
+
+"TextFormat.Spoiler" = "Spoiler";
+
+"Conversation.ContextMenuTranslate" = "Translate";
+
+"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+
+"ChatSettings.StickersAndReactions" = "Stickers and Emoji";
+
+"Localization.TranslateMessages" = "Translate Messages";
+"Localization.ShowTranslate" = "Show Translate Button";
+"Localization.ShowTranslateInfo" = "Show 'Translate' button in the message action menu.";
+"Localization.DoNotTranslate" = "Do Not Translate";
+"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language.";
+"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages.";
+"Localization.InterfaceLanguage" = "Interface Language";
+
+"DoNotTranslate.Title" = "Do Not Translate";
+
+"Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
+"Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";
+
+"Contacts.ScanQrCode" = "Scan QR Code";
+"Contacts.QrCode.MyCode" = "My QR Code";
+"Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
+
+"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+
+"Share.ShareToInstagramStories" = "Share to Instagram Stories";
+
+"PeerInfo.AllowedReactions.Title" = "Reactions";
+"PeerInfo.AllowedReactions.AllowAllText" = "Allow Reactions";
+"PeerInfo.AllowedReactions.AllowAllGroupInfo" = "Allow subscribers to react to group messages.";
+"PeerInfo.AllowedReactions.AllowAllChannelInfo" = "Allow subscribers to react to channel posts.";
+"PeerInfo.AllowedReactions.ReactionListHeader" = "AVAILABLE REACTIONS";
+
+"PeerInfo.Reactions" = "Reactions";
+"PeerInfo.ReactionsDisabled" = "Disabled";
+
+"Settings.QuickReactionSetup.NavigationTitle" = "Quick Reaction";
+"Settings.QuickReactionSetup.Title" = "Quick Reaction";
+"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON MESSAGE TO REACT";
+"Settings.QuickReactionSetup.DemoInfo" = "You can double tap on message for a quick reaction.";
+"Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
+"Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
+"Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
+
+"Chat.ContextReactionCount_1" = "1 reaction";
+"Chat.ContextReactionCount_any" = "%@ reactions";
+"Chat.OutgoingContextReactionCount_1" = "1 reacted";
+"Chat.OutgoingContextReactionCount_any" = "%@ reacted";
+"Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";

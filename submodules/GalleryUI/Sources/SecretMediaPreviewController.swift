@@ -86,8 +86,8 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
         }
     }
     
-    override func animateIn(animateContent: Bool) {
-        super.animateIn(animateContent: animateContent)
+    override func animateIn(animateContent: Bool, useSimpleAnimation: Bool) {
+        super.animateIn(animateContent: animateContent, useSimpleAnimation: useSimpleAnimation)
         
         self.timeoutNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
@@ -232,7 +232,7 @@ public final class SecretMediaPreviewController: ViewController {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
-        self.controllerNode.beginCustomDismiss = { [weak self] in
+        self.controllerNode.beginCustomDismiss = { [weak self] _ in
             if let strongSelf = self {
                 strongSelf._hiddenMedia.set(.single(nil))
                 
@@ -300,7 +300,7 @@ public final class SecretMediaPreviewController: ViewController {
                                 }, transition: .immediate)
                             } else {
                                 let contentNode = SecretMediaPreviewFooterContentNode()
-                                let peerTitle = messageMainPeer(message)?.compactDisplayTitle ?? ""
+                                let peerTitle = messageMainPeer(EngineMessage(message))?.compactDisplayTitle ?? ""
                                 let text: String
                                 if let file = media as? TelegramMediaFile {
                                     if file.isAnimated {
@@ -369,7 +369,7 @@ public final class SecretMediaPreviewController: ViewController {
         self.controllerNode.setControlsHidden(false, animated: false)
         if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments {
             if presentationArguments.animated {
-                self.controllerNode.animateIn(animateContent: !nodeAnimatesItself)
+                self.controllerNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
             }
         }
     }

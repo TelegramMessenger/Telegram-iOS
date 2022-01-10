@@ -243,7 +243,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
                 let foundLocalPeers = context.account.postbox.searchPeers(query: query.lowercased())
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError> = .single(([], [], true))
                 |> then(
-                    context.engine.peers.searchPeers(query: query)
+                    context.engine.contacts.searchRemotePeers(query: query)
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     |> map { a, b -> ([FoundPeer], [FoundPeer], Bool) in
                         return (a, b, false)
@@ -423,7 +423,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         return (gridTopInset, itemWidth)
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = (size, bottomInset)
         

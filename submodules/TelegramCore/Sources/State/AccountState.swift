@@ -28,6 +28,8 @@ extension SentAuthorizationCodeType {
                 self = .call(length: length)
             case let .sentCodeTypeFlashCall(pattern):
                 self = .flashCall(pattern: pattern)
+            case let .sentCodeTypeMissedCall(prefix, length):
+                self = .missedCall(numberPrefix: prefix, length: length)
         }
     }
 }
@@ -41,6 +43,8 @@ extension AuthorizationCodeNextType {
                 self = .call
             case .codeTypeFlashCall:
                 self = .flashCall
+            case .codeTypeMissedCall:
+                self = .missedCall
         }
     }
 }

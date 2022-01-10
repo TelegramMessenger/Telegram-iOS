@@ -217,10 +217,10 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
                     
                     if let updatedVenueType = updatedVenueType {
                         strongSelf.venueType = updatedVenueType
-                        strongSelf.iconNode.setSignal(venueIcon(postbox: context.account.postbox, type: updatedVenueType, background: false))
+                        strongSelf.iconNode.setSignal(venueIcon(engine: context.engine, type: updatedVenueType, background: false))
                     }
                     
-                    let arguments = VenueIconArguments(defaultForegroundColor: theme.chat.inputPanel.actionControlForegroundColor)
+                    let arguments = VenueIconArguments(defaultBackgroundColor: theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: theme.chat.inputPanel.actionControlForegroundColor)
                     let iconSize = CGSize(width: 44.0, height: 44.0)
                     let apply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets(), custom: arguments))
                     apply()

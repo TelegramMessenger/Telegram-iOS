@@ -70,15 +70,18 @@ public final class SearchDisplayController {
         self.contentNode.dismissInput = { [weak self] in
             self?.searchBar.deactivate(clear: false)
         }
+        
+        var isFirstTime = true
         self.contentNode.setQuery = { [weak self] prefix, tokens, query in
             if let strongSelf = self {
                 strongSelf.searchBar.prefixString = prefix
                 let previousTokens = strongSelf.searchBar.tokens
                 strongSelf.searchBar.tokens = tokens
                 strongSelf.searchBar.text = query
-                if previousTokens.count < tokens.count {
+                if previousTokens.count < tokens.count && !isFirstTime {
                     strongSelf.searchBar.selectLastToken()
                 }
+                isFirstTime = false
             }
         }
         if let placeholder = placeholder {

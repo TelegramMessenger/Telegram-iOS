@@ -88,7 +88,7 @@ public final class WatchCommunicationManager {
             }
             if let context = appContext {
                 strongSelf.accountContext.set(.single(context.context))
-                strongSelf.server.setAuthorized(true, userId: context.context.account.peerId.id._internalGetInt32Value())
+                strongSelf.server.setAuthorized(true, userId: context.context.account.peerId.id._internalGetInt64Value())
                 strongSelf.server.setMicAccessAllowed(false)
                 strongSelf.server.pushContext()
                 strongSelf.server.setMicAccessAllowed(true)
@@ -96,7 +96,7 @@ public final class WatchCommunicationManager {
                 
                 strongSelf.presets.set(context.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.watchPresetSettings])
                 |> map({ sharedData -> WatchPresetSettings in
-                    return (sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings] as? WatchPresetSettings) ?? WatchPresetSettings.defaultSettings
+                    return sharedData.entries[ApplicationSpecificSharedDataKeys.watchPresetSettings]?.get(WatchPresetSettings.self) ?? WatchPresetSettings.defaultSettings
                 }))
             } else {
                 strongSelf.accountContext.set(.single(nil))

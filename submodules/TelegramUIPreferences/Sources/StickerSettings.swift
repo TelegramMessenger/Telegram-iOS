@@ -9,7 +9,7 @@ public enum EmojiStickerSuggestionMode: Int32 {
     case installed
 }
 
-public struct StickerSettings: PreferencesEntry, Equatable {
+public struct StickerSettings: Codable, Equatable {
     public var emojiStickerSuggestionMode: EmojiStickerSuggestionMode
     public var loopAnimatedStickers: Bool
     
@@ -22,22 +22,18 @@ public struct StickerSettings: PreferencesEntry, Equatable {
         self.loopAnimatedStickers = loopAnimatedStickers
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.emojiStickerSuggestionMode = EmojiStickerSuggestionMode(rawValue: decoder.decodeInt32ForKey("emojiStickerSuggestionMode", orElse: 0))!
-        self.loopAnimatedStickers = decoder.decodeBoolForKey("loopAnimatedStickers", orElse: true)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.emojiStickerSuggestionMode = EmojiStickerSuggestionMode(rawValue: try container.decode(Int32.self, forKey: "emojiStickerSuggestionMode"))!
+        self.loopAnimatedStickers = try container.decodeIfPresent(Bool.self, forKey: "loopAnimatedStickers") ?? true
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.emojiStickerSuggestionMode.rawValue, forKey: "emojiStickerSuggestionMode")
-        encoder.encodeBool(self.loopAnimatedStickers, forKey: "loopAnimatedStickers")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? StickerSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.emojiStickerSuggestionMode.rawValue, forKey: "emojiStickerSuggestionMode")
+        try container.encode(self.loopAnimatedStickers, forKey: "loopAnimatedStickers")
     }
     
     public static func ==(lhs: StickerSettings, rhs: StickerSettings) -> Bool {
@@ -57,12 +53,12 @@ public func updateStickerSettingsInteractively(accountManager: AccountManager<Te
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.stickerSettings, { entry in
             let currentSettings: StickerSettings
-            if let entry = entry as? StickerSettings {
+            if let entry = entry?.get(StickerSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = StickerSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

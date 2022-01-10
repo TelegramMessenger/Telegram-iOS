@@ -45,11 +45,18 @@ public func explicitUrl(_ url: String) -> String {
     return url
 }
 
+private let validUrlSet: CharacterSet = {
+    var set = CharacterSet(charactersIn: "a".unicodeScalars.first! ... "z".unicodeScalars.first!)
+    set.insert(charactersIn: "A".unicodeScalars.first! ... "Z".unicodeScalars.first!)
+    set.insert(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
+    set.insert(charactersIn: ".?!@#$^&%*-+=,:;'\"`<>()[]{}/\\|~ ")
+    return set
+}()
+
 public func urlEncodedStringFromString(_ string: String) -> String {
     var nsString: NSString = string as NSString
     if let value = nsString.removingPercentEncoding {
         nsString = value as NSString
     }
-
-    return nsString.addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "?!@#$^&%*+=,:;'\"`<>()[]{}/\\|~ ")) ?? ""
+    return nsString.addingPercentEncoding(withAllowedCharacters: validUrlSet) ?? ""
 }

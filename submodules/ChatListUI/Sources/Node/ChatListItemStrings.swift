@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -14,7 +13,7 @@ private enum MessageGroupType {
     case generic
 }
 
-private func singleMessageType(message: Message) -> MessageGroupType {
+private func singleMessageType(message: EngineMessage) -> MessageGroupType {
     for media in message.media {
         if let _ = media as? TelegramMediaImage {
             return .photos
@@ -31,7 +30,7 @@ private func singleMessageType(message: Message) -> MessageGroupType {
     return .generic
 }
 
-private func messageGroupType(messages: [Message]) -> MessageGroupType {
+private func messageGroupType(messages: [EngineMessage]) -> MessageGroupType {
     if messages.isEmpty {
         return .generic
     }
@@ -45,8 +44,8 @@ private func messageGroupType(messages: [Message]) -> MessageGroupType {
     return currentType
 }
 
-public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
-    let peer: Peer?
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [EngineMessage], chatPeer: EngineRenderedPeer, accountPeerId: EnginePeer.Id, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: EnginePeer?, hideAuthor: Bool, messageText: String) {
+    let peer: EnginePeer?
     
     let message = messages.last
     
@@ -100,7 +99,15 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                     textIsReady = true
                 }
             case .generic:
-                break
+                var messageTypes = Set<MessageGroupType>()
+                for message in messages {
+                    messageTypes.insert(singleMessageType(message: message))
+                }
+                if messageTypes.count == 2 && messageTypes.contains(.photos) && messageTypes.contains(.videos) {
+                    if !messageText.isEmpty {
+                        textIsReady = true
+                    }
+                }
             }
         }
         
@@ -282,7 +289,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         peer = chatPeer.chatMainPeer
         messageText = ""
         if chatPeer.peerId.namespace == Namespaces.Peer.SecretChat {
-            if let secretChat = chatPeer.peers[chatPeer.peerId] as? TelegramSecretChat {
+            if case let .secretChat(secretChat) = chatPeer.peers[chatPeer.peerId] {
                 switch secretChat.embeddedState {
                     case .active:
                         switch secretChat.role {

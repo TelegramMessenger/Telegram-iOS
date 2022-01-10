@@ -57,23 +57,34 @@ public extension Peer {
         switch self {
         case let user as TelegramUser:
             if let firstName = user.firstName, let lastName = user.lastName, !firstName.isEmpty && !lastName.isEmpty {
-                return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased(), lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+                return [
+                    String(firstName[..<firstName.index(after: firstName.startIndex)].uppercased()),
+                    String(lastName[..<lastName.index(after: lastName.startIndex)].uppercased()),
+                ]
             } else if let firstName = user.firstName, !firstName.isEmpty {
-                return [firstName.substring(to: firstName.index(after: firstName.startIndex)).uppercased()]
+                return [
+                    String(firstName[..<firstName.index(after: firstName.startIndex)].uppercased())
+                ]
             } else if let lastName = user.lastName, !lastName.isEmpty {
-                return [lastName.substring(to: lastName.index(after: lastName.startIndex)).uppercased()]
+                return [
+                    String(lastName[..<lastName.index(after: lastName.startIndex)].uppercased()),
+                ]
             }
             
             return []
         case let group as TelegramGroup:
             if group.title.startIndex != group.title.endIndex {
-                return [group.title.substring(to: group.title.index(after: group.title.startIndex)).uppercased()]
+                return [
+                    String(group.title[..<group.title.index(after: group.title.startIndex)].uppercased()),
+                ]
             } else {
                 return []
             }
         case let channel as TelegramChannel:
             if channel.title.startIndex != channel.title.endIndex {
-                return [channel.title.substring(to: channel.title.index(after: channel.title.startIndex)).uppercased()]
+                return [
+                    String(channel.title[..<channel.title.index(after: channel.title.startIndex)].uppercased()),
+                ]
             } else {
                 return []
             }
@@ -142,6 +153,17 @@ public extension Peer {
             return false
         }
     }
+    
+    var isCopyProtectionEnabled: Bool {
+        switch self {
+        case let group as TelegramGroup:
+            return group.flags.contains(.copyProtectionEnabled)
+        case let channel as TelegramChannel:
+            return channel.flags.contains(.copyProtectionEnabled)
+        default:
+            return false
+        }
+    }
 }
 
 public extension PeerId {
@@ -183,12 +205,12 @@ public func peerDebugDisplayTitles(_ peers: [Peer]) -> String {
     }
 }
 
-public func messageMainPeer(_ message: Message) -> Peer? {
+public func messageMainPeer(_ message: EngineMessage) -> EnginePeer? {
     if let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramSecretChat {
-            return message.peers[peer.regularPeerId]
+            return message.peers[peer.regularPeerId].flatMap(EnginePeer.init)
         } else {
-            return peer
+            return EnginePeer(peer)
         }
     } else {
         return nil
@@ -240,7 +262,7 @@ public func isServicePeer(_ peer: Peer) -> Bool {
         if peer.id.isReplies {
             return true
         }
-        return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt32Value() == 777000 || peer.id.id._internalGetInt32Value() == 333000))
+        return (peer.id.namespace == Namespaces.Peer.CloudUser && (peer.id.id._internalGetInt64Value() == 777000 || peer.id.id._internalGetInt64Value() == 333000))
     }
     return false
 }
@@ -248,7 +270,7 @@ public func isServicePeer(_ peer: Peer) -> Bool {
 public extension PeerId {
     var isReplies: Bool {
         if self.namespace == Namespaces.Peer.CloudUser {
-            if self.id._internalGetInt32Value() == 708513 || self.id._internalGetInt32Value() == 1271266957 {
+            if self.id._internalGetInt64Value() == 708513 || self.id._internalGetInt64Value() == 1271266957 {
                 return true
             }
         }
@@ -267,7 +289,7 @@ public extension PeerId {
     
     var isImport: Bool {
         if self.namespace == Namespaces.Peer.CloudUser {
-            if self.id._internalGetInt32Value() == 225079 {
+            if self.id._internalGetInt64Value() == 225079 {
                 return true
             }
         }

@@ -96,10 +96,43 @@ func deleteMessagesInteractively(transaction: Transaction, stateManager: Account
     }
 }
 
+func _internal_clearHistoryInRangeInteractively(postbox: Postbox, peerId: PeerId, minTimestamp: Int32, maxTimestamp: Int32, type: InteractiveHistoryClearingType) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Void in
+        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
+            cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: CloudChatClearHistoryType(type))
+            if type == .scheduledMessages {
+            } else {
+                _internal_clearHistoryInRange(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, namespaces: .not(Namespaces.Message.allScheduled))
+            }
+        } else if peerId.namespace == Namespaces.Peer.SecretChat {
+            /*_internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .all)
+
+            if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+                var layer: SecretChatLayer?
+                switch state.embeddedState {
+                    case .terminated, .handshake:
+                        break
+                    case .basicLayer:
+                        layer = .layer8
+                    case let .sequenceBasedLayer(sequenceState):
+                        layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+                }
+
+                if let layer = layer {
+                    let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: SecretChatOutgoingOperationContents.clearHistory(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max)), state: state)
+                    if updatedState != state {
+                        transaction.setPeerChatState(peerId, state: updatedState)
+                    }
+                }
+            }*/
+        }
+    }
+}
+
 func _internal_clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: InteractiveHistoryClearingType) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
-            cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, type: CloudChatClearHistoryType(type))
+            cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, minTimestamp: nil, maxTimestamp: nil, type: CloudChatClearHistoryType(type))
             if type == .scheduledMessages {
                 _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .just(Namespaces.Message.allScheduled))
             } else {
@@ -110,7 +143,7 @@ func _internal_clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type:
             
                 _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .not(Namespaces.Message.allScheduled))
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference {
-                    cloudChatAddClearHistoryOperation(transaction: transaction, peerId: migrationReference.maxMessageId.peerId, explicitTopMessageId: MessageId(peerId: migrationReference.maxMessageId.peerId, namespace: migrationReference.maxMessageId.namespace, id: migrationReference.maxMessageId.id + 1), type: CloudChatClearHistoryType(type))
+                    cloudChatAddClearHistoryOperation(transaction: transaction, peerId: migrationReference.maxMessageId.peerId, explicitTopMessageId: MessageId(peerId: migrationReference.maxMessageId.peerId, namespace: migrationReference.maxMessageId.namespace, id: migrationReference.maxMessageId.id + 1), minTimestamp: nil, maxTimestamp: nil, type: CloudChatClearHistoryType(type))
                     _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: migrationReference.maxMessageId.peerId, namespaces: .all)
                 }
                 if let topIndex = topIndex {
@@ -148,9 +181,8 @@ func _internal_clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type:
 
 func _internal_clearAuthorHistory(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputChannel = apiInputChannel(peer), let inputUser = apiInputUser(memberPeer) {
-            
-            let signal = account.network.request(Api.functions.channels.deleteUserHistory(channel: inputChannel, userId: inputUser))
+        if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputChannel = apiInputChannel(peer), let inputUser = apiInputPeer(memberPeer) {
+            let signal = account.network.request(Api.functions.channels.deleteParticipantHistory(channel: inputChannel, participant: inputUser))
                 |> map { result -> Api.messages.AffectedHistory? in
                     return result
                 }

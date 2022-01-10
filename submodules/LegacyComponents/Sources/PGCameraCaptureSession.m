@@ -1080,14 +1080,16 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
         [[SQueue concurrentDefaultQueue] dispatch:^
         {
             TGDispatchOnMainThread(^{
-                bool mirrored = self.requestPreviewIsMirrored();
-                UIImageOrientation orientation = TGSnapshotOrientationForVideoOrientation(mirrored);
-                [[SQueue concurrentDefaultQueue] dispatch:^
-                {
-                    UIImage *image = [self imageFromSampleBuffer:sampleBuffer orientation:orientation];
-                    CFRelease(sampleBuffer);
-                    capturedFrameCompletion(image);
-                }];
+                if (self.requestPreviewIsMirrored != nil) {
+                    bool mirrored = self.requestPreviewIsMirrored();
+                    UIImageOrientation orientation = TGSnapshotOrientationForVideoOrientation(mirrored);
+                    [[SQueue concurrentDefaultQueue] dispatch:^
+                    {
+                        UIImage *image = [self imageFromSampleBuffer:sampleBuffer orientation:orientation];
+                        CFRelease(sampleBuffer);
+                        capturedFrameCompletion(image);
+                    }];
+                }
             });
         }];
     }

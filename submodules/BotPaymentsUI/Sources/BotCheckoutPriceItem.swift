@@ -92,6 +92,7 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
     let backgroundNode: ASDisplayNode
     let separatorNode: ASDisplayNode
     let bottomSeparatorNode: ASDisplayNode
+    private let maskNode: ASImageNode
 
     private var placeholderNode: ShimmerEffectNode?
     private var absoluteLocation: (CGRect, CGSize)?
@@ -108,6 +109,9 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
         self.backgroundNode = ASDisplayNode()
         self.separatorNode = ASDisplayNode()
         self.bottomSeparatorNode = ASDisplayNode()
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         super.init(layerBacked: false, dynamicBounce: false)
 
@@ -180,23 +184,39 @@ class BotCheckoutPriceItemNode: ListViewItemNode {
                     
                     let leftInset: CGFloat = 16.0 + params.leftInset
 
-                    strongSelf.separatorNode.isHidden = !item.hasSeparator
-                    strongSelf.separatorNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
-
+                    if strongSelf.maskNode.supernode == nil {
+                        strongSelf.addSubnode(strongSelf.maskNode)
+                    }
+                    
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
+                    switch neighbors.top {
+                        case .sameSection(false):
+                            break
+                        default:
+                            hasTopCorners = true
+                    }
                     switch neighbors.bottom {
-                    case .otherSection, .none:
+                    case .sameSection(false):
                         strongSelf.bottomSeparatorNode.isHidden = false
                     default:
-                        strongSelf.bottomSeparatorNode.isHidden = !item.isFinal
+                        hasBottomCorners = true
+                        strongSelf.bottomSeparatorNode.isHidden = !item.isFinal || hasCorners
                     }
-
+                    
+                    strongSelf.separatorNode.isHidden = !item.hasSeparator || (hasCorners && hasTopCorners)
+                    strongSelf.separatorNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
+                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: params.width - leftInset, height: UIScreenPixel))
+                    
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    
                     strongSelf.bottomSeparatorNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomSeparatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: CGSize(width: params.width, height: UIScreenPixel))
 
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: contentSize.height))
-                    
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: verticalOffset + floor((naturalContentHeight - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     strongSelf.labelNode.frame = CGRect(origin: CGPoint(x: params.width - rightInset - labelLayout.size.width, y: verticalOffset + floor((naturalContentHeight - labelLayout.size.height) / 2.0)), size: labelLayout.size)
 

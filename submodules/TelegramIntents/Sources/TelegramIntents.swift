@@ -69,7 +69,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                 return sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.intentsSettings])
                 |> take(1)
                 |> mapToSignal { sharedData -> Signal<[(Peer, SendMessageIntentSubject)], NoError> in
-                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings] as? IntentsSettings) ?? IntentsSettings.defaultSettings
+                    let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.intentsSettings]?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
                     if let accountId = settings.account, accountId != account.peerId {
                         return .single([])
                     }
@@ -178,12 +178,12 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                         displayTitle = presentationData.strings.DialogList_SavedMessages
                         nameComponents.givenName = displayTitle
                     } else {
-                        displayTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        displayTitle = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         nameComponents.givenName = peer.firstName
                         nameComponents.familyName = peer.lastName
                     }
                 } else {
-                    displayTitle = peer.compactDisplayTitle
+                    displayTitle = EnginePeer(peer).compactDisplayTitle
                     nameComponents.givenName = displayTitle
                 }
                 

@@ -309,6 +309,70 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
             return false
         }
     }
+    
+    public func navigationBarPallete() -> TGNavigationBarPallete! {
+        let presentationTheme: PresentationTheme
+        if let theme = self.theme {
+            presentationTheme = theme
+        } else {
+            presentationTheme = defaultPresentationTheme
+        }
+        let theme = presentationTheme
+        let barTheme = theme.rootController.navigationBar
+        return TGNavigationBarPallete(backgroundColor: barTheme.opaqueBackgroundColor, separatorColor: barTheme.separatorColor, titleColor: barTheme.primaryTextColor, tintColor: barTheme.accentTextColor)
+    }
+    
+    public func menuSheetPallete() -> TGMenuSheetPallete! {
+        let presentationTheme: PresentationTheme
+        if let theme = self.theme {
+            presentationTheme = theme
+        } else {
+            presentationTheme = defaultPresentationTheme
+        }
+        let theme = presentationTheme
+        let sheetTheme = theme.actionSheet
+        
+        return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
+    }
+    
+    public func darkMenuSheetPallete() -> TGMenuSheetPallete! {
+        let presentationTheme: PresentationTheme
+        if let theme = self.theme {
+            presentationTheme = theme
+        } else {
+            presentationTheme = defaultPresentationTheme
+        }
+        let theme = presentationTheme
+        let sheetTheme = theme.actionSheet
+        return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
+    }
+    
+    public func mediaAssetsPallete() -> TGMediaAssetsPallete! {
+        let presentationTheme: PresentationTheme
+        if let theme = self.theme {
+            presentationTheme = theme
+        } else {
+            presentationTheme = defaultPresentationTheme
+        }
+        
+        let theme = presentationTheme.list
+        let navigationBar = presentationTheme.rootController.navigationBar
+        let tabBar = presentationTheme.rootController.tabBar
+        
+        return TGMediaAssetsPallete(dark: presentationTheme.overallDarkAppearance, backgroundColor: theme.plainBackgroundColor, selectionColor: theme.itemHighlightedBackgroundColor, separatorColor: theme.itemPlainSeparatorColor, textColor: theme.itemPrimaryTextColor, secondaryTextColor: theme.controlSecondaryColor, accentColor: theme.itemAccentColor, destructiveColor: theme.itemDestructiveColor, barBackgroundColor: navigationBar.opaqueBackgroundColor, barSeparatorColor: tabBar.separatorColor, navigationTitleColor: navigationBar.primaryTextColor, badge: generateStretchableFilledCircleImage(diameter: 22.0, color: navigationBar.accentTextColor), badgeTextColor: navigationBar.opaqueBackgroundColor, sendIconImage: PresentationResourcesChat.chatInputPanelSendButtonImage(presentationTheme), doneIconImage: PresentationResourcesChat.chatInputPanelApplyButtonImage(presentationTheme), maybeAccentColor: navigationBar.accentTextColor)
+    }
+    
+    public func checkButtonPallete() -> TGCheckButtonPallete! {
+        let presentationTheme: PresentationTheme
+        if let theme = self.theme {
+            presentationTheme = theme
+        } else {
+            presentationTheme = defaultPresentationTheme
+        }
+        
+        let theme = presentationTheme
+        return TGCheckButtonPallete(defaultBackgroundColor: theme.chat.message.selectionControlColors.fillColor, accentBackgroundColor: theme.chat.message.selectionControlColors.fillColor, defaultBorderColor: theme.chat.message.selectionControlColors.strokeColor, mediaBorderColor: theme.chat.message.selectionControlColors.strokeColor, chatBorderColor: theme.chat.message.selectionControlColors.strokeColor, check: theme.chat.message.selectionControlColors.foregroundColor, blueColor: theme.chat.message.selectionControlColors.fillColor, barBackgroundColor: theme.chat.message.selectionControlColors.fillColor)
+    }
 }
 
 open class LegacyController: ViewController, PresentableController {

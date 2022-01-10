@@ -94,6 +94,8 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
                 strongSelf.controllerNode.updateCountryCode()
             }
         })
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     override func viewWillAppear(_ animated: Bool) {

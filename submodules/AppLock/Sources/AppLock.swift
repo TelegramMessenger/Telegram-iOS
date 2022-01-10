@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Postbox
 import TelegramCore
 import Display
 import SwiftSignalKit
@@ -12,6 +11,7 @@ import TelegramUIPreferences
 import ImageBlur
 import FastBlur
 import AppLockState
+import PassKit
 
 private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: LockState, isApplicationActive: Bool) -> Bool {
     if state.isManuallyLocked {
@@ -120,7 +120,7 @@ public final class AppLockContextImpl: AppLockContext {
                 return
             }
             
-            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? .defaultSettings
+            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? .defaultSettings
             
             let timestamp = CFAbsoluteTimeGetCurrent()
             var becameActiveRecently = false
@@ -205,6 +205,7 @@ public final class AppLockContextImpl: AppLockContext {
                         strongSelf.passcodeController = passcodeController
                         if let rootViewController = strongSelf.rootController {
                             if let _ = rootViewController.presentedViewController as? UIActivityViewController {
+                            } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                             } else {
                                 rootViewController.dismiss(animated: false, completion: nil)
                             }
@@ -229,6 +230,7 @@ public final class AppLockContextImpl: AppLockContext {
                     
                     if let rootViewController = strongSelf.rootController {
                         if let _ = rootViewController.presentedViewController as? UIActivityViewController {
+                        } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                         } else {
                             rootViewController.dismiss(animated: false, completion: nil)
                         }

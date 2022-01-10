@@ -60,8 +60,8 @@ extension Api.MessageMedia {
             case let .messageMediaWebPage(webPage):
                 var result: [(MediaResource, Data)]?
                 switch webPage {
-                    case let .webPage(content):
-                        if let photo = content.photo {
+                    case let .webPage(_, _, _, _, _, _, _, _, _, photo, _, _, _, _, _, _, document, _, _):
+                        if let photo = photo {
                             if let photoResult = collectPreCachedResources(for: photo) {
                                 if result == nil {
                                     result = []
@@ -69,7 +69,7 @@ extension Api.MessageMedia {
                                 result!.append(contentsOf: photoResult)
                             }
                         }
-                        if let file = content.document {
+                        if let file = document {
                             if let fileResult = collectPreCachedResources(for: file) {
                                 if result == nil {
                                     result = []
@@ -90,8 +90,8 @@ extension Api.MessageMedia {
 extension Api.Message {
     var rawId: Int32 {
         switch self {
-            case let .message(message):
-                return message.id
+        case let .message(_, id, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                return id
             case let .messageEmpty(_, id, _):
                 return id
             case let .messageService(_, id, _, _, _, _, _, _):
@@ -101,12 +101,8 @@ extension Api.Message {
     
     func id(namespace: MessageId.Namespace = Namespaces.Message.Cloud) -> MessageId? {
         switch self {
-            case let .message(message):
-                let flags = message.flags
-                let id = message.id
-                let fromId = message.fromId
-                
-                let peerId: PeerId = message.peerId.peerId
+            case let .message(_, id, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                let peerId: PeerId = messagePeerId.peerId
                 return MessageId(peerId: peerId, namespace: namespace, id: id)
             case let .messageEmpty(_, id, peerId):
                 if let peerId = peerId {
@@ -114,7 +110,7 @@ extension Api.Message {
                 } else {
                     return nil
                 }
-            case let .messageService(flags, id, fromId, chatPeerId, _, _, _, _):
+            case let .messageService(_, id, _, chatPeerId, _, _, _, _):
                 let peerId: PeerId = chatPeerId.peerId
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
@@ -122,10 +118,10 @@ extension Api.Message {
 
     var timestamp: Int32? {
         switch self {
-            case let .message(message):
-                return message.date
-            case let .messageService(messageService):
-                return messageService.date
+            case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                return date
+            case let .messageService(_, _, _, _, _, date, _, _):
+                return date
             case .messageEmpty:
                 return nil
         }
@@ -133,8 +129,8 @@ extension Api.Message {
     
     var preCachedResources: [(MediaResource, Data)]? {
         switch self {
-            case let .message(message):
-                return message.media?.preCachedResources
+            case let .message(_, _, _, _, _, _, _, _, _, media, _, _, _, _, _, _, _, _, _, _, _):
+                return media?.preCachedResources
             default:
                 return nil
         }
@@ -144,16 +140,16 @@ extension Api.Message {
 extension Api.Chat {
     var peerId: PeerId {
         switch self {
-            case let .chat(chat):
-                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chat.id))
+            case let .chat(_, id, _, _, _, _, _, _, _, _):
+                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
             case let .chatEmpty(id):
-                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
             case let .chatForbidden(id, _):
-                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(id))
-            case let .channel(channel):
-                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channel.id))
+                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
+            case let .channel(_, id, _, _, _, _, _, _, _, _, _, _):
+                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
             case let .channelForbidden(_, id, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
         }
     }
 }
@@ -162,9 +158,9 @@ extension Api.User {
     var peerId: PeerId {
         switch self {
             case .user(_, let id, _, _, _, _, _, _, _, _, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
             case let .userEmpty(id):
-                return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id))
         }
     }
 }
@@ -173,11 +169,11 @@ extension Api.Peer {
     var peerId: PeerId {
         switch self {
             case let .peerChannel(channelId):
-                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))
+                return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
             case let .peerChat(chatId):
-                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))
+                return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
             case let .peerUser(userId):
-                return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))
+                return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
         }
     }
 }
@@ -247,40 +243,40 @@ extension Api.Update {
     var peerIds: [PeerId] {
         switch self {
             case let .updateChannel(channelId):
-                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]
             case let .updateChat(chatId):
-                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))]
             case let .updateChannelTooLong(_, channelId, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]
             case let .updateChatParticipantAdd(chatId, userId, inviterId, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(inviterId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(inviterId))]
             case let .updateChatParticipantAdmin(chatId, userId, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateChatParticipantDelete(chatId, userId, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)), PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateChatParticipants(participants):
                 switch participants {
                     case let .chatParticipants(chatId, _, _):
-                        return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))]
+                        return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))]
                     case let .chatParticipantsForbidden(_, chatId, _):
-                        return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId))]
+                        return [PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))]
                 }
             case let .updateDeleteChannelMessages(channelId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]
             case let .updatePinnedChannelMessages(_, channelId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]
             case let .updateNewChannelMessage(message, _, _):
                 return apiMessagePeerIds(message)
             case let .updateEditChannelMessage(message, _, _):
                 return apiMessagePeerIds(message)
             case let .updateChannelWebPage(channelId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]
             case let .updateNewMessage(message, _, _):
                 return apiMessagePeerIds(message)
             case let .updateEditMessage(message, _, _):
                 return apiMessagePeerIds(message)
             case let .updateReadChannelInbox(_, _, channelId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(channelId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))]
             case let .updateNotifySettings(peer, _):
                 switch peer {
                     case let .notifyPeer(peer):
@@ -289,14 +285,14 @@ extension Api.Update {
                         return []
                 }
             case let .updateUserName(userId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateUserPhone(userId, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateUserPhoto(userId, _, _, _):
-                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId))]
+                return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))]
             case let .updateServiceNotification(_, inboxDate, _, _, _, _):
                 if let _ = inboxDate {
-                    return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(777000))]
+                    return [PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000))]
                 } else {
                     return []
                 }
@@ -417,9 +413,9 @@ extension Api.Updates {
             case .updatesTooLong:
                 return []
             case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _, _):
-                return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(userId)), namespace: Namespaces.Message.Cloud, id: id)]
+                return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), namespace: Namespaces.Message.Cloud, id: id)]
             case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _, _):
-                return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(chatId)), namespace: Namespaces.Message.Cloud, id: id)]
+                return [MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)), namespace: Namespaces.Message.Cloud, id: id)]
         }
     }
     
@@ -451,9 +447,9 @@ extension Api.Updates {
                 return [:]
             case .updatesTooLong:
                 return [:]
-            case let .updateShortMessage(_, id, userId, _, _, _, _, _, _, _, _, _):
+            case .updateShortMessage:
                 return [:]
-            case let .updateShortChatMessage(_, id, _, chatId, _, _, _, _, _, _, _, _, _):
+            case .updateShortChatMessage:
                 return [:]
         }
     }
@@ -548,15 +544,15 @@ extension Api.EncryptedChat {
     var peerId: PeerId {
         switch self {
             case let .encryptedChat(id, _, _, _, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(id)))
             case let .encryptedChatDiscarded(_, id):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(id)))
             case let .encryptedChatEmpty(id):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(id)))
             case let .encryptedChatRequested(_, _, id, _, _, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(id)))
             case let .encryptedChatWaiting(id, _, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(id))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(id)))
         }
     }
 }
@@ -565,9 +561,9 @@ extension Api.EncryptedMessage {
     var peerId: PeerId {
         switch self {
             case let .encryptedMessage(_, chatId, _, _, _):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(chatId))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(chatId)))
             case let .encryptedMessageService(_, chatId, _, _):
-                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt32Value(chatId))
+                return PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(chatId)))
         }
     }
 }

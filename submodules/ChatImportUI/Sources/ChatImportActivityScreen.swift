@@ -9,6 +9,7 @@ import AccountContext
 import PresentationDataUtils
 import RadialStatusNode
 import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import AppBundle
 import ZipArchive
 import MimeTypes
@@ -380,20 +381,17 @@ public final class ChatImportActivityScreen: ViewController {
             
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
-            if let path = getAppBundle().path(forResource: "HistoryImport", ofType: "tgs") {
-                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 190 * 2, height: 190 * 2, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
-                self.animationNode.visibility = true
-            }
-            if let path = getAppBundle().path(forResource: "HistoryImportDone", ofType: "tgs") {
-                self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 190 * 2, height: 190 * 2, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-                self.doneAnimationNode.started = { [weak self] in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.animationNode.isHidden = true
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "HistoryImport"), width: 190 * 2, height: 190 * 2, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.visibility = true
+            
+            self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "HistoryImportDone"), width: 190 * 2, height: 190 * 2, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.doneAnimationNode.started = { [weak self] in
+                guard let strongSelf = self else {
+                    return
                 }
-                self.doneAnimationNode.visibility = false
+                strongSelf.animationNode.isHidden = true
             }
+            self.doneAnimationNode.visibility = false
             
             self.addSubnode(self.animationNode)
             self.addSubnode(self.doneAnimationNode)

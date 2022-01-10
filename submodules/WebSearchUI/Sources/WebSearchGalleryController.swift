@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import QuickLook
-import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
@@ -38,7 +37,7 @@ struct WebSearchGalleryEntry: Equatable {
         switch self.result {
             case let .externalReference(externalReference):
                 if let content = externalReference.content, externalReference.type == "gif", let thumbnailResource = externalReference.thumbnail?.resource, let dimensions = content.dimensions {
-                    let fileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
+                    let fileReference = FileMediaReference.standalone(media: TelegramMediaFile(fileId: EngineMedia.Id(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: content.resource, previewRepresentations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil)], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])]))
                     return WebSearchVideoGalleryItem(context: context, presentationData: presentationData, index: self.index, result: self.result, content: NativeVideoContent(id: .contextResult(self.result.queryId, self.result.id), fileReference: fileReference, loopVideo: true, enableSound: false, fetchAutomatically: true), controllerInteraction: controllerInteraction)
                 }
             case let .internalReference(internalReference):
@@ -99,7 +98,7 @@ class WebSearchGalleryController: ViewController {
     private let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     private let baseNavigationController: NavigationController?
     
-    init(context: AccountContext, peer: Peer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
+    init(context: AccountContext, peer: EnginePeer?, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext, entries: [WebSearchGalleryEntry], centralIndex: Int, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, baseNavigationController: NavigationController?, sendCurrent: @escaping (ChatContextResult) -> Void) {
         self.context = context
         self.replaceRootController = replaceRootController
         self.baseNavigationController = baseNavigationController
@@ -334,7 +333,7 @@ class WebSearchGalleryController: ViewController {
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

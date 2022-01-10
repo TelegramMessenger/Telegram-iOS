@@ -88,10 +88,12 @@ swift_library(
         "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
         "//submodules/AccountUtils:AccountUtils",
         "//submodules/AuthTransferUI:AuthTransferUI",
-        "//submodules/WidgetSetupScreen:WidgetSetupScreen",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
         "//submodules/DebugSettingsUI:DebugSettingsUI",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
+        "//submodules/WebPBinding:WebPBinding",
+        "//submodules/Translate:Translate",
+        "//submodules/QrCodeUI:QrCodeUI",
     ],
     visibility = [
         "//visibility:public",

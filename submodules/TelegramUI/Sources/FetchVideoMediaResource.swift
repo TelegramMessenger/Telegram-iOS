@@ -210,7 +210,7 @@ public func fetchVideoLibraryMediaResource(account: Account, resource: VideoLibr
     return account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> take(1)
     |> map { view in
-        return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+        return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
     }
     |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
@@ -323,7 +323,7 @@ func fetchLocalFileVideoMediaResource(account: Account, resource: LocalFileVideo
     return account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> take(1)
     |> map { view in
-        return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+        return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
     }
     |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in

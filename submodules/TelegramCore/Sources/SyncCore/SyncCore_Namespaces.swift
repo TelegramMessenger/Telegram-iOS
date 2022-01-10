@@ -44,6 +44,8 @@ public struct Namespaces {
         public static let EmojiKeywords: Int32 = 2
         public static let CloudAnimatedEmoji: Int32 = 3
         public static let CloudDice: Int32 = 4
+        public static let CloudAnimatedEmojiAnimations: Int32 = 5
+        public static let CloudAnimatedEmojiReactions: Int32 = 6
     }
     
     public struct OrderedItemList {
@@ -73,10 +75,12 @@ public struct Namespaces {
         public static let cachedPollResults: Int8 = 9
         public static let cachedContextResults: Int8 = 10
         public static let proximityNotificationStoredState: Int8 = 11
-        public static let cachedPeerInvitationImporters: Int8 = 12
-        public static let cachedPeerExportedInvitations: Int8 = 13
         public static let cachedGroupCallDisplayAsPeers: Int8 = 14
         public static let cachedAdMessageStates: Int8 = 15
+        public static let cachedPeerInvitationImporters: Int8 = 16
+        public static let cachedPeerExportedInvitations: Int8 = 17
+        public static let cachedSendAsPeers: Int8 = 18
+        public static let availableReactions: Int8 = 19
     }
     
     public struct UnorderedItemList {
@@ -212,12 +216,13 @@ private enum PreferencesKeyValues: Int32 {
     case appConfiguration = 14
     case searchBotsConfiguration = 15
     case contactsSettings = 16
-    case secretChatSettings = 17
     case walletCollection = 18
     case contentSettings = 19
     case chatListFilters = 20
     case peersNearby = 21
     case chatListFiltersFeaturedState = 22
+    case secretChatSettings = 23
+    case reactionSettings = 24
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -340,6 +345,12 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.chatListFiltersFeaturedState.rawValue)
         return key
     }()
+    
+    public static let reactionSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.reactionSettings.rawValue)
+        return key
+    }()
 }
 
 private enum SharedDataKeyValues: Int32 {
@@ -351,7 +362,7 @@ private enum SharedDataKeyValues: Int32 {
     case themeSettings = 6
     case countriesList = 7
     case wallapersState = 8
-    case chatThemes = 9
+    case chatThemes = 10
 }
 
 public struct SharedDataKeys {

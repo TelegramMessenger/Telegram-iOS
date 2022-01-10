@@ -153,7 +153,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer)), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
                     interaction.peerSelected(peer, nil)
                 })
             case let .participant(participant, label, revealActions, revealed, enabled):
@@ -161,7 +161,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                 if let label = label {
                     status = .custom(string: label, multiline: false)
                 } else if let presence = participant.presences[participant.peer.id], self.addIcon {
-                    status = .presence(presence, dateTimeFormat)
+                    status = .presence(EnginePeer.Presence(presence), dateTimeFormat)
                 } else {
                     status = .none
                 }
@@ -187,7 +187,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                     actionIcon = .add
                 }
                 
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: participant.peer, chatPeer: participant.peer), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: revealed), options: options, actionIcon: actionIcon, index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(participant.peer), chatPeer: EnginePeer(participant.peer)), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: revealed), options: options, actionIcon: actionIcon, index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
                     interaction.peerSelected(participant.peer, participant)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     interaction.setPeerIdWithRevealedOptions(RevealedPeerId(peerId: participant.peer.id, section: self.section), fromPeerId.flatMap({ RevealedPeerId(peerId: $0, section: self.section) }))
@@ -681,7 +681,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                             foundRemotePeers = .single(([], []))
                         } else {
                             foundContacts = context.account.postbox.searchContacts(query: query.lowercased())
-                            foundRemotePeers = .single(([], [])) |> then(context.engine.peers.searchPeers(query: query)
+                            foundRemotePeers = .single(([], [])) |> then(context.engine.contacts.searchRemotePeers(query: query)
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                         }
                     case .searchMembers, .searchBanned, .searchKicked, .searchAdmins:
@@ -816,7 +816,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                                     if peer.id == participant.peer.id {
                                                         label = presentationData.strings.Channel_Management_LabelAdministrator
                                                     } else {
-                                                        label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                        label = presentationData.strings.Channel_Management_PromotedBy(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                     }
                                                 }
                                             }
@@ -843,7 +843,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     switch participant.participant {
                                         case let .member(_, _, _, banInfo, _):
                                             if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                                label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                label = presentationData.strings.Channel_Management_RemovedBy(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                             }
                                         default:
                                             break
@@ -995,7 +995,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 }
                 
                 if mode == .banAndPromoteActions || mode == .inviteActions {
-                    foundRemotePeers = .single(([], [])) |> then(context.engine.peers.searchPeers(query: query)
+                    foundRemotePeers = .single(([], [])) |> then(context.engine.contacts.searchRemotePeers(query: query)
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                 } else {
                     foundRemotePeers = .single(([], []))
@@ -1076,7 +1076,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                                 if peer.id == participant.peer.id {
                                                     label = presentationData.strings.Channel_Management_LabelAdministrator
                                                 } else {
-                                                    label = presentationData.strings.Channel_Management_PromotedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                    label = presentationData.strings.Channel_Management_PromotedBy(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                 }
                                             }
                                         }
@@ -1103,7 +1103,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     switch participant.participant {
                                     case let .member(_, _, _, banInfo, _):
                                         if let banInfo = banInfo, let peer = participant.peers[banInfo.restrictedBy] {
-                                            label = presentationData.strings.Channel_Management_RemovedBy(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                            label = presentationData.strings.Channel_Management_RemovedBy(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                         }
                                     default:
                                         break

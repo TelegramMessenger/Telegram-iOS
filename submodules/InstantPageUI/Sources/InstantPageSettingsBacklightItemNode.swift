@@ -5,10 +5,10 @@ import Display
 import AppBundle
 import LegacyComponents
 
-private func generateKnobImage() -> UIImage? {
+func generateKnobImage() -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -1.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
+        context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 12.0, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
         context.setFillColor(UIColor.white.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
     })

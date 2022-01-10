@@ -28,7 +28,7 @@ static FORCE_INLINE uint32_t fmix ( uint32_t h )
     return h;
 }
 
-static void murMurHash32Impl(const void *key, int len, uint32_t seed, void *out)
+static void murMurHash32Impl(const void *key, uint32_t len, uint32_t seed, void *out)
 {
     const uint8_t * data = (const uint8_t*)key;
     const int nblocks = len / 4;
@@ -101,20 +101,3 @@ int32_t murMurHashString32(const char *s)
     return result;
 }
 
-NSString *postboxTransformedString(CFStringRef string, bool replaceWithTransliteratedVersion, bool appendTransliteratedVersion) {
-    NSMutableString *mutableString = [[NSMutableString alloc] initWithString:(__bridge NSString * _Nonnull)(string)];
-    CFStringTransform((CFMutableStringRef)mutableString, NULL, kCFStringTransformStripCombiningMarks, false);
-    
-    if (replaceWithTransliteratedVersion || appendTransliteratedVersion) {
-        NSMutableString *transliteratedString = [[NSMutableString alloc] initWithString:mutableString];
-        CFStringTransform((CFMutableStringRef)transliteratedString, NULL, kCFStringTransformToLatin, false);
-        if (replaceWithTransliteratedVersion) {
-            return transliteratedString;
-        } else {
-            [mutableString appendString:@" "];
-            [mutableString appendString:transliteratedString];
-        }
-    }
-    
-    return mutableString;
-}

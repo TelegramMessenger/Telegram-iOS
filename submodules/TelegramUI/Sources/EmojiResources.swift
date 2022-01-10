@@ -10,7 +10,7 @@ import Emoji
 import AppBundle
 import AccountContext
 
-public struct EmojiThumbnailResourceId: MediaResourceId {
+public struct EmojiThumbnailResourceId {
     public let emoji: String
     
     public var uniqueId: String {
@@ -19,14 +19,6 @@ public struct EmojiThumbnailResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.emoji.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? EmojiThumbnailResourceId {
-            return self.emoji == to.emoji
-        } else {
-            return false
-        }
     }
 }
 
@@ -46,7 +38,7 @@ public class EmojiThumbnailResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return EmojiThumbnailResourceId(emoji: self.emoji)
+        return MediaResourceId(EmojiThumbnailResourceId(emoji: self.emoji).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -58,7 +50,7 @@ public class EmojiThumbnailResource: TelegramMediaResource {
     }
 }
 
-public struct EmojiSpriteResourceId: MediaResourceId {
+public struct EmojiSpriteResourceId {
     public let packId: UInt8
     public let stickerId: UInt8
     
@@ -68,14 +60,6 @@ public struct EmojiSpriteResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.packId.hashValue &* 31 &+ self.stickerId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? EmojiSpriteResourceId {
-            return self.packId == to.packId && self.stickerId == to.stickerId
-        } else {
-            return false
-        }
     }
 }
 
@@ -99,7 +83,7 @@ public class EmojiSpriteResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return EmojiSpriteResourceId(packId: self.packId, stickerId: self.stickerId)
+        return MediaResourceId(EmojiSpriteResourceId(packId: self.packId, stickerId: self.stickerId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -201,15 +185,7 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
 
 func messageIsElligibleForLargeEmoji(_ message: Message) -> Bool {
     if !message.text.isEmpty && message.text.containsOnlyEmoji && message.text.emojis.count < 4 {
-        var messageEntities: [MessageTextEntity]?
-        for attribute in message.attributes {
-            if let attribute = attribute as? TextEntitiesMessageAttribute {
-                messageEntities = attribute.entities
-                break
-            }
-        }
-        
-        if !(messageEntities?.isEmpty ?? true) {
+        if !(message.textEntitiesAttribute?.entities.isEmpty ?? true) {
             return false
         }
         
@@ -292,78 +268,80 @@ func fetchEmojiSpriteResource(account: Account, resource: EmojiSpriteResource) -
     |> mapToSignal { result -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         switch result {
             case let .result(_, items, _):
-                if let sticker = items[Int(resource.stickerId)] as? StickerPackItem {
-                    return Signal { subscriber in
-                        guard let fetchResource = account.postbox.mediaBox.fetchResource else {
-                            return EmptyDisposable
-                        }
-
-                        subscriber.putNext(.reset)
-
-                        let fetch = fetchResource(sticker.file.resource, .single([(0 ..< Int.max, .default)]), nil)
-                        let buffer = Atomic<Buffer>(value: Buffer())
-                        let disposable = fetch.start(next: { result in
-                            switch result {
-                                case .reset:
-                                    let _ = buffer.with { buffer in
-                                        buffer.data.count = 0
-                                    }
-                                case .resourceSizeUpdated:
-                                    break
-                                case .progressUpdated:
-                                    break
-                                case let .moveLocalFile(path):
-                                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                                        let _ = buffer.with { buffer in
-                                            buffer.data = data
-                                        }
-                                        let _ = try? FileManager.default.removeItem(atPath: path)
-                                    }
-                                case let .moveTempFile(file):
-                                    if let data = try? Data(contentsOf: URL(fileURLWithPath: file.path)) {
-                                        let _ = buffer.with { buffer in
-                                            buffer.data = data
-                                        }
-                                    }
-                                    TempBox.shared.dispose(file)
-                                case .copyLocalItem:
-                                    assertionFailure()
-                                    break
-                                case let .replaceHeader(data, range):
-                                    let _ = buffer.with { buffer in
-                                        if buffer.data.count < range.count {
-                                            buffer.data.count = range.count
-                                        }
-                                        buffer.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                            data.copyBytes(to: bytes, from: range)
-                                        }
-                                    }
-                                case let .dataPart(resourceOffset, data, range, _):
-                                    let _ = buffer.with { buffer in
-                                        if buffer.data.count < resourceOffset + range.count {
-                                            buffer.data.count = resourceOffset + range.count
-                                        }
-                                        buffer.data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                                            data.copyBytes(to: bytes.advanced(by: resourceOffset), from: range)
-                                        }
-                                    }
-                            }
-                        }, completed: {
-                            let image = buffer.with { buffer -> UIImage? in
-                                return WebP.convert(fromWebP: buffer.data)
-                            }
-                            if let image = image, let data = image.pngData() {
-                                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
-                                subscriber.putCompletion()
-                            }
-                        })
-
-                        return ActionDisposable {
-                            disposable.dispose()
-                        }
+                let sticker = items[Int(resource.stickerId)]
+                
+                return Signal { subscriber in
+                    guard let fetchResource = account.postbox.mediaBox.fetchResource else {
+                        return EmptyDisposable
                     }
-                } else {
-                    return .complete()
+
+                    subscriber.putNext(.reset)
+
+                    let fetch = fetchResource(sticker.file.resource, .single([(0 ..< Int.max, .default)]), nil)
+                    let buffer = Atomic<Buffer>(value: Buffer())
+                    let disposable = fetch.start(next: { result in
+                        switch result {
+                            case .reset:
+                                let _ = buffer.with { buffer in
+                                    buffer.data.count = 0
+                                }
+                            case .resourceSizeUpdated:
+                                break
+                            case .progressUpdated:
+                                break
+                            case let .moveLocalFile(path):
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                    let _ = buffer.with { buffer in
+                                        buffer.data = data
+                                    }
+                                    let _ = try? FileManager.default.removeItem(atPath: path)
+                                }
+                            case let .moveTempFile(file):
+                                if let data = try? Data(contentsOf: URL(fileURLWithPath: file.path)) {
+                                    let _ = buffer.with { buffer in
+                                        buffer.data = data
+                                    }
+                                }
+                                TempBox.shared.dispose(file)
+                            case .copyLocalItem:
+                                assertionFailure()
+                                break
+                            case let .replaceHeader(data, range):
+                                let _ = buffer.with { buffer in
+                                    if buffer.data.count < range.count {
+                                        buffer.data.count = range.count
+                                    }
+                                    buffer.data.withUnsafeMutableBytes { rawBytes -> Void in
+                                        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                                        data.copyBytes(to: bytes, from: range)
+                                    }
+                                }
+                            case let .dataPart(resourceOffset, data, range, _):
+                                let _ = buffer.with { buffer in
+                                    if buffer.data.count < resourceOffset + range.count {
+                                        buffer.data.count = resourceOffset + range.count
+                                    }
+                                    buffer.data.withUnsafeMutableBytes { rawBytes -> Void in
+                                        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                                        data.copyBytes(to: bytes.advanced(by: resourceOffset), from: range)
+                                    }
+                                }
+                        }
+                    }, completed: {
+                        let image = buffer.with { buffer -> UIImage? in
+                            return WebP.convert(fromWebP: buffer.data)
+                        }
+                        if let image = image, let data = image.pngData() {
+                            subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                            subscriber.putCompletion()
+                        }
+                    })
+
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
                 }
 
             default:

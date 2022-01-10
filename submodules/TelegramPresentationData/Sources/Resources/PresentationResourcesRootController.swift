@@ -73,6 +73,12 @@ public struct PresentationResourcesRootController {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/SearchIcon"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
+
+    public static func navigationCalendarIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationCalendarIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/Calendar"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
     
     public static func navigationMoreIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationMoreIcon.rawValue, { theme in
@@ -84,6 +90,18 @@ public struct PresentationResourcesRootController {
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: 13.0, y: floor((size.height - dotSize) / 2.0)), size: CGSize(width: dotSize, height: dotSize)))
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: 20.0, y: floor((size.height - dotSize) / 2.0)), size: CGSize(width: dotSize, height: dotSize)))
             })
+        })
+    }
+
+    public static func navigationMoreCircledIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationMoreCircledIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationMore"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
+
+    public static func navigationQrCodeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationQrCodeIcon.rawValue, { theme in
+            generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
     

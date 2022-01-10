@@ -3,15 +3,19 @@ import Foundation
 final class MutableAdditionalChatListItemsView: MutablePostboxView {
     fileprivate var items: [AdditionalChatListItem]
     
-    init(postbox: Postbox) {
+    init(postbox: PostboxImpl) {
         self.items = postbox.additionalChatListItemsTable.get()
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if let items = transaction.replacedAdditionalChatListItems {
             self.items = items
             return true
         }
+        return false
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
         return false
     }
     

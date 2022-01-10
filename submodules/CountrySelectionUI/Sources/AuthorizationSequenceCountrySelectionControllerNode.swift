@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
@@ -79,21 +78,26 @@ func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, S
     return result
 }
 
-private func stringTokens(_ string: String) -> [ValueBoxKey] {
+private func stringTokens(_ string: String) -> [Data] {
     let nsString = string.replacingOccurrences(of: ".", with: "").folding(options: .diacriticInsensitive, locale: .current).lowercased() as NSString
     
     let flag = UInt(kCFStringTokenizerUnitWord)
     let tokenizer = CFStringTokenizerCreate(kCFAllocatorDefault, nsString, CFRangeMake(0, nsString.length), flag, CFLocaleCopyCurrent())
     var tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
-    var tokens: [ValueBoxKey] = []
+    var tokens: [Data] = []
     
-    var addedTokens = Set<ValueBoxKey>()
+    var addedTokens = Set<Data>()
     while tokenType != [] {
         let currentTokenRange = CFStringTokenizerGetCurrentTokenRange(tokenizer)
         
         if currentTokenRange.location >= 0 && currentTokenRange.length != 0 {
-            let token = ValueBoxKey(length: currentTokenRange.length * 2)
-            nsString.getCharacters(token.memory.assumingMemoryBound(to: unichar.self), range: NSMakeRange(currentTokenRange.location, currentTokenRange.length))
+            var token = Data(count: currentTokenRange.length * 2)
+            token.withUnsafeMutableBytes { bytes -> Void in
+                guard let baseAddress = bytes.baseAddress else {
+                    return
+                }
+                nsString.getCharacters(baseAddress.assumingMemoryBound(to: unichar.self), range: NSMakeRange(currentTokenRange.location, currentTokenRange.length))
+            }
             if !addedTokens.contains(token) {
                 tokens.append(token)
                 addedTokens.insert(token)
@@ -105,13 +109,33 @@ private func stringTokens(_ string: String) -> [ValueBoxKey] {
     return tokens
 }
 
-private func matchStringTokens(_ tokens: [ValueBoxKey], with other: [ValueBoxKey]) -> Bool {
+public func isPrefix(data: Data, to otherData: Data) -> Bool {
+    if data.isEmpty {
+        return true
+    } else if data.count <= otherData.count {
+        return data.withUnsafeBytes { bytes -> Bool in
+            guard let bytesBaseAddress = bytes.baseAddress else {
+                return false
+            }
+            return otherData.withUnsafeBytes { otherBytes -> Bool in
+                guard let otherBytesBaseAddress = otherBytes.baseAddress else {
+                    return false
+                }
+                return memcmp(bytesBaseAddress, otherBytesBaseAddress, bytes.count) == 0
+            }
+        }
+    } else {
+        return false
+    }
+}
+
+private func matchStringTokens(_ tokens: [Data], with other: [Data]) -> Bool {
     if other.isEmpty {
         return false
     } else if other.count == 1 {
         let otherToken = other[0]
         for token in tokens {
-            if otherToken.isPrefix(to: token) {
+            if isPrefix(data: otherToken, to: token) {
                 return true
             }
         }
@@ -119,7 +143,7 @@ private func matchStringTokens(_ tokens: [ValueBoxKey], with other: [ValueBoxKey
         for otherToken in other {
             var found = false
             for token in tokens {
-                if otherToken.isPrefix(to: token) {
+                if isPrefix(data: otherToken, to: token) {
                     found = true
                     break
                 }
@@ -138,7 +162,13 @@ private func searchCountries(items: [((String, String), String, [Int])], query: 
     
     var result: [((String, String), String, Int)] = []
     for item in items {
-        let string = "\(item.0) \(item.1)"
+        let componentsOne = item.0.0.components(separatedBy: " ")
+        let abbrOne = componentsOne.compactMap { $0.first.flatMap { String($0) } }.reduce(into: String(), { $0.append(contentsOf: $1) }).replacingOccurrences(of: "&", with: "")
+        
+        let componentsTwo = item.0.0.components(separatedBy: " ")
+        let abbrTwo = componentsTwo.compactMap { $0.first.flatMap { String($0) } }.reduce(into: String(), { $0.append(contentsOf: $1) }).replacingOccurrences(of: "&", with: "")
+        
+        let string = "\(item.0.0) \((item.0.1)) \(item.1) \(abbrOne) \(abbrTwo)"
         let tokens = stringTokens(string)
         if matchStringTokens(tokens, with: queryTokens) {
             for code in item.2 {

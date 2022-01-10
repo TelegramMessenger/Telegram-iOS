@@ -232,72 +232,82 @@ public final class InitialPresentationDataAndSettings {
 public func currentPresentationDataAndSettings(accountManager: AccountManager<TelegramAccountManagerTypes>, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<InitialPresentationDataAndSettings, NoError> {
     return accountManager.transaction { transaction -> InitialPresentationDataAndSettings in
         let localizationSettings: LocalizationSettings?
-        if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
+        if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
             localizationSettings = current
         } else {
             localizationSettings = nil
         }
         
         let themeSettings: PresentationThemeSettings
-        if let current = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings) as? PresentationThemeSettings {
+        if let current = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings)?.get(PresentationThemeSettings.self) {
             themeSettings = current
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
         }
         
         let automaticMediaDownloadSettings: MediaAutoDownloadSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings) as? MediaAutoDownloadSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings)?.get(MediaAutoDownloadSettings.self) {
             automaticMediaDownloadSettings = value
         } else {
             automaticMediaDownloadSettings = MediaAutoDownloadSettings.defaultSettings
         }
         
         let autodownloadSettings: AutodownloadSettings
-        if let value = transaction.getSharedData(SharedDataKeys.autodownloadSettings) as? AutodownloadSettings {
+        if let value = transaction.getSharedData(SharedDataKeys.autodownloadSettings)?.get(AutodownloadSettings.self) {
             autodownloadSettings = value
         } else {
             autodownloadSettings = .defaultSettings
         }
         
         let callListSettings: CallListSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings) as? CallListSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.callListSettings)?.get(CallListSettings.self) {
             callListSettings = value
         } else {
             callListSettings = CallListSettings.defaultSettings
         }
         
         let inAppNotificationSettings: InAppNotificationSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings) as? InAppNotificationSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.inAppNotificationSettings)?.get(InAppNotificationSettings.self) {
             inAppNotificationSettings = value
         } else {
             inAppNotificationSettings = InAppNotificationSettings.defaultSettings
         }
         
         let mediaInputSettings: MediaInputSettings
-        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings) as? MediaInputSettings {
+        if let value = transaction.getSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings)?.get(MediaInputSettings.self) {
             mediaInputSettings = value
         } else {
             mediaInputSettings = MediaInputSettings.defaultSettings
         }
         
-        let experimentalUISettings: ExperimentalUISettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings) as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        let experimentalUISettings: ExperimentalUISettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings)?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
         
-        let contactSettings: ContactSynchronizationSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings) as? ContactSynchronizationSettings) ?? ContactSynchronizationSettings.defaultSettings
+        let contactSettings: ContactSynchronizationSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
         
         let effectiveTheme: PresentationThemeReference
+        var preferredBaseTheme: TelegramBaseTheme?
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
         let autoNightModeTriggered: Bool
         if automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle) {
             effectiveTheme = themeSettings.automaticThemeSwitchSetting.theme
             autoNightModeTriggered = true
+            
+            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.night, .tinted].contains(baseTheme) {
+                preferredBaseTheme = baseTheme
+            } else {
+                preferredBaseTheme = .night
+            }
         } else {
             effectiveTheme = themeSettings.theme
             autoNightModeTriggered = false
+            
+            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.classic, .day].contains(baseTheme) {
+                preferredBaseTheme = baseTheme
+            }
         }
         
         let effectiveColors = themeSettings.themeSpecificAccentColors[effectiveTheme.index]
-        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], baseColor: effectiveColors?.baseColor) ?? defaultPresentationTheme
-        
+        let theme = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], baseColor: effectiveColors?.baseColor) ?? defaultPresentationTheme
         
         let effectiveChatWallpaper: TelegramWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: effectiveTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[effectiveTheme.index]) ?? theme.chat.defaultWallpaper
         
@@ -330,6 +340,7 @@ private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
 
 private enum PreparedAutomaticThemeSwitchTrigger {
     case explicitNone
+    case explicitForce
     case system
     case time(fromSeconds: Int32, toSeconds: Int32)
     case brightness(threshold: Double)
@@ -341,26 +352,30 @@ private struct AutomaticThemeSwitchParameters {
     
     init(settings: AutomaticThemeSwitchSetting) {
         let trigger: PreparedAutomaticThemeSwitchTrigger
-        switch settings.trigger {
-            case .system:
-                trigger = .system
-            case .explicitNone:
-                trigger = .explicitNone
-            case let .timeBased(setting):
-                let fromValue: Int32
-                let toValue: Int32
-                switch setting {
-                    case let .automatic(latitude, longitude, _):
-                        let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: latitude, longitude: longitude)!
-                        fromValue = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
-                        toValue = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
-                    case let .manual(fromSeconds, toSeconds):
-                        fromValue = fromSeconds
-                        toValue = toSeconds
-                }
-                trigger = .time(fromSeconds: fromValue, toSeconds: toValue)
-            case let .brightness(threshold):
-                trigger = .brightness(threshold: threshold)
+        if settings.force {
+            trigger = .explicitForce
+        } else {
+            switch settings.trigger {
+                case .system:
+                    trigger = .system
+                case .explicitNone:
+                    trigger = .explicitNone
+                case let .timeBased(setting):
+                    let fromValue: Int32
+                    let toValue: Int32
+                    switch setting {
+                        case let .automatic(latitude, longitude, _):
+                            let calculator = EDSunriseSet(date: Date(), timezone: TimeZone.current, latitude: latitude, longitude: longitude)!
+                            fromValue = roundTimeToDay(Int32(calculator.sunset.timeIntervalSince1970))
+                            toValue = roundTimeToDay(Int32(calculator.sunrise.timeIntervalSince1970))
+                        case let .manual(fromSeconds, toSeconds):
+                            fromValue = fromSeconds
+                            toValue = toSeconds
+                    }
+                    trigger = .time(fromSeconds: fromValue, toSeconds: toValue)
+                case let .brightness(threshold):
+                    trigger = .brightness(threshold: threshold)
+            }
         }
         self.trigger = trigger
         self.theme = settings.theme
@@ -371,6 +386,8 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
     switch parameters.trigger {
         case .explicitNone:
             return false
+        case .explicitForce:
+            return true
         case .system:
             return systemUserInterfaceStyle == .dark
         case let .time(fromValue, toValue):
@@ -391,7 +408,9 @@ public func automaticThemeShouldSwitchNow(settings: AutomaticThemeSwitchSetting,
 }
 
 private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<Bool, NoError> {
-    if case .explicitNone = settings.trigger {
+    if settings.force {
+        return .single(true)
+    } else if case .explicitNone = settings.trigger {
         return .single(false)
     } else {
         return Signal { subscriber in
@@ -569,13 +588,13 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
     return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings, ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), systemUserInterfaceStyle)
     |> mapToSignal { sharedData, systemUserInterfaceStyle -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
-        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
+        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
             themeSettings = current
         } else {
             themeSettings = PresentationThemeSettings.defaultSettings
         }
         
-        let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings ?? ContactSynchronizationSettings.defaultSettings
+        let contactSettings: ContactSynchronizationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]?.get(ContactSynchronizationSettings.self) ?? ContactSynchronizationSettings.defaultSettings
         
         var currentColors = themeSettings.themeSpecificAccentColors[themeSettings.theme.index]
         if let colors = currentColors, colors.baseColor == .theme {
@@ -605,9 +624,15 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         var effectiveColors = currentColors
                         
                         var switchedToNightModeWallpaper = false
+                        var preferredBaseTheme: TelegramBaseTheme?
                         if autoNightModeTriggered {
                             let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             effectiveColors = themeSettings.themeSpecificAccentColors[automaticTheme.index]
+                            
+                            if automaticTheme == .builtin(.night) && effectiveColors == nil {
+                                effectiveColors = PresentationThemeAccentColor(baseColor: .blue)
+                            }
+                            
                             let themeSpecificWallpaper = (themeSettings.themeSpecificChatWallpapers[coloredThemeIndex(reference: automaticTheme, accentColor: effectiveColors)] ?? themeSettings.themeSpecificChatWallpapers[automaticTheme.index])
                             
                             if let themeSpecificWallpaper = themeSpecificWallpaper {
@@ -615,15 +640,23 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                                 switchedToNightModeWallpaper = true
                             }
                             effectiveTheme = automaticTheme
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.night, .tinted].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            } else {
+                                preferredBaseTheme = .night
+                            }
                         } else {
                             effectiveTheme = themeSettings.theme
+                            if let baseTheme = themeSettings.themePreferredBaseTheme[effectiveTheme.index], [.classic, .day].contains(baseTheme) {
+                                preferredBaseTheme = baseTheme
+                            }
                         }
                         
                         if let colors = effectiveColors, colors.baseColor == .theme {
                             effectiveColors = nil
                         }
                         
-                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
+                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, baseTheme: preferredBaseTheme, accentColor: effectiveColors?.color, bubbleColors: effectiveColors?.customBubbleColors ?? [], wallpaper: effectiveColors?.wallpaper, baseColor: effectiveColors?.baseColor, serviceBackgroundColor: serviceBackgroundColor) ?? defaultPresentationTheme
                         
                         if autoNightModeTriggered && !switchedToNightModeWallpaper {
                             switch effectiveChatWallpaper {
@@ -639,7 +672,7 @@ public func updatedPresentationData(accountManager: AccountManager<TelegramAccou
                         }
                         
                         let localizationSettings: LocalizationSettings?
-                        if let current = sharedData.entries[SharedDataKeys.localizationSettings] as? LocalizationSettings {
+                        if let current = sharedData.entries[SharedDataKeys.localizationSettings]?.get(LocalizationSettings.self) {
                             localizationSettings = current
                         } else {
                             localizationSettings = nil

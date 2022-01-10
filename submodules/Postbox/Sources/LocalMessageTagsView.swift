@@ -4,7 +4,7 @@ final class MutableLocalMessageTagsView: MutablePostboxView {
     private let tag: LocalMessageTags
     fileprivate var messages: [MessageId: Message] = [:]
     
-    init(postbox: Postbox, tag: LocalMessageTags) {
+    init(postbox: PostboxImpl, tag: LocalMessageTags) {
         self.tag = tag
         for id in postbox.localMessageHistoryTagsTable.get(tag: tag) {
             if let message = postbox.getMessage(id) {
@@ -15,7 +15,7 @@ final class MutableLocalMessageTagsView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         for operation in transaction.currentLocalTagsOperations {
             switch operation {
@@ -49,6 +49,10 @@ final class MutableLocalMessageTagsView: MutablePostboxView {
             }
         }
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

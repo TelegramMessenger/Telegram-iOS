@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
@@ -30,6 +31,7 @@ public enum ItemListNavigationButtonContent: Equatable {
     case none
     case text(String)
     case icon(ItemListNavigationButtonContentIcon)
+    case node(ASDisplayNode)
 }
 
 public struct ItemListNavigationButton {
@@ -204,6 +206,14 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
+    public var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)? {
+        didSet {
+            if self.isNodeLoaded {
+                (self.displayNode as! ItemListControllerNode).listNode.didScrollWithOffset = self.didScrollWithOffset
+            }
+        }
+    }
+    
     public var willScrollToTop: (() -> Void)?
     
     public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Signal<Bool, NoError>) {
@@ -335,6 +345,11 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                             image = PresentationResourcesRootController.navigationShareIcon(controllerState.presentationData.theme)
                                     }
                                     item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
+                                case let .node(node):
+                                    item = UIBarButtonItem(customDisplayNode: node)
+                                    item.setCustomAction({ [weak self] in
+                                        self?.navigationButtonActions.0?()
+                                    })
                             }
                             strongSelf.leftNavigationButtonTitleAndStyle = (leftNavigationButton.content, leftNavigationButton.style)
                             strongSelf.navigationItem.setLeftBarButton(item, animated: false)
@@ -392,6 +407,11 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                                                 image = PresentationResourcesRootController.navigationShareIcon(controllerState.presentationData.theme)
                                         }
                                         item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
+                                    case let .node(node):
+                                        item = UIBarButtonItem(customDisplayNode: node)
+                                        item.setCustomAction({ [weak self] in
+                                            self?.navigationButtonActions.1?()
+                                        })
                                 }
                             }
                             items.append(item)
@@ -459,6 +479,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         displayNode.reorderEntry = self.reorderEntry
         displayNode.reorderCompleted = self.reorderCompleted
         displayNode.listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
+        displayNode.listNode.didScrollWithOffset = self.didScrollWithOffset
         displayNode.requestLayout = { [weak self] transition in
             self?.requestLayout(transition: transition)
         }

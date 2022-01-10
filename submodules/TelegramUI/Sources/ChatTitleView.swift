@@ -130,7 +130,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
                                         segments = [.text(0, NSAttributedString(string: formatPhoneNumber(phone), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     } else {
-                                        segments = [.text(0, NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
+                                        segments = [.text(0, NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }
                                 }
                                 if peer.isFake {
@@ -343,12 +343,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = strings.Activity_UploadingVideoMessage
                         case .choosingSticker:
                             stringValue = strings.Activity_ChoosingSticker
-                        case .speakingInGroupCall:
+                        case let .seeingEmojiInteraction(emoticon):
+                            stringValue = strings.Activity_EnjoyingAnimations(emoticon).string
+                        case .speakingInGroupCall, .interactingWithEmoji:
                             stringValue = ""
                     }
                 } else {
                     for (peer, _) in inputActivities {
-                        let title = peer.compactDisplayTitle
+                        let title = EnginePeer(peer).compactDisplayTitle
                         if !title.isEmpty {
                             if first {
                                 first = false
@@ -372,9 +374,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         state = .uploading(string, color)
                     case .playingGame:
                         state = .playingGame(string, color)
-                    case .speakingInGroupCall:
+                    case .speakingInGroupCall, .interactingWithEmoji:
                         state = .typingText(string, color)
                     case .choosingSticker:
+                        state = .choosingSticker(string, color)
+                    case .seeingEmojiInteraction:
                         state = .choosingSticker(string, color)
                 }
             } else {
@@ -407,11 +411,11 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         let userPresence: TelegramUserPresence
                                         if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence {
                                             userPresence = presence
-                                            self.presenceManager?.reset(presence: presence)
+                                            self.presenceManager?.reset(presence: EnginePeer.Presence(presence))
                                         } else {
                                             userPresence = TelegramUserPresence(status: .none, lastActivity: 0)
                                         }
-                                        let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: userPresence, relativeTo: Int32(timestamp))
+                                        let (string, activity) = stringAndActivityForUserPresence(strings: self.strings, dateTimeFormat: self.dateTimeFormat, presence: EnginePeer.Presence(userPresence), relativeTo: Int32(timestamp))
                                         let attributedString = NSAttributedString(string: string, font: subtitleFont, textColor: activity ? titleTheme.rootController.navigationBar.accentTextColor : titleTheme.rootController.navigationBar.secondaryTextColor)
                                         state = .info(attributedString, activity ? .online : .lastSeenTime)
                                     } else {

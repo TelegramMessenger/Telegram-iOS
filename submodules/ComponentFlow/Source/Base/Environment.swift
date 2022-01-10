@@ -55,7 +55,7 @@ public class _EnvironmentValue {
 public final class EnvironmentValue<T: Equatable>: _EnvironmentValue, Equatable {
     private var storage: EnvironmentValueStorage<T>
 
-    fileprivate var value: T {
+    public var value: T {
         switch self.storage {
         case let .direct(value):
             return value

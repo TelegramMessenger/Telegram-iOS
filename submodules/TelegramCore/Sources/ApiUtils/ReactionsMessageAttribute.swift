@@ -2,18 +2,30 @@ import Foundation
 import Postbox
 import TelegramApi
 
-
-/*extension ReactionsMessageAttribute {
+extension ReactionsMessageAttribute {
     func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
-        case let .messageReactions(flags, results):
+        case let .messageReactions(flags, results, recentReactions):
             let min = (flags & (1 << 0)) != 0
+            let canViewList = (flags & (1 << 2)) != 0
             var reactions = results.map { result -> MessageReaction in
                 switch result {
                 case let .reactionCount(flags, reaction, count):
                     return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
                 }
             }
+            let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
+            if let recentReactions = recentReactions {
+                parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
+                    switch recentReaction {
+                    case let .messageUserReaction(userId, reaction):
+                        return ReactionsMessageAttribute.RecentPeer(value: reaction, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
+                    }
+                }
+            } else {
+                parsedRecentReactions = []
+            }
+            
             if min {
                 var currentSelectedReaction: String?
                 for reaction in self.reactions {
@@ -30,10 +42,29 @@ import TelegramApi
                     }
                 }
             }
-            return ReactionsMessageAttribute(reactions: reactions)
+            return ReactionsMessageAttribute(canViewList: canViewList, reactions: reactions, recentPeers: parsedRecentReactions)
         }
     }
-}*/
+}
+
+public func mergedMessageReactionsAndPeers(message: Message) -> (reactions: [MessageReaction], peers: [(String, EnginePeer)]) {
+    guard let attribute = mergedMessageReactions(attributes: message.attributes) else {
+        return ([], [])
+    }
+    
+    var recentPeers = attribute.recentPeers.compactMap { recentPeer -> (String, EnginePeer)? in
+        if let peer = message.peers[recentPeer.peerId] {
+            return (recentPeer.value, EnginePeer(peer))
+        } else {
+            return nil
+        }
+    }
+    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+        recentPeers.removeAll()
+    }
+    
+    return (attribute.reactions, recentPeers)
+}
 
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
     var current: ReactionsMessageAttribute?
@@ -48,6 +79,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
     
     if let pending = pending {
         var reactions = current?.reactions ?? []
+        var recentPeers = current?.recentPeers ?? []
         if let value = pending.value {
             var found = false
             for i in 0 ..< reactions.count {
@@ -63,6 +95,17 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
                 reactions.append(MessageReaction(value: value, count: 1, isSelected: true))
             }
         }
+        if let accountPeerId = pending.accountPeerId {
+            for i in 0 ..< recentPeers.count {
+                if recentPeers[i].peerId == accountPeerId {
+                    recentPeers.remove(at: i)
+                    break
+                }
+            }
+            if let value = pending.value {
+                recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: value, peerId: accountPeerId))
+            }
+        }
         for i in (0 ..< reactions.count).reversed() {
             if reactions[i].isSelected, pending.value != reactions[i].value {
                 if reactions[i].count == 1 {
@@ -74,7 +117,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
             }
         }
         if !reactions.isEmpty {
-            return ReactionsMessageAttribute(reactions: reactions)
+            return ReactionsMessageAttribute(canViewList: current?.canViewList ?? false, reactions: reactions, recentPeers: recentPeers)
         } else {
             return nil
         }
@@ -85,17 +128,33 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
     }
 }
 
-/*extension ReactionsMessageAttribute {
+extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
-        case let .messageReactions(_, results):
-            self.init(reactions: results.map { result in
-                switch result {
-                case let .reactionCount(flags, reaction, count):
-                    return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
+        case let .messageReactions(flags, results, recentReactions):
+            let canViewList = (flags & (1 << 2)) != 0
+            let parsedRecentReactions: [ReactionsMessageAttribute.RecentPeer]
+            if let recentReactions = recentReactions {
+                parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
+                    switch recentReaction {
+                    case let .messageUserReaction(userId, reaction):
+                        return ReactionsMessageAttribute.RecentPeer(value: reaction, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
+                    }
                 }
-            })
+            } else {
+                parsedRecentReactions = []
+            }
+            
+            self.init(
+                canViewList: canViewList,
+                reactions: results.map { result in
+                    switch result {
+                    case let .reactionCount(flags, reaction, count):
+                        return MessageReaction(value: reaction, count: count, isSelected: (flags & (1 << 0)) != 0)
+                    }
+                },
+                recentPeers: parsedRecentReactions
+            )
         }
     }
 }
-*/

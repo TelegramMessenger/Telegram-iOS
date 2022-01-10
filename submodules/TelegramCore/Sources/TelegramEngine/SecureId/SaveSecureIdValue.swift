@@ -55,7 +55,9 @@ func decryptedSecureValueAccessContext(context: SecureIdAccessContext, encrypted
     
     let valueSecretHash = sha512Digest(valueSecret)
     var valueSecretIdValue: Int64 = 0
-    valueSecretHash.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+    valueSecretHash.withUnsafeBytes { rawBytes -> Void in
+        let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
         memcpy(&valueSecretIdValue, bytes.advanced(by: valueSecretHash.count - 8), 8)
     }
     

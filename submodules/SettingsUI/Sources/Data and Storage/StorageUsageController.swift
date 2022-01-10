@@ -264,7 +264,7 @@ private enum StorageUsageEntry: ItemListNodeEntry {
                 let options: [ItemListPeerItemRevealOption] = [ItemListPeerItemRevealOption(type: .destructive, title: strings.ClearCache_Clear, action: {
                     arguments.clearPeerMedia(peer.id)
                 })]
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), aliasHandling: .threatSelfAsSaved, nameColor: chatPeer == nil ? .primary : .secret, presence: nil, text: .none, label: .disclosure(value), editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     let resolvedPeer = chatPeer ?? peer
                     arguments.openPeerMedia(resolvedPeer.id)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -408,7 +408,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
     cacheSettingsPromise.set(context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
     |> map { sharedData -> CacheStorageSettings in
         let cacheSettings: CacheStorageSettings
-        if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings] as? CacheStorageSettings {
+        if let value = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) {
             cacheSettings = value
         } else {
             cacheSettings = CacheStorageSettings.defaultSettings
@@ -507,7 +507,7 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                     } else {
                         otherSize = (!otherSize.0, otherSize.1)
                     }
-                    controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                    controller?.updateItem(groupIndex: 0, itemIndex: itemIndex + 1, { item in
                         if let item = item as? ActionSheetCheckboxItem {
                             return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
                         }
@@ -520,6 +520,8 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                 let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
                 
                 var totalSize: Int64 = 0
+                
+                items.append(ActionSheetTextItem(title: presentationData.strings.ClearCache_ClearDescription))
                 
                 for categoryId in validCategories {
                     if let (_, size) = sizeIndex[categoryId] {
@@ -565,11 +567,11 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                 media[peerId] = categories
                             }
                             
-                            var clearResourceIds = Set<WrappedMediaResourceId>()
+                            var clearResourceIds = Set<MediaResourceId>()
                             for id in clearMediaIds {
                                 if let ids = stats.mediaResourceIds[id] {
                                     for resourceId in ids {
-                                        clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                        clearResourceIds.insert(resourceId)
                                     }
                                 }
                             }
@@ -774,11 +776,11 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                                     }
                                 }
                                 
-                                var clearResourceIds = Set<WrappedMediaResourceId>()
+                                var clearResourceIds = Set<MediaResourceId>()
                                 for id in clearMediaIds {
                                     if let ids = stats.mediaResourceIds[id] {
                                         for resourceId in ids {
-                                            clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                            clearResourceIds.insert(resourceId)
                                         }
                                     }
                                 }
@@ -901,11 +903,11 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
                             }
                         }
                         
-                        var clearResourceIds = Set<WrappedMediaResourceId>()
+                        var clearResourceIds = Set<MediaResourceId>()
                         for id in clearMediaIds {
                             if let ids = stats.mediaResourceIds[id] {
                                 for resourceId in ids {
-                                    clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                    clearResourceIds.insert(resourceId)
                                 }
                             }
                         }

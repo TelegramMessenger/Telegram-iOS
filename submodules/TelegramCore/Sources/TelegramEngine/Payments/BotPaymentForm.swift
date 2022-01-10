@@ -224,7 +224,7 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, messageId
                                     parsedSavedCredentials = .card(id: id, title: title)
                             }
                         }
-                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
+                        return BotPaymentForm(id: id, canSaveCredentials: (flags & (1 << 2)) != 0, passwordMissing: (flags & (1 << 3)) != 0, invoice: parsedInvoice, paymentBotId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(providerId)), url: url, nativeProvider: parsedNativeProvider, savedInfo: parsedSavedInfo, savedCredentials: parsedSavedCredentials)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -477,7 +477,7 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
         |> mapToSignal { result -> Signal<BotPaymentReceipt, RequestBotPaymentReceiptError> in
             return account.postbox.transaction { transaction -> BotPaymentReceipt in
                 switch result {
-                case let .paymentReceipt(flags, date, botId, providerId, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
+                case let .paymentReceipt(_, _, botId, _, title, description, photo, invoice, info, shipping, tipAmount, currency, totalAmount, credentialsTitle, users):
                     var peers: [Peer] = []
                     for user in users {
                         peers.append(TelegramUser(user: user))
@@ -487,26 +487,6 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
                     let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
                     let parsedInfo = info.flatMap(BotPaymentRequestedInfo.init)
                     let shippingOption = shipping.flatMap(BotPaymentShippingOption.init)
-
-                    /*let fields = BotPaymentInvoiceFields()
-
-                    let form = BotPaymentForm(
-                        id: 0,
-                        canSaveCredentials: false,
-                        passwordMissing: false,
-                        invoice: BotPaymentInvoice(
-                            isTest: false,
-                            requestedFields: fields,
-                            currency: currency,
-                            prices: [],
-                            tip: nil
-                        ),
-                        providerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(providerId)),
-                        url: "",
-                        nativeProvider: nil,
-                        savedInfo: nil,
-                        savedCredentials: nil
-                    )*/
 
                     let invoiceMedia = TelegramMediaInvoice(
                         title: title,
@@ -519,7 +499,7 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
                         flags: []
                     )
                     
-                    let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(botId))
+                    let botPaymentId = PeerId.init(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId))
 
                     return BotPaymentReceipt(invoice: parsedInvoice, info: parsedInfo, shippingOption: shippingOption, credentialsTitle: credentialsTitle, invoiceMedia: invoiceMedia, tipAmount: tipAmount, botPaymentId: botPaymentId)
                 }

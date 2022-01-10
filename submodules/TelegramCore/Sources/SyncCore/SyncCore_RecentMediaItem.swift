@@ -25,19 +25,24 @@ public struct RecentMediaItemId {
     }
 }
 
-public final class RecentMediaItem: OrderedItemListEntryContents, Equatable {
-    public let media: Media
+public final class RecentMediaItem: Codable, Equatable {
+    public let media: TelegramMediaFile
     
-    public init(_ media: Media) {
+    public init(_ media: TelegramMediaFile) {
         self.media = media
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.media = decoder.decodeObjectForKey("m") as! Media
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        let mediaData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "m")
+        self.media = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: mediaData.data)))
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.media, forKey: "m")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(PostboxEncoder().encodeObjectToRawData(self.media), forKey: "m")
     }
     
     public static func ==(lhs: RecentMediaItem, rhs: RecentMediaItem) -> Bool {

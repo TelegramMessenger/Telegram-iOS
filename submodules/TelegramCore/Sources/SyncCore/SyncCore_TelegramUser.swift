@@ -205,6 +205,9 @@ public final class TelegramUser: Peer, Equatable {
     }
 
     public static func ==(lhs: TelegramUser, rhs: TelegramUser) -> Bool {
+        if lhs === rhs {
+            return true
+        }
         if lhs.id != rhs.id {
             return false
         }

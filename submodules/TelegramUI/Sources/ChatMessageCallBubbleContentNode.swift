@@ -167,7 +167,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: 0)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
                 
                 let statusText: String
                 if let callDuration = callDuration, callDuration > 1 {
@@ -264,9 +264,5 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         } else {
             return .none
         }
-    }
-    
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return nil
     }
 }

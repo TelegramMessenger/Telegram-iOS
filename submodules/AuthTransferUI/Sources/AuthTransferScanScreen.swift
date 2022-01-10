@@ -11,6 +11,8 @@ import AlertUI
 import TelegramPresentationData
 import TelegramCore
 import UndoUI
+import Markdown
+import TextFormat
 
 private func parseAuthTransferUrl(_ url: URL) -> Data? {
     var tokenString: String?
@@ -160,7 +162,7 @@ public final class AuthTransferScanScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = AuthTransferScanScreenNode(presentationData: self.presentationData)
+        self.displayNode = AuthTransferScanScreenNode(context: self.context, presentationData: self.presentationData)
         
         self.displayNodeDidLoad()
         
@@ -210,6 +212,7 @@ public final class AuthTransferScanScreen: ViewController {
 }
 
 private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
+    private let context: AccountContext
     private var presentationData: PresentationData
 
     private let previewNode: CameraPreviewNode
@@ -246,7 +249,10 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         }
     }
     
-    init(presentationData: PresentationData) {
+    private var highlightViews: [UIVisualEffectView] = []
+    
+    init(context: AccountContext, presentationData: PresentationData) {
+        self.context = context
         self.presentationData = presentationData
         
         self.previewNode = CameraPreviewNode()
@@ -287,11 +293,22 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         
+        let textFont = Font.regular(17.0)
+        let boldFont = Font.bold(17.0)
+        
+        var text = presentationData.strings.AuthSessions_AddDevice_ScanInstallInfo
+        text = text.replacingOccurrences(of: " [", with: "   [").replacingOccurrences(of: ") ", with: ")   ")
+        
+        let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: .white), bold: MarkdownAttributeSet(font: boldFont, textColor: .white), link: MarkdownAttributeSet(font: boldFont, textColor: .white), linkAttribute: { contents in
+            return (TelegramTextAttributes.URL, contents)
+        })))
+        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: presentationData.strings.AuthSessions_AddDevice_ScanInfo, font: Font.regular(16.0), textColor: .white)
+        self.textNode.attributedText = attributedText
         self.textNode.maximumNumberOfLines = 0
         self.textNode.textAlignment = .center
+        self.textNode.lineSpacing = 0.5
         
         self.errorTextNode = ImmediateTextNode()
         self.errorTextNode.displaysAsynchronously = false
@@ -377,6 +394,39 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
                 strongSelf.updateFocusedRect(nil)
             }
         }))
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { _ in
+            return .waitForSingleTap
+        }
+        self.textNode.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+            case .ended:
+                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                    switch gesture {
+                        case .tap:
+                            if let (_, attributes) = self.textNode.attributesAtPoint(location) {
+                                if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    switch url {
+                                    case "desktop":
+                                        self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: "https://getdesktop.telegram.org", forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                                    case "web":
+                                        self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: "https://web.telegram.org", forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                    }
+                }
+            default:
+                break
+        }
     }
     
     func updateFocusedRect(_ rect: CGRect?) {
@@ -450,22 +500,40 @@ private final class AuthTransferScanScreenNode: ViewControllerTracingNode, UIScr
         transition.updateAlpha(node: self.textNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.errorTextNode, alpha: controlsAlpha)
         transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
+        for view in self.highlightViews {
+            transition.updateAlpha(layer: view.layer, alpha: controlsAlpha)
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
         let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 16.0, height: layout.size.height))
-        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: dimHeight - textSize.height - titleSpacing), size: textSize)
+        var textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: max(dimHeight - textSize.height - titleSpacing, navigationHeight + floorToScreenPixels((dimHeight - navigationHeight - textSize.height) / 2.0) + 5.0)), size: textSize)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: textFrame.minY - 18.0 - titleSize.height), size: titleSize)
-        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
-        errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
         if titleFrame.minY < navigationHeight {
             transition.updateAlpha(node: self.titleNode, alpha: 0.0)
+            textFrame = textFrame.offsetBy(dx: 0.0, dy: -5.0)
         } else {
             transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
         }
+        var errorTextFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - errorTextSize.width) / 2.0), y: dimHeight + frameSide + 48.0), size: errorTextSize)
+        errorTextFrame.origin.y += floor(additionalTorchOffset / 2.0)
+
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
         transition.updateFrameAdditive(node: self.errorTextNode, frame: errorTextFrame)
+        
+        if self.highlightViews.isEmpty {
+            let urlAttributesAndRects = self.textNode.cachedLayout?.allAttributeRects(name: "UrlAttributeT") ?? []
+            
+            for (_, rect) in urlAttributesAndRects {
+                let view = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+                view.clipsToBounds = true
+                view.layer.cornerRadius = 5.0
+                view.frame = rect.offsetBy(dx: self.textNode.frame.minX, dy: self.textNode.frame.minY).insetBy(dx: -4.0, dy: -2.0)
+                self.view.insertSubview(view, belowSubview: self.textNode.view)
+                self.highlightViews.append(view)
+            }
+        }
     }
     
     @objc private func torchPressed() {

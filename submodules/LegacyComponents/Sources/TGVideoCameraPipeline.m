@@ -996,7 +996,11 @@ static CGFloat angleOffsetFromPortraitOrientationToOrientation(AVCaptureVideoOri
 {
     AVCaptureConnection *videoConnection = [_videoOutput connectionWithMediaType:AVMediaTypeVideo];
     if (videoConnection.supportsVideoStabilization) {
-        videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeStandard;
+        if (iosMajorVersion() >= 13) {
+            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeCinematicExtended;
+        } else {
+            videoConnection.preferredVideoStabilizationMode = AVCaptureVideoStabilizationModeCinematic;
+        }
     }
 }
 

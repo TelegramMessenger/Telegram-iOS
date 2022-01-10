@@ -1,6 +1,6 @@
 import Postbox
 
-public struct LocalizationListState: PreferencesEntry, Equatable {
+public struct LocalizationListState: Codable {
     public var availableOfficialLocalizations: [LocalizationInfo]
     public var availableSavedLocalizations: [LocalizationInfo]
     
@@ -13,21 +13,17 @@ public struct LocalizationListState: PreferencesEntry, Equatable {
         self.availableSavedLocalizations = availableSavedLocalizations
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.availableOfficialLocalizations = decoder.decodeObjectArrayWithDecoderForKey("availableOfficialLocalizations")
-        self.availableSavedLocalizations = decoder.decodeObjectArrayWithDecoderForKey("availableSavedLocalizations")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.availableOfficialLocalizations = (try? container.decode([LocalizationInfo].self, forKey: "availableOfficialLocalizations")) ?? []
+        self.availableSavedLocalizations = (try? container.decode([LocalizationInfo].self, forKey: "availableSavedLocalizations")) ?? []
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObjectArray(self.availableOfficialLocalizations, forKey: "availableOfficialLocalizations")
-        encoder.encodeObjectArray(self.availableSavedLocalizations, forKey: "availableSavedLocalizations")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? LocalizationListState else {
-            return false
-        }
-        
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.availableOfficialLocalizations, forKey: "availableOfficialLocalizations")
+        try container.encode(self.availableSavedLocalizations, forKey: "availableSavedLocalizations")
     }
 }

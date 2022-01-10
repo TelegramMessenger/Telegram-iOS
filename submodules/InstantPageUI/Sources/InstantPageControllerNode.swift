@@ -357,7 +357,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let scrollInsetTop = maxBarHeight
         
-        let resetOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout
+        let resetOffset = self.scrollNode.bounds.size.width.isZero || self.setupScrollOffsetOnLayout || !(self.initialAnchor ?? "").isEmpty
         let widthUpdated = !self.scrollNode.bounds.size.width.isEqual(to: layout.size.width)
         
         var shouldUpdateVisibleItems = false
@@ -379,6 +379,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 contentOffset = CGPoint(x: 0.0, y: CGFloat(state.contentOffset))
             }
             else if let anchor = self.initialAnchor, !anchor.isEmpty {
+                self.initialAnchor = nil
                 if let items = self.currentLayout?.items {
                     didSetScrollOffset = true
                     if let (item, lineOffset, _, _) = self.findAnchorItem(anchor, items: items) {
@@ -801,7 +802,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                let highlightColor = self.theme?.linkHighlightColor ?? UIColor(rgb: 0x007ee5).withAlphaComponent(0.4)
+                let highlightColor = self.theme?.linkHighlightColor ?? UIColor(rgb: 0x007aff).withAlphaComponent(0.4)
                 linkHighlightingNode = LinkHighlightingNode(color: highlightColor)
                 linkHighlightingNode.isUserInteractionEnabled = false
                 self.linkHighlightingNode = linkHighlightingNode
@@ -1221,7 +1222,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
-                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
+                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                                 strongSelf.getNavigationController()?.pushViewController(controller)
                                             }
                                         }
@@ -1276,7 +1277,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }, openUrl: { _ in }, openPeer: { _ in
             }, showAll: false)
             
-            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
             
             let controller = LocationViewController(context: self.context, subject: message, params: controllerParams)

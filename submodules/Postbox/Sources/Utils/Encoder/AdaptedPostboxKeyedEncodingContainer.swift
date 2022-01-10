@@ -17,7 +17,7 @@ extension _AdaptedPostboxEncoder {
             self.encoder = PostboxEncoder()
         }
 
-        func makeData(addHeader: Bool) -> (Data, ValueType) {
+        func makeData(addHeader: Bool, isDictionary: Bool) -> (Data, ValueType) {
             let buffer = WriteBuffer()
 
             if addHeader {
@@ -43,12 +43,22 @@ extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
     func encode<T>(_ value: T, forKey key: Key) throws where T : Encodable {
         if let value = value as? Data {
             self.encoder.encodeData(value, forKey: key.stringValue)
+        } else if let value = value as? AdaptedPostboxEncoder.RawObjectData {
+            self.encoder.encodeInnerObjectDataWithHeader(typeHash: value.typeHash, data: value.data, valueType: .Object, forKey: key.stringValue)
         } else {
             let typeHash: Int32 = murMurHashString32("\(type(of: value))")
             let innerEncoder = _AdaptedPostboxEncoder(typeHash: typeHash)
             try! value.encode(to: innerEncoder)
 
-            let (data, valueType) = innerEncoder.makeData(addHeader: true)
+            let typeOfValue = type(of: value)
+            let typeString = "\(typeOfValue)"
+            var isDictionary = false
+            if typeString.hasPrefix("Dictionary<") {
+                isDictionary = true
+            }
+
+            let (data, valueType) = innerEncoder.makeData(addHeader: true, isDictionary: isDictionary)
+
             self.encoder.encodeInnerObjectData(data, valueType: valueType, forKey: key.stringValue)
         }
     }
@@ -63,6 +73,12 @@ extension _AdaptedPostboxEncoder.KeyedContainer: KeyedEncodingContainerProtocol 
 
     func encode(_ value: Int64, forKey key: Key) throws {
         self.encoder.encodeInt64(value, forKey: key.stringValue)
+    }
+
+    func encode(_ value: Int, forKey key: Key) throws {
+        assertionFailure()
+
+        self.encoder.encodeInt32(Int32(value), forKey: key.stringValue)
     }
 
     func encode(_ value: Bool, forKey key: Key) throws {

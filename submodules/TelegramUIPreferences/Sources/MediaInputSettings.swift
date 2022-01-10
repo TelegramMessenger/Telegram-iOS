@@ -3,7 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-public struct MediaInputSettings: PreferencesEntry, Equatable {
+public struct MediaInputSettings: Codable, Equatable {
     public let enableRaiseToSpeak: Bool
     
     public static var defaultSettings: MediaInputSettings {
@@ -14,20 +14,16 @@ public struct MediaInputSettings: PreferencesEntry, Equatable {
         self.enableRaiseToSpeak = enableRaiseToSpeak
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.enableRaiseToSpeak = decoder.decodeInt32ForKey("enableRaiseToSpeak", orElse: 1) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.enableRaiseToSpeak = (try container.decode(Int32.self, forKey: "enableRaiseToSpeak")) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.enableRaiseToSpeak ? 1 : 0, forKey: "enableRaiseToSpeak")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? MediaInputSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.enableRaiseToSpeak ? 1 : 0) as Int32, forKey: "enableRaiseToSpeak")
     }
     
     public static func ==(lhs: MediaInputSettings, rhs: MediaInputSettings) -> Bool {
@@ -43,12 +39,12 @@ public func updateMediaInputSettingsInteractively(accountManager: AccountManager
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.mediaInputSettings, { entry in
             let currentSettings: MediaInputSettings
-            if let entry = entry as? MediaInputSettings {
+            if let entry = entry?.get(MediaInputSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = MediaInputSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

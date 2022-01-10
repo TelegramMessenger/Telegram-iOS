@@ -120,6 +120,8 @@ public final class ChangePhoneNumberIntroController: ViewController {
             self?.proceed()
         }
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     public override func viewDidAppear(_ animated: Bool) {

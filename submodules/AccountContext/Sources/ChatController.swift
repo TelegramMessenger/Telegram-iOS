@@ -22,10 +22,14 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let contactsPeerIds: Set<EnginePeer.Id>
     public let channelDiscussionGroup: ChannelDiscussionGroupStatus
     public let animatedEmojiStickers: [String: [StickerPackItem]]
+    public let additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]]
     public let forcedResourceStatus: FileMediaResourceStatus?
     public let currentlyPlayingMessageId: EngineMessage.Index?
+    public let isCopyProtectionEnabled: Bool
+    public let availableReactions: AvailableReactions?
+    public let defaultReaction: String?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: String?) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -33,8 +37,12 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.contactsPeerIds = contactsPeerIds
         self.channelDiscussionGroup = channelDiscussionGroup
         self.animatedEmojiStickers = animatedEmojiStickers
+        self.additionalAnimatedEmojiStickers = additionalAnimatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
         self.currentlyPlayingMessageId = currentlyPlayingMessageId
+        self.isCopyProtectionEnabled = isCopyProtectionEnabled
+        self.availableReactions = availableReactions
+        self.defaultReaction = defaultReaction
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -59,7 +67,19 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
             return false
         }
+        if lhs.additionalAnimatedEmojiStickers != rhs.additionalAnimatedEmojiStickers {
+            return false
+        }
         if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
+            return false
+        }
+        if lhs.currentlyPlayingMessageId != rhs.currentlyPlayingMessageId {
+            return false
+        }
+        if lhs.isCopyProtectionEnabled != rhs.isCopyProtectionEnabled {
+            return false
+        }
+        if lhs.availableReactions != rhs.availableReactions {
             return false
         }
         return true
@@ -359,6 +379,11 @@ public struct ChatTextInputStateText: Codable, Equatable {
 }
 
 public enum ChatControllerSubject: Equatable {
+    public enum MessageSubject: Equatable {
+        case id(MessageId)
+        case timestamp(Int32)
+    }
+
     public struct ForwardOptions: Equatable {
         public let hideNames: Bool
         public let hideCaptions: Bool
@@ -369,7 +394,7 @@ public enum ChatControllerSubject: Equatable {
         }
     }
     
-    case message(id: EngineMessage.Id, highlight: Bool, timecode: Double?)
+    case message(id: MessageSubject, highlight: Bool, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
     case forwardedMessages(ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
@@ -525,4 +550,8 @@ public struct FileMediaResourceStatus: Equatable {
 public enum FileMediaResourceMediaStatus: Equatable {
     case fetchStatus(MediaResourceStatus)
     case playbackStatus(FileMediaResourcePlaybackStatus)
+}
+
+public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
+    func targetReactionView(value: String) -> UIView?
 }

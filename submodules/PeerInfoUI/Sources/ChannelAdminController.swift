@@ -286,7 +286,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
         let arguments = arguments as! ChannelAdminControllerArguments
         switch self {
             case let .info(_, _, dateTimeFormat, peer, presence):
-                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
+                return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .generic, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), memberCount: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
                 }, avatarTapped: {
                 })
             case let .rankTitle(_, text, count, limit):
@@ -749,7 +749,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func channelAdminController(context: AccountContext, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, updated: @escaping (TelegramChatAdminRights?) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
+public func channelAdminController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, updated: @escaping (TelegramChatAdminRights?) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminControllerState())
     let updateState: ((ChannelAdminControllerState) -> ChannelAdminControllerState) -> Void = { f in
@@ -817,7 +817,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
             }
             
             transferOwnershipDisposable.set((context.engine.peers.checkOwnershipTranfserAvailability(memberId: adminId) |> deliverOnMainQueue).start(error: { error in
-                let controller = channelOwnershipTransferController(context: context, peer: peer, member: member, initialError: error, present: { c, a in
+                let controller = channelOwnershipTransferController(context: context, updatedPresentationData: updatedPresentationData, peer: peer, member: member, initialError: error, present: { c, a in
                     presentControllerImpl?(c, a)
                 }, completion: { upgradedPeerId in
                     if let upgradedPeerId = upgradedPeerId {
@@ -883,7 +883,8 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     
     let combinedView = context.account.postbox.combinedView(keys: [.peer(peerId: peerId, components: .all), .peer(peerId: adminId, components: .all)])
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), combinedView)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, statePromise.get(), combinedView)
     |> deliverOnMainQueue
     |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
@@ -986,9 +987,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         if let admin = adminView.peers[adminView.peerId] {
                                             switch channel.info {
                                                 case .broadcast:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                                 case .group:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                             }
                                         }
                                     case .notMutualContact:
@@ -1007,7 +1008,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         text = presentationData.strings.Group_ErrorAdminsTooMuch
                                     }
                                 }
-                                presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }, completed: {
                                 updated(TelegramChatAdminRights(rights: updateFlags ?? []))
                                 dismissImpl?()
@@ -1070,9 +1071,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         case .restricted:
                                             switch channel.info {
                                                 case .broadcast:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToChannelError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                                 case .group:
-                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                                    text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                             }
                                         case .notMutualContact:
                                             if case .broadcast = channel.info {
@@ -1083,7 +1084,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                         default:
                                             break
                                     }
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 } else if case .adminsTooMuch = error {
                                     let text: String
                                     if case .broadcast = channel.info {
@@ -1091,7 +1092,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     } else {
                                         text = presentationData.strings.Group_ErrorAdminsTooMuch
                                     }
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 dismissImpl?()
                             }, completed: {
@@ -1131,9 +1132,9 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                             updateRightsDisposable.set((context.engine.peers.addGroupAdmin(peerId: peerId, adminId: adminId)
                             |> deliverOnMainQueue).start(error: { error in
                                 if case let .addMemberError(error) = error, case .privacy = error, let admin = adminView.peers[adminView.peerId] {
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 } else if case .adminsTooMuch = error {
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                                 
                                 dismissImpl?()
@@ -1191,13 +1192,13 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
                                     if case let .addMemberError(error) = error {
                                         var text = presentationData.strings.Login_UnknownError
                                         if case .restricted = error, let admin = adminView.peers[adminView.peerId] {
-                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(admin.compactDisplayTitle, admin.compactDisplayTitle).string
+                                            text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                         } else if case .tooMuchJoined = error {
                                             text = presentationData.strings.Invite_ChannelsTooMuch
                                         }
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     } else if case .adminsTooMuch = error {
-                                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                        presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_ErrorAdminsTooMuch, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }
                                 case .conversionFailed, .conversionTooManyChannels:
                                     pushControllerImpl?(oldChannelsController(context: context, intent: .upgrade))

@@ -198,7 +198,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         }
                         return frame
                     }
-                    if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                    if let frame = maybeFrame {
                         let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
                         completion(image)
                         strongSelf.cachedCIImage = image
@@ -414,6 +414,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 }
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
+    public var captionPanelView: (() -> TGCaptionPanelView?)!
     public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> TGPhotoPaintStickersScreen?)!
     
     private let context: AccountContext

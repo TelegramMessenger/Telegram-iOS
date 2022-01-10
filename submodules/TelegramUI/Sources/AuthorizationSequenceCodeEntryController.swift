@@ -102,9 +102,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
-            if case .otherSession = codeType {
+            switch codeType {
+            case .otherSession, .missedCall:
                 self.title = number
-            } else {
+            default:
                 self.title = nil
             }
             self.data = (number, codeType, nextType, timeout)
@@ -137,6 +138,8 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
                 minimalCodeLength = Int(length)
             case .flashCall:
                 break
+            case let .missedCall(_, length):
+                minimalCodeLength = Int(length)
         }
         
         if self.controllerNode.currentCode.count < minimalCodeLength {

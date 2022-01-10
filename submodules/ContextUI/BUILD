@@ -15,8 +15,9 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TextSelectionNode:TextSelectionNode",
-        "//submodules/ReactionSelectionNode:ReactionSelectionNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/ReactionSelectionNode:ReactionSelectionNode",
     ],
     visibility = [
         "//visibility:public",

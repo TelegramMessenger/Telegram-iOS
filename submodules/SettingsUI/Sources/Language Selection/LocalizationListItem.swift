@@ -52,7 +52,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         async {
             let node = LocalizationListItemNode()
             var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-            if previousItem == nil || previousItem is ChatListSearchItem || self.alwaysPlain {
+            if previousItem == nil && self.alwaysPlain {
                 neighbors.top = .sameSection(alwaysPlain: false)
             }
             let (layout, apply) = node.asyncLayout()(self, params, neighbors)
@@ -75,7 +75,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
                 
                 async {
                     var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
-                    if previousItem == nil || previousItem is ChatListSearchItem || self.alwaysPlain {
+                    if previousItem == nil && self.alwaysPlain {
                         neighbors.top = .sameSection(alwaysPlain: false)
                     }
                     let (layout, apply) = makeLayout(self, params, neighbors)
@@ -102,6 +102,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let iconNode: ASImageNode
     private let activityNode: ActivityIndicator
@@ -118,6 +119,11 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
     private var reorderControlNode: ItemListEditableReorderControlNode?
     
     private let activateArea: AccessibilityAreaNode
+    
+    private let containerNode: ASDisplayNode
+    override var controlsContainer: ASDisplayNode {
+        return self.containerNode
+    }
     
     override var canBeSelected: Bool {
         if self.editableControlNode != nil {
@@ -139,6 +145,11 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
+        
+        self.containerNode = ASDisplayNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -165,10 +176,12 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.activityNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.addSubnode(self.iconNode)
+        self.containerNode.addSubnode(self.activityNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.subtitleNode)
         
         self.addSubnode(self.activateArea)
     }
@@ -199,7 +212,7 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
             
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.subtitle, font: subtitleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 50.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + 1.0 + subtitleLayout.size.height + 8.0 * 2.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -277,11 +290,18 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                     if strongSelf.bottomStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
+                    if strongSelf.maskNode.supernode == nil {
+                        strongSelf.addSubnode(strongSelf.maskNode)
+                    }
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
                     switch neighbors.top {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
-                            strongSelf.topStripeNode.isHidden = false
+                            hasTopCorners = true
+                            strongSelf.topStripeNode.isHidden = hasCorners
                     }
                     let bottomStripeInset: CGFloat
                     switch neighbors.bottom {
@@ -289,8 +309,15 @@ class LocalizationListItemNode: ItemListRevealOptionsItemNode {
                             bottomStripeInset = leftInset
                         default:
                             bottomStripeInset = 0.0
+                            hasBottomCorners = true
+                            strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
+                    
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: strongSelf.backgroundNode.frame.size)
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     

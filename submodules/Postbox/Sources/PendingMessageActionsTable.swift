@@ -53,10 +53,10 @@ final class PendingMessageActionsTable: Table {
     
     private let metadataTable: PendingMessageActionsMetadataTable
     
-    init(valueBox: ValueBox, table: ValueBoxTable, metadataTable: PendingMessageActionsMetadataTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, metadataTable: PendingMessageActionsMetadataTable) {
         self.metadataTable = metadataTable
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func forwardKey(id: MessageId, actionType: PendingMessageActionType) -> ValueBoxKey {

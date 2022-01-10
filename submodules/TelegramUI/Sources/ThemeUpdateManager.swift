@@ -40,7 +40,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
         
         self.disposable = (sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> map { sharedData -> PresentationThemeSettings in
-            return (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+            return sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
         }
         |> deliverOn(queue)).start(next: { [weak self] themeSettings in
             self?.presentationThemeSettingsUpdated(themeSettings)
@@ -124,7 +124,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                             let _ = (accountManager.transaction { transaction -> Void in
                                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                                     let current: PresentationThemeSettings
-                                    if let entry = entry as? PresentationThemeSettings {
+                                    if let entry = entry?.get(PresentationThemeSettings.self) {
                                         current = entry
                                     } else {
                                         current = PresentationThemeSettings.defaultSettings
@@ -138,7 +138,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                         theme = updatedTheme
                                     }
                                     
-                                    return PresentationThemeSettings(theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    return PreferencesEntry(PresentationThemeSettings(theme: theme, themePreferredBaseTheme: current.themePreferredBaseTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion))
                                 })
                             }).start()
                         }

@@ -48,6 +48,7 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
+    private let maskNode: ASImageNode
     private let iconNode: ASImageNode
     private let labelBadgeNode: ASImageNode
     private let labelNode: ImmediateTextNode
@@ -61,6 +62,9 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -98,13 +102,14 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
+        self.addSubnode(self.maskNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.arrowNode)
         self.addSubnode(self.activateArea)
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenDisclosureItem else {
             return 10.0
         }
@@ -188,8 +193,20 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityValue = item.label.text
         
         transition.updateFrame(node: self.labelBadgeNode, frame: labelBadgeNodeFrame)
-        transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        if self.labelNode.bounds.size != labelFrame.size {
+            self.labelNode.frame = labelFrame
+        } else {
+            transition.updateFrame(node: self.labelNode, frame: labelFrame)
+        }
         transition.updateFrame(node: self.textNode, frame: textFrame)
+        
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
+        let hasTopCorners = hasCorners && topItem == nil
+        let hasBottomCorners = hasCorners && bottomItem == nil
+        
+        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)

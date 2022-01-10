@@ -3,7 +3,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 
-public struct WebBrowserSettings: PreferencesEntry, Equatable {
+public struct WebBrowserSettings: Codable, Equatable {
     public let defaultWebBrowser: String?
     
     public static var defaultSettings: WebBrowserSettings {
@@ -14,24 +14,16 @@ public struct WebBrowserSettings: PreferencesEntry, Equatable {
         self.defaultWebBrowser = defaultWebBrowser
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.defaultWebBrowser = decoder.decodeOptionalStringForKey("defaultWebBrowser")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.defaultWebBrowser = try? container.decodeIfPresent(String.self, forKey: "defaultWebBrowser")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        if let defaultWebBrowser = self.defaultWebBrowser {
-            encoder.encodeString(defaultWebBrowser, forKey: "defaultWebBrowser")
-        } else {
-            encoder.encodeNil(forKey: "defaultWebBrowser")
-        }
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? WebBrowserSettings {
-            return self == to
-        } else {
-            return false
-        }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encodeIfPresent(self.defaultWebBrowser, forKey: "defaultWebBrowser")
     }
     
     public static func ==(lhs: WebBrowserSettings, rhs: WebBrowserSettings) -> Bool {
@@ -47,12 +39,12 @@ public func updateWebBrowserSettingsInteractively(accountManager: AccountManager
     return accountManager.transaction { transaction -> Void in
         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.webBrowserSettings, { entry in
             let currentSettings: WebBrowserSettings
-            if let entry = entry as? WebBrowserSettings {
+            if let entry = entry?.get(WebBrowserSettings.self) {
                 currentSettings = entry
             } else {
                 currentSettings = WebBrowserSettings.defaultSettings
             }
-            return f(currentSettings)
+            return PreferencesEntry(f(currentSettings))
         })
     }
 }

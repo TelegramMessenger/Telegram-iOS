@@ -3,11 +3,13 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AnimatedStickerNode
-import AppBundle
+import TelegramAnimatedStickerNode
+import AccountContext
 
 public enum ChatListFilterSettingsHeaderAnimation {
     case folders
@@ -17,12 +19,14 @@ public enum ChatListFilterSettingsHeaderAnimation {
 }
 
 public class ChatListFilterSettingsHeaderItem: ListViewItem, ItemListItem {
+    let context: AccountContext
     let theme: PresentationTheme
     let text: String
     let animation: ChatListFilterSettingsHeaderAnimation
     public let sectionId: ItemListSectionId
     
-    public init(theme: PresentationTheme, text: String, animation: ChatListFilterSettingsHeaderAnimation, sectionId: ItemListSectionId) {
+    public init(context: AccountContext, theme: PresentationTheme, text: String, animation: ChatListFilterSettingsHeaderAnimation, sectionId: ItemListSectionId) {
+        self.context = context
         self.theme = theme
         self.text = text
         self.animation = animation
@@ -136,7 +140,7 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height)
-            var insets = itemListNeighborsGroupedInsets(neighbors)
+            var insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             if isHidden {
                 insets = UIEdgeInsets()
@@ -148,10 +152,8 @@ class ChatListFilterSettingsHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        if let path = getAppBundle().path(forResource: animationName, ofType: "tgs") {
-                            strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: size, height: size, playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
-                            strongSelf.animationNode.visibility = true
-                        }
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: size, height: size, playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.visibility = true
                     }
                     
                     strongSelf.item = item

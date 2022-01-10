@@ -20,7 +20,7 @@ private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: Presenta
     } else if peer.id.isReplies {
         return strings.DialogList_Replies
     } else {
-        return peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)
+        return EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
     }
 }
 
@@ -86,7 +86,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.options = params.options
         self.filters = params.filters
         self.limit = params.limit
-        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         
         self.titleView = CounterContollerTitleView(theme: self.presentationData.theme)
         
@@ -103,7 +103,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = ((params.updatedPresentationData?.signal ?? params.context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
@@ -173,6 +173,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.updateTitle()
+        self.contactsNode.updatePresentationData(self.presentationData)
     }
     
     private func updateTitle() {
@@ -204,8 +205,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
             self.navigationItem.rightBarButtonItem = self.rightNavigationButton
             rightNavigationButton.isEnabled = false
-        case let .chatSelection(chatSelection):
-            self.titleView.title = CounterContollerTitle(title: chatSelection.title, counter: "")
+        case let .chatSelection(title, _, _, _):
+            self.titleView.title = CounterContollerTitle(title: title, counter: "")
             let rightNavigationButton = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.rightNavigationButtonPressed))
             self.rightNavigationButton = rightNavigationButton
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
@@ -215,7 +216,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, mode: self.mode, options: self.options, filters: self.filters)
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, options: self.options, filters: self.filters)
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
             self._listReady.set(contactsNode.ready)

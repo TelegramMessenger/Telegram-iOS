@@ -130,7 +130,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                 }
             }
             let resource = MapSnapshotMediaResource(latitude: map.latitude, longitude: map.longitude, width: Int32(dimensions.width), height: Int32(dimensions.height))
-            self.imageNode.setSignal(chatMapSnapshotImage(account: context.account, resource: resource))
+            self.imageNode.setSignal(chatMapSnapshotImage(engine: context.engine, resource: resource))
         } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
             self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))

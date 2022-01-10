@@ -5,6 +5,8 @@ swift_library(
     module_name = "TelegramVoip",
     srcs = glob([
         "Sources/**/*.swift",
+    ], exclude = [
+        "Sources/macOS/**/*",
     ]),
     copts = [
         "-warnings-as-errors",
@@ -12,7 +14,6 @@ swift_library(
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramCore:TelegramCore",
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/TgVoip:TgVoip",
         "//submodules/TgVoipWebrtc:TgVoipWebrtc",

@@ -2,6 +2,7 @@
 
 #import <mozjpeg/turbojpeg.h>
 #import <mozjpeg/jpeglib.h>
+#import <Accelerate/Accelerate.h>
 
 static NSData *getHeaderPattern() {
     static NSData *value = nil;
@@ -252,4 +253,83 @@ NSData * _Nullable compressMiniThumbnail(UIImage * _Nonnull image, CGSize size) 
     free(buffer);
     
     return serializedData;
+}
+
+UIImage * _Nullable decompressImage(NSData * _Nonnull sourceData) {
+    long unsigned int jpegSize = sourceData.length;
+    unsigned char *_compressedImage = (unsigned char *)sourceData.bytes;
+
+    int jpegSubsamp, width, height;
+
+    tjhandle _jpegDecompressor = tjInitDecompress();
+
+    if (tjDecompressHeader2(_jpegDecompressor, _compressedImage, jpegSize, &width, &height, &jpegSubsamp) != 0) {
+        return nil;
+    }
+
+    int sourceBytesPerRow = (3 * width + 31) & ~0x1F;
+    int targetBytesPerRow = (4 * width + 31) & ~0x1F;
+
+    unsigned char *buffer = malloc(sourceBytesPerRow * height);
+
+    tjDecompress2(_jpegDecompressor, _compressedImage, jpegSize, buffer, width, sourceBytesPerRow, height, TJPF_RGB, TJFLAG_FASTDCT | TJFLAG_FASTUPSAMPLE);
+
+    tjDestroy(_jpegDecompressor);
+
+    vImage_Buffer source;
+    source.width = width;
+    source.height = height;
+    source.rowBytes = sourceBytesPerRow;
+    source.data = buffer;
+
+    vImage_Buffer target;
+    target.width = width;
+    target.height = height;
+    target.rowBytes = targetBytesPerRow;
+
+    unsigned char *targetBuffer = malloc(targetBytesPerRow * height);
+    target.data = targetBuffer;
+
+    vImageConvert_RGB888toARGB8888(&source, nil, 0xff, &target, false, kvImageDoNotTile);
+
+    free(buffer);
+
+    vImage_Buffer permuteTarget;
+    permuteTarget.width = width;
+    permuteTarget.height = height;
+    permuteTarget.rowBytes = targetBytesPerRow;
+
+    unsigned char *permuteTargetBuffer = malloc(targetBytesPerRow * height);
+    permuteTarget.data = permuteTargetBuffer;
+
+    const uint8_t permuteMap[4] = {3,2,1,0};
+    vImagePermuteChannels_ARGB8888(&target, &permuteTarget, permuteMap, kvImageDoNotTile);
+
+    free(targetBuffer);
+
+    NSData *resultData = [[NSData alloc] initWithBytesNoCopy:permuteTargetBuffer length:targetBytesPerRow * height deallocator:^(void * _Nonnull bytes, __unused NSUInteger length) {
+        free(bytes);
+    }];
+
+    CGDataProviderRef dataProvider = CGDataProviderCreateWithCFData((__bridge CFDataRef)resultData);
+
+    static CGColorSpaceRef imageColorSpace;
+    static CGBitmapInfo bitmapInfo;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        UIGraphicsBeginImageContextWithOptions(CGSizeMake(1, 1), YES, 0);
+        UIImage *refImage = UIGraphicsGetImageFromCurrentImageContext();
+        imageColorSpace = CGColorSpaceRetain(CGImageGetColorSpace(refImage.CGImage));
+        bitmapInfo = CGImageGetBitmapInfo(refImage.CGImage);
+        UIGraphicsEndImageContext();
+    });
+
+    CGImageRef cgImg = CGImageCreate(width, height, 8, 32, targetBytesPerRow, imageColorSpace, bitmapInfo, dataProvider, NULL, true, kCGRenderingIntentDefault);
+
+    CGDataProviderRelease(dataProvider);
+
+    UIImage *resultImage = [[UIImage alloc] initWithCGImage:cgImg];
+    CGImageRelease(cgImg);
+
+    return resultImage;
 }

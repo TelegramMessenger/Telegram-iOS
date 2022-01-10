@@ -138,7 +138,7 @@ static const void *userInfoKey = &userInfoKey;
 
 - (void)_ac91f40f_setBackBarButtonItem:(UIBarButtonItem *)backBarButtonItem
 {
-    UIBarButtonItem *previousItem = self.rightBarButtonItem;
+    UIBarButtonItem *previousItem = self.backBarButtonItem;
     
     [self _ac91f40f_setBackBarButtonItem:backBarButtonItem];
     

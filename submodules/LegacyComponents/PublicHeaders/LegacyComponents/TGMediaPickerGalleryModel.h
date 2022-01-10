@@ -25,7 +25,7 @@
 @property (nonatomic, copy) void (^didFinishEditingItem)(id<TGMediaEditableItem>item, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage);
 @property (nonatomic, copy) void (^didFinishRenderingFullSizeImage)(id<TGMediaEditableItem> item, UIImage *fullSizeImage);
 
-@property (nonatomic, copy) void (^saveItemCaption)(id<TGMediaEditableItem> item, NSString *caption, NSArray *entities);
+@property (nonatomic, copy) void (^saveItemCaption)(id<TGMediaEditableItem> item, NSAttributedString *caption);
 
 @property (nonatomic, copy) void (^storeOriginalImageForItem)(id<TGMediaEditableItem> item, UIImage *originalImage);
 

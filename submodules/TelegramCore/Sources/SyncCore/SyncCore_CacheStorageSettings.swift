@@ -1,6 +1,6 @@
 import Postbox
 
-public struct CacheStorageSettings: PreferencesEntry, Equatable {
+public struct CacheStorageSettings: Codable, Equatable {
     public let defaultCacheStorageTimeout: Int32
     public let defaultCacheStorageLimitGigabytes: Int32
 
@@ -13,26 +13,18 @@ public struct CacheStorageSettings: PreferencesEntry, Equatable {
         self.defaultCacheStorageLimitGigabytes = defaultCacheStorageLimitGigabytes
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.defaultCacheStorageTimeout = decoder.decodeInt32ForKey("dt", orElse: Int32.max)
-        self.defaultCacheStorageLimitGigabytes = decoder.decodeInt32ForKey("dl", orElse: Int32.max)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.defaultCacheStorageTimeout = (try? container.decode(Int32.self, forKey: "dt")) ?? Int32.max
+        self.defaultCacheStorageLimitGigabytes = (try? container.decode(Int32.self, forKey: "dl")) ?? Int32.max
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.defaultCacheStorageTimeout, forKey: "dt")
-        encoder.encodeInt32(self.defaultCacheStorageLimitGigabytes, forKey: "dl")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        if let to = to as? CacheStorageSettings {
-            return self == to
-        } else {
-            return false
-        }
-    }
-    
-    public static func ==(lhs: CacheStorageSettings, rhs: CacheStorageSettings) -> Bool {
-        return lhs.defaultCacheStorageTimeout == rhs.defaultCacheStorageTimeout && lhs.defaultCacheStorageLimitGigabytes == rhs.defaultCacheStorageLimitGigabytes
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.defaultCacheStorageTimeout, forKey: "dt")
+        try container.encode(self.defaultCacheStorageLimitGigabytes, forKey: "dl")
     }
     
     public func withUpdatedDefaultCacheStorageTimeout(_ defaultCacheStorageTimeout: Int32) -> CacheStorageSettings {

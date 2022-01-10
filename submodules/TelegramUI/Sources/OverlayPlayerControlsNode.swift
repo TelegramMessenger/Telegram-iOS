@@ -79,7 +79,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
         }
         
         titleString = NSAttributedString(string: titleText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)
-        descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: presentationData.theme.list.itemSecondaryTextColor)
+        descriptionString = NSAttributedString(string: subtitleText, font: descriptionFont, textColor: hasArtist ? presentationData.theme.list.itemAccentColor : presentationData.theme.list.itemSecondaryTextColor)
     }
     
     return (titleString, descriptionString, hasArtist)
@@ -88,6 +88,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, pres
 final class OverlayPlayerControlsNode: ASDisplayNode {
     private let accountManager: AccountManager<TelegramAccountManagerTypes>
     private let postbox: Postbox
+    private let engine: TelegramEngine
     private var presentationData: PresentationData
     
     private let backgroundNode: ASImageNode
@@ -153,9 +154,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
-    init(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
+    init(account: Account, engine: TelegramEngine, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationData: PresentationData, status: Signal<(Account, SharedMediaPlayerItemPlaybackStateOrLoading, MediaManagerPlayerType)?, NoError>) {
         self.accountManager = accountManager
         self.postbox = account.postbox
+        self.engine = engine
         self.presentationData = presentationData
         
         self.backgroundNode = ASImageNode()
@@ -312,7 +314,6 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
             
             var rateButtonIsHidden = true
-            strongSelf.shareNode.isHidden = false
             var displayData: SharedMediaPlaybackDisplayData?
             if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading {
                 var isPaused: Bool
@@ -391,10 +392,12 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             
             if strongSelf.displayData != displayData {
                 strongSelf.displayData = displayData
-                                
+                          
+                var canShare = true
                 if let (_, valueOrLoading, _) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                     switch source {
-                        case let .telegramFile(fileReference):
+                        case let .telegramFile(fileReference, isCopyProtected):
+                            canShare = !isCopyProtected
                             strongSelf.currentFileReference = fileReference
                             if let size = fileReference.media.size {
                                 strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
@@ -409,6 +412,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     strongSelf.scrubberNode.bufferingStatus = nil
                 }
                 strongSelf.updateLabels(transition: .immediate)
+                
+                strongSelf.shareNode.isHidden = !canShare
             }
         })
         
@@ -610,9 +615,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if self.currentAlbumArt != albumArt || !self.currentAlbumArtInitialized {
             self.currentAlbumArtInitialized = true
             self.currentAlbumArt = albumArt
-            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
+            self.albumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: true))
             if let largeAlbumArtNode = self.largeAlbumArtNode {
-                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
+                largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: albumArt, thumbnail: false))
             }
         }
     }
@@ -710,7 +715,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.largeAlbumArtNode = largeAlbumArtNode
                 self.addSubnode(largeAlbumArtNode)
                 if self.currentAlbumArtInitialized {
-                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
+                    largeAlbumArtNode.setSignal(playerAlbumArt(postbox: self.postbox, engine: self.engine, fileReference: self.currentFileReference, albumArt: self.currentAlbumArt, thumbnail: false))
                 }
             }
             

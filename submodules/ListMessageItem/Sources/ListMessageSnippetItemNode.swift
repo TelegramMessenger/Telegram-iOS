@@ -307,10 +307,10 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                             mutableDescriptionText.append(NSAttributedString(string: text + "\n", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor))
                         }
                         
-                        let plainUrlString = NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor)
+                        let plainUrlString = NSAttributedString(string: content.url.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor)
                         let urlString = NSMutableAttributedString()
                         urlString.append(plainUrlString)
-                        urlString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
+                        urlString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: content.url, range: NSMakeRange(0, urlString.length))
                         linkText = urlString
                         
                         descriptionText = mutableDescriptionText
@@ -395,7 +395,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     }
                                     
                                     let urlAttributedString = NSMutableAttributedString()
-                                    urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
+                                    urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
                                     if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
                                         urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                     }
@@ -439,7 +439,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                     }
                                     
                                     let urlAttributedString = NSMutableAttributedString()
-                                    urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
+                                    urlAttributedString.append(NSAttributedString(string: urlString.replacingOccurrences(of: "https://", with: ""), font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemAccentColor))
                                     if item.presentationData.theme.theme.list.itemAccentColor.isEqual(item.presentationData.theme.theme.list.itemPrimaryTextColor) {
                                         urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                     }
@@ -505,7 +505,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: descriptionMaxNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 16.0 - 8.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
             
-            let (linkNodeLayout, linkNodeApply) = linkNodeMakeLayout(TextNodeLayoutArguments(attributedString: linkText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 16.0 - 8.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: isInstantView ? TextNodeCutout(topLeft: CGSize(width: 14.0, height: 8.0)) : nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
+            let (linkNodeLayout, linkNodeApply) = linkNodeMakeLayout(TextNodeLayoutArguments(attributedString: linkText, backgroundColor: nil, maximumNumberOfLines: 4, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - params.rightInset - 16.0 - 8.0, height: CGFloat.infinity), alignment: .natural, lineSpacing: 0.3, cutout: isInstantView ? TextNodeCutout(topLeft: CGSize(width: 14.0, height: 8.0)) : nil, insets: UIEdgeInsets(top: 1.0, left: 1.0, bottom: 1.0, right: 1.0)))
             var instantViewImage: UIImage?
             if isInstantView {
                  instantViewImage = PresentationResourcesChat.sharedMediaInstantViewIcon(item.presentationData.theme.theme)
@@ -537,7 +537,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             var authorString = ""
             if item.isGlobalSearchResult {
-                authorString = stringForFullAuthorName(message: item.message, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
             }
             
             let authorText = NSAttributedString(string: authorString, font: authorFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)

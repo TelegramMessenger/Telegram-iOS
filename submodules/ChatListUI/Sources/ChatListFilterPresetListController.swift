@@ -138,7 +138,7 @@ private enum ChatListFilterPresetListEntry: ItemListNodeEntry {
         let arguments = arguments as! ChatListFilterPresetListControllerArguments
         switch self {
         case let .screenHeader(text):
-            return ChatListFilterSettingsHeaderItem(theme: presentationData.theme, text: text, animation: .folders, sectionId: self.section)
+            return ChatListFilterSettingsHeaderItem(context: arguments.context, theme: presentationData.theme, text: text, animation: .folders, sectionId: self.section)
         case let .suggestedListHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
         case let .suggestedPreset(_, title, label, preset):
@@ -307,7 +307,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
     |> map { preferences -> [ChatListFeaturedFilter] in
-        guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState] as? ChatListFiltersFeaturedState else {
+        guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState]?.get(ChatListFiltersFeaturedState.self) else {
             return []
         }
         return state.filters
@@ -330,7 +330,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         featuredFilters
     )
     |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings] as? ChatListFilterSettings ?? ChatListFilterSettings.default
+        let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings]?.get(ChatListFilterSettings.self) ?? ChatListFilterSettings.default
         let leftNavigationButton: ItemListNavigationButton?
         switch mode {
         case .default:

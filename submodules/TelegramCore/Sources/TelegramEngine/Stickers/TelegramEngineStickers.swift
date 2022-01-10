@@ -95,5 +95,18 @@ public extension TelegramEngine {
                 )
             }
         }
+        
+        public func availableReactions() -> Signal<AvailableReactions?, NoError> {
+            return _internal_cachedAvailableReactions(postbox: self.account.postbox)
+        }
+        
+        public func updateQuickReaction(reaction: String) -> Signal<Never, NoError> {
+            let _ = updateReactionSettingsInteractively(postbox: self.account.postbox, { settings in
+                var settings = settings
+                settings.quickReaction = reaction
+                return settings
+            }).start()
+            return _internal_updateDefaultReaction(account: self.account, reaction: reaction)
+        }
     }
 }

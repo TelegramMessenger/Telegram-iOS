@@ -90,7 +90,6 @@ func decryptedSecureIdFile(context: SecureIdAccessContext, encryptedData: Data, 
 public func uploadSecureIdFile(context: SecureIdAccessContext, postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadSecureIdFileResult, UploadSecureIdFileError> {
     return postbox.mediaBox.resourceData(resource)
     |> mapError { _ -> UploadSecureIdFileError in
-        return .generic
     }
     |> mapToSignal { next -> Signal<UploadSecureIdFileResult, UploadSecureIdFileError> in
         if !next.complete {

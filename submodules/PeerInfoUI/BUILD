@@ -71,6 +71,9 @@ swift_library(
         "//submodules/ChatListFilterSettingsHeaderItem:ChatListFilterSettingsHeaderItem",
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
     ],
     visibility = [
         "//visibility:public",

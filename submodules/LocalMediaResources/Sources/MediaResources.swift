@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import PersistentStringHash
 
 public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     public let data: MemoryBuffer
@@ -27,7 +28,7 @@ public final class VideoMediaResourceAdjustments: PostboxCoding, Equatable {
     }
 }
 
-public struct VideoLibraryMediaResourceId: MediaResourceId {
+public struct VideoLibraryMediaResourceId {
     public let localIdentifier: String
     public let adjustmentsDigest: MemoryBuffer?
     
@@ -41,14 +42,6 @@ public struct VideoLibraryMediaResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.localIdentifier.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? VideoLibraryMediaResourceId {
-            return self.localIdentifier == to.localIdentifier && self.adjustmentsDigest == to.adjustmentsDigest
-        } else {
-            return false
-        }
     }
 }
 
@@ -130,7 +123,7 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
             case let .compress(adjustments):
                 adjustmentsDigest = adjustments?.digest
         }
-        return VideoLibraryMediaResourceId(localIdentifier: self.localIdentifier, adjustmentsDigest: adjustmentsDigest)
+        return MediaResourceId(VideoLibraryMediaResourceId(localIdentifier: self.localIdentifier, adjustmentsDigest: adjustmentsDigest).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -142,7 +135,7 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
     }
 }
 
-public struct LocalFileVideoMediaResourceId: MediaResourceId {
+public struct LocalFileVideoMediaResourceId {
     public let randomId: Int64
     
     public var uniqueId: String {
@@ -151,14 +144,6 @@ public struct LocalFileVideoMediaResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.randomId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? LocalFileVideoMediaResourceId {
-            return self.randomId == to.randomId
-        } else {
-            return false
-        }
     }
 }
 
@@ -194,7 +179,7 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return LocalFileVideoMediaResourceId(randomId: self.randomId)
+        return MediaResourceId(LocalFileVideoMediaResourceId(randomId: self.randomId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -206,7 +191,7 @@ public final class LocalFileVideoMediaResource: TelegramMediaResource {
     }
 }
 
-public struct PhotoLibraryMediaResourceId: MediaResourceId {
+public struct PhotoLibraryMediaResourceId {
     public let localIdentifier: String
     public let resourceId: Int64
     
@@ -220,14 +205,6 @@ public struct PhotoLibraryMediaResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.localIdentifier.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? PhotoLibraryMediaResourceId {
-            return self.localIdentifier == to.localIdentifier
-        } else {
-            return false
-        }
     }
 }
 
@@ -251,7 +228,7 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return PhotoLibraryMediaResourceId(localIdentifier: self.localIdentifier, resourceId: self.uniqueId)
+        return MediaResourceId(PhotoLibraryMediaResourceId(localIdentifier: self.localIdentifier, resourceId: self.uniqueId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
@@ -263,7 +240,7 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     }
 }
 
-public struct LocalFileGifMediaResourceId: MediaResourceId {
+public struct LocalFileGifMediaResourceId {
     public let randomId: Int64
     
     public var uniqueId: String {
@@ -272,14 +249,6 @@ public struct LocalFileGifMediaResourceId: MediaResourceId {
     
     public var hashValue: Int {
         return self.randomId.hashValue
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? LocalFileGifMediaResourceId {
-            return self.randomId == to.randomId
-        } else {
-            return false
-        }
     }
 }
 
@@ -307,12 +276,57 @@ public final class LocalFileGifMediaResource: TelegramMediaResource {
     }
     
     public var id: MediaResourceId {
-        return LocalFileGifMediaResourceId(randomId: self.randomId)
+        return MediaResourceId(LocalFileGifMediaResourceId(randomId: self.randomId).uniqueId)
     }
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? LocalFileGifMediaResource {
             return self.randomId == to.randomId && self.path == to.path
+        } else {
+            return false
+        }
+    }
+}
+
+
+public struct BundleResourceId {
+    public let nameHash: Int64
+    
+    public var uniqueId: String {
+        return "bundle-\(nameHash)"
+    }
+    
+    public var hashValue: Int {
+        return self.nameHash.hashValue
+    }
+}
+
+public class BundleResource: TelegramMediaResource {
+    public let nameHash: Int64
+    public let path: String
+    
+    public init(name: String, path: String) {
+        self.nameHash = Int64(bitPattern: name.persistentHashValue)
+        self.path = path
+    }
+    
+    public required init(decoder: PostboxDecoder) {
+        self.nameHash = decoder.decodeInt64ForKey("h", orElse: 0)
+        self.path = decoder.decodeStringForKey("p", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt64(self.nameHash, forKey: "h")
+        encoder.encodeString(self.path, forKey: "p")
+    }
+    
+    public var id: MediaResourceId {
+        return MediaResourceId(BundleResourceId(nameHash: self.nameHash).uniqueId)
+    }
+    
+    public func isEqual(to: MediaResource) -> Bool {
+        if let to = to as? BundleResource {
+            return self.nameHash == to.nameHash
         } else {
             return false
         }

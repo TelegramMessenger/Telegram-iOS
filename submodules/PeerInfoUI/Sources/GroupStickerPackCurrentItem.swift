@@ -208,7 +208,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = 65.0 + params.leftInset
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 59.0)
             let separatorHeight = UIScreenPixel
             
@@ -327,7 +327,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.imageNode.setSignal(updatedImageSignal)
                     }
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 59.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     

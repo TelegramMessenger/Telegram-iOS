@@ -8,11 +8,11 @@ import PhoneNumberFormat
 
 func makePeerIdFromBridgeIdentifier(_ identifier: Int64) -> PeerId? {
     if identifier < 0 && identifier > Int32.min {
-        return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt32Value(Int32(clamping: -identifier)))
+        return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(-identifier))
     } else if identifier < Int64(Int32.min) * 2 && identifier > Int64(Int32.min) * 3 {
-        return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt32Value(Int32(clamping: Int64(Int32.min) &* 2 &- identifier)))
+        return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(Int64(Int32.min) &* 2 &- identifier))
     } else if identifier > 0 && identifier < Int32.max {
-        return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt32Value(Int32(clamping: identifier)))
+        return PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(identifier))
     } else {
         return nil
     }
@@ -21,11 +21,11 @@ func makePeerIdFromBridgeIdentifier(_ identifier: Int64) -> PeerId? {
 func makeBridgeIdentifier(_ peerId: PeerId) -> Int64 {
     switch peerId.namespace {
         case Namespaces.Peer.CloudGroup:
-            return -Int64(peerId.id._internalGetInt32Value())
+            return -Int64(peerId.id._internalGetInt64Value())
         case Namespaces.Peer.CloudChannel:
-            return Int64(Int32.min) * 2 - Int64(peerId.id._internalGetInt32Value())
+            return Int64(Int32.min) * 2 - Int64(peerId.id._internalGetInt64Value())
         default:
-            return Int64(peerId.id._internalGetInt32Value())
+            return Int64(peerId.id._internalGetInt64Value())
     }
 }
 

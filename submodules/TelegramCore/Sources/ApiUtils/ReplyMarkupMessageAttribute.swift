@@ -30,7 +30,7 @@ extension ReplyMarkupButton {
             case let .inputKeyboardButtonUrlAuth(_, text, fwdText, url, _):
                 self.init(title: text, titleWhenForwarded: fwdText, action: .urlAuth(url: url, buttonId: 0))
             case let .keyboardButtonRequestPoll(_, quiz, text):
-                var isQuiz: Bool? = quiz.flatMap { quiz in
+                let isQuiz: Bool? = quiz.flatMap { quiz in
                     if case .boolTrue = quiz {
                         return true
                     } else {
@@ -38,6 +38,10 @@ extension ReplyMarkupButton {
                     }
                 }
                 self.init(title: text, titleWhenForwarded: nil, action: .setupPoll(isQuiz: isQuiz))
+            case let .keyboardButtonUserProfile(text, userId):
+                self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))))
+            case let .inputKeyboardButtonUserProfile(text, _):
+                self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))))
         }
     }
 }

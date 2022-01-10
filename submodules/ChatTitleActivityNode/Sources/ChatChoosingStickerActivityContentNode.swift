@@ -101,7 +101,7 @@ class ChatChoosingStickerActivityContentNode: ChatTitleActivityContentNode {
         self.indicatorNode = ChatChoosingStickerActivityIndicatorNode(color: color)
         
         var text = text
-        self.advanced = text.string == "choosing sticker"
+        self.advanced = text.string == "choosing a sticker"
         if self.advanced {
             let mutable = text.mutableCopy() as? NSMutableAttributedString
             mutable?.replaceCharacters(in: NSMakeRange(2, 2), with: "     ")

@@ -1,25 +1,29 @@
 import Foundation
 import Postbox
 
-public struct SecureIdConfiguration: PostboxCoding {
+public struct SecureIdConfiguration: Codable {
     public let nativeLanguageByCountry: [String: String]
     
     public init(jsonString: String) {
         self.nativeLanguageByCountry = (try? JSONDecoder().decode(Dictionary<String, String>.self, from: jsonString.data(using: .utf8) ?? Data())) ?? [:]
     }
     
-    public init(decoder: PostboxDecoder) {
-        let nativeLanguageByCountryData = decoder.decodeBytesForKey("nativeLanguageByCountry")!
-        self.nativeLanguageByCountry = (try? JSONDecoder().decode(Dictionary<String, String>.self, from: nativeLanguageByCountryData.dataNoCopy())) ?? [:]
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        let nativeLanguageByCountryData = try container.decode(Data.self, forKey: "nativeLanguageByCountry")
+        self.nativeLanguageByCountry = (try? JSONDecoder().decode(Dictionary<String, String>.self, from: nativeLanguageByCountryData)) ?? [:]
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         let nativeLanguageByCountryData = (try? JSONEncoder().encode(self.nativeLanguageByCountry)) ?? Data()
-        encoder.encodeBytes(MemoryBuffer(data: nativeLanguageByCountryData), forKey: "nativeLanguageByCountry")
+        try container.encode(nativeLanguageByCountryData, forKey: "nativeLanguageByCountry")
     }
 }
 
-public final class CachedSecureIdConfiguration: PostboxCoding {
+public final class CachedSecureIdConfiguration: Codable {
     public let value: SecureIdConfiguration
     public let hash: Int32
     
@@ -28,13 +32,17 @@ public final class CachedSecureIdConfiguration: PostboxCoding {
         self.hash = hash
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.value = decoder.decodeObjectForKey("value", decoder: { SecureIdConfiguration(decoder: $0) }) as! SecureIdConfiguration
-        self.hash = decoder.decodeInt32ForKey("hash", orElse: 0)
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.value = try container.decode(SecureIdConfiguration.self, forKey: "value")
+        self.hash = try container.decode(Int32.self, forKey: "hash")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.value, forKey: "value")
-        encoder.encodeInt32(self.hash, forKey: "hash")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.value, forKey: "value")
+        try container.encode(self.hash, forKey: "hash")
     }
 }

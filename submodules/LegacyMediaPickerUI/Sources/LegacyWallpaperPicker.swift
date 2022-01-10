@@ -7,11 +7,11 @@ import TelegramPresentationData
 import DeviceAccess
 import AccountContext
 
-public func legacyWallpaperPicker(context: AccountContext, presentationData: PresentationData) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+public func legacyWallpaperPicker(context: AccountContext, presentationData: PresentationData, subject: DeviceAccessMediaLibrarySubject = .wallpaper) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     return Signal { subscriber in
         let intent = TGMediaAssetsControllerSetCustomWallpaperIntent
         
-        DeviceAccess.authorizeAccess(to: .mediaLibrary(.wallpaper), presentationData: presentationData, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
+        DeviceAccess.authorizeAccess(to: .mediaLibrary(subject), presentationData: presentationData, present: context.sharedContext.presentGlobalController, openSettings: context.sharedContext.applicationBindings.openSettings, { value in
             if !value {
                 subscriber.putError(Void())
                 return

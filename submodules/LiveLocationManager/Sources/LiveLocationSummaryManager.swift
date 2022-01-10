@@ -1,15 +1,14 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
 
 private final class LiveLocationSummaryContext {
     private let queue: Queue
-    private let postbox: Postbox
-    private var subscribers = Bag<([MessageId: Message]) -> Void>()
+    private let engine: TelegramEngine
+    private var subscribers = Bag<([EngineMessage.Id: EngineMessage]) -> Void>()
     
-    var messageIds = Set<MessageId>() {
+    var messageIds = Set<EngineMessage.Id>() {
         didSet {
             assert(self.queue.isCurrent())
             
@@ -18,10 +17,12 @@ private final class LiveLocationSummaryContext {
                     self.disposable.set(nil)
                     self.messages = [:]
                 } else {
-                    let key = PostboxViewKey.messages(self.messageIds)
-                    self.disposable.set((self.postbox.combinedView(keys: [key]) |> deliverOn(self.queue)).start(next: { [weak self] view in
+                    self.disposable.set((self.engine.data.subscribe(
+                        TelegramEngine.EngineData.Item.Messages.Messages(ids: self.messageIds)
+                    )
+                    |> deliverOn(self.queue)).start(next: { [weak self] messages in
                         if let strongSelf = self {
-                            strongSelf.messages = (view.views[key] as? MessagesView)?.messages ?? [:]
+                            strongSelf.messages = messages
                         }
                     }))
                 }
@@ -29,7 +30,7 @@ private final class LiveLocationSummaryContext {
         }
     }
     
-    private var messages: [MessageId: Message] = [:] {
+    private var messages: [EngineMessage.Id: EngineMessage] = [:] {
         didSet {
             assert(self.queue.isCurrent())
             
@@ -41,16 +42,16 @@ private final class LiveLocationSummaryContext {
     
     private let disposable = MetaDisposable()
     
-    init(queue: Queue, postbox: Postbox) {
+    init(queue: Queue, engine: TelegramEngine) {
         self.queue = queue
-        self.postbox = postbox
+        self.engine = engine
     }
     
     deinit {
         self.disposable.dispose()
     }
     
-    func subscribe() -> Signal<[MessageId: Message], NoError> {
+    func subscribe() -> Signal<[EngineMessage.Id: EngineMessage], NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -79,12 +80,11 @@ private final class LiveLocationSummaryContext {
 private final class LiveLocationPeerSummaryContext {
     private let queue: Queue
     private let engine: TelegramEngine
-    private let accountPeerId: PeerId
-    private let viewTracker: AccountViewTracker
-    private let peerId: PeerId
+    private let accountPeerId: EnginePeer.Id
+    private let peerId: EnginePeer.Id
     private let becameEmpty: () -> Void
     
-    private var peersAndMessages: [(Peer, Message)]? = nil {
+    private var peersAndMessages: [(EnginePeer, EngineMessage)]? = nil {
         didSet {
             assert(self.queue.isCurrent())
             
@@ -108,7 +108,7 @@ private final class LiveLocationPeerSummaryContext {
             }
         }
     }
-    private var subscribers = Bag<([(Peer, Message)]?) -> Void>()
+    private var subscribers = Bag<([(EnginePeer, EngineMessage)]?) -> Void>()
     
     var isEmpty: Bool {
         return !self.isActive && self.subscribers.isEmpty
@@ -116,11 +116,10 @@ private final class LiveLocationPeerSummaryContext {
     
     private let peerDisposable = MetaDisposable()
     
-    init(queue: Queue, engine: TelegramEngine, accountPeerId: PeerId, viewTracker: AccountViewTracker, peerId: PeerId, becameEmpty: @escaping () -> Void) {
+    init(queue: Queue, engine: TelegramEngine, accountPeerId: EnginePeer.Id, peerId: EnginePeer.Id, becameEmpty: @escaping () -> Void) {
         self.queue = queue
         self.engine = engine
         self.accountPeerId = accountPeerId
-        self.viewTracker = viewTracker
         self.peerId = peerId
         self.becameEmpty = becameEmpty
     }
@@ -129,7 +128,7 @@ private final class LiveLocationPeerSummaryContext {
         self.peerDisposable.dispose()
     }
     
-    func subscribe(_ f: @escaping ([(Peer, Message)]?) -> Void) -> Disposable {
+    func subscribe(_ f: @escaping ([(EnginePeer, EngineMessage)]?) -> Void) -> Disposable {
         let wasEmpty = self.subscribers.isEmpty
         let index = self.subscribers.add({ next in
             f(next)
@@ -164,11 +163,11 @@ private final class LiveLocationPeerSummaryContext {
             self.peerDisposable.set((self.engine.messages.topPeerActiveLiveLocationMessages(peerId: self.peerId)
                 |> deliverOn(self.queue)).start(next: { [weak self] accountPeer, messages in
                     if let strongSelf = self {
-                        var peersAndMessages: [(Peer, Message)] = []
+                        var peersAndMessages: [(EnginePeer, EngineMessage)] = []
                         for message in messages {
                             if let author = message.author {
                                 if author.id != strongSelf.accountPeerId && message.flags.contains(.Incoming) {
-                                    peersAndMessages.append((author, message))
+                                    peersAndMessages.append((EnginePeer(author), EngineMessage(message)))
                                 }
                             }
                         }
@@ -189,33 +188,29 @@ private final class LiveLocationPeerSummaryContext {
 public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
     private let queue: Queue
     private let engine: TelegramEngine
-    private let postbox: Postbox
-    private let accountPeerId: PeerId
-    private let viewTracker: AccountViewTracker
+    private let accountPeerId: EnginePeer.Id
     
     private let globalContext: LiveLocationSummaryContext
-    private var peerContexts: [PeerId: LiveLocationPeerSummaryContext] = [:]
+    private var peerContexts: [EnginePeer.Id: LiveLocationPeerSummaryContext] = [:]
     
-    init(queue: Queue, engine: TelegramEngine, postbox: Postbox, accountPeerId: PeerId, viewTracker: AccountViewTracker) {
+    init(queue: Queue, engine: TelegramEngine, accountPeerId: EnginePeer.Id) {
         assert(queue.isCurrent())
         self.queue = queue
         self.engine = engine
-        self.postbox = postbox
         self.accountPeerId = accountPeerId
-        self.viewTracker = viewTracker
         
-        self.globalContext = LiveLocationSummaryContext(queue: queue, postbox: postbox)
+        self.globalContext = LiveLocationSummaryContext(queue: queue, engine: engine)
     }
     
-    func update(messageIds: Set<MessageId>) {
-        var peerIds = Set<PeerId>()
+    func update(messageIds: Set<EngineMessage.Id>) {
+        var peerIds = Set<EnginePeer.Id>()
         for id in messageIds {
             peerIds.insert(id.peerId)
         }
         
         for peerId in peerIds {
             if self.peerContexts[peerId] == nil {
-                let context = LiveLocationPeerSummaryContext(queue: self.queue, engine: self.engine, accountPeerId: self.accountPeerId, viewTracker: self.viewTracker, peerId: peerId, becameEmpty: { [weak self] in
+                let context = LiveLocationPeerSummaryContext(queue: self.queue, engine: self.engine, accountPeerId: self.accountPeerId, peerId: peerId, becameEmpty: { [weak self] in
                     if let strongSelf = self, let context = strongSelf.peerContexts[peerId], context.isEmpty {
                         strongSelf.peerContexts.removeValue(forKey: peerId)
                     }
@@ -231,11 +226,11 @@ public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
         self.globalContext.messageIds = messageIds
     }
     
-    public func broadcastingToMessages() -> Signal<[MessageId: Message], NoError> {
+    public func broadcastingToMessages() -> Signal<[EngineMessage.Id: EngineMessage], NoError> {
         return self.globalContext.subscribe()
     }
     
-    public func peersBroadcastingTo(peerId: PeerId) -> Signal<[(Peer, Message)]?, NoError> {
+    public func peersBroadcastingTo(peerId: EnginePeer.Id) -> Signal<[(EnginePeer, EngineMessage)]?, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             let disposable = MetaDisposable()
@@ -245,7 +240,7 @@ public final class LiveLocationSummaryManagerImpl: LiveLocationSummaryManager {
                     if let current = strongSelf.peerContexts[peerId] {
                         context = current
                     } else {
-                        context = LiveLocationPeerSummaryContext(queue: strongSelf.queue, engine: strongSelf.engine, accountPeerId: strongSelf.accountPeerId, viewTracker: strongSelf.viewTracker, peerId: peerId, becameEmpty: {
+                        context = LiveLocationPeerSummaryContext(queue: strongSelf.queue, engine: strongSelf.engine, accountPeerId: strongSelf.accountPeerId, peerId: peerId, becameEmpty: {
                             if let strongSelf = self, let context = strongSelf.peerContexts[peerId], context.isEmpty {
                                 strongSelf.peerContexts.removeValue(forKey: peerId)
                             }

@@ -18,6 +18,7 @@ import WallpaperResources
 import GZip
 import TelegramUniversalVideoContent
 import GradientBackground
+import Svg
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -118,10 +119,16 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchAnimatedStickerFirstFrameRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
-    } else if let resource = resource as? MapSnapshotMediaResource, let _ = representation as? MapSnapshotMediaResourceRepresentation {
-        return fetchMapSnapshotResource(resource: resource)
     } else if let resource = resource as? YoutubeEmbedStoryboardMediaResource, let _ = representation as? YoutubeEmbedStoryboardMediaResourceRepresentation {
         return fetchYoutubeEmbedStoryboardResource(resource: resource)
+    } else if let representation = representation as? CachedPreparedPatternWallpaperRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchPreparedPatternWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
+        }
     }
     return .never()
 }
@@ -689,7 +696,7 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
 private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { file in
+            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.stringRepresentation)-\(representation.uniqueId)").start(next: { file in
                 subscriber.putNext(.tempFile(file))
                 subscriber.putCompletion()
             })
@@ -704,7 +711,7 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if #available(iOS 9.0, *) {
-                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { value in
+                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.stringRepresentation)-\(representation.uniqueId)").start(next: { value in
                     subscriber.putNext(value)
                 }, completed: {
                     subscriber.putCompletion()
@@ -719,3 +726,18 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     |> runOn(Queue.concurrentDefaultQueue())
 }
 
+
+private func fetchPreparedPatternWallpaperRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPreparedPatternWallpaperRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+            if let unpackedData = TGGUnzipData(data, 2 * 1024 * 1024), let data = prepareSvgImage(unpackedData) {
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
+                let url = URL(fileURLWithPath: path)
+                let _ = try? data.write(to: url)
+                subscriber.putNext(.temporaryPath(path))
+                subscriber.putCompletion()
+            }
+        }
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
+}
