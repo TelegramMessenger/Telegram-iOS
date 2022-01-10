@@ -69,7 +69,9 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         if nsString == nil {
             nsString = text as NSString
         }
-        if range.location + range.length > stringLength {
+        if range.location > stringLength {
+            continue
+        } else if range.location + range.length > stringLength {
             range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }

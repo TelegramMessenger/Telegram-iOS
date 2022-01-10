@@ -1597,9 +1597,9 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         
         self.codeTextNode.attributedText = NSAttributedString(string: self.codeTextNode.attributedText?.string ?? "", font: Font.with(size: fontSize, design: .round, weight: .bold, traits: []), textColor: .black)
         
-        let codeBackgroundWidth = size.width - codeInset * 2.0
+        let codeBackgroundWidth = min(300.0, size.width - codeInset * 2.0)
         let codeBackgroundHeight = floor(codeBackgroundWidth * 1.1)
-        let codeBackgroundFrame = CGRect(x: codeInset, y: topInset + floor((size.height - bottomInset - codeBackgroundHeight) / 2.0), width: codeBackgroundWidth, height: codeBackgroundHeight)
+        let codeBackgroundFrame = CGRect(x: floor((size.width - codeBackgroundWidth) / 2.0), y: topInset + floor((size.height - bottomInset - codeBackgroundHeight) / 2.0), width: codeBackgroundWidth, height: codeBackgroundHeight)
         transition.updateFrame(node: self.codeBackgroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeForegroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeMaskNode, frame: CGRect(origin: CGPoint(), size: codeBackgroundFrame.size))

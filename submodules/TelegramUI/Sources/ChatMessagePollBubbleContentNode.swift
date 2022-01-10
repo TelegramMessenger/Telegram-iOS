@@ -876,6 +876,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.votersNode.contentMode = .topLeft
         self.votersNode.contentsScale = UIScreenScale
         self.votersNode.displaysAsynchronously = false
+        self.votersNode.clipsToBounds = true
         
         var displaySolution: (() -> Void)?
         self.solutionButtonNode = SolutionButtonNode(pressed: {

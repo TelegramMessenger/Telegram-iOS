@@ -1053,6 +1053,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if let message = messages.last {
                         var composedString: NSMutableAttributedString
                         
+                        if let peerText = peerText {
+                            authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
+                        }
+                        
                         let entities = (message._asMessage().textEntitiesAttribute?.entities ?? []).filter { entity in
                             if case .Spoiler = entity.type {
                                 return true
@@ -1062,7 +1066,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         let messageString: NSAttributedString
                         if !message.text.isEmpty && entities.count > 0 {
-                            messageString = stringWithAppliedEntities(message.text, entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                            messageString = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: authorAttributedString == nil ? 2 : 1), entities: entities, baseColor: theme.messageTextColor, linkColor: theme.messageTextColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
                         } else {
                             messageString = NSAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                         }
@@ -1109,9 +1113,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         attributedText = composedString
                         
-                        if let peerText = peerText {
-                            authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
-                        }
+
                         
                         var displayMediaPreviews = true
                         if message._asMessage().containsSecretMedia {

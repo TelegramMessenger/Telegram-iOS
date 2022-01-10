@@ -277,6 +277,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if attribute is ViewCountMessageAttribute{
                             return false
                         }
+                        if attribute is ForwardCountMessageAttribute {
+                            return false
+                        }
+                        if attribute is ReactionsMessageAttribute {
+                            return false
+                        }
                         return true
                     })
                     

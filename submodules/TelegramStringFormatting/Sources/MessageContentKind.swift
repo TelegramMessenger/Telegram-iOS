@@ -253,3 +253,20 @@ public func foldLineBreaks(_ text: String) -> String {
     }
     return result
 }
+
+
+public func trimToLineCount(_ text: String, lineCount: Int) -> String {
+    if lineCount < 1 {
+        return ""
+    }
+    
+    let lines = text.split { $0.isNewline }
+    var result = ""
+    for line in lines.prefix(lineCount) {
+        if !result.isEmpty {
+            result += "\n"
+        }
+        result += line
+    }
+    return result
+}
