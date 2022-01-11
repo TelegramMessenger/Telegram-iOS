@@ -182,9 +182,11 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     }
     
     func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
-        var nodeHeight: CGFloat = (self.peerNodes.isEmpty ? 264.0 : 364.0)
-        
+        let showPeers = !self.peerNodes.isEmpty && !isLandscape
+        var nodeHeight: CGFloat = (!showPeers ? 236.0 : 320.0)
         let paddedSize = CGSize(width: size.width - 60.0, height: size.height)
+        
+        self.peersScrollNode.isHidden = !showPeers
         
         var aboutSize: CGSize?
         var descriptionSize: CGSize?
@@ -210,14 +212,16 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
             descriptionSize = measuredSize
         }
         
+        let constrainSize = CGSize(width: size.width - 32.0, height: size.height)
+        let titleSize = self.titleNode.measure(constrainSize)
+        nodeHeight += titleSize.height
+        
         let verticalOrigin = size.height - nodeHeight
         
         let avatarSize: CGFloat = 100.0
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floor((size.width - avatarSize) / 2.0), y: verticalOrigin + 32.0), size: CGSize(width: avatarSize, height: avatarSize)))
         
-        let constrainSize = CGSize(width: size.width - 32.0, height: size.height)
-        let titleSize = self.titleNode.measure(constrainSize)
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: verticalOrigin + 27.0 + avatarSize + 15.0), size: titleSize))
         
         let countSize = self.countNode.measure(constrainSize)
@@ -246,9 +250,9 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         }
         
         self.peersScrollNode.view.contentSize = CGSize(width: CGFloat(self.peerNodes.count) * peerSize.width + (self.moreNode != nil ? peerSize.width : 0.0) + peerInset * 2.0, height: peerSize.height)
-        transition.updateFrame(node: self.peersScrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin + 210.0), size: CGSize(width: size.width, height: peerSize.height)))
+        transition.updateFrame(node: self.peersScrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOrigin + 27.0 + avatarSize + 15.0 + titleSize.height + 3.0 + countSize.height + 12.0), size: CGSize(width: size.width, height: peerSize.height)))
         
-        if !self.peerNodes.isEmpty {
+        if showPeers {
             verticalOffset += 100.0
         }
         
