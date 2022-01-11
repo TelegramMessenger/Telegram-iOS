@@ -228,7 +228,11 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard), value: nsString!.substring(with: range), range: range)
             case .Spoiler:
-                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true as NSNumber, range: range)
+                if external {
+                    string.addAttribute(NSAttributedString.Key.backgroundColor, value: UIColor.gray, range: range)
+                } else {
+                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true as NSNumber, range: range)
+                }
             case let .Custom(type):
                 if type == ApplicationSpecificEntityType.Timecode {
                     string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
