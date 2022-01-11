@@ -165,7 +165,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         }
     case .action:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
-            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false) ?? "")
+            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false)?.0 ?? "")
         } else {
             return nil
         }
@@ -250,6 +250,23 @@ public func foldLineBreaks(_ text: String) -> String {
         } else {
             result += " " + line
         }
+    }
+    return result
+}
+
+
+public func trimToLineCount(_ text: String, lineCount: Int) -> String {
+    if lineCount < 1 {
+        return ""
+    }
+    
+    let lines = text.split { $0.isNewline }
+    var result = ""
+    for line in lines.prefix(lineCount) {
+        if !result.isEmpty {
+            result += "\n"
+        }
+        result += line
     }
     return result
 }

@@ -95,6 +95,8 @@ swift_library(
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
         "//submodules/Translate:Translate",
         "//submodules/QrCodeUI:QrCodeUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

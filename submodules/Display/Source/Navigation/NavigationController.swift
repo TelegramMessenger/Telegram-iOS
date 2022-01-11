@@ -409,8 +409,15 @@ open class NavigationController: UINavigationController, ContainableController, 
         let overlayContainerLayout = layout
         
         if let inCallStatusBar = self.inCallStatusBar {
-            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))
-            if layout.deviceMetrics.hasTopNotch {
+            let isLandscape = layout.size.width > layout.size.height
+            var minHeight: CGFloat
+            if case .compact = layout.metrics.widthClass, isLandscape {
+                minHeight = 22.0
+            } else {
+                minHeight = 40.0
+            }
+            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(minHeight, layout.safeInsets.top))))
+            if layout.deviceMetrics.hasTopNotch && !isLandscape {
                 inCallStatusBarFrame.size.height += 12.0
             }
             if inCallStatusBar.frame.isEmpty {
