@@ -2590,7 +2590,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             appearAnimation: reaction.appearAnimation,
                                             stillAnimation: reaction.selectAnimation,
                                             listAnimation: centerAnimation,
-                                            applicationAnimation: aroundAnimation
+                                            largeListAnimation: reaction.activateAnimation,
+                                            applicationAnimation: aroundAnimation,
+                                            largeApplicationAnimation: reaction.effectAnimation
                                         ),
                                         targetView: targetView,
                                         hideNode: true,

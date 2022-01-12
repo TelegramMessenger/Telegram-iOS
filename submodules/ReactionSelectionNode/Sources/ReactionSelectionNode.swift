@@ -58,6 +58,8 @@ final class ReactionNode: ASDisplayNode {
     private var isLongPressing: Bool = false
     private var longPressAnimator: DisplayLinkAnimator?
     
+    var expandedAnimationDidBegin: (() -> Void)?
+    
     init(context: AccountContext, theme: PresentationTheme, item: ReactionContextItem) {
         self.context = context
         self.item = item
@@ -105,7 +107,7 @@ final class ReactionNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, isExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         
         let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -128,7 +130,15 @@ final class ReactionNode: ASDisplayNode {
             self.animationNode = animationNode
             self.addSubnode(animationNode)
             
-            animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
+            animationNode.started = { [weak self] in
+                self?.expandedAnimationDidBegin?()
+            }
+            
+            if largeExpanded {
+                animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
+            } else {
+                animationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.listAnimation.resource), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.listAnimation.resource.id)))
+            }
             animationNode.frame = expandedAnimationFrame
             animationNode.updateLayout(size: expandedAnimationFrame.size)
             

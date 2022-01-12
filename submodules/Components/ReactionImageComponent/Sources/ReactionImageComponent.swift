@@ -58,22 +58,51 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
     })
 }
 
-public final class ReactionImageNode: ASImageNode {
+public final class ReactionImageNode: ASDisplayNode {
     private var disposable: Disposable?
-    public let size: CGSize
+    private let size: CGSize
+    private let isAnimation: Bool
+    
+    private let iconNode: ASImageNode
     
     public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String) {
+        self.iconNode = ASImageNode()
+        
         var file: TelegramMediaFile?
+        var animationFile: TelegramMediaFile?
         if let availableReactions = availableReactions {
             for availableReaction in availableReactions.reactions {
                 if availableReaction.value == reaction {
                     file = availableReaction.staticIcon
+                    animationFile = availableReaction.centerAnimation
                     break
                 }
             }
         }
-        if let file = file {
-            self.size = file.dimensions?.cgSize ?? CGSize(width: 18.0, height: 18.0)
+        if let animationFile = animationFile {
+            self.size = animationFile.dimensions?.cgSize ?? CGSize(width: 32.0, height: 32.0)
+            var displaySize = self.size.aspectFitted(CGSize(width: 20.0, height: 20.0))
+            displaySize.width = floor(displaySize.width * 2.0)
+            displaySize.height = floor(displaySize.height * 2.0)
+            self.isAnimation = true
+            
+            super.init()
+            
+            self.disposable = (reactionStaticImage(context: context, animation: animationFile, pixelSize: CGSize(width: displaySize.width * UIScreenScale, height: displaySize.height * UIScreenScale))
+            |> deliverOnMainQueue).start(next: { [weak self] data in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                    if let image = UIImage(data: dataValue) {
+                        strongSelf.iconNode.image = image
+                    }
+                }
+            })
+        } else if let file = file {
+            self.size = file.dimensions?.cgSize ?? CGSize(width: 32.0, height: 32.0)
+            self.isAnimation = false
             
             super.init()
             
@@ -85,60 +114,29 @@ public final class ReactionImageNode: ASImageNode {
                 
                 if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                     if let image = WebP.convert(fromWebP: dataValue) {
-                        strongSelf.image = image
+                        strongSelf.iconNode.image = image
                     }
                 }
             })
         } else {
-            self.size = CGSize(width: 18.0, height: 18.0)
+            self.size = CGSize(width: 32.0, height: 32.0)
+            self.isAnimation = false
             super.init()
         }
+        
+        self.addSubnode(self.iconNode)
     }
     
     deinit {
         self.disposable?.dispose()
     }
-}
-
-public final class ReactionFileImageNode: ASImageNode {
-    private let disposable = MetaDisposable()
-
-    private var currentFile: TelegramMediaFile?
     
-    override public init() {
-    }
-    
-    deinit {
-        self.disposable.dispose()
-    }
-
-    public func asyncLayout() -> (_ context: AccountContext, _ file: TelegramMediaFile?) -> (size: CGSize, apply: () -> Void) {
-        return { [weak self] context, file in
-            let size = file?.dimensions?.cgSize ?? CGSize(width: 18.0, height: 18.0)
-            
-            return (size, {
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.currentFile != file {
-                    strongSelf.currentFile = file
-                    
-                    if let file = file {
-                        strongSelf.disposable.set((context.account.postbox.mediaBox.resourceData(file.resource)
-                        |> deliverOnMainQueue).start(next: { data in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                if let image = WebP.convert(fromWebP: dataValue) {
-                                    strongSelf.image = image
-                                }
-                            }
-                        }))
-                    }
-                }
-            })
+    public func update(size: CGSize) {
+        var imageSize = self.size.aspectFitted(size)
+        if self.isAnimation {
+            imageSize.width *= 2.0
+            imageSize.height *= 2.0
         }
+        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize)
     }
 }

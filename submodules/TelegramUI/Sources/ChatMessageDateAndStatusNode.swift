@@ -9,7 +9,6 @@ import TelegramPresentationData
 import AccountContext
 import AppBundle
 import ReactionButtonListComponent
-import WebPBinding
 import ReactionImageComponent
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
@@ -672,11 +671,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         },
                         reactions: arguments.reactions.map { reaction in
                             var centerAnimation: TelegramMediaFile?
+                            var legacyIcon: TelegramMediaFile?
                             
                             if let availableReactions = arguments.availableReactions {
                                 for availableReaction in availableReactions.reactions {
                                     if availableReaction.value == reaction.value {
                                         centerAnimation = availableReaction.centerAnimation
+                                        legacyIcon = availableReaction.staticIcon
                                         break
                                     }
                                 }
@@ -695,7 +696,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             return ReactionButtonsAsyncLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
-                                    centerAnimation: centerAnimation
+                                    centerAnimation: centerAnimation,
+                                    legacyIcon: legacyIcon
                                 ),
                                 count: Int(reaction.count),
                                 peers: peers,
@@ -808,12 +810,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 }
                                 
-                                item.node.isGestureEnabled = true
                                 let itemValue = item.value
                                 let itemNode = item.node
-                                item.node.isGestureEnabled = arguments.canViewReactionList
+                                item.node.isGestureEnabled = true
+                                let canViewReactionList = arguments.canViewReactionList
+                                item.node.activateAfterCompletion = !canViewReactionList
                                 item.node.activated = { [weak itemNode] gesture, _ in
-                                    guard let strongSelf = self else {
+                                    guard let strongSelf = self, canViewReactionList else {
                                         return
                                     }
                                     guard let itemNode = itemNode else {

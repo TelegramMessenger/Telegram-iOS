@@ -10,7 +10,6 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
-import WebPBinding
 import ReactionImageComponent
 
 private final class QuickReactionSetupControllerArguments {
@@ -273,19 +272,19 @@ public func quickReactionSetupController(
                 if !availableReaction.isEnabled {
                     continue
                 }
+                guard let centerAnimation = availableReaction.centerAnimation else {
+                    continue
+                }
                 
-                let signal: Signal<(String, UIImage?), NoError> = context.account.postbox.mediaBox.resourceData(availableReaction.staticIcon.resource)
-                |> distinctUntilChanged(isEqual: { lhs, rhs in
-                    return lhs.complete == rhs.complete
-                })
+                let signal: Signal<(String, UIImage?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0, height: 72.0))
                 |> map { data -> (String, UIImage?) in
-                    guard data.complete else {
+                    guard data.isComplete else {
                         return (availableReaction.value, nil)
                     }
                     guard let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
                         return (availableReaction.value, nil)
                     }
-                    guard let image = WebP.convert(fromWebP: dataValue) else {
+                    guard let image = UIImage(data: dataValue) else {
                         return (availableReaction.value, nil)
                     }
                     return (availableReaction.value, image)

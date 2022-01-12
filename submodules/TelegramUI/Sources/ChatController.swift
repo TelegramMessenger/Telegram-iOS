@@ -1030,7 +1030,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
                                 listAnimation: centerAnimation,
-                                applicationAnimation: aroundAnimation
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation
                             ))
                         }
                     }
@@ -1080,7 +1082,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     hideTargetButton = targetView.superview
                                                 }
                                                 
-                                                controller.dismissWithReaction(value: updatedReaction, targetView: targetView, hideNode: true, animateTargetContainer: hideTargetButton, completion: { [weak itemNode, weak targetView] in
+                                                controller.dismissWithReaction(value: updatedReaction, targetView: targetView, hideNode: true, animateTargetContainer: hideTargetButton, addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                                    standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                                    strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                                }, completion: { [weak itemNode, weak targetView] in
                                                     guard let strongSelf = self, let itemNode = itemNode, let targetView = targetView else {
                                                         return
                                                     }
@@ -1279,7 +1288,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
                                                 listAnimation: centerAnimation,
-                                                applicationAnimation: aroundAnimation
+                                                largeListAnimation: reaction.activateAnimation,
+                                                applicationAnimation: aroundAnimation,
+                                                largeApplicationAnimation: reaction.effectAnimation
                                             ),
                                             targetView: targetView,
                                             hideNode: true,

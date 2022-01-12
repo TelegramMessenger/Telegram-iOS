@@ -67,7 +67,6 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         
         self.backgroundLayer.backgroundColor = UIColor.black.cgColor
         self.backgroundLayer.masksToBounds = true
-        self.backgroundLayer.cornerRadius = 52.0 / 2.0
         
         self.largeCircleLayer.backgroundColor = UIColor.black.cgColor
         self.largeCircleLayer.masksToBounds = true
@@ -114,6 +113,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         size: CGSize,
         cloudSourcePoint: CGFloat,
         isLeftAligned: Bool,
+        isMinimized: Bool,
         transition: ContainedViewLayoutTransition
     ) {
         let shadowInset: CGFloat = 15.0
@@ -136,7 +136,13 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             }
         }
         
-        let backgroundFrame = CGRect(origin: CGPoint(), size: size)
+        var backgroundFrame = CGRect(origin: CGPoint(), size: size)
+        if isMinimized {
+            let updatedHeight = floor(size.height * 0.9)
+            backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - updatedHeight), size: CGSize(width: size.width, height: updatedHeight))
+        }
+        
+        transition.updateCornerRadius(layer: self.backgroundLayer, cornerRadius: backgroundFrame.height / 2.0)
         
         let largeCircleFrame: CGRect
         let smallCircleFrame: CGRect
