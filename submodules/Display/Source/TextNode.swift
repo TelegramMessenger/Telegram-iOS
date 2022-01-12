@@ -1073,7 +1073,6 @@ public class TextNode: ASDisplayNode {
                                 break
                             }
                         }
-//                        brokenLineRange.length = CTLineGetGlyphCount(coreTextLine) - 1
                         if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                             brokenLineRange.length = attributedString.length - brokenLineRange.location
                         }
@@ -1338,7 +1337,7 @@ public class TextNode: ASDisplayNode {
                     context.saveGState()
                     var clipRects: [CGRect] = []
                     for spoiler in line.spoilerWords {
-                        var spoilerClipRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                        var spoilerClipRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY - UIScreenPixel)
                         spoilerClipRect.size.height += 1.0 + UIScreenPixel
                         clipRects.append(spoilerClipRect)
                     }
@@ -1375,7 +1374,7 @@ public class TextNode: ASDisplayNode {
                         context.restoreGState()
                     } else {
                         for spoiler in line.spoilerWords {
-                            var spoilerClearRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                            var spoilerClearRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY - UIScreenPixel)
                             spoilerClearRect.size.height += 1.0 + UIScreenPixel
                             clearRects.append(spoilerClearRect)
                         }

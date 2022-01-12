@@ -122,7 +122,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
         emitterLayer.emitterSize = CGSize(width: 1, height: 1)
         emitterLayer.emitterShape = CAEmitterLayerEmitterShape(rawValue: "rectangles")
         emitterLayer.setValue(behaviors, forKey: "emitterBehaviors")
-//        emitterLayer.setValue(0.0322, forKey: "updateInterval")
         
         emitterLayer.setValue(4.0, forKeyPath: "emitterBehaviors.fingerAttractor.stiffness")
         emitterLayer.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
@@ -188,7 +187,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
 
             var scaleAddition = maxFactor * 4.0
             var durationAddition = -maxFactor * 0.2
-            if self.emitterNode.frame.height > 0.0, self.emitterNode.frame.width / self.emitterNode.frame.height < 0.3 {
+            if self.emitterNode.frame.height > 0.0, self.emitterNode.frame.width / self.emitterNode.frame.height < 0.7 {
                 scaleAddition *= 5.0
                 durationAddition *= 2.0
             }
