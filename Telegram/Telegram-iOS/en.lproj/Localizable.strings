@@ -7239,3 +7239,6 @@ Sorry for the inconvenience.";
 "Share.ShareMessage" = "Share Message";
 
 "Conversation.UserSendMessage" = "SEND MESSAGE";
+
+"Conversation.CopyProtectionForwardingDisabledBot" = "Forwards from this bot are restricted";
+"Conversation.CopyProtectionSavingDisabledBot" = "Saving from this bot is restricted";

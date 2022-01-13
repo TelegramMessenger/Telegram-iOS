@@ -6567,35 +6567,69 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         self?.controller?.push(c)
                     }, completion: { _, _ in }), in: .window(.root))
                 }, displayCopyProtectionTip: { [weak self] node, save in
-                    if let strongSelf = self, let peer = strongSelf.data?.peer {
-                        let isChannel: Bool
-                        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                            isChannel = true
-                        } else {
-                            isChannel = false
-                        }
-                        let text: String
-                        if save {
-                            text = isChannel ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledGroup
-                        } else {
-                            text = isChannel ? strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledGroup
-                        }
-                        
-                        strongSelf.copyProtectionTooltipController?.dismiss()
-                        let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
-                        strongSelf.copyProtectionTooltipController = tooltipController
-                        tooltipController.dismissed = { [weak tooltipController] _ in
-                            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.copyProtectionTooltipController === tooltipController {
-                                strongSelf.copyProtectionTooltipController = nil
+                    if let strongSelf = self, let peer = strongSelf.data?.peer, let messageIds = strongSelf.state.selectedMessageIds, !messageIds.isEmpty {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
+                            var messages: [EngineMessage] = []
+                            for id in messageIds {
+                                if let message = transaction.getMessage(id) {
+                                    messages.append(EngineMessage(message))
+                                }
                             }
+                            return messages
                         }
-                        strongSelf.controller?.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
-                            if let strongSelf = self {
-                                let rect = node.view.convert(node.view.bounds, to: strongSelf.view).offsetBy(dx: 0.0, dy: 3.0)
-                                return (strongSelf, rect)
+                        |> deliverOnMainQueue).start(next: { [weak self] messages in
+                            guard let strongSelf = self else {
+                                return
                             }
-                            return nil
-                        }))
+                            enum PeerType {
+                                case group
+                                case channel
+                                case bot
+                            }
+                            var isBot = false
+                            for message in messages {
+                                if let author = message.author, case let .user(user) = author, user.botInfo != nil {
+                                    isBot = true
+                                    break
+                                }
+                            }
+                            let type: PeerType
+                            if isBot {
+                                type = .bot
+                            } else if let user = peer as? TelegramUser, user.botInfo != nil {
+                                type = .bot
+                            } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                type = .channel
+                            }  else {
+                                type = .group
+                            }
+                            
+                            let text: String
+                            switch type {
+                            case .group:
+                                text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledGroup : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledGroup
+                            case .channel:
+                                text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledChannel
+                            case .bot:
+                                text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledBot : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledBot
+                            }
+                            
+                            strongSelf.copyProtectionTooltipController?.dismiss()
+                            let tooltipController = TooltipController(content: .text(text), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                            strongSelf.copyProtectionTooltipController = tooltipController
+                            tooltipController.dismissed = { [weak tooltipController] _ in
+                                if let strongSelf = self, let tooltipController = tooltipController, strongSelf.copyProtectionTooltipController === tooltipController {
+                                    strongSelf.copyProtectionTooltipController = nil
+                                }
+                            }
+                            strongSelf.controller?.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                                if let strongSelf = self {
+                                    let rect = node.view.convert(node.view.bounds, to: strongSelf.view).offsetBy(dx: 0.0, dy: 3.0)
+                                    return (strongSelf, rect)
+                                }
+                                return nil
+                            }))
+                        })
                    }
                 })
                 self.paneContainerNode.selectionPanelNode = selectionPanelNode

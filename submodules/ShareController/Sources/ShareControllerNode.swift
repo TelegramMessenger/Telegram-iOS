@@ -809,23 +809,23 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 }))
             }
             
-            if strongSelf.fromPublicChannel, let context = strongSelf.context, let node = node as? ContextReferenceContentNode {
-                let presentationData = strongSelf.presentationData
-                let items: [ContextMenuItem] = [
-                    .action(ContextMenuActionItem(text: presentationData.strings.Share_ShareAsLink, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                        f(.default)
-                        proceed(false)
-                    })),
-                    .action(ContextMenuActionItem(text: presentationData.strings.Share_ShareAsImage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Image"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                        f(.default)
-                        proceed(true)
-                    }))
-                ]
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-                strongSelf.present?(contextController)
-            } else {
+//            if strongSelf.fromPublicChannel, let context = strongSelf.context, let node = node as? ContextReferenceContentNode {
+//                let presentationData = strongSelf.presentationData
+//                let items: [ContextMenuItem] = [
+//                    .action(ContextMenuActionItem(text: presentationData.strings.Share_ShareAsLink, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+//                        f(.default)
+//                        proceed(false)
+//                    })),
+//                    .action(ContextMenuActionItem(text: presentationData.strings.Share_ShareAsImage, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Image"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+//                        f(.default)
+//                        proceed(true)
+//                    }))
+//                ]
+//                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+//                strongSelf.present?(contextController)
+//            } else {
                 proceed(false)
-            }
+//            }
         }
         peersContentNode.openShare = { node, gesture in
             openShare(false, node, gesture)
