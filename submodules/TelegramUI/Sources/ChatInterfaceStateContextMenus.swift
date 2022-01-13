@@ -730,7 +730,22 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if (!messageText.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled {
+        var isPoll = false
+        if messageText.isEmpty {
+            for media in message.media {
+                if let poll = media as? TelegramMediaPoll {
+                    isPoll = true
+                    var text = poll.text
+                    for option in poll.options {
+                        text.append("\n— \(option.text)")
+                    }
+                    messageText = poll.text
+                    break
+                }
+            }
+        }
+        
+        if (!messageText.isEmpty || resourceAvailable || diceEmoji != nil) && !chatPresentationInterfaceState.copyProtectionEnabled && !message.isCopyProtected() {
             let message = messages[0]
             var isExpired = false
             for media in message.media {
@@ -739,68 +754,70 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             }
             if !isExpired {
-                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    if let diceEmoji = diceEmoji {
-                        UIPasteboard.general.string = diceEmoji
-                    } else {
-                        let copyTextWithEntities = {
-                            var messageEntities: [MessageTextEntity]?
-                            var restrictedText: String?
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                    messageEntities = attribute.entities
+                if !isPoll {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        if let diceEmoji = diceEmoji {
+                            UIPasteboard.general.string = diceEmoji
+                        } else {
+                            let copyTextWithEntities = {
+                                var messageEntities: [MessageTextEntity]?
+                                var restrictedText: String?
+                                for attribute in message.attributes {
+                                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                        messageEntities = attribute.entities
+                                    }
+                                    if let attribute = attribute as? RestrictedContentMessageAttribute {
+                                        restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                                    }
                                 }
-                                if let attribute = attribute as? RestrictedContentMessageAttribute {
-                                    restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                                
+                                if let restrictedText = restrictedText {
+                                    storeMessageTextInPasteboard(restrictedText, entities: nil)
+                                } else {
+                                    storeMessageTextInPasteboard(messageText, entities: messageEntities)
                                 }
+                                
+                                Queue.mainQueue().after(0.2, {
+                                    let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
+                                    controllerInteraction.displayUndo(content)
+                                })
                             }
-                            
-                            if let restrictedText = restrictedText {
-                                storeMessageTextInPasteboard(restrictedText, entities: nil)
-                            } else {
-                                storeMessageTextInPasteboard(messageText, entities: messageEntities)
-                            }
-                            
-                            Queue.mainQueue().after(0.2, {
-                                let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_MessageCopied)
-                                controllerInteraction.displayUndo(content)
-                            })
-                        }
-                        if resourceAvailable {
-                            for media in message.media {
-                                if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
-                                    let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                        |> take(1)
-                                        |> deliverOnMainQueue).start(next: { data in
-                                            if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                                if let image = UIImage(data: imageData) {
-                                                    if !messageText.isEmpty {
-                                                        copyTextWithEntities()
+                            if resourceAvailable {
+                                for media in message.media {
+                                    if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+                                        let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
+                                            |> take(1)
+                                            |> deliverOnMainQueue).start(next: { data in
+                                                if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                                    if let image = UIImage(data: imageData) {
+                                                        if !messageText.isEmpty {
+                                                            copyTextWithEntities()
+                                                        } else {
+                                                            UIPasteboard.general.image = image
+                                                            
+                                                            Queue.mainQueue().after(0.2, {
+                                                                let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_ImageCopied)
+                                                                controllerInteraction.displayUndo(content)
+                                                            })
+                                                        }
                                                     } else {
-                                                        UIPasteboard.general.image = image
-                                                        
-                                                        Queue.mainQueue().after(0.2, {
-                                                            let content: UndoOverlayContent = .copy(text: chatPresentationInterfaceState.strings.Conversation_ImageCopied)
-                                                            controllerInteraction.displayUndo(content)
-                                                        })
+                                                        copyTextWithEntities()
                                                     }
                                                 } else {
                                                     copyTextWithEntities()
                                                 }
-                                            } else {
-                                                copyTextWithEntities()
-                                            }
-                                        })
+                                            })
+                                    }
                                 }
+                            } else {
+                                copyTextWithEntities()
                             }
-                        } else {
-                            copyTextWithEntities()
                         }
-                    }
-                    f(.default)
-                })))
+                        f(.default)
+                    })))
+                }
                 
                 if canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages) {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
@@ -1067,7 +1084,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             break
                         }
                     }
-                    if let file = media as? TelegramMediaFile, !chatPresentationInterfaceState.copyProtectionEnabled {
+                    if let file = media as? TelegramMediaFile, !chatPresentationInterfaceState.copyProtectionEnabled && !message.isCopyProtected() {
                         if file.isVideo {
                             if file.isAnimated {
                                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, icon: { theme in
