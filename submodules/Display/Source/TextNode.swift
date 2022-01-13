@@ -208,7 +208,13 @@ public final class TextNodeLayout: NSObject {
                 hasRTL = true
             }
             
-            let lineFrame = displayLineFrame(frame: line.frame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: size), cutout: cutout)
+            let lineFrame: CGRect
+            switch self.resolvedAlignment {
+            case .center:
+                lineFrame = CGRect(origin: CGPoint(x: floor((size.width - line.frame.size.width) / 2.0), y: line.frame.minY), size: line.frame.size)
+            default:
+                lineFrame = displayLineFrame(frame: line.frame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: size), cutout: cutout)
+            }
             
             spoilers.append(contentsOf: line.spoilers.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
             spoilerWords.append(contentsOf: line.spoilerWords.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
