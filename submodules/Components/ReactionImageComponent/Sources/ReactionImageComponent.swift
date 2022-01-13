@@ -65,7 +65,7 @@ public final class ReactionImageNode: ASDisplayNode {
     
     private let iconNode: ASImageNode
     
-    public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String) {
+    public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String, displayPixelSize: CGSize) {
         self.iconNode = ASImageNode()
         
         var file: TelegramMediaFile?
@@ -80,8 +80,8 @@ public final class ReactionImageNode: ASDisplayNode {
             }
         }
         if let animationFile = animationFile {
-            self.size = animationFile.dimensions?.cgSize ?? CGSize(width: 32.0, height: 32.0)
-            var displaySize = self.size.aspectFitted(CGSize(width: 20.0, height: 20.0))
+            self.size = animationFile.dimensions?.cgSize ?? displayPixelSize
+            var displaySize = self.size.aspectFitted(displayPixelSize)
             displaySize.width = floor(displaySize.width * 2.0)
             displaySize.height = floor(displaySize.height * 2.0)
             self.isAnimation = true
@@ -101,7 +101,7 @@ public final class ReactionImageNode: ASDisplayNode {
                 }
             })
         } else if let file = file {
-            self.size = file.dimensions?.cgSize ?? CGSize(width: 32.0, height: 32.0)
+            self.size = file.dimensions?.cgSize ?? displayPixelSize
             self.isAnimation = false
             
             super.init()
@@ -119,7 +119,7 @@ public final class ReactionImageNode: ASDisplayNode {
                 }
             })
         } else {
-            self.size = CGSize(width: 32.0, height: 32.0)
+            self.size = displayPixelSize
             self.isAnimation = false
             super.init()
         }

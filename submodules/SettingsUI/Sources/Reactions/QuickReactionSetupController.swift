@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import ReactionImageComponent
+import WebPBinding
 
 private final class QuickReactionSetupControllerArguments {
     let context: AccountContext
@@ -46,7 +47,7 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     case demoMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: String?)
     case demoDescription(String)
     case itemsHeader(String)
-    case item(index: Int, value: String, image: UIImage?, text: String, isSelected: Bool)
+    case item(index: Int, value: String, image: UIImage?, imageIsAnimation: Bool, text: String, isSelected: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -67,7 +68,7 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
             return .demoDescription
         case .itemsHeader:
             return .itemsHeader
-        case let .item(_, value, _, _, _):
+        case let .item(_, value, _, _, _, _):
             return .item(value)
         }
     }
@@ -82,7 +83,7 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
             return 2
         case .itemsHeader:
             return 3
-        case let .item(index, _, _, _, _):
+        case let .item(index, _, _, _, _, _):
             return 100 + index
         }
     }
@@ -113,8 +114,8 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .item(index, value, file, text, isEnabled):
-            if case .item(index, value, file, text, isEnabled) = rhs {
+        case let .item(index, value, file, imageIsAnimation, text, isEnabled):
+            if case .item(index, value, file, imageIsAnimation, text, isEnabled) = rhs {
                 return true
             } else {
                 return false
@@ -152,11 +153,16 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .itemsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .item(_, value, image, text, isSelected):
+        case let .item(_, value, image, imageIsAnimation, text, isSelected):
+            var imageFitSize = CGSize(width: 30.0, height: 30.0)
+            if imageIsAnimation {
+                imageFitSize.width = floor(imageFitSize.width * 2.0)
+                imageFitSize.height = floor(imageFitSize.height * 2.0)
+            }
             return ItemListCheckboxItem(
                 presentationData: presentationData,
                 icon: image,
-                iconSize: image?.size.aspectFitted(CGSize(width: 30.0, height: 30.0)),
+                iconSize: image?.size.aspectFitted(imageFitSize),
                 title: text,
                 style: .right,
                 color: .accent,
@@ -178,7 +184,7 @@ private struct QuickReactionSetupControllerState: Equatable {
 private func quickReactionSetupControllerEntries(
     presentationData: PresentationData,
     availableReactions: AvailableReactions?,
-    images: [String: UIImage],
+    images: [String: (image: UIImage, isAnimation: Bool)],
     reactionSettings: ReactionSettings,
     state: QuickReactionSetupControllerState
 ) -> [QuickReactionSetupControllerEntry] {
@@ -207,7 +213,8 @@ private func quickReactionSetupControllerEntries(
             entries.append(.item(
                 index: index,
                 value: availableReaction.value,
-                image: images[availableReaction.value],
+                image: images[availableReaction.value]?.image,
+                imageIsAnimation: images[availableReaction.value]?.isAnimation ?? false,
                 text: availableReaction.title,
                 isSelected: reactionSettings.quickReaction == availableReaction.value
             ))
@@ -263,39 +270,53 @@ public func quickReactionSetupController(
         return reactionSettings
     }
     
-    let images: Signal<[String: UIImage], NoError> = context.engine.stickers.availableReactions()
-    |> mapToSignal { availableReactions -> Signal<[String: UIImage], NoError> in
-        var signals: [Signal<(String, UIImage?), NoError>] = []
+    let images: Signal<[String: (image: UIImage, isAnimation: Bool)], NoError> = context.engine.stickers.availableReactions()
+    |> mapToSignal { availableReactions -> Signal<[String: (image: UIImage, isAnimation: Bool)], NoError> in
+        var signals: [Signal<(String, (image: UIImage, isAnimation: Bool)?), NoError>] = []
         
         if let availableReactions = availableReactions {
             for availableReaction in availableReactions.reactions {
                 if !availableReaction.isEnabled {
                     continue
                 }
-                guard let centerAnimation = availableReaction.centerAnimation else {
-                    continue
+                if let centerAnimation = availableReaction.centerAnimation {
+                    let signal: Signal<(String, (image: UIImage, isAnimation: Bool)?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0 * 2.0, height: 72.0 * 2.0))
+                    |> map { data -> (String, (image: UIImage, isAnimation: Bool)?) in
+                        guard data.isComplete else {
+                            return (availableReaction.value, nil)
+                        }
+                        guard let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                            return (availableReaction.value, nil)
+                        }
+                        guard let image = UIImage(data: dataValue) else {
+                            return (availableReaction.value, nil)
+                        }
+                        return (availableReaction.value, (image, true))
+                    }
+                    signals.append(signal)
+                } else {
+                    let signal: Signal<(String, (image: UIImage, isAnimation: Bool)?), NoError> = context.account.postbox.mediaBox.resourceData(availableReaction.staticIcon.resource)
+                    |> map { data -> (String, (image: UIImage, isAnimation: Bool)?) in
+                        guard data.complete else {
+                            return (availableReaction.value, nil)
+                        }
+                        guard let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                            return (availableReaction.value, nil)
+                        }
+                        guard let image = WebP.convert(fromWebP: dataValue) else {
+                            return (availableReaction.value, nil)
+                        }
+                        
+                        return (availableReaction.value, (image, false))
+                    }
+                    signals.append(signal)
                 }
-                
-                let signal: Signal<(String, UIImage?), NoError> = reactionStaticImage(context: context, animation: centerAnimation, pixelSize: CGSize(width: 72.0, height: 72.0))
-                |> map { data -> (String, UIImage?) in
-                    guard data.isComplete else {
-                        return (availableReaction.value, nil)
-                    }
-                    guard let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
-                        return (availableReaction.value, nil)
-                    }
-                    guard let image = UIImage(data: dataValue) else {
-                        return (availableReaction.value, nil)
-                    }
-                    return (availableReaction.value, image)
-                }
-                signals.append(signal)
             }
         }
         
         return combineLatest(queue: .mainQueue(), signals)
-        |> map { values -> [String: UIImage] in
-            var dict: [String: UIImage] = [:]
+        |> map { values -> [String: (image: UIImage, isAnimation: Bool)] in
+            var dict: [String: (image: UIImage, isAnimation: Bool)] = [:]
             for (key, image) in values {
                 if let image = image {
                     dict[key] = image
