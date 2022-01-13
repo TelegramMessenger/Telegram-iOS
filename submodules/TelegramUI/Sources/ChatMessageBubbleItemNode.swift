@@ -807,6 +807,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     return .fail
                 }
                 
+                if let actionButtonsNode = strongSelf.actionButtonsNode {
+                    if let _ = actionButtonsNode.hitTest(strongSelf.view.convert(point, to: actionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
+                }
+                
                 if let reactionButtonsNode = strongSelf.reactionButtonsNode {
                     if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
                         return .fail
@@ -852,7 +858,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 if !strongSelf.backgroundNode.frame.contains(point) {
-                    return .waitForSingleTap
+                    return .waitForDoubleTap
                 }
             }
             
@@ -1182,6 +1188,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if isAd {
             needsShareButton = false
         }
+        for attribute in item.content.firstMessage.attributes {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
+                needsShareButton = false
+            }
+        }
         
         var tmpWidth: CGFloat
         if allowFullWidth {
@@ -1310,9 +1321,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var isItemEdited = false
         
         switch item.content {
-            case let .message(message, value, _, _, _):
+            case let .message(message, value, _, attributes, _):
                 read = value
                 isItemPinned = message.tags.contains(.pinned)
+                if attributes.isCentered {
+                    alignment = .center
+                }
             case let .group(messages):
                 read = messages[0].1
                 for message in messages {
@@ -3026,6 +3040,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 } else if case .tap = gesture {
                     item.controllerInteraction.clickThroughMessage()
+                } else if case .doubleTap = gesture {
+                    if canAddMessageReactions(message: item.message) {
+                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                    }
                 }
             }
         default:
@@ -3435,7 +3453,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if !self.backgroundNode.frame.contains(point) {
-            if self.actionButtonsNode == nil || !self.actionButtonsNode!.frame.contains(point) {
+            if let actionButtonsNode = self.actionButtonsNode, let result = actionButtonsNode.hitTest(self.view.convert(point, to: actionButtonsNode.view), with: event) {
+                return result
             }
         }
         

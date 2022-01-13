@@ -16,6 +16,7 @@ import ItemListPeerActionItem
 import UndoUI
 import ShareController
 import WebPBinding
+import ReactionImageComponent
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account

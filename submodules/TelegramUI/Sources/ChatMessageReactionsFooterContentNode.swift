@@ -140,12 +140,14 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 strongSelf.reactionSelected?(value)
             },
             reactions: reactions.reactions.map { reaction in
-                var iconFile: TelegramMediaFile?
+                var centerAnimation: TelegramMediaFile?
+                var legacyIcon: TelegramMediaFile?
                 
                 if let availableReactions = availableReactions {
                     for availableReaction in availableReactions.reactions {
                         if availableReaction.value == reaction.value {
-                            iconFile = availableReaction.staticIcon
+                            centerAnimation = availableReaction.centerAnimation
+                            legacyIcon = availableReaction.staticIcon
                             break
                         }
                     }
@@ -170,7 +172,8 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 return ReactionButtonsAsyncLayoutContainer.Reaction(
                     reaction: ReactionButtonComponent.Reaction(
                         value: reaction.value,
-                        iconFile: iconFile
+                        centerAnimation: centerAnimation,
+                        legacyIcon: legacyIcon
                     ),
                     count: Int(reaction.count),
                     peers: peers,
@@ -308,10 +311,15 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                         
                         let itemValue = item.value
                         let itemNode = item.node
-                        item.node.isGestureEnabled = canViewMessageReactionList(message: message)
+                        item.node.isGestureEnabled = true
+                        let canViewReactionList = canViewMessageReactionList(message: message)
+                        item.node.activateAfterCompletion = !canViewReactionList
                         item.node.activated = { [weak itemNode] gesture, _ in
                             guard let strongSelf = self, let itemNode = itemNode else {
                                 gesture.cancel()
+                                return
+                            }
+                            if !canViewReactionList {
                                 return
                             }
                             strongSelf.openReactionPreview?(gesture, itemNode.containerNode, itemValue)

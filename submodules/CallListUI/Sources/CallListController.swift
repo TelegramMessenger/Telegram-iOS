@@ -115,6 +115,7 @@ public final class CallListController: TelegramBaseController {
             self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle
             self.tabBarItem.image = icon
             self.tabBarItem.selectedImage = icon
+            self.tabBarItem.animationName = "TabCalls"
         }
         
         self.segmentedTitleView.indexUpdated = { [weak self] index in

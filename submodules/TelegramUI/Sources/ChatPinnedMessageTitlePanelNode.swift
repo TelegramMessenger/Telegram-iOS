@@ -468,7 +468,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                 }
                 let textColor = theme.chat.inputPanel.primaryTextColor
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
                 } else {
                     messageText = NSAttributedString(string: foldLineBreaks(textString), font: textFont, textColor: textColor)
                 }
@@ -503,7 +503,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                             strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode)
                         }
                         dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                        dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                        dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.primaryTextColor, textColor: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                     } else if let dustNode = strongSelf.dustNode {
                         dustNode.removeFromSupernode()
                         strongSelf.dustNode = nil

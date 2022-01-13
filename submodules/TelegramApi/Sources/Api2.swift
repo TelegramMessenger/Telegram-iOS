@@ -20236,13 +20236,13 @@ public extension Api {
     
     }
     public enum AvailableReaction: TypeConstructorDescription {
-        case availableReaction(flags: Int32, reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document)
+        case availableReaction(flags: Int32, reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document, aroundAnimation: Api.Document?, centerIcon: Api.Document?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
+                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation, let aroundAnimation, let centerIcon):
                     if boxed {
-                        buffer.appendInt32(35486795)
+                        buffer.appendInt32(-1065882623)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(reaction, buffer: buffer, boxed: false)
@@ -20252,14 +20252,16 @@ public extension Api {
                     selectAnimation.serialize(buffer, true)
                     activateAnimation.serialize(buffer, true)
                     effectAnimation.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {aroundAnimation!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {centerIcon!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
-                return ("availableReaction", [("flags", flags), ("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation)])
+                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation, let aroundAnimation, let centerIcon):
+                return ("availableReaction", [("flags", flags), ("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation), ("aroundAnimation", aroundAnimation), ("centerIcon", centerIcon)])
     }
     }
     
@@ -20290,6 +20292,14 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _8 = Api.parse(reader, signature: signature) as? Api.Document
             }
+            var _9: Api.Document?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _10: Api.Document?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -20298,8 +20308,10 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.AvailableReaction.availableReaction(flags: _1!, reaction: _2!, title: _3!, staticIcon: _4!, appearAnimation: _5!, selectAnimation: _6!, activateAnimation: _7!, effectAnimation: _8!)
+            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.AvailableReaction.availableReaction(flags: _1!, reaction: _2!, title: _3!, staticIcon: _4!, appearAnimation: _5!, selectAnimation: _6!, activateAnimation: _7!, effectAnimation: _8!, aroundAnimation: _9, centerIcon: _10)
             }
             else {
                 return nil

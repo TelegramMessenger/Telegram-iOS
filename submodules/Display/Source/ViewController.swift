@@ -19,7 +19,7 @@ private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     }
 }
 
-private func findWindow(_ view: UIView) -> WindowHost? {
+func findWindow(_ view: UIView) -> WindowHost? {
     if let view = view as? WindowHost {
         return view
     } else if let superview = view.superview {
@@ -191,7 +191,7 @@ public enum TabBarItemContextActionType {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
-    private(set) var toolbar: Toolbar?
+    public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true
     open var navigationBarRequiresEntireLayoutUpdate: Bool {
@@ -567,6 +567,10 @@ public enum TabBarItemContextActionType {
     public func presentInGlobalOverlay(_ controller: ViewController, with arguments: Any? = nil) {
         controller.presentationArguments = arguments
         self.window?.presentInGlobalOverlay(controller)
+    }
+    
+    public func addGlobalPortalHostView(sourceView: PortalSourceView) {
+        self.window?.addGlobalPortalHostView(sourceView: sourceView)
     }
     
     open override func viewWillDisappear(_ animated: Bool) {

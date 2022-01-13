@@ -827,7 +827,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
                 if let context = context, let liveLocationManager = context.context.liveLocationManager {
                     let accountId = context.context.account.id
-                    return liveLocationManager.isPolling
+                    return combineLatest(queue: .mainQueue(),
+                        liveLocationManager.isPolling,
+                        liveLocationManager.hasBackgroundTasks
+                    )
+                    |> map { isPolling, hasBackgroundTasks -> Bool in
+                        return isPolling || hasBackgroundTasks
+                    }
                     |> distinctUntilChanged
                     |> map { value -> AccountRecordId? in
                         if value {
@@ -2035,7 +2041,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                             if result {
                                 Queue.mainQueue().async {
                                     let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
-                                    
+                                                                        
                                     let unknownMessageCategory: UNNotificationCategory
                                     let replyMessageCategory: UNNotificationCategory
                                     let replyLegacyMessageCategory: UNNotificationCategory

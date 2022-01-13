@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import AVFoundation
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
@@ -31,7 +32,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 protocol GenericAnimatedStickerNode: ASDisplayNode {
-    func setOverlayColor(_ color: UIColor?, animated: Bool)
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool)
 
     var currentFrameIndex: Int { get }
     func setFrameIndex(_ frameIndex: Int)
@@ -49,6 +50,34 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
         return 0
     }
 
+    func setFrameIndex(_ frameIndex: Int) {
+    }
+}
+
+private class VideoStickerNode: ASDisplayNode, GenericAnimatedStickerNode {
+    private var layerHolder: SampleBufferLayer?
+    var manager: SoftwareVideoLayerFrameManager?
+    
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
+        
+    }
+    
+    func update(context: AccountContext, fileReference: FileMediaReference, size: CGSize) {
+        let layerHolder = takeSampleBufferLayer()
+        layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
+        layerHolder.layer.frame = CGRect(origin: CGPoint(), size: size)
+        self.layer.addSublayer(layerHolder.layer)
+        self.layerHolder = layerHolder
+        
+        let manager = SoftwareVideoLayerFrameManager(account: context.account, fileReference: fileReference, layerHolder: layerHolder, hintVP9: true)
+        self.manager = manager
+        manager.start()
+    }
+    
+    var currentFrameIndex: Int {
+        return 0
+    }
+    
     func setFrameIndex(_ frameIndex: Int) {
     }
 }
@@ -171,6 +200,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var animationSize: CGSize?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
+    
+    private var displayLink: ConstantDisplayLinkAnimator?
+    private var displayLinkTimestamp: Double = 0.0
     
     private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
     private var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
@@ -341,9 +373,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if false, strongSelf.telegramFile == nil {
+                if strongSelf.telegramFile == nil {
                     if let animationNode = strongSelf.animationNode, animationNode.frame.contains(point) {
-                        return .waitForDoubleTap
+                        return .waitForSingleTap
                     }
                 }
             }
@@ -438,6 +470,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 self.animationNode = animationNode
             }
+        } else if let telegramFile = self.telegramFile, let fileName = telegramFile.fileName, fileName.hasSuffix(".webm") {
+            let videoNode = VideoStickerNode()
+            videoNode.update(context: item.context, fileReference: .standalone(media: telegramFile), size: CGSize(width: 184.0, height: 184.0))
+            self.animationNode = videoNode
         } else {
             let animationNode = AnimatedStickerNode()
             animationNode.started = { [weak self] in
@@ -554,7 +590,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         
-        if let animationNode = self.animationNode as? AnimatedStickerNode {
+        let isPlaying = self.visibilityStatus && !self.forceStopAnimations
+        if let _ = self.animationNode as? VideoStickerNode {
+            let displayLink: ConstantDisplayLinkAnimator
+            if let current = self.displayLink {
+                displayLink = current
+            } else {
+                displayLink = ConstantDisplayLinkAnimator { [weak self] in
+                    guard let strongSelf = self, let animationNode = strongSelf.animationNode as? VideoStickerNode else {
+                        return
+                    }
+                    animationNode.manager?.tick(timestamp: strongSelf.displayLinkTimestamp)
+                    strongSelf.displayLinkTimestamp += 1.0 / 30.0
+                }
+                displayLink.frameInterval = 2
+                self.displayLink = displayLink
+            }
+            self.displayLink?.isPaused = !isPlaying
+        } else if let animationNode = self.animationNode as? AnimatedStickerNode {
             let isPlaying = self.visibilityStatus && !self.forceStopAnimations
             
             if !isPlaying {
@@ -741,6 +794,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     imageSize = dimensions.cgSize.aspectFitted(displaySize)
                 } else if let thumbnailSize = telegramFile.previewRepresentations.first?.dimensions {
                     imageSize = thumbnailSize.cgSize.aspectFitted(displaySize)
+                } else {
+                    imageSize = displaySize
                 }
             } else if let emojiFile = emojiFile {
                 isEmoji = true
@@ -1461,6 +1516,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 } else if case .tap = gesture {
                     item.controllerInteraction.clickThroughMessage()
+                } else if case .doubleTap = gesture {
+                    if canAddMessageReactions(message: item.message) {
+                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                    }
                 }
             }
         default:
@@ -2134,10 +2193,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if highlighted {
                     self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
-                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
+                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, replace: false, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
-                    self.animationNode?.setOverlayColor(nil, animated: false)
+                    self.animationNode?.setOverlayColor(nil, replace: false, animated: false)
                 }
             }
         }

@@ -18,6 +18,8 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var validLayout: CGSize?
     
+    private var overlayNode: ActionSheetGroupOverlayNode?
+    
     init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
@@ -64,6 +66,31 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         self.clippingNode.addSubnode(self.scrollNode)
         
         self.addSubnode(self.clippingNode)
+    }
+    
+    func setOverlayNode(_ overlayNode: ActionSheetGroupOverlayNode?) {
+        guard self.overlayNode == nil else {
+            return
+        }
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+        overlayNode?.alpha = 0.0
+        
+        self.overlayNode = overlayNode
+        if let overlayNode = overlayNode {
+            transition.updateAlpha(node: overlayNode, alpha: 1.0)
+            self.clippingNode.addSubnode(overlayNode)
+        } else if let overlayNode = self.overlayNode {
+            overlayNode.removeFromSupernode()
+        }
+        
+        if let size = self.validLayout, let overlayNode = overlayNode {
+            overlayNode.updateLayout(size: size, transition: .immediate)
+        }
+        
+        for node in self.itemNodes {
+            transition.updateAlpha(node: node, alpha: 0.0)
+        }
     }
     
     func updateItemNodes(_ nodes: [ActionSheetItemNode], leadingVisibleNodeCount: CGFloat = 1000.0) {
@@ -138,6 +165,10 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         
         if updateOffset {
             self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -scrollViewContentInsets.top)
+        }
+        
+        if let overlayNode = self.overlayNode {
+            overlayNode.updateLayout(size: size, transition: transition)
         }
         
         self.updateOverscroll(size: size, transition: transition)

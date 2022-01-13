@@ -13,6 +13,15 @@ enum PrivacyIntroControllerMode {
     case passcode
     case twoStepVerification
     
+    var animationName: String? {
+        switch self {
+        case .passcode:
+            return "Passcode"
+        case .twoStepVerification:
+            return nil
+        }
+    }
+    
     func icon(theme: PresentationTheme) -> UIImage? {
         switch self {
             case .passcode:

@@ -35,7 +35,7 @@
                 break;
         }
         
-        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", true, {}, modifier);
+        _animation = rlottie::Animation::loadFromData(std::string(reinterpret_cast<const char *>(data.bytes), data.length), std::string([cacheKey UTF8String]), "", false, {}, modifier);
         if (_animation == nullptr) {
             return nil;
         }

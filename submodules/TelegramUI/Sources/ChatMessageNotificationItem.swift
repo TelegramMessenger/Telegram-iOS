@@ -414,7 +414,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 self.insertSubnode(dustNode, aboveSubnode: self.textNode)
             }
             dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-            dustNode.update(size: dustNode.frame.size, color: presentationData.theme.inAppNotification.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+            dustNode.update(size: dustNode.frame.size, color: presentationData.theme.inAppNotification.primaryTextColor, textColor: presentationData.theme.inAppNotification.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
         } else if let dustNode = self.dustNode {
             dustNode.removeFromSupernode()
             self.dustNode = nil

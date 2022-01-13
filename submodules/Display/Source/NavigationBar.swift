@@ -235,12 +235,12 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         self.validLayout = (size, cornerRadius)
 
         let contentFrame = CGRect(origin: CGPoint(), size: size)
-        transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
+        transition.updateFrame(node: self.backgroundNode, frame: contentFrame, beginWithCurrentState: true)
         if let effectView = self.effectView, effectView.frame != contentFrame {
-            transition.updateFrame(layer: effectView.layer, frame: contentFrame)
+            transition.updateFrame(layer: effectView.layer, frame: contentFrame, beginWithCurrentState: true)
             if let sublayers = effectView.layer.sublayers {
                 for sublayer in sublayers {
-                    transition.updateFrame(layer: sublayer, frame: contentFrame)
+                    transition.updateFrame(layer: sublayer, frame: contentFrame, beginWithCurrentState: true)
                 }
             }
         }

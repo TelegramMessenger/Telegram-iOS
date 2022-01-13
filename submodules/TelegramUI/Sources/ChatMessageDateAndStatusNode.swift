@@ -9,7 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import AppBundle
 import ReactionButtonListComponent
-import WebPBinding
+import ReactionImageComponent
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -46,7 +46,7 @@ private let reactionCountFont = Font.semibold(11.0)
 private let reactionFont = Font.regular(12.0)
 
 private final class StatusReactionNode: ASDisplayNode {
-    let iconView: UIImageView
+    let iconView: ReactionIconView
     
     private let iconImageDisposable = MetaDisposable()
     
@@ -55,7 +55,7 @@ private final class StatusReactionNode: ASDisplayNode {
     private var isSelected: Bool?
     
     override init() {
-        self.iconView = UIImageView()
+        self.iconView = ReactionIconView()
         
         super.init()
         
@@ -70,18 +70,19 @@ private final class StatusReactionNode: ASDisplayNode {
         if self.value != value {
             self.value = value
             
-            let defaultImageSize = CGSize(width: 17.0, height: 17.0)
+            let boundingImageSize = CGSize(width: 17.0, height: 17.0)
+            let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
             let imageSize: CGSize
             if let file = file {
-                self.iconImageDisposable.set((context.account.postbox.mediaBox.resourceData(file.resource)
+                self.iconImageDisposable.set((reactionStaticImage(context: context, animation: file, pixelSize: CGSize(width: 72.0, height: 72.0))
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     guard let strongSelf = self else {
                         return
                     }
                     
-                    if data.complete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                        if let image = WebP.convert(fromWebP: dataValue) {
-                            strongSelf.iconView.image = image
+                    if data.isComplete, let dataValue = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                        if let image = UIImage(data: dataValue) {
+                            strongSelf.iconView.imageView.image = image
                         }
                     }
                 }))
@@ -90,7 +91,9 @@ private final class StatusReactionNode: ASDisplayNode {
                 imageSize = defaultImageSize
             }
             
-            self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((defaultImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((defaultImageSize.height - imageSize.height) / 2.0)), size: imageSize)
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((boundingImageSize.height - imageSize.height) / 2.0)), size: imageSize)
+            self.iconView.frame = iconFrame
+            self.iconView.update(size: iconFrame.size, transition: .immediate)
         }
     }
 }
@@ -667,12 +670,14 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             strongSelf.reactionSelected?(value)
                         },
                         reactions: arguments.reactions.map { reaction in
-                            var iconFile: TelegramMediaFile?
+                            var centerAnimation: TelegramMediaFile?
+                            var legacyIcon: TelegramMediaFile?
                             
                             if let availableReactions = arguments.availableReactions {
                                 for availableReaction in availableReactions.reactions {
                                     if availableReaction.value == reaction.value {
-                                        iconFile = availableReaction.staticIcon
+                                        centerAnimation = availableReaction.centerAnimation
+                                        legacyIcon = availableReaction.staticIcon
                                         break
                                     }
                                 }
@@ -691,7 +696,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             return ReactionButtonsAsyncLayoutContainer.Reaction(
                                 reaction: ReactionButtonComponent.Reaction(
                                     value: reaction.value,
-                                    iconFile: iconFile
+                                    centerAnimation: centerAnimation,
+                                    legacyIcon: legacyIcon
                                 ),
                                 count: Int(reaction.count),
                                 peers: peers,
@@ -804,12 +810,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 }
                                 
-                                item.node.isGestureEnabled = true
                                 let itemValue = item.value
                                 let itemNode = item.node
-                                item.node.isGestureEnabled = arguments.canViewReactionList
+                                item.node.isGestureEnabled = true
+                                let canViewReactionList = arguments.canViewReactionList
+                                item.node.activateAfterCompletion = !canViewReactionList
                                 item.node.activated = { [weak itemNode] gesture, _ in
-                                    guard let strongSelf = self else {
+                                    guard let strongSelf = self, canViewReactionList else {
                                         return
                                     }
                                     guard let itemNode = itemNode else {
@@ -1027,18 +1034,18 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 }
                                 validReactions.insert(reaction.value)
                                 
-                                var iconFile: TelegramMediaFile?
+                                var centerAnimation: TelegramMediaFile?
                                 
                                 if let availableReactions = arguments.availableReactions {
                                     for availableReaction in availableReactions.reactions {
                                         if availableReaction.value == reaction.value {
-                                            iconFile = availableReaction.staticIcon
+                                            centerAnimation = availableReaction.centerAnimation
                                             break
                                         }
                                     }
                                 }
                                 
-                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: iconFile, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
+                                node.update(context: arguments.context, type: arguments.type, value: reaction.value, file: centerAnimation, isSelected: reaction.isSelected, count: Int(reaction.count), theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, animated: false)
                                 if node.supernode == nil {
                                     strongSelf.addSubnode(node)
                                     if animation.isAnimated {

@@ -804,7 +804,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
                 self.dustNode = dustNode
             }
             dustNode.frame = CGRect(origin: CGPoint(), size: textInputNode.textView.contentSize)
-            dustNode.update(size: textInputNode.textView.contentSize, color: textColor, rects: rects, wordRects: rects)
+            dustNode.update(size: textInputNode.textView.contentSize, color: textColor, textColor: textColor, rects: rects, wordRects: rects)
         } else if let dustNode = self.dustNode {
             dustNode.removeFromSupernode()
             self.dustNode = nil
@@ -977,7 +977,7 @@ class PeerSelectionTextInputPanelNode: ChatInputPanelNode, TGCaptionPanelView, A
             if let oneLineDustNode = self.oneLineDustNode {
                 let textFrame = self.oneLineNode.frame.insetBy(dx: 0.0, dy: -3.0)
                 
-                oneLineDustNode.update(size: textFrame.size, color: .white, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 0.0, dy: 3.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 0.0, dy: 3.0) })
+                oneLineDustNode.update(size: textFrame.size, color: .white, textColor: .white, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 0.0, dy: 3.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 0.0, dy: 3.0) })
                 oneLineDustNode.frame = textFrame
             }
         } else {

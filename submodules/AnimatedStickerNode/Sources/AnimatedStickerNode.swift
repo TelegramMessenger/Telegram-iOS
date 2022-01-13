@@ -819,6 +819,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private let eventsNode: AnimatedStickerNodeDisplayEvents
     
     public var automaticallyLoadFirstFrame: Bool = false
+    public var automaticallyLoadLastFrame: Bool = false
     public var playToCompletionOnStop: Bool = false
     
     public var started: () -> Void = {}
@@ -869,6 +870,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     public var isPlayingChanged: (Bool) -> Void = { _ in }
     
+    private var overlayColor: (UIColor?, Bool)? = nil
+    private var size: CGSize?
+    
     override public init() {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
@@ -900,9 +904,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.renderer = SoftwareAnimationRenderer()
         //self.renderer = MetalAnimationRenderer()
         #endif
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
+        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.size ?? self.bounds.size)
         if let contents = self.nodeToCopyFrameFrom?.renderer?.contents {
             self.renderer?.contents = contents
+        }
+        if let (overlayColor, replace) = self.overlayColor {
+            self.renderer?.setOverlayColor(overlayColor, replace: replace, animated: false)
         }
         self.nodeToCopyFrameFrom = nil
         self.addSubnode(self.renderer!)
@@ -987,25 +994,30 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     private func updateIsPlaying() {
-        guard !self.autoplay else {
-            return
-        }
-        let isPlaying = self.visibility && self.isDisplaying
-        if self.isPlaying != isPlaying {
-            self.isPlaying = isPlaying
-            if isPlaying {
-                self.play()
-            } else{
-                self.pause()
+        if !self.autoplay {
+            let isPlaying = self.visibility && self.isDisplaying
+            if self.isPlaying != isPlaying {
+                self.isPlaying = isPlaying
+                if isPlaying {
+                    self.play()
+                } else{
+                    self.pause()
+                }
+                
+                self.isPlayingChanged(isPlaying)
             }
-            
-            self.isPlayingChanged(isPlaying)
         }
-        let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
-        if self.canDisplayFirstFrame != canDisplayFirstFrame {
-            self.canDisplayFirstFrame = canDisplayFirstFrame
-            if canDisplayFirstFrame {
-                self.play(firstFrame: true)
+        if self.automaticallyLoadLastFrame {
+            if self.isDisplaying {
+                self.seekTo(.end)
+            }
+        } else {
+            let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
+            if self.canDisplayFirstFrame != canDisplayFirstFrame {
+                self.canDisplayFirstFrame = canDisplayFirstFrame
+                if canDisplayFirstFrame {
+                    self.play(firstFrame: true)
+                }
             }
         }
     }
@@ -1347,10 +1359,12 @@ public final class AnimatedStickerNode: ASDisplayNode {
     }
     
     public func updateLayout(size: CGSize) {
+        self.size = size
         self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
     }
     
-    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
-        self.renderer?.setOverlayColor(color, animated: animated)
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
+        self.overlayColor = (color, replace)
+        self.renderer?.setOverlayColor(color, replace: replace, animated: animated)
     }
 }

@@ -8,7 +8,8 @@ import YuvConversion
 final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private var highlightedContentNode: ASDisplayNode?
     private var highlightedColor: UIColor?
-    
+    private var highlightReplacesContent = false
+        
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, completion: @escaping () -> Void) {
         assert(bytesPerRow > 0)
         queue.async { [weak self] in
@@ -53,20 +54,29 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 }
                 strongSelf.contents = image?.cgImage
                 strongSelf.updateHighlightedContentNode()
+                if strongSelf.highlightedContentNode?.frame != strongSelf.bounds {
+                    strongSelf.highlightedContentNode?.frame = strongSelf.bounds
+                }
                 completion()
             }
         }
     }
     
     private func updateHighlightedContentNode() {
-        guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor, let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID else {
+        guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor else {
             return
         }
-        (highlightedContentNode.view as! UIImageView).image = UIImage(cgImage: contents as! CGImage).withRenderingMode(.alwaysTemplate)
+        if let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
+            (highlightedContentNode.view as! UIImageView).image = UIImage(cgImage: contents as! CGImage).withRenderingMode(.alwaysTemplate)
+        }
         highlightedContentNode.tintColor = highlightedColor
+        if self.highlightReplacesContent {
+            self.contents = nil
+        }
     }
-    
-    func setOverlayColor(_ color: UIColor?, animated: Bool) {
+            
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
+        self.highlightReplacesContent = replace
         var updated = false
         if let current = self.highlightedColor, let color = color {
             updated = !current.isEqual(color)

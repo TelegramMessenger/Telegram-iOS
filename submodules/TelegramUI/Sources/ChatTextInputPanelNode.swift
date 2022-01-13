@@ -1860,7 +1860,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.dustNode = dustNode
             }
             dustNode.frame = CGRect(origin: CGPoint(), size: textInputNode.textView.contentSize)
-            dustNode.update(size: textInputNode.textView.contentSize, color: textColor, rects: rects, wordRects: rects)
+            dustNode.update(size: textInputNode.textView.contentSize, color: textColor, textColor: textColor, rects: rects, wordRects: rects)
         } else if let dustNode = self.dustNode {
             dustNode.removeFromSupernode()
             self.dustNode = nil

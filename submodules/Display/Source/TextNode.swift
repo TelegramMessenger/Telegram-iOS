@@ -840,6 +840,10 @@ public class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
+    override public func didLoad() {
+        super.didLoad()
+    }
+    
     public func attributesAtPoint(_ point: CGPoint, orNearest: Bool = false) -> (Int, [NSAttributedString.Key: Any])? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.attributesAtPoint(point, orNearest: orNearest)
@@ -1059,9 +1063,17 @@ public class TextNode: ASDisplayNode {
                         let tokenString = "\u{2026}"
                         let truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
                         let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
-                        
+                       
                         coreTextLine = CTLineCreateTruncatedLine(originalLine, Double(lineConstrainedSize.width), truncationType, truncationToken) ?? truncationToken
-                        brokenLineRange.length = CTLineGetGlyphCount(coreTextLine) - 1
+                        let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
+                        for run in runs {
+                            let runAttributes: NSDictionary = CTRunGetAttributes(run)
+                            if let _ = runAttributes["CTForegroundColorFromContext"] {
+                                brokenLineRange.length = CTRunGetStringRange(run).location
+                                break
+                            }
+                        }
+//                        brokenLineRange.length = CTLineGetGlyphCount(coreTextLine) - 1
                         if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                             brokenLineRange.length = attributedString.length - brokenLineRange.location
                         }
@@ -1326,7 +1338,9 @@ public class TextNode: ASDisplayNode {
                     context.saveGState()
                     var clipRects: [CGRect] = []
                     for spoiler in line.spoilerWords {
-                        clipRects.append(spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY))
+                        var spoilerClipRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                        spoilerClipRect.size.height += 1.0 + UIScreenPixel
+                        clipRects.append(spoilerClipRect)
                     }
                     context.clip(to: clipRects)
                 }
@@ -1361,7 +1375,9 @@ public class TextNode: ASDisplayNode {
                         context.restoreGState()
                     } else {
                         for spoiler in line.spoilerWords {
-                            clearRects.append(spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY))
+                            var spoilerClearRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                            spoilerClearRect.size.height += 1.0 + UIScreenPixel
+                            clearRects.append(spoilerClearRect)
                         }
                     }
                 }

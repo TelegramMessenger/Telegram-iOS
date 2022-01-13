@@ -11,11 +11,12 @@ private final class LinkHelperClass: NSObject {
 public var supportedTranslationLanguages = [
     "en",
     "ar",
-    "zh",
+    "zh-Hans",
+    "zh-Hant",
     "fr",
     "de",
     "it",
-    "jp",
+    "ja",
     "ko",
     "pt",
     "ru",
@@ -59,7 +60,7 @@ public func translateText(context: AccountContext, text: String) {
         return
     }
     if #available(iOS 15.0, *) {
-        let text = text.unicodeScalars.filter { !$0.properties.isEmojiPresentation}.reduce("") { $0 + String($1) }
+        let text = text.unicodeScalars.filter { !$0.properties.isEmojiPresentation }.reduce("") { $0 + String($1) }
         
         let textView = UITextView()
         textView.text = text

@@ -45,7 +45,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
     case allowAllInfo(String)
     
     case itemsHeader(String)
-    case item(index: Int, value: String, file: TelegramMediaFile?, text: String, isEnabled: Bool)
+    case item(index: Int, value: String, availableReactions: AvailableReactions?, reaction: String, text: String, isEnabled: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -64,7 +64,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             return .allowAllInfo
         case .itemsHeader:
             return .itemsHeader
-        case let .item(_, value, _, _, _):
+        case let .item(_, value, _, _, _, _):
             return .item(value)
         }
     }
@@ -77,7 +77,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             return 1
         case .itemsHeader:
             return 2
-        case let .item(index, _, _, _, _):
+        case let .item(index, _, _, _, _, _):
             return 100 + index
         }
     }
@@ -102,8 +102,8 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .item(index, value, file, text, isEnabled):
-            if case .item(index, value, file, text, isEnabled) = rhs {
+        case let .item(index, value, availableReactions, reaction, text, isEnabled):
+            if case .item(index, value, availableReactions, reaction, text, isEnabled) = rhs {
                 return true
             } else {
                 return false
@@ -126,11 +126,12 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .itemsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .item(_, value, file, text, isEnabled):
+        case let .item(_, value, availableReactions, reaction, text, isEnabled):
             return ItemListReactionItem(
                 context: arguments.context,
                 presentationData: presentationData,
-                file: file,
+                availableReactions: availableReactions,
+                reaction: reaction,
                 title: text,
                 value: isEnabled,
                 sectionId: self.section,
@@ -172,7 +173,7 @@ private func peerAllowedReactionListControllerEntries(
             if !availableReaction.isEnabled {
                 continue
             }
-            entries.append(.item(index: index, value: availableReaction.value, file: availableReaction.staticIcon, text: availableReaction.title, isEnabled: allowedReactions.contains(availableReaction.value)))
+            entries.append(.item(index: index, value: availableReaction.value, availableReactions: availableReactions, reaction: availableReaction.value, text: availableReaction.title, isEnabled: allowedReactions.contains(availableReaction.value)))
             index += 1
         }
     }
