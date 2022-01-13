@@ -504,6 +504,17 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             )
             
             if let reactionContextNode = self.reactionContextNode {
+                let reactionsPositionDeltaYDistance = -animationInContentDistance
+                reactionContextNode.layer.animateSpring(
+                    from: NSValue(cgPoint: CGPoint(x: 0.0, y: reactionsPositionDeltaYDistance)),
+                    to: NSValue(cgPoint: CGPoint()),
+                    keyPath: "position",
+                    duration: duration,
+                    delay: 0.0,
+                    initialVelocity: 0.0,
+                    damping: springDamping,
+                    additive: true
+                )
                 reactionContextNode.animateIn(from: currentContentScreenFrame)
             }
             

@@ -606,7 +606,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             intermediateCompletion()
         }
         
-        transition.animatePositionWithKeyframes(node: itemNode, keyframes: generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: 30.0), completion: { [weak self, weak itemNode, weak targetView] _ in
+        transition.animatePositionWithKeyframes(node: itemNode, keyframes: generateParabollicMotionKeyframes(from: selfSourceRect.center, to: expandedFrame.center, elevation: 30.0), completion: { [weak self, weak itemNode, weak targetView, weak animateTargetContainer] _ in
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
                 guard let strongSelf = self else {
                     return
@@ -620,7 +620,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 guard let targetView = targetView as? ReactionIconView else {
                     return
                 }
+                if let animateTargetContainer = animateTargetContainer {
+                    animateTargetContainer.isHidden = false
+                }
                 targetView.isHidden = false
+                targetView.alpha = 1.0
                 targetView.imageView.alpha = 0.0
                 targetView.addSubnode(itemNode)
                 itemNode.frame = targetView.bounds
