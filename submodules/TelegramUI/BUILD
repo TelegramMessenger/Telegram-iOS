@@ -254,6 +254,7 @@ swift_library(
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
         "//submodules/Translate:Translate",
         "//submodules/TabBarUI:TabBarUI",
+        "//submodules/SoftwareVideo:SoftwareVideo",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

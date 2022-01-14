@@ -14,6 +14,7 @@ import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import AccountContext
 import ShimmerEffect
+import SoftwareVideo
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
