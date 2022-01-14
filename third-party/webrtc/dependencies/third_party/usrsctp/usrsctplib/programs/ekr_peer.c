@@ -132,7 +132,7 @@ receive_cb(struct socket *sock, union sctp_sockstore addr, void *data,
 			       rcv.rcv_sid,
 			       rcv.rcv_ssn,
 			       rcv.rcv_tsn,
-			       ntohl(rcv.rcv_ppid),
+			       (uint32_t)ntohl(rcv.rcv_ppid),
 			       rcv.rcv_context);
 		}
 		free(data);
@@ -156,7 +156,7 @@ main(int argc, char *argv[])
 #ifdef _WIN32
 	SOCKET fd;
 #else
-	int fd;
+	int fd, rc;
 #endif
 	struct socket *s;
 #ifdef _WIN32
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 
 #ifdef _WIN32
 	if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
-		printf("WSAStartup failed\n");
+		fprintf(stderr, "WSAStartup failed\n");
 		exit(EXIT_FAILURE);
 	}
 #endif
@@ -185,7 +185,7 @@ main(int argc, char *argv[])
 	/* set up a connected UDP socket */
 #ifdef _WIN32
 	if ((fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
-		printf("socket() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "socket() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -206,7 +206,7 @@ main(int argc, char *argv[])
 	}
 #ifdef _WIN32
 	if (bind(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-		printf("bind() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "bind() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -227,7 +227,7 @@ main(int argc, char *argv[])
 	}
 #ifdef _WIN32
 	if (connect(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-		printf("connect() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "connect() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -237,9 +237,15 @@ main(int argc, char *argv[])
 	}
 #endif
 #ifdef _WIN32
-	tid = CreateThread(NULL, 0, &handle_packets, (void *)&fd, 0, NULL);
+	if ((tid = CreateThread(NULL, 0, &handle_packets, (void *)&fd, 0, NULL)) == NULL) {
+		fprintf(stderr, "CreateThread() failed with error: %lu\n", GetLastError());
+		exit(EXIT_FAILURE);
+	}
 #else
-	pthread_create(&tid, NULL, &handle_packets, (void *)&fd);
+	if ((rc = pthread_create(&tid, NULL, &handle_packets, (void *)&fd)) != 0) {
+		fprintf(stderr, "pthread_create: %s\n", strerror(rc));
+		exit(EXIT_FAILURE);
+	}
 #endif
 #ifdef SCTP_DEBUG
 	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
@@ -306,7 +312,7 @@ main(int argc, char *argv[])
 		sndinfo.snd_context = 0;
 		sndinfo.snd_assoc_id = 0;
 		if (usrsctp_sendv(s, line, strlen(line), NULL, 0, (void *)&sndinfo,
-	                          (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0) < 0) {
+		                  (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0) < 0) {
 			perror("usrsctp_sendv");
 		}
 	}
@@ -321,7 +327,7 @@ main(int argc, char *argv[])
 	TerminateThread(tid, 0);
 	WaitForSingleObject(tid, INFINITE);
 	if (closesocket(fd) == SOCKET_ERROR) {
-		printf("closesocket() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "closesocket() failed with error: %d\n", WSAGetLastError());
 	}
 	WSACleanup();
 #else

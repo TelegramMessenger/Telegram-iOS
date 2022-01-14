@@ -1,6 +1,6 @@
 #
 # Copyright (C) 2015-2015 Oleg Alexeenkov
-# Copyright (C) 2015-2019 Felix Weinrank
+# Copyright (C) 2015-2020 Felix Weinrank
 #
 # All rights reserved.
 #
@@ -52,7 +52,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	add_definitions(-D_GNU_SOURCE)
 endif ()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin" OR CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_definitions(-D__APPLE_USE_RFC_2292)
 endif ()
 
@@ -93,7 +93,6 @@ list(APPEND check_programs
 	echo_server_upcall.c
 	ekr_client.c
 	ekr_loop.c
-	ekr_loop_offload.c
 	ekr_loop_upcall.c
 	ekr_peer.c
 	ekr_server.c
@@ -117,7 +116,16 @@ foreach (source_file ${check_programs})
 
 	target_link_libraries(
 		${source_file_we}
-		${programs_link_library}
+		"usrsctp"
 		${CMAKE_THREAD_LIBS_INIT}
 	)
+
+	if (APPLE)
+		set_target_properties(
+			${source_file_we}
+			PROPERTIES
+			XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER
+			com.github.sctplab.usrsctp.${source_file_we}
+		)
+	endif()
 endforeach ()

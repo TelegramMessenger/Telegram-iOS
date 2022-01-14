@@ -50,6 +50,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <time.h>
 #ifdef LINUX
 #include <getopt.h>
 #endif
@@ -67,6 +68,8 @@ struct socket *psock = NULL;
 
 static struct timeval start_time;
 unsigned int runtime = 0;
+static int policy = 0;
+static unsigned int timetolive = 0;
 static unsigned long cb_messages = 0;
 static unsigned long long cb_first_length = 0;
 static unsigned long long cb_sum = 0;
@@ -76,11 +79,29 @@ static unsigned int use_cb = 0;
 static void
 gettimeofday(struct timeval *tv, void *ignore)
 {
-	struct timeb tb;
+	FILETIME filetime;
+	ULARGE_INTEGER ularge;
 
-	ftime(&tb);
-	tv->tv_sec = (long)tb.time;
-	tv->tv_usec = tb.millitm * 1000;
+	GetSystemTimeAsFileTime(&filetime);
+	ularge.LowPart = filetime.dwLowDateTime;
+	ularge.HighPart = filetime.dwHighDateTime;
+	/* Change base from Jan 1 1601 00:00:00 to Jan 1 1970 00:00:00 */
+#if defined(__MINGW32__)
+	ularge.QuadPart -= 116444736000000000ULL;
+#else
+	ularge.QuadPart -= 116444736000000000UI64;
+#endif
+	/*
+	 * ularge.QuadPart is now the number of 100-nanosecond intervals
+	 * since Jan 1 1970 00:00:00.
+	 */
+#if defined(__MINGW32__)
+	tv->tv_sec = (long)(ularge.QuadPart / 10000000ULL);
+	tv->tv_usec = (long)((ularge.QuadPart % 10000000ULL) / 10ULL);
+#else
+	tv->tv_sec = (long)(ularge.QuadPart / 10000000UI64);
+	tv->tv_usec = (long)((ularge.QuadPart % 10000000UI64) / 10UI64);
+#endif
 }
 #endif
 
@@ -90,14 +111,18 @@ char Usage[] =
 "Options:\n"
 "        -a             set adaptation layer indication\n"
 "        -c             use callback API\n"
+"        -d             time in seconds after which a status update is printed\n"
+"        -D             turns Nagle off\n"
 "        -E             local UDP encapsulation port (default 9899)\n"
 "        -f             fragmentation point\n"
 "        -l             message length\n"
 "        -L             bind to local IP (default INADDR_ANY)\n"
 "        -n             number of messages sent (0 means infinite)/received\n"
-"        -D             turns Nagle off\n"
+"        -p             port number\n"
+"        -P             partial reliability policy to use (0=none (default), 1=ttl, 2=rtx, 3=buf)\n"
 "        -R             socket recv buffer\n"
 "        -S             socket send buffer\n"
+"        -t             based on -P the time to live, number of retransmissions, or priority for messages\n"
 "        -T             time to send messages\n"
 "        -u             use unordered user messages\n"
 "        -U             remote UDP encapsulation port\n"
@@ -111,11 +136,21 @@ char Usage[] =
 #define BUFFERSIZE                 (1<<16)
 
 static int verbose, very_verbose;
-static unsigned int done; 
+static unsigned int done;
+static unsigned int round_duration;
 
 void stop_sender(int sig)
 {
 	done = 1;
+}
+
+static time_t calc_round_timeout(struct timeval round_start)
+{
+	time_t round_timeout = round_start.tv_sec + round_duration;
+	if (round_start.tv_usec >= 500000) {
+		round_timeout++;
+	}
+	return round_timeout;
 }
 
 #ifdef _WIN32
@@ -148,6 +183,9 @@ handle_connection(void *arg)
 	unsigned long messages = 0;
 	unsigned long long first_length = 0;
 	unsigned long long sum = 0;
+	unsigned long long round_bytes = 0;
+	struct timeval round_start = (struct timeval){0};
+	time_t round_timeout = 0;
 
 	conn_sock = *(struct socket **)arg;
 
@@ -165,6 +203,11 @@ handle_connection(void *arg)
 	                 &infolen, &infotype, &flags);
 
 	gettimeofday(&time_start, NULL);
+	if (round_duration > 0) {
+		gettimeofday(&round_start, NULL);
+		round_timeout = calc_round_timeout(round_start);
+	}
+
 	while (n > 0) {
 		recv_calls++;
 		if (flags & MSG_NOTIFICATION) {
@@ -174,7 +217,7 @@ handle_connection(void *arg)
 			snp = (union sctp_notification *)buf;
 			if (snp->sn_header.sn_type == SCTP_PEER_ADDR_CHANGE) {
 				spc = &snp->sn_paddr_change;
-				printf("SCTP_PEER_ADDR_CHANGE: state=%d, error=%d\n",spc->spc_state, spc->spc_error);
+				printf("SCTP_PEER_ADDR_CHANGE: state=%u, error=%u\n",spc->spc_state, spc->spc_error);
 			}
 		} else {
 			if (very_verbose) {
@@ -186,7 +229,20 @@ handle_connection(void *arg)
 				if (first_length == 0) {
 					first_length = sum;
 				}
+				if (round_duration > 0) {
+					round_bytes += first_length;
+				}
 			}
+		}
+		if (round_duration > 0 && round_timeout <= time(NULL)) {
+			gettimeofday(&time_now, NULL);
+			timersub(&time_now, &round_start, &time_diff);
+			seconds = time_diff.tv_sec + (double)time_diff.tv_usec/1000000.0;
+			fprintf(stdout, "throughput for the last %f seconds: %f B/s\n", seconds, (double)round_bytes / seconds);
+
+			round_bytes = 0;
+			gettimeofday(&round_start, NULL);
+			round_timeout = calc_round_timeout(round_start);
 		}
 		flags = 0;
 		len = (socklen_t)sizeof(struct sockaddr_in);
@@ -215,10 +271,10 @@ handle_connection(void *arg)
 }
 
 static int
-send_cb(struct socket *sock, uint32_t sb_free) {
-	struct sctp_sndinfo sndinfo;
+send_cb(struct socket *sock, uint32_t sb_free, void *ulp_info) {
+	struct sctp_sendv_spa sendv_spa;
 
-	if ((cb_messages == 0) & verbose) {
+	if ((cb_messages == 0) && verbose) {
 		printf("Start sending ");
 		if (number_of_messages > 0) {
 			printf("%ld messages ", (long)number_of_messages);
@@ -230,14 +286,44 @@ send_cb(struct socket *sock, uint32_t sb_free) {
 		fflush(stdout);
 	}
 
-	sndinfo.snd_sid = 0;
-	sndinfo.snd_flags = 0;
+	sendv_spa.sendv_flags = SCTP_SEND_SNDINFO_VALID | SCTP_SEND_PRINFO_VALID;
+
+	sendv_spa.sendv_sndinfo.snd_sid = 0;
+	sendv_spa.sendv_sndinfo.snd_flags = 0;
 	if (unordered != 0) {
-		sndinfo.snd_flags |= SCTP_UNORDERED;
+		sendv_spa.sendv_sndinfo.snd_flags |= SCTP_UNORDERED;
 	}
-	sndinfo.snd_ppid = 0;
-	sndinfo.snd_context = 0;
-	sndinfo.snd_assoc_id = 0;
+	sendv_spa.sendv_sndinfo.snd_ppid = 0;
+	sendv_spa.sendv_sndinfo.snd_context = 0;
+	sendv_spa.sendv_sndinfo.snd_assoc_id = 0;
+
+	sendv_spa.sendv_prinfo.pr_policy = 0;
+	switch (policy) {
+#ifdef SCTP_PR_SCTP_NONE
+	case 0:
+		sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_NONE;
+		break;
+#endif
+#ifdef SCTP_PR_SCTP_TTL
+	case 1:
+		sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_TTL;
+		break;
+#endif
+#ifdef SCTP_PR_SCTP_RTX
+	case 2:
+		sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_RTX;
+		break;
+#endif
+#ifdef SCTP_PR_SCTP_BUF
+	case 3:
+		sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_BUF;
+		break;
+#endif
+	default:
+		printf("Unknown PR-SCTP policy.\n");
+		break;
+	}
+	sendv_spa.sendv_prinfo.pr_value = timetolive;
 
 	while (!done && ((number_of_messages == 0) || (cb_messages < (number_of_messages - 1)))) {
 		if (very_verbose) {
@@ -246,7 +332,7 @@ send_cb(struct socket *sock, uint32_t sb_free) {
 
 		if (usrsctp_sendv(psock, buffer, length,
 		                  (struct sockaddr *) &remote_addr, 1,
-		                  (void *)&sndinfo, (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO,
+		                  (void *)&sendv_spa, (socklen_t)sizeof(struct sctp_sendv_spa), SCTP_SENDV_SPA,
 		                  0) < 0) {
 			if (errno != EWOULDBLOCK && errno != EAGAIN) {
 				perror("usrsctp_sendv (cb)");
@@ -266,9 +352,9 @@ send_cb(struct socket *sock, uint32_t sb_free) {
 			printf("Sending final message number %lu.\n", cb_messages + 1);
 		}
 
-		sndinfo.snd_flags |= SCTP_EOF;
+		sendv_spa.sendv_sndinfo.snd_flags |= SCTP_EOF;
 		if (usrsctp_sendv(psock, buffer, length, (struct sockaddr *) &remote_addr, 1,
-		                  (void *)&sndinfo, (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO,
+		                  (void *)&sendv_spa, (socklen_t)sizeof(struct sctp_sendv_spa), SCTP_SENDV_SPA,
 		                  0) < 0) {
 			if (errno != EWOULDBLOCK && errno != EAGAIN) {
 				perror("usrsctp_sendv (cb)");
@@ -329,7 +415,7 @@ client_receive_cb(struct socket *sock, union sctp_sockstore addr, void *data,
 int main(int argc, char **argv)
 {
 #ifndef _WIN32
-	int c;
+	int c, rc;
 #endif
 	socklen_t addr_len;
 	struct sockaddr_in local_addr;
@@ -343,10 +429,11 @@ int main(int argc, char **argv)
 	int nodelay = 0;
 	struct sctp_assoc_value av;
 	struct sctp_udpencaps encaps;
-	struct sctp_sndinfo sndinfo;
+	struct sctp_sendv_spa sendv_spa;
 	unsigned long messages = 0;
 #ifdef _WIN32
 	unsigned long srcAddr;
+	HANDLE tid;
 #else
 	in_addr_t srcAddr;
 	pthread_t tid;
@@ -367,18 +454,25 @@ int main(int argc, char **argv)
 	verbose = 0;
 	very_verbose = 0;
 	srcAddr = htonl(INADDR_ANY);
+	round_duration = 0;
 
 	memset((void *) &remote_addr, 0, sizeof(struct sockaddr_in));
 	memset((void *) &local_addr, 0, sizeof(struct sockaddr_in));
 
 #ifndef _WIN32
-	while ((c = getopt(argc, argv, "a:cp:l:E:f:L:n:R:S:T:uU:vVD")) != -1)
+	while ((c = getopt(argc, argv, "a:cd:DE:f:l:L:n:p:P:R:S:t:T:uU:vV")) != -1)
 		switch(c) {
 			case 'a':
 				ind.ssb_adaptation_ind = atoi(optarg);
 				break;
 			case 'c':
 				use_cb = 1;
+				break;
+			case 'd':
+				round_duration = atoi(optarg);
+				break;
+			case 'D':
+				nodelay = 1;
 				break;
 			case 'l':
 				length = atoi(optarg);
@@ -388,6 +482,9 @@ int main(int argc, char **argv)
 				break;
 			case 'p':
 				port = atoi(optarg);
+				break;
+			case 'P':
+				policy = atoi(optarg);
 				break;
 			case 'E':
 				local_udp_port = atoi(optarg);
@@ -406,6 +503,9 @@ int main(int argc, char **argv)
 			case 'S':
 				sndbufsize = atoi(optarg);
 				break;
+			case 't':
+				timetolive = atoi(optarg);
+				break;
 			case 'T':
 				runtime = atoi(optarg);
 				number_of_messages = 0;
@@ -422,9 +522,6 @@ int main(int argc, char **argv)
 			case 'V':
 				verbose = 1;
 				very_verbose = 1;
-				break;
-			case 'D':
-				nodelay = 1;
 				break;
 			default:
 				fprintf(stderr, "%s", Usage);
@@ -460,6 +557,14 @@ int main(int argc, char **argv)
 					}
 					opt = argv[optind];
 					port = atoi(opt);
+					break;
+				case 'P':
+					if (++optind >= argc) {
+						printf("%s", Usage);
+						exit(1);
+					}
+					opt = argv[optind];
+					policy = atoi(opt);
 					break;
 				case 'n':
 					if (++optind >= argc) {
@@ -516,6 +621,14 @@ int main(int argc, char **argv)
 					}
 					opt = argv[optind];
 					sndbufsize = atoi(opt);
+					break;
+				case 't':
+					if (++optind >= argc) {
+						printf("%s", Usage);
+						exit(1);
+					}
+					opt = argv[optind];
+					timetolive = atoi(opt);
 					break;
 				case 'T':
 					if (++optind >= argc) {
@@ -631,9 +744,7 @@ int main(int argc, char **argv)
 			memset(&remote_addr, 0, sizeof(struct sockaddr_in));
 			addr_len = sizeof(struct sockaddr_in);
 			if (use_cb) {
-				struct socket *conn_sock;
-
-				if ((conn_sock = usrsctp_accept(psock, (struct sockaddr *) &remote_addr, &addr_len)) == NULL) {
+				if (usrsctp_accept(psock, (struct sockaddr *) &remote_addr, &addr_len) == NULL) {
 					perror("usrsctp_accept");
 					continue;
 				}
@@ -646,10 +757,15 @@ int main(int argc, char **argv)
 					continue;
 				}
 #ifdef _WIN32
-				CreateThread(NULL, 0, &handle_connection, (void *)conn_sock, 0, NULL);
+				if ((tid = CreateThread(NULL, 0, &handle_connection, (void *)conn_sock, 0, NULL)) == NULL) {
+					fprintf(stderr, "CreateThread() failed with error: %lu\n", GetLastError());
 #else
-				pthread_create(&tid, NULL, &handle_connection, (void *)conn_sock);
+				if ((rc = pthread_create(&tid, NULL, &handle_connection, (void *)conn_sock)) != 0) {
+					fprintf(stderr, "pthread_create: %s\n", strerror(rc));
 #endif
+					usrsctp_close(*conn_sock);
+					continue;
+				}
 			}
 			if (verbose) {
 				/* const char *inet_ntop(int af, const void *src, char *dst, socklen_t size)
@@ -724,7 +840,7 @@ int main(int argc, char **argv)
 			signal(SIGALRM, stop_sender);
 			alarm(runtime);
 #else
-			printf("You cannot set the runtime in Windows yet\n");
+			fprintf(stderr, "You cannot set the runtime in Windows yet\n");
 			exit(-1);
 #endif
 		}
@@ -738,14 +854,45 @@ int main(int argc, char **argv)
 #endif
 			}
 		} else {
-			sndinfo.snd_sid = 0;
-			sndinfo.snd_flags = 0;
+			sendv_spa.sendv_flags = SCTP_SEND_SNDINFO_VALID | SCTP_SEND_PRINFO_VALID;
+
+			sendv_spa.sendv_sndinfo.snd_sid = 0;
+			sendv_spa.sendv_sndinfo.snd_flags = 0;
 			if (unordered != 0) {
-				sndinfo.snd_flags |= SCTP_UNORDERED;
+				sendv_spa.sendv_sndinfo.snd_flags |= SCTP_UNORDERED;
 			}
-			sndinfo.snd_ppid = 0;
-			sndinfo.snd_context = 0;
-			sndinfo.snd_assoc_id = 0;
+			sendv_spa.sendv_sndinfo.snd_ppid = 0;
+			sendv_spa.sendv_sndinfo.snd_context = 0;
+			sendv_spa.sendv_sndinfo.snd_assoc_id = 0;
+
+			sendv_spa.sendv_prinfo.pr_policy = 0;
+			switch (policy) {
+#ifdef SCTP_PR_SCTP_NONE
+			case 0:
+				sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_NONE;
+				break;
+#endif
+#ifdef SCTP_PR_SCTP_TTL
+			case 1:
+				sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_TTL;
+				break;
+#endif
+#ifdef SCTP_PR_SCTP_RTX
+			case 2:
+				sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_RTX;
+				break;
+#endif
+#ifdef SCTP_PR_SCTP_BUF
+			case 3:
+				sendv_spa.sendv_prinfo.pr_policy = SCTP_PR_SCTP_BUF;
+				break;
+#endif
+			default:
+				printf("Unknown PR-SCTP policy.\n");
+				break;
+			}
+			sendv_spa.sendv_prinfo.pr_value = timetolive;
+
 			if (verbose) {
 				printf("Start sending ");
 				if (number_of_messages > 0) {
@@ -763,7 +910,7 @@ int main(int argc, char **argv)
 				}
 
 				if (usrsctp_sendv(psock, buffer, length, (struct sockaddr *) &remote_addr, 1,
-				                  (void *)&sndinfo, (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO,
+				                  (void *)&sendv_spa, (socklen_t)sizeof(struct sctp_sendv_spa), SCTP_SENDV_SPA,
 				                  0) < 0) {
 					perror("usrsctp_sendv");
 					exit(1);
@@ -774,9 +921,9 @@ int main(int argc, char **argv)
 				printf("Sending message number %lu.\n", messages + 1);
 			}
 
-			sndinfo.snd_flags |= SCTP_EOF;
+			sendv_spa.sendv_sndinfo.snd_flags |= SCTP_EOF;
 			if (usrsctp_sendv(psock, buffer, length, (struct sockaddr *) &remote_addr, 1,
-			                  (void *)&sndinfo, (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO,
+			                  (void *)&sendv_spa, (socklen_t)sizeof(struct sctp_sendv_spa), SCTP_SENDV_SPA,
 			                  0) < 0) {
 				perror("usrsctp_sendv");
 				exit(1);
@@ -793,7 +940,7 @@ int main(int argc, char **argv)
 		gettimeofday(&time_now, NULL);
 		timersub(&time_now, &time_start, &time_diff);
 		seconds = time_diff.tv_sec + (double)time_diff.tv_usec/1000000;
-		printf("%s of %ld messages of length %u took %f seconds.\n",
+		printf("%s of %lu messages of length %d took %f seconds.\n",
 		       "Sending", messages, length, seconds);
 		throughput = (double)messages * (double)length / seconds;
 		printf("Throughput was %f Byte/sec.\n", throughput);
