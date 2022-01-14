@@ -41,10 +41,10 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #ifndef _WIN32
+#include <sys/socket.h>
 #include <unistd.h>
 #include <time.h>
-#include <sys/socket.h>
-#include <sys/errno.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
@@ -215,14 +215,6 @@ main(int argc, char *argv[])
 	while (1) {
 #ifdef _WIN32
 		Sleep(1*1000);
-#else
-		sleep(1);
-#endif
-	}
-	usrsctp_close(listening_socket);
-	while (usrsctp_finish() != 0) {
-#ifdef _WIN32
-		Sleep(1000);
 #else
 		sleep(1);
 #endif

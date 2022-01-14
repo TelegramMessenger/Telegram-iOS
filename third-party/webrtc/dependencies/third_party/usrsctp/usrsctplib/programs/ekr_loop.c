@@ -28,6 +28,10 @@
  * SUCH DAMAGE.
  */
 
+/*
+ * Usage: ekr_loop [client_port] [server_port] [crc32c offloading <0/1>]
+ */
+
 #ifdef _WIN32
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -55,6 +59,8 @@
 #define DISCARD_PPID 39
 #define NUMBER_OF_STEPS 10
 
+static uint8_t crc32c_offloading = 0;
+
 #ifdef _WIN32
 static DWORD WINAPI
 #else
@@ -68,8 +74,10 @@ handle_packets(void *arg)
 	int *fdp;
 #endif
 	char *dump_buf;
+	struct sctp_common_header *hdr;
 	ssize_t length;
 	char buf[MAX_PACKET_SIZE];
+	uint32_t received_crc32c, computed_crc32c;
 
 #ifdef _WIN32
 	fdp = (SOCKET *)arg;
@@ -83,10 +91,29 @@ handle_packets(void *arg)
 		length = recv(*fdp, buf, MAX_PACKET_SIZE, 0);
 		if (length > 0) {
 			if ((dump_buf = usrsctp_dumppacket(buf, (size_t)length, SCTP_DUMP_INBOUND)) != NULL) {
-				/* fprintf(stderr, "%s", dump_buf); */
+				/* debug_printf_clean("%s", dump_buf); */
 				usrsctp_freedumpbuffer(dump_buf);
 			}
-			usrsctp_conninput(fdp, buf, (size_t)length, 0);
+
+			if (crc32c_offloading) {
+				if ((size_t)length >= sizeof(struct sctp_common_header)) {
+					hdr = (struct sctp_common_header *)buf;
+					received_crc32c = hdr->crc32c;
+					hdr->crc32c = htonl(0);
+					computed_crc32c = usrsctp_crc32c(buf, (size_t)length);
+					hdr->crc32c = received_crc32c;
+					if (received_crc32c == computed_crc32c) {
+						usrsctp_conninput(fdp, buf, (size_t)length, 0);
+					} else {
+						debug_printf("Wrong CRC32c: expected %08x received %08x\n",
+						             ntohl(computed_crc32c), ntohl(received_crc32c));
+					}
+				} else {
+					debug_printf("Packet too short: length %zd", length);
+				}
+			} else {
+				usrsctp_conninput(fdp, buf, (size_t)length, 0);
+			}
 		}
 	}
 #ifdef _WIN32
@@ -100,6 +127,7 @@ static int
 conn_output(void *addr, void *buf, size_t length, uint8_t tos, uint8_t set_df)
 {
 	char *dump_buf;
+	struct sctp_common_header *hdr;
 #ifdef _WIN32
 	SOCKET *fdp;
 #else
@@ -111,8 +139,13 @@ conn_output(void *addr, void *buf, size_t length, uint8_t tos, uint8_t set_df)
 #else
 	fdp = (int *)addr;
 #endif
+	if (crc32c_offloading && length >= sizeof(struct sctp_common_header)) {
+		hdr = (struct sctp_common_header *)buf;
+		hdr->crc32c = usrsctp_crc32c(buf, (size_t)length);
+	}
+
 	if ((dump_buf = usrsctp_dumppacket(buf, length, SCTP_DUMP_OUTBOUND)) != NULL) {
-		/* fprintf(stderr, "%s", dump_buf); */
+		/* debug_printf_clean("%s", dump_buf); */
 		usrsctp_freedumpbuffer(dump_buf);
 	}
 #ifdef _WIN32
@@ -154,13 +187,16 @@ receive_cb(struct socket *sock, union sctp_sockstore addr, void *data,
 	return (1);
 }
 
-#if 0
 static void
 print_addresses(struct socket *sock)
 {
 	int i, n;
 	struct sockaddr *addrs, *addr;
+#if !defined(HAVE_SA_LEN)
+	int sa_len;
+#endif
 
+	debug_printf("Addresses: ");
 	n = usrsctp_getladdrs(sock, 0, &addrs);
 	addr = addrs;
 	for (i = 0; i < n; i++) {
@@ -173,7 +209,10 @@ print_addresses(struct socket *sock)
 
 			sin = (struct sockaddr_in *)addr;
 			name = inet_ntop(AF_INET, &sin->sin_addr, buf, INET_ADDRSTRLEN);
-			debug_printf("%s:%d", name, ntohs(sin->sin_port));
+			debug_printf_clean("%s:%d", name, ntohs(sin->sin_port));
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr_in);
+#endif
 			break;
 		}
 		case AF_INET6:
@@ -184,7 +223,10 @@ print_addresses(struct socket *sock)
 
 			sin6 = (struct sockaddr_in6 *)addr;
 			name = inet_ntop(AF_INET6, &sin6->sin6_addr, buf, INET6_ADDRSTRLEN);
-			debug_printf("%s:%d", name, ntohs(sin6->sin6_port));
+			debug_printf_clean("%s:%d", name, ntohs(sin6->sin6_port));
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr_in6);
+#endif
 			break;
 		}
 		case AF_CONN:
@@ -192,22 +234,32 @@ print_addresses(struct socket *sock)
 			struct sockaddr_conn *sconn;
 
 			sconn = (struct sockaddr_conn *)addr;
-			debug_printf("%p:%d", sconn->sconn_addr, ntohs(sconn->sconn_port));
+			debug_printf_clean("%p:%d", sconn->sconn_addr, ntohs(sconn->sconn_port));
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr_conn);
+#endif
 			break;
 		}
 		default:
-			debug_printf("Unknown family: %d", addr->sa_family);
+			debug_printf_clean("Unknown family: %d", addr->sa_family);
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr);
+#endif
 			break;
 		}
+#if !defined(HAVE_SA_LEN)
+		addr = (struct sockaddr *)((char *)addr + sa_len);
+#else
 		addr = (struct sockaddr *)((caddr_t)addr + addr->sa_len);
+#endif
 		if (i != n - 1) {
-			debug_printf(",");
+			debug_printf_clean(",");
 		}
 	}
 	if (n > 0) {
 		usrsctp_freeladdrs(addrs);
 	}
-	debug_printf("<->");
+	debug_printf_clean("<->");
 	n = usrsctp_getpaddrs(sock, 0, &addrs);
 	addr = addrs;
 	for (i = 0; i < n; i++) {
@@ -220,7 +272,10 @@ print_addresses(struct socket *sock)
 
 			sin = (struct sockaddr_in *)addr;
 			name = inet_ntop(AF_INET, &sin->sin_addr, buf, INET_ADDRSTRLEN);
-			debug_printf("%s:%d", name, ntohs(sin->sin_port));
+			debug_printf_clean("%s:%d", name, ntohs(sin->sin_port));
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr_in);
+#endif
 			break;
 		}
 		case AF_INET6:
@@ -231,7 +286,10 @@ print_addresses(struct socket *sock)
 
 			sin6 = (struct sockaddr_in6 *)addr;
 			name = inet_ntop(AF_INET6, &sin6->sin6_addr, buf, INET6_ADDRSTRLEN);
-			debug_printf("%s:%d", name, ntohs(sin6->sin6_port));
+			debug_printf_clean("%s:%d", name, ntohs(sin6->sin6_port));
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr_in6);
+#endif
 			break;
 		}
 		case AF_CONN:
@@ -239,34 +297,44 @@ print_addresses(struct socket *sock)
 			struct sockaddr_conn *sconn;
 
 			sconn = (struct sockaddr_conn *)addr;
-			debug_printf("%p:%d", sconn->sconn_addr, ntohs(sconn->sconn_port));
+			debug_printf_clean("%p:%d", sconn->sconn_addr, ntohs(sconn->sconn_port));
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr_conn);
+#endif
 			break;
 		}
 		default:
-			debug_printf("Unknown family: %d", addr->sa_family);
+			debug_printf_clean("Unknown family: %d", addr->sa_family);
+#if !defined(HAVE_SA_LEN)
+			sa_len = (int)sizeof(struct sockaddr);
+#endif
 			break;
 		}
+#if !defined(HAVE_SA_LEN)
+		addr = (struct sockaddr *)((char *)addr + sa_len);
+#else
 		addr = (struct sockaddr *)((caddr_t)addr + addr->sa_len);
+#endif
 		if (i != n - 1) {
-			debug_printf(",");
+			debug_printf_clean(",");
 		}
 	}
 	if (n > 0) {
 		usrsctp_freepaddrs(addrs);
 	}
-	debug_printf("\n");
+	debug_printf_clean("\n");
 }
-#endif
 
 int
 main(int argc, char *argv[])
 {
 	struct sockaddr_in sin_s, sin_c;
 	struct sockaddr_conn sconn;
+	struct sctp_paddrparams paddrparams;
 #ifdef _WIN32
 	SOCKET fd_c, fd_s;
 #else
-	int fd_c, fd_s;
+	int fd_c, fd_s, rc;
 #endif
 	struct socket *s_c, *s_s, *s_l;
 #ifdef _WIN32
@@ -274,7 +342,7 @@ main(int argc, char *argv[])
 #else
 	pthread_t tid_c, tid_s;
 #endif
-	int i, j, cur_buf_size, snd_buf_size, rcv_buf_size;
+	int i, j, cur_buf_size, snd_buf_size, rcv_buf_size, sendv_retries_left;
 	socklen_t opt_len;
 	struct sctp_sndinfo sndinfo;
 	char *line;
@@ -284,28 +352,45 @@ main(int argc, char *argv[])
 	uint16_t client_port = 9900;
 	uint16_t server_port = 9901;
 
-	if (argc == 3) {
+	if (argc > 1) {
 		client_port = atoi(argv[1]);
+	}
+
+	if (argc > 2) {
 		server_port = atoi(argv[2]);
 	}
 
-	debug_printf("starting program\n");
+	if (argc > 3) {
+		crc32c_offloading = atoi(argv[3]);
+	}
+
+	debug_printf("Starting program\n");
+	debug_printf("Config:\n\tClient Port:\t%d\n\tServer Port:\t%d\n\tCRC32C Calc:\t%s\n", client_port, server_port, crc32c_offloading ? "offloaded" : "NOT offloaded");
 
 #ifdef _WIN32
 	if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
-		printf("WSAStartup failed\n");
+		debug_printf("WSAStartup failed\n");
 		exit (EXIT_FAILURE);
 	}
 #endif
 	usrsctp_init(0, conn_output, debug_printf_stack);
+
+#ifdef SCTP_DEBUG
+	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
+#endif
+
+	if (crc32c_offloading) {
+		usrsctp_enable_crc32c_offload();
+	}
+
 	/* set up a connected UDP socket */
 #ifdef _WIN32
 	if ((fd_c = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
-		printf("socket() failed with error: %d\n", WSAGetLastError());
+		debug_printf("socket() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 	if ((fd_s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
-		printf("socket() failed with error: %d\n", WSAGetLastError());
+		debug_printf("socket() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -334,11 +419,11 @@ main(int argc, char *argv[])
 	sin_s.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 #ifdef _WIN32
 	if (bind(fd_c, (struct sockaddr *)&sin_c, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-		printf("bind() failed with error: %d\n", WSAGetLastError());
+		debug_printf("bind() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 	if (bind(fd_s, (struct sockaddr *)&sin_s, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-		printf("bind() failed with error: %d\n", WSAGetLastError());
+		debug_printf("bind() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -371,22 +456,26 @@ main(int argc, char *argv[])
 	}
 #endif
 #ifdef _WIN32
-	tid_c = CreateThread(NULL, 0, &handle_packets, (void *)&fd_c, 0, NULL);
-	tid_s = CreateThread(NULL, 0, &handle_packets, (void *)&fd_s, 0, NULL);
+	if ((tid_c = CreateThread(NULL, 0, &handle_packets, (void *)&fd_c, 0, NULL)) == NULL) {
+		debug_printf("CreateThread() failed with error: %d\n", GetLastError());
+		exit(EXIT_FAILURE);
+	}
+	if ((tid_s = CreateThread(NULL, 0, &handle_packets, (void *)&fd_s, 0, NULL)) == NULL) {
+		debug_printf("CreateThread() failed with error: %d\n", GetLastError());
+		exit(EXIT_FAILURE);
+	}
 #else
-	if (pthread_create(&tid_c, NULL, &handle_packets, (void *)&fd_c)) {
-		perror("pthread_create tid_c");
+	if ((rc = pthread_create(&tid_c, NULL, &handle_packets, (void *)&fd_c)) != 0) {
+		debug_printf_clean("pthread_create tid_c: %s\n", strerror(rc));
 		exit(EXIT_FAILURE);
 	}
 
-	if (pthread_create(&tid_s, NULL, &handle_packets, (void *)&fd_s)) {
-		perror("pthread_create tid_s");
+	if ((rc = pthread_create(&tid_s, NULL, &handle_packets, (void *)&fd_s)) != 0) {
+		debug_printf_clean("pthread_create tid_s: %s\n", strerror(rc));
 		exit(EXIT_FAILURE);
 	};
 #endif
-#ifdef SCTP_DEBUG
-	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
-#endif
+
 	usrsctp_sysctl_set_sctp_ecn_enable(0);
 	usrsctp_register_address((void *)&fd_c);
 	usrsctp_register_address((void *)&fd_s);
@@ -412,7 +501,18 @@ main(int argc, char *argv[])
 		perror("usrsctp_getsockopt");
 		exit(EXIT_FAILURE);
 	}
-	debug_printf("to %d.\n", cur_buf_size);
+	debug_printf_clean("to %d.\n", cur_buf_size);
+	memset(&paddrparams, 0, sizeof(struct sctp_paddrparams));
+	paddrparams.spp_address.ss_family = AF_CONN;
+#ifdef HAVE_SCONN_LEN
+	paddrparams.spp_address.ss_len = sizeof(struct sockaddr_conn);
+#endif
+	paddrparams.spp_flags = SPP_PMTUD_DISABLE;
+	paddrparams.spp_pathmtu = 9000;
+	if (usrsctp_setsockopt(s_c, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS, &paddrparams, sizeof(struct sctp_paddrparams)) < 0) {
+		perror("usrsctp_setsockopt");
+		exit(EXIT_FAILURE);
+	}
 	if ((s_l = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP, receive_cb, NULL, 0, &fd_s)) == NULL) {
 		perror("usrsctp_socket");
 		exit(EXIT_FAILURE);
@@ -435,7 +535,7 @@ main(int argc, char *argv[])
 		perror("usrsctp_getsockopt");
 		exit(EXIT_FAILURE);
 	}
-	debug_printf("to %d.\n", cur_buf_size);
+	debug_printf_clean("to %d.\n", cur_buf_size);
 	/* Bind the client side. */
 	memset(&sconn, 0, sizeof(struct sockaddr_conn));
 	sconn.sconn_family = AF_CONN;
@@ -482,6 +582,8 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	usrsctp_close(s_l);
+	print_addresses(s_s);
+
 	if ((line = malloc(LINE_LENGTH)) == NULL) {
 		exit(EXIT_FAILURE);
 	}
@@ -492,37 +594,41 @@ main(int argc, char *argv[])
 	sndinfo.snd_assoc_id = 0;
 
 	for (i = 0; i < NUMBER_OF_STEPS; i++) {
-		j = 0;
 		if (i % 2) {
 			sndinfo.snd_flags = SCTP_UNORDERED;
 		} else {
 			sndinfo.snd_flags = 0;
 		}
-		/* Send a 1 MB message */
-		debug_printf("usrscp_sendv - step %d - call %d flags %x\n", i, ++j, sndinfo.snd_flags);
-		if (usrsctp_sendv(s_c, line, LINE_LENGTH, NULL, 0, (void *)&sndinfo,
-				 (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0) < 0) {
-			perror("usrsctp_sendv");
-			exit(EXIT_FAILURE);
-		}
-		/* Send a 1 MB message */
-		debug_printf("usrscp_sendv - step %d - call %d flags %x\n", i, ++j, sndinfo.snd_flags);
-		if (usrsctp_sendv(s_c, line, LINE_LENGTH, NULL, 0, (void *)&sndinfo,
-				 (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0) < 0) {
-			perror("usrsctp_sendv");
-			exit(EXIT_FAILURE);
+		for (j = 0; j < 2; j++) {
+			/* Send a 1 MB message */
+			sendv_retries_left = 120;
+			debug_printf("usrscp_sendv - step %d - call %d flags %x\n", i, j + 1, sndinfo.snd_flags);
+			while (usrsctp_sendv(s_c, line, LINE_LENGTH, NULL, 0, (void *)&sndinfo,
+					 (socklen_t)sizeof(struct sctp_sndinfo), SCTP_SENDV_SNDINFO, 0) < 0) {
+				debug_printf("usrsctp_sendv - errno: %d - %s\n", errno, strerror(errno));
+				if (errno != EWOULDBLOCK || !sendv_retries_left) {
+					exit(EXIT_FAILURE);
+				}
+				sendv_retries_left--;
+#ifdef _WIN32
+				Sleep(1000);
+#else
+				sleep(1);
+#endif
+			}
 		}
 		debug_printf("Sending done, sleeping\n");
 #ifdef _WIN32
-		Sleep(10000);
+		Sleep(1000);
 #else
-		sleep(10);
+		sleep(1);
 #endif
 	}
 	free(line);
 	usrsctp_shutdown(s_c, SHUT_WR);
 
 	while (usrsctp_finish() != 0) {
+		debug_printf("Waiting for usrsctp_finish()\n");
 #ifdef _WIN32
 		Sleep(1000);
 #else

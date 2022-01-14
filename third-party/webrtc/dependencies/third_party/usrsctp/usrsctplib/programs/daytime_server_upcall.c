@@ -69,10 +69,12 @@ handle_accept(struct socket *sock, void *data, int flags)
 	}
 	time(&now);
 #ifdef _WIN32
-		_snprintf(buffer, sizeof(buffer), "%s", ctime(&now));
+		if (_snprintf(buffer, sizeof(buffer), "%s", ctime(&now)) < 0) {
 #else
-		snprintf(buffer, sizeof(buffer), "%s", ctime(&now));
+		if (snprintf(buffer, sizeof(buffer), "%s", ctime(&now)) < 0) {
 #endif
+			buffer[0] = '\0';
+		}
 		sndinfo.snd_sid = 0;
 		sndinfo.snd_flags = 0;
 		sndinfo.snd_ppid = htonl(DAYTIME_PPID);
@@ -132,14 +134,6 @@ main(int argc, char *argv[])
 	while (1) {
 #ifdef _WIN32
 		Sleep(1*1000);
-#else
-		sleep(1);
-#endif
-	}
-	usrsctp_close(sock);
-	while (usrsctp_finish() != 0) {
-#ifdef _WIN32
-		Sleep(1000);
 #else
 		sleep(1);
 #endif

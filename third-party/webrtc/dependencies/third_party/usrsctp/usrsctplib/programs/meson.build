@@ -15,7 +15,6 @@ programs = {
     'echo_server_upcall': files('echo_server_upcall.c'),
     'ekr_client': files('ekr_client.c'),
     'ekr_loop': files('ekr_loop.c'),
-    'ekr_loop_offload': files('ekr_loop_offload.c'),
     'ekr_loop_upcall': files('ekr_loop_upcall.c'),
     'ekr_peer': files('ekr_peer.c'),
     'ekr_server': files('ekr_server.c'),
