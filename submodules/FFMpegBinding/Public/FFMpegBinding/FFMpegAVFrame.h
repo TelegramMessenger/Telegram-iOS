@@ -7,6 +7,11 @@ typedef NS_ENUM(NSUInteger, FFMpegAVFrameColorRange) {
     FFMpegAVFrameColorRangeFull
 };
 
+typedef NS_ENUM(NSUInteger, FFMpegAVFramePixelFormat) {
+    FFMpegAVFramePixelFormatYUV,
+    FFMpegAVFramePixelFormatYUVA
+};
+
 @interface FFMpegAVFrame : NSObject
 
 @property (nonatomic, readonly) int32_t width;
@@ -16,6 +21,7 @@ typedef NS_ENUM(NSUInteger, FFMpegAVFrameColorRange) {
 @property (nonatomic, readonly) int64_t pts;
 @property (nonatomic, readonly) int64_t duration;
 @property (nonatomic, readonly) FFMpegAVFrameColorRange colorRange;
+@property (nonatomic, readonly) FFMpegAVFramePixelFormat pixelFormat;
 
 - (instancetype)init;
 

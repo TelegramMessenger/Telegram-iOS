@@ -32,7 +32,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 protocol GenericAnimatedStickerNode: ASDisplayNode {
-    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool)
+    func setOverlayColor(_ color: UIColor?, animated: Bool)
 
     var currentFrameIndex: Int { get }
     func setFrameIndex(_ frameIndex: Int)
@@ -58,7 +58,7 @@ private class VideoStickerNode: ASDisplayNode, GenericAnimatedStickerNode {
     private var layerHolder: SampleBufferLayer?
     var manager: SoftwareVideoLayerFrameManager?
     
-    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
+    func setOverlayColor(_ color: UIColor?, animated: Bool) {
         
     }
     
@@ -367,15 +367,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
-                if let reactionButtonsNode = strongSelf.reactionButtonsNode {
-                    if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
-                        return .fail
-                    }
-                }
                 
-                if strongSelf.telegramFile == nil {
+                if false, strongSelf.telegramFile == nil {
                     if let animationNode = strongSelf.animationNode, animationNode.frame.contains(point) {
-                        return .waitForSingleTap
+                        return .waitForDoubleTap
                     }
                 }
             }
@@ -898,7 +893,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if item.associatedData.isCopyProtectionEnabled || item.message.isCopyProtected() {
+                if item.associatedData.isCopyProtectionEnabled {
                     needsShareButton = false
                 }
             }
@@ -945,8 +940,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var dateReplies = 0
             let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
             for attribute in item.message.attributes {
-                if let attribute = attribute as? EditedMessageAttribute, isEmoji {
-                    edited = !attribute.isHidden
+                if let _ = attribute as? EditedMessageAttribute, isEmoji {
+                    edited = true
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
                 } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = item.chatLocation {
@@ -977,8 +972,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 reactionPeers: dateReactionsAndPeers.peers,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
-                hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message)
+                hasAutoremove: item.message.isSelfExpiring
             ))
             
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -1111,9 +1105,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             let reactions: ReactionsMessageAttribute
             if shouldDisplayInlineDateReactions(message: item.message) {
-                reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
+                reactions = ReactionsMessageAttribute(reactions: [], recentPeers: [])
             } else {
-                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
+                reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(reactions: [], recentPeers: [])
             }
             var reactionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode))?
             if !reactions.reactions.isEmpty {
@@ -1144,7 +1138,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
             }
             if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
-                layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
+                layoutSize.height += reactionButtonsSizeAndApply.0.height
             }
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, _ in
@@ -1411,13 +1405,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                         let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: reactionButtonsSizeAndApply.0)
-                        if !incoming {
-                            reactionButtonsFrame.origin.x = imageFrame.maxX - reactionButtonsSizeAndApply.0.width
-                        }
-                        if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
-                            reactionButtonsFrame.origin.y += 4.0 + actionButtonsSizeAndApply.0.height
-                        }
+                        let reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY), size: reactionButtonsSizeAndApply.0)
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
                             reactionButtonsNode.reactionSelected = { value in
@@ -1425,14 +1413,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     return
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
-                            }
-                            reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
-                                    gesture?.cancel()
-                                    return
-                                }
-                                
-                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
                             }
                             reactionButtonsNode.frame = reactionButtonsFrame
                             if let (rect, containerSize) = strongSelf.absoluteRect {
@@ -1516,10 +1496,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                 } else if case .tap = gesture {
                     item.controllerInteraction.clickThroughMessage()
-                } else if case .doubleTap = gesture {
-                    if canAddMessageReactions(message: item.message) {
-                        item.controllerInteraction.updateMessageReaction(item.message, .default)
-                    }
                 }
             }
         default:
@@ -2193,10 +2169,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if highlighted {
                     self.imageNode.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
-                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, replace: false, animated: false)
+                    self.animationNode?.setOverlayColor(item.presentationData.theme.theme.chat.message.mediaHighlightOverlayColor, animated: false)
                 } else {
                     self.imageNode.setOverlayColor(nil, animated: animated)
-                    self.animationNode?.setOverlayColor(nil, replace: false, animated: false)
+                    self.animationNode?.setOverlayColor(nil, animated: false)
                 }
             }
         }
@@ -2404,13 +2380,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             }
         }
-    }
-    
-    override func openMessageContextMenu() {
-        guard let item = self.item else {
-            return
-        }
-        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {
