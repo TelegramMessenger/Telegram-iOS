@@ -11,6 +11,7 @@ import ItemListStickerPackItem
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
+import SoftwareVideo
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
@@ -83,6 +84,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private let scalingNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animatedStickerNode: AnimatedStickerNode?
+    private var videoStickerNode: VideoStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
     private let highlightNode: ASImageNode
     private let titleNode: ImmediateTextNode
@@ -286,6 +288,9 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         if let animatedStickerNode = self.animatedStickerNode {
             animatedStickerNode.frame = self.imageNode.frame
             animatedStickerNode.updateLayout(size: self.imageNode.frame.size)
+        }
+        if let videoNode = self.videoStickerNode {
+            videoNode.frame = self.imageNode.frame
         }
         if let placeholderNode = self.placeholderNode {
             placeholderNode.bounds = CGRect(origin: CGPoint(), size: boundingImageSize)

@@ -380,7 +380,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if let fileName = telegramFile.fileName, fileName.hasSuffix(".webm") {
+                if telegramFile.isVideoSticker {
                     viewClassName = ChatMessageAnimatedStickerItemNode.self
                     break loop
                 }

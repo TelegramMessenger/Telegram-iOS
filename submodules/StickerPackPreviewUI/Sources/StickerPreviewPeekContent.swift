@@ -9,6 +9,7 @@ import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ContextUI
+import SoftwareVideo
 
 public enum StickerPreviewPeekItem: Equatable {
     case pack(StickerPackItem)
@@ -71,6 +72,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     private var textNode: ASTextNode
     public var imageNode: TransformImageNode
     public var animationNode: AnimatedStickerNode?
+    public var videoNode: VideoStickerNode?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -86,16 +88,24 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             break
         }
         
-        if item.file.isAnimatedSticker {
+        if item.file.isVideoSticker {
+            let videoNode = VideoStickerNode()
+            self.videoNode = videoNode
+            
+            videoNode.update(account: self.account, fileReference: .standalone(media: item.file))
+            videoNode.update(isPlaying: true)
+            
+            videoNode.addSubnode(self.textNode)
+        } else if item.file.isAnimatedSticker {
             let animationNode = AnimatedStickerNode()
             self.animationNode = animationNode
             
             let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0))
             
-            self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
-            self.animationNode?.visibility = true
-            self.animationNode?.addSubnode(self.textNode)
+            animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+            animationNode.visibility = true
+            animationNode.addSubnode(self.textNode)
         } else {
             self.imageNode.addSubnode(self.textNode)
             self.animationNode = nil
@@ -107,7 +117,9 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
         
         self.isUserInteractionEnabled = false
         
-        if let animationNode = self.animationNode {
+        if let videoNode = self.videoNode {
+            self.addSubnode(videoNode)
+        } else if let animationNode = self.animationNode {
             self.addSubnode(animationNode)
         } else {
             self.addSubnode(self.imageNode)
@@ -125,7 +137,10 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             let imageFrame = CGRect(origin: CGPoint(x: 0.0, y: textSize.height + textSpacing), size: imageSize)
             self.imageNode.frame = imageFrame
-            if let animationNode = self.animationNode {
+            if let videoNode = self.videoNode {
+                videoNode.frame = imageFrame
+                videoNode.updateLayout(size: imageSize)
+            } else if let animationNode = self.animationNode {
                 animationNode.frame = imageFrame
                 animationNode.updateLayout(size: imageSize)
             }

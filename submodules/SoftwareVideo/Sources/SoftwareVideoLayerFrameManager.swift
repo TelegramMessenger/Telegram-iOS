@@ -10,7 +10,7 @@ private let applyQueue = Queue()
 private let workers = ThreadPool(threadCount: 3, threadPriority: 0.2)
 private var nextWorker = 0
 
-final class SoftwareVideoLayerFrameManager {
+public final class SoftwareVideoLayerFrameManager {
     private let fetchDisposable: Disposable
     private var dataDisposable = MetaDisposable()
     private let source = Atomic<SoftwareVideoSource?>(value: nil)
@@ -32,7 +32,10 @@ final class SoftwareVideoLayerFrameManager {
     
     private var layerRotationAngleAndAspect: (CGFloat, CGFloat)?
     
-    init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer, hintVP9: Bool = false) {
+    private var didStart = false
+    var started: () -> Void = { }
+    
+    public init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer, hintVP9: Bool = false) {
         var resource = fileReference.media.resource
         var secondaryResource: MediaResource?
         for attribute in fileReference.media.attributes {
@@ -61,7 +64,7 @@ final class SoftwareVideoLayerFrameManager {
         self.dataDisposable.dispose()
     }
     
-    func start() {
+    public func start() {
         func stringForResource(_ resource: MediaResource?) -> String {
             guard let resource = resource else {
                 return "<none>"
@@ -115,7 +118,7 @@ final class SoftwareVideoLayerFrameManager {
         }))
     }
     
-    func tick(timestamp: Double) {
+    public func tick(timestamp: Double) {
         applyQueue.async {
             if self.baseTimestamp == nil && !self.frames.isEmpty {
                 self.baseTimestamp = timestamp
@@ -148,6 +151,13 @@ final class SoftwareVideoLayerFrameManager {
                         self.layerHolder.layer.setAffineTransform(transform)
                     }*/
                     self.layerHolder.layer.enqueue(frame.sampleBuffer)
+                    
+                    if !self.didStart {
+                        self.didStart = true
+                        Queue.mainQueue().async {
+                            self.started()
+                        }
+                    }
                 }
             }
             

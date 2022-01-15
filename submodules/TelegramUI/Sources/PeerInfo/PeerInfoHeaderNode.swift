@@ -125,13 +125,14 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         let previousIcon = self.icon
+        let themeUpdated = self.theme != presentationData.theme
         let iconUpdated = self.icon != icon
         let isActiveUpdated = self.isActive != isActive
         self.isActive = isActive
         
         let iconSize = CGSize(width: 40.0, height: 40.0)
         
-        if self.theme != presentationData.theme || self.icon != icon {
+        if themeUpdated || iconUpdated {
             self.theme = presentationData.theme
             self.icon = icon
             
@@ -194,9 +195,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 let animationNode: AnimationNode
                 if let current = self.animationNode {
                     animationNode = current
-                    if iconUpdated {
-                        animationNode.setAnimation(name: animationName, colors: colors)
-                    }
+                    animationNode.setAnimation(name: animationName, colors: colors)
                 } else {
                     animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
                     self.referenceNode.addSubnode(animationNode)

@@ -277,7 +277,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
                                           options as CFDictionary,
                                           &pixelBufferRef)
         }
-                
+        
         guard let pixelBuffer = pixelBufferRef else {
             return nil
         }
@@ -399,11 +399,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
     }
-    
-    func decodeImage() {
-
-    }
-    
+        
     public func reset() {
         self.codecContext.flushBuffers()
         self.resetDecoderOnNextFrame = true

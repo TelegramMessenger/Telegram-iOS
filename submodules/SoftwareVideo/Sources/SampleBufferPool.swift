@@ -14,19 +14,19 @@ private final class SampleBufferLayerImpl: AVSampleBufferDisplayLayer {
     }
 }
 
-final class SampleBufferLayer {
-    let layer: AVSampleBufferDisplayLayer
+public final class SampleBufferLayer {
+    public let layer: AVSampleBufferDisplayLayer
     private let enqueue: (AVSampleBufferDisplayLayer) -> Void
     
     
-    var isFreed: Bool = false
+    public var isFreed: Bool = false
     fileprivate init(layer: AVSampleBufferDisplayLayer, enqueue: @escaping (AVSampleBufferDisplayLayer) -> Void) {
         self.layer = layer
         self.enqueue = enqueue
     }
     
     deinit {
-        if !isFreed {
+        if !self.isFreed {
             self.enqueue(self.layer)
         }
     }
@@ -34,11 +34,11 @@ final class SampleBufferLayer {
 
 private let pool = Atomic<[AVSampleBufferDisplayLayer]>(value: [])
 
-func clearSampleBufferLayerPoll() {
+public func clearSampleBufferLayerPoll() {
     let _ = pool.modify { _ in return [] }
 }
 
-func takeSampleBufferLayer() -> SampleBufferLayer {
+public func takeSampleBufferLayer() -> SampleBufferLayer {
     var layer: AVSampleBufferDisplayLayer?
     let _ = pool.modify { list in
         var list = list

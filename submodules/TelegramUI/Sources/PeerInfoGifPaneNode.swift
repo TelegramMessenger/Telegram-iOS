@@ -13,6 +13,7 @@ import GridMessageSelectionNode
 import UniversalMediaPlayer
 import ListMessageItem
 import ChatMessageInteractiveMediaBadge
+import SoftwareVideo
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext

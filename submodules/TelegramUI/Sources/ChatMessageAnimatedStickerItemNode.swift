@@ -26,6 +26,7 @@ import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
 import LottieMeshSwift
+import SoftwareVideo
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -54,24 +55,9 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
     }
 }
 
-private class VideoStickerNode: ASDisplayNode, GenericAnimatedStickerNode {
-    private var layerHolder: SampleBufferLayer?
-    var manager: SoftwareVideoLayerFrameManager?
-    
+extension VideoStickerNode: GenericAnimatedStickerNode {
     func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
         
-    }
-    
-    func update(context: AccountContext, fileReference: FileMediaReference, size: CGSize) {
-        let layerHolder = takeSampleBufferLayer()
-        layerHolder.layer.videoGravity = AVLayerVideoGravity.resizeAspectFill
-        layerHolder.layer.frame = CGRect(origin: CGPoint(), size: size)
-        self.layer.addSublayer(layerHolder.layer)
-        self.layerHolder = layerHolder
-        
-        let manager = SoftwareVideoLayerFrameManager(account: context.account, fileReference: fileReference, layerHolder: layerHolder, hintVP9: true)
-        self.manager = manager
-        manager.start()
     }
     
     var currentFrameIndex: Int {
@@ -200,9 +186,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var animationSize: CGSize?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
-    
-    private var displayLink: ConstantDisplayLinkAnimator?
-    private var displayLinkTimestamp: Double = 0.0
     
     private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
     private var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
@@ -436,8 +419,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if self.visibilityStatus != oldValue {
                 self.updateVisibility()
                 self.haptic?.enabled = self.visibilityStatus
-                
-                
             }
         }
     }
@@ -470,9 +451,24 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 self.animationNode = animationNode
             }
-        } else if let telegramFile = self.telegramFile, let fileName = telegramFile.fileName, fileName.hasSuffix(".webm") {
+        } else if let telegramFile = self.telegramFile, telegramFile.mimeType == "video/webm" {
             let videoNode = VideoStickerNode()
-            videoNode.update(context: item.context, fileReference: .standalone(media: telegramFile), size: CGSize(width: 184.0, height: 184.0))
+            videoNode.started = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.imageNode.alpha = 0.0
+                    if !strongSelf.enableSynchronousImageApply {
+                        let current = CACurrentMediaTime()
+                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
+                            if !strongSelf.placeholderNode.alpha.isZero {
+                                strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                strongSelf.removePlaceholder(animated: true)
+                            }
+                        } else {
+                            strongSelf.removePlaceholder(animated: false)
+                        }
+                    }
+                }
+            }
             self.animationNode = videoNode
         } else {
             let animationNode = AnimatedStickerNode()
@@ -591,25 +587,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         let isPlaying = self.visibilityStatus && !self.forceStopAnimations
-        if let _ = self.animationNode as? VideoStickerNode {
-            let displayLink: ConstantDisplayLinkAnimator
-            if let current = self.displayLink {
-                displayLink = current
-            } else {
-                displayLink = ConstantDisplayLinkAnimator { [weak self] in
-                    guard let strongSelf = self, let animationNode = strongSelf.animationNode as? VideoStickerNode else {
-                        return
+        if let videoNode = self.animationNode as? VideoStickerNode {
+            if self.isPlaying != isPlaying {
+                self.isPlaying = isPlaying
+                
+                if self.isPlaying && !self.didSetUpAnimationNode {
+                    self.didSetUpAnimationNode = true
+                                    
+                    if let file = self.telegramFile {
+                        videoNode.update(account: item.context.account, fileReference: .standalone(media: file))
                     }
-                    animationNode.manager?.tick(timestamp: strongSelf.displayLinkTimestamp)
-                    strongSelf.displayLinkTimestamp += 1.0 / 30.0
                 }
-                displayLink.frameInterval = 2
-                self.displayLink = displayLink
+                
+                videoNode.update(isPlaying: isPlaying)
             }
-            self.displayLink?.isPaused = !isPlaying
         } else if let animationNode = self.animationNode as? AnimatedStickerNode {
-            let isPlaying = self.visibilityStatus && !self.forceStopAnimations
-            
             if !isPlaying {
                 for decorationNode in self.additionalAnimationNodes {
                     if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
@@ -1203,9 +1195,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
                         strongSelf.animationNode?.frame = animationNodeFrame
-                    }
-                    if let animationNode = strongSelf.animationNode as? AnimatedStickerNode, strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
-                        animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                        if let videoNode = strongSelf.animationNode as? VideoStickerNode {
+                            videoNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                        }
+                        if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
+                            animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
+                        }
                     }
 
                     strongSelf.enableSynchronousImageApply = true
