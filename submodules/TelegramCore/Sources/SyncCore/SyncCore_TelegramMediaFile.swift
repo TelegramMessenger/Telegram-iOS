@@ -479,7 +479,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public var isVideoSticker: Bool {
-        if let fileName = self.fileName, fileName.hasSuffix(".webm") {
+        if self.mimeType == "video/webm" {
             return true
         }
         if let _ = self.fileName, self.mimeType == "video/webm" {
