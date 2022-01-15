@@ -1575,7 +1575,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func async(_ f: @escaping () -> Void) {
-        DispatchQueue.main.async(execute: f)
+        DispatchQueue.global(qos: .userInteractive).async(execute: f)
     }
     
     private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimationIsAnimated: Bool, updateAnimationIsCrossfade: Bool, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {

@@ -59,7 +59,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     private var bubbleBackgroundNode: WallpaperBubbleBackgroundNode?
     private let container: ReactionButtonsAsyncLayoutContainer
-    private let backgroundMaskView: UIView
+    private var backgroundMaskView: UIView?
     private var backgroundMaskButtons: [String: UIView] = [:]
     
     var reactionSelected: ((String) -> Void)?
@@ -67,7 +67,6 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     override init() {
         self.container = ReactionButtonsAsyncLayoutContainer()
-        self.backgroundMaskView = UIView()
         
         super.init()
     }
@@ -219,6 +218,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     return
                 }
                 
+                if strongSelf.backgroundMaskView == nil {
+                    strongSelf.backgroundMaskView = UIView()
+                }
+                
                 let backgroundInsets: CGFloat = 10.0
                 
                 switch type {
@@ -330,7 +333,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     }
                     
                     if itemMaskView.superview == nil {
-                        strongSelf.backgroundMaskView.addSubview(itemMaskView)
+                        strongSelf.backgroundMaskView?.addSubview(itemMaskView)
                         if animation.isAnimated {
                             itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                             itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
