@@ -60,11 +60,11 @@ NSString *const TGBridgeMessagesArrayKey = @"messages";
     [aCoder encodeBool:self.forceReply forKey:TGBridgeMessageForceReplyKey];
 }
 
-- (NSIndexSet *)involvedUserIds
+- (NSArray<NSNumber *> *)involvedUserIds
 {
-    NSMutableIndexSet *userIds = [[NSMutableIndexSet alloc] init];
+    NSMutableSet<NSNumber *> *userIds = [[NSMutableSet alloc] init];
     if (!TGPeerIdIsChannel(self.fromUid))
-        [userIds addIndex:(int32_t)self.fromUid];
+        [userIds addObject:[NSNumber numberWithLongLong:self.fromUid]];
     
     for (TGBridgeMediaAttachment *attachment in self.media)
     {
@@ -72,29 +72,33 @@ NSString *const TGBridgeMessagesArrayKey = @"messages";
         {
             TGBridgeContactMediaAttachment *contactAttachment = (TGBridgeContactMediaAttachment *)attachment;
             if (contactAttachment.uid != 0)
-                [userIds addIndex:contactAttachment.uid];
+                [userIds addObject:[NSNumber numberWithLongLong:contactAttachment.uid]];
         }
         else if ([attachment isKindOfClass:[TGBridgeForwardedMessageMediaAttachment class]])
         {
             TGBridgeForwardedMessageMediaAttachment *forwardAttachment = (TGBridgeForwardedMessageMediaAttachment *)attachment;
             if (forwardAttachment.peerId != 0 && !TGPeerIdIsChannel(forwardAttachment.peerId))
-                [userIds addIndex:(int32_t)forwardAttachment.peerId];
+                [userIds addObject:[NSNumber numberWithLongLong:forwardAttachment.peerId]];
         }
         else if ([attachment isKindOfClass:[TGBridgeReplyMessageMediaAttachment class]])
         {
             TGBridgeReplyMessageMediaAttachment *replyAttachment = (TGBridgeReplyMessageMediaAttachment *)attachment;
             if (replyAttachment.message != nil && !TGPeerIdIsChannel(replyAttachment.message.fromUid))
-                [userIds addIndex:(int32_t)replyAttachment.message.fromUid];
+                [userIds addObject:[NSNumber numberWithLongLong:replyAttachment.message.fromUid]];
         }
         else if ([attachment isKindOfClass:[TGBridgeActionMediaAttachment class]])
         {
             TGBridgeActionMediaAttachment *actionAttachment = (TGBridgeActionMediaAttachment *)attachment;
             if (actionAttachment.actionData[@"uid"] != nil)
-                [userIds addIndex:(int32_t)[actionAttachment.actionData[@"uid"] intValue]];
+                [userIds addObject:[NSNumber numberWithLongLong:[actionAttachment.actionData[@"uid"] intValue]]];
         }
     }
     
-    return userIds;
+    NSMutableArray *result = [[NSMutableArray alloc] init];
+    for (NSNumber *object in userIds) {
+        [result addObject:object];
+    }
+    return result;
 }
 
 - (NSArray *)textCheckingResults

@@ -59,7 +59,7 @@ NSString *const TGNeoChatRowIdentifier = @"TGNeoChatRow";
     _currentChat = chat;
     
     NSDictionary *oldUsers = _currentUsers;
-    _currentUsers = [[TGBridgeUserCache instance] usersWithIndexSet:[chat involvedUserIds]];
+    _currentUsers = [[TGBridgeUserCache instance] usersWithIds:[chat involvedUserIds]];
 
     bool shouldUpdate = [self shouldUpdateContentFrom:oldChat oldUsers:oldUsers to:_currentChat newUsers:_currentUsers];
     if (shouldUpdate)

@@ -33,7 +33,7 @@
     return self;
 }
 
-- (TGBridgeUser *)userWithId:(int32_t)userId
+- (TGBridgeUser *)userWithId:(int64_t)userId
 {
     __block TGBridgeUser *user = nil;
     
@@ -44,26 +44,28 @@
     return user;
 }
 
-- (NSDictionary *)usersWithIndexSet:(NSIndexSet *)indexSet
+- (NSDictionary *)usersWithIds:(NSArray<NSNumber *> *)indexSet
 {
     NSMutableDictionary *users = [[NSMutableDictionary alloc] init];
-    NSMutableIndexSet *neededUsers = [indexSet mutableCopy];
+    NSMutableSet<NSNumber *> *neededUsers = [indexSet mutableCopy];
     
-    NSMutableIndexSet *foundUsers = [[NSMutableIndexSet alloc] init];
+    NSMutableSet<NSNumber *> *foundUsers = [[NSMutableSet alloc] init];
     
     OSSpinLockLock(&_userByUidLock);
-    [neededUsers enumerateIndexesUsingBlock:^(NSUInteger index, BOOL * _Nonnull stop)
-    {
+    for (NSNumber *nId in neededUsers) {
+        int64_t index = [nId longLongValue];
         TGBridgeUser *user = _userByUid[@(index)];
         if (user != nil)
         {
             users[@(index)] = user;
-            [foundUsers addIndex:index];
+            [foundUsers addObject:@(index)];
         }
-    }];
+    }
     OSSpinLockUnlock(&_userByUidLock);
     
-    [neededUsers removeIndexes:foundUsers];
+    for (NSNumber *nId in foundUsers) {
+        [neededUsers removeObject:nId];
+    }
     
     return users;
 }
