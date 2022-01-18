@@ -55,7 +55,7 @@ objc_library(
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
         "-std=c++14",
-        "-DWEBRTC_DISABLE_H265",
+        #"-DWEBRTC_DISABLE_H265",
     ],
     includes = [
         "PublicHeaders",

@@ -2924,6 +2924,16 @@ webrtc_sources = [
     "api/wrapping_async_dns_resolver.cc",
     "modules/video_coding/utility/bandwidth_quality_scaler.cc",
     "rtc_base/experiments/bandwidth_quality_scaler_settings.cc",
+    "common_video/h265/h265_common.cc",
+    "common_video/h265/h265_pps_parser.cc",
+    "common_video/h265/h265_sps_parser.cc",
+    "common_video/h265/h265_vps_parser.cc",
+    "common_video/h265/legacy_bit_buffer.h",
+    "common_video/h265/legacy_bit_buffer.cc",
+    "modules/rtp_rtcp/source/rtp_format_h265.cc",
+    "modules/video_coding/h265_vps_sps_pps_tracker.cc",
+    "modules/rtp_rtcp/source/video_rtp_depacketizer_h265.cc",
+    "common_video/h265/h265_bitstream_parser.cc",
 ]
 
 ios_objc_sources = [
@@ -3185,6 +3195,8 @@ ios_sources = [
     "objc/components/network/RTCNetworkMonitor+Private.h",
     "objc/components/network/RTCNetworkMonitor.mm",
     "objc/native/src/network_monitor_observer.h",
+    "objc/components/video_codec/RTCCodecSpecificInfoH265.mm",
+    "objc/components/video_codec/RTCH265ProfileLevelId.mm",
 ]
 
 common_arm_specific_sources = [webrtc_source_dir + "/" + path for path in [
