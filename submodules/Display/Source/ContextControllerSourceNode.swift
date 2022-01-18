@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-open class ContextControllerSourceNode: ASDisplayNode {
+open class ContextControllerSourceNode: ContextReferenceContentNode {
     public private(set) var contextGesture: ContextGesture?
     
     public var isGestureEnabled: Bool = true {
