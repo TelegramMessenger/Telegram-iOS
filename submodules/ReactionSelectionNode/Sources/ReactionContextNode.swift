@@ -7,6 +7,7 @@ import TelegramPresentationData
 import AccountContext
 import TelegramAnimatedStickerNode
 import ReactionButtonListComponent
+import SwiftSignalKit
 
 public final class ReactionContextItem {
     public struct Reaction: Equatable {
@@ -60,7 +61,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let previewingItemContainer: ASDisplayNode
     private var visibleItemNodes: [Int: ReactionNode] = [:]
     
-    private weak var currentLongPressItemNode: ReactionNode?
+    private var longPressRecognizer: UILongPressGestureRecognizer?
+    private var longPressTimer: SwiftSignalKit.Timer?
     
     private var highlightedReaction: ReactionContextItem.Reaction?
     private var didTriggerExpandedReaction: Bool = false
@@ -144,9 +146,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
-        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
-        longPressGesture.minimumPressDuration = 0.2
-        self.view.addGestureRecognizer(longPressGesture)
+        let longPressRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
+        longPressRecognizer.minimumPressDuration = 0.2
+        self.longPressRecognizer = longPressRecognizer
+        self.view.addGestureRecognizer(longPressRecognizer)
     }
     
     public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, transition: ContainedViewLayoutTransition) {
@@ -485,6 +488,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
         itemNode.layer.animatePosition(from: itemNode.layer.position, to: targetPosition, duration: duration, removeOnCompletion: false)
+        targetSnapshotView.alpha = 1.0
         targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
         targetSnapshotView.layer.animatePosition(from: sourceFrame.center, to: targetPosition, duration: duration, removeOnCompletion: false)
         targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 1.0, duration: duration, removeOnCompletion: false, completion: { [weak targetSnapshotView] _ in
@@ -653,7 +657,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             theme: strongSelf.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                             reaction: itemNode.item,
                             targetView: targetView,
-                            hideNode: true,
                             completion: { [weak standaloneReactionAnimation] in
                                 standaloneReactionAnimation?.removeFromSupernode()
                             }
@@ -704,8 +707,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 if let (size, insets, anchorRect) = self.validLayout {
                     self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 2.5, curve: .linear), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
                 }
+                
+                self.longPressTimer?.invalidate()
+                self.longPressTimer = SwiftSignalKit.Timer(timeout: 2.5, repeat: false, completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.longPressRecognizer?.state = .cancelled
+                }, queue: .mainQueue())
+                self.longPressTimer?.start()
             }
         case .ended, .cancelled:
+            self.longPressTimer?.invalidate()
             self.continuousHaptic = nil
             self.didTriggerExpandedReaction = true
             self.highlightGestureFinished(performAction: true)
@@ -839,7 +852,6 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     private var isCancelled: Bool = false
     
     private weak var targetView: UIView?
-    private var hideNode: Bool = false
     
     override public init() {
         super.init()
@@ -847,18 +859,17 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, reaction: reaction, targetView: targetView, currentItemNode: nil, hideNode: hideNode, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, targetView: UIView, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, reaction: reaction, targetView: targetView, currentItemNode: nil, completion: completion)
     }
         
-    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, targetView: UIView, currentItemNode: ReactionNode?, hideNode: Bool, completion: @escaping () -> Void) {
+    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, targetView: UIView, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
         }
         
         self.targetView = targetView
-        self.hideNode = hideNode
         
         let itemNode: ReactionNode
         if let currentItemNode = currentItemNode {
@@ -884,9 +895,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 
                 targetView.imageView.isHidden = true
             } else {
-                if hideNode {
-                    targetView.isHidden = true
-                }
+                targetView.isHidden = true
             }
         }
         
@@ -951,10 +960,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     if let targetView = targetView as? ReactionIconView {
                         targetView.imageView.isHidden = false
                     } else {
-                        if strongSelf.hideNode {
-                            targetView.alpha = 1.0
-                            targetView.isHidden = false
-                        }
+                        targetView.alpha = 1.0
+                        targetView.isHidden = false
                     }
                 }
                 
@@ -981,63 +988,6 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         })
     }
     
-    /*private func animateFromItemNodeToReaction(itemNode: ReactionNode, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
-        if "".isEmpty {
-            if hideNode {
-                targetView.alpha = 1.0
-                targetView.isHidden = false
-            }
-            completion()
-            return
-        }
-        
-        guard let targetSnapshotView = targetView.snapshotContentTree(unhide: true) else {
-            completion()
-            return
-        }
-        
-        let sourceFrame = itemNode.view.convert(itemNode.bounds, to: self.view)
-        let targetFrame = self.view.convert(targetView.convert(targetView.bounds, to: nil), from: nil)
-        
-        targetSnapshotView.frame = targetFrame
-        self.view.insertSubview(targetSnapshotView, belowSubview: itemNode.view)
-        
-        var completedTarget = false
-        var targetScaleCompleted = false
-        let intermediateCompletion: () -> Void = {
-            if completedTarget && targetScaleCompleted {
-                completion()
-            }
-        }
-        
-        let targetPosition = targetFrame.center
-        let duration: Double = 0.16
-        
-        itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
-        itemNode.layer.animatePosition(from: itemNode.layer.position, to: targetPosition, duration: duration, removeOnCompletion: false)
-        targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
-        targetSnapshotView.layer.animatePosition(from: sourceFrame.center, to: targetPosition, duration: duration, removeOnCompletion: false)
-        targetSnapshotView.layer.animateScale(from: itemNode.bounds.width / targetSnapshotView.bounds.width, to: 1.0, duration: duration, removeOnCompletion: false, completion: { [weak targetSnapshotView] _ in
-            completedTarget = true
-            intermediateCompletion()
-            
-            targetSnapshotView?.isHidden = true
-            
-            if hideNode {
-                targetView.alpha = 1.0
-                targetView.isHidden = false
-                targetSnapshotView?.isHidden = true
-                targetScaleCompleted = true
-                intermediateCompletion()
-            } else {
-                targetScaleCompleted = true
-                intermediateCompletion()
-            }
-        })
-        
-        itemNode.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 1.0) / itemNode.bounds.width, duration: duration, removeOnCompletion: false)
-    }*/
-    
     public func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
         self.bounds = self.bounds.offsetBy(dx: 0.0, dy: offset.y)
         transition.animateOffsetAdditive(node: self, offset: -offset.y)
@@ -1046,7 +996,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     public func cancel() {
         self.isCancelled = true
         
-        if let targetView = self.targetView, self.hideNode {
+        if let targetView = self.targetView {
             if let targetView = targetView as? ReactionIconView {
                 targetView.imageView.isHidden = false
             } else {

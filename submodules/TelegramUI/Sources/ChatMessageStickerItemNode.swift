@@ -689,7 +689,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 layoutSize.height += dateAndStatusSize.height
             }
             if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
-                layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height + 4.0
+                layoutSize.height += reactionButtonsSizeAndApply.0.height + 2.0
             }
             if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
                 layoutSize.height += actionButtonsSizeAndApply.0.height
@@ -986,7 +986,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
                         let reactionButtonsNode = reactionButtonsSizeAndApply.1(animation)
-                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: imageFrame.maxY - innerImageInset + 4.0), size: reactionButtonsSizeAndApply.0)
+                        var reactionButtonsFrame = CGRect(origin: CGPoint(x: imageFrame.minX, y: dateAndStatusFrame.maxY + 6.0), size: reactionButtonsSizeAndApply.0)
                         if !incoming {
                             reactionButtonsFrame.origin.x = imageFrame.maxX - innerImageInset - reactionButtonsSizeAndApply.0.width
                         }

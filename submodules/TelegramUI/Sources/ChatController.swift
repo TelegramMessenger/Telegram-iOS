@@ -1293,7 +1293,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 largeApplicationAnimation: reaction.effectAnimation
                                             ),
                                             targetView: targetView,
-                                            hideNode: true,
                                             completion: { [weak standaloneReactionAnimation] in
                                                 standaloneReactionAnimation?.removeFromSupernode()
                                             }
