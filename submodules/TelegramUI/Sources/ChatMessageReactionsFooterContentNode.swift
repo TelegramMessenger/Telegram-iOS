@@ -59,7 +59,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     private var bubbleBackgroundNode: WallpaperBubbleBackgroundNode?
     private let container: ReactionButtonsAsyncLayoutContainer
-    private let backgroundMaskView: UIView
+    private var backgroundMaskView: UIView?
     private var backgroundMaskButtons: [String: UIView] = [:]
     
     var reactionSelected: ((String) -> Void)?
@@ -67,7 +67,6 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     override init() {
         self.container = ReactionButtonsAsyncLayoutContainer()
-        self.backgroundMaskView = UIView()
         
         super.init()
     }
@@ -219,6 +218,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                     return
                 }
                 
+                if strongSelf.backgroundMaskView == nil {
+                    strongSelf.backgroundMaskView = UIView()
+                }
+                
                 let backgroundInsets: CGFloat = 10.0
                 
                 switch type {
@@ -308,29 +311,29 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                             item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
                         item.node.frame = itemFrame
-                        
-                        let itemValue = item.value
-                        let itemNode = item.node
-                        item.node.isGestureEnabled = true
-                        let canViewReactionList = canViewMessageReactionList(message: message)
-                        item.node.activateAfterCompletion = !canViewReactionList
-                        item.node.activated = { [weak itemNode] gesture, _ in
-                            guard let strongSelf = self, let itemNode = itemNode else {
-                                gesture.cancel()
-                                return
-                            }
-                            if !canViewReactionList {
-                                return
-                            }
-                            strongSelf.openReactionPreview?(gesture, itemNode.containerNode, itemValue)
-                        }
-                        item.node.additionalActivationProgressLayer = itemMaskView.layer
                     } else {
                         animation.animator.updateFrame(layer: item.node.layer, frame: itemFrame, completion: nil)
                     }
                     
+                    let itemValue = item.value
+                    let itemNode = item.node
+                    item.node.isGestureEnabled = true
+                    let canViewReactionList = canViewMessageReactionList(message: message)
+                    item.node.activateAfterCompletion = !canViewReactionList
+                    item.node.activated = { [weak itemNode] gesture, _ in
+                        guard let strongSelf = self, let itemNode = itemNode else {
+                            gesture.cancel()
+                            return
+                        }
+                        if !canViewReactionList {
+                            return
+                        }
+                        strongSelf.openReactionPreview?(gesture, itemNode.containerNode, itemValue)
+                    }
+                    item.node.additionalActivationProgressLayer = itemMaskView.layer
+                    
                     if itemMaskView.superview == nil {
-                        strongSelf.backgroundMaskView.addSubview(itemMaskView)
+                        strongSelf.backgroundMaskView?.addSubview(itemMaskView)
                         if animation.isAnimated {
                             itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                             itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

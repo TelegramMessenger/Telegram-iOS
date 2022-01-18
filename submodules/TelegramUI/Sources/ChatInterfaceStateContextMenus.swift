@@ -1255,14 +1255,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             var hasReadReports = false
             if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
-                    if let cachedData = cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, memberCount <= 50 {
+                    if canViewStats {
                         hasReadReports = true
                     }
                 } else {
                     reactionCount = 0
                 }
-            } else if let group = peer as? TelegramGroup {
-                if group.participantCount <= 50 {
+            } else if let _ = peer as? TelegramGroup {
+                if canViewStats {
                     hasReadReports = true
                 }
             } else {

@@ -70,7 +70,7 @@ private final class StatusReactionNode: ASDisplayNode {
         if self.value != value {
             self.value = value
             
-            let boundingImageSize = CGSize(width: 17.0, height: 17.0)
+            let boundingImageSize = CGSize(width: 14.0, height: 14.0)
             let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
             let imageSize: CGSize
             if let file = file {
@@ -809,29 +809,30 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     item.node.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                                     item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 }
-                                
-                                let itemValue = item.value
-                                let itemNode = item.node
-                                item.node.isGestureEnabled = true
-                                let canViewReactionList = arguments.canViewReactionList
-                                item.node.activateAfterCompletion = !canViewReactionList
-                                item.node.activated = { [weak itemNode] gesture, _ in
-                                    guard let strongSelf = self, canViewReactionList else {
-                                        return
-                                    }
-                                    guard let itemNode = itemNode else {
-                                        return
-                                    }
-                                    
-                                    if let openReactionPreview = strongSelf.openReactionPreview {
-                                        openReactionPreview(gesture, itemNode.containerNode, itemValue)
-                                    } else {
-                                        gesture.cancel()
-                                    }
-                                }
                             } else {
                                 animation.animator.updateFrame(layer: item.node.layer, frame: CGRect(origin: reactionButtonPosition, size: item.size), completion: nil)
                             }
+                            
+                            let itemValue = item.value
+                            let itemNode = item.node
+                            item.node.isGestureEnabled = true
+                            let canViewReactionList = arguments.canViewReactionList
+                            item.node.activateAfterCompletion = !canViewReactionList
+                            item.node.activated = { [weak itemNode] gesture, _ in
+                                guard let strongSelf = self, canViewReactionList else {
+                                    return
+                                }
+                                guard let itemNode = itemNode else {
+                                    return
+                                }
+                                
+                                if let openReactionPreview = strongSelf.openReactionPreview {
+                                    openReactionPreview(gesture, itemNode.containerNode, itemValue)
+                                } else {
+                                    gesture.cancel()
+                                }
+                            }
+                            
                             reactionButtonPosition.x += item.size.width + 6.0
                         }
                         
@@ -1052,7 +1053,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                         node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                     }
                                 }
-                                let nodeFrame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + offset + verticalInset - 2.0), size: CGSize(width: reactionSize, height: reactionSize))
+                                let nodeFrame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + offset + verticalInset), size: CGSize(width: reactionSize, height: reactionSize))
                                 if animateNode {
                                     animation.animator.updateFrame(layer: node.layer, frame: nodeFrame, completion: nil)
                                 } else {
