@@ -93,18 +93,12 @@ def get_xcode_version():
     exit(1)
 
 
-class BuildEnvironment:
+class BuildEnvironmentVersions:
     def __init__(
             self,
-            base_path,
-            bazel_path,
-            override_bazel_version,
-            override_xcode_version
+            base_path
             ):
-        self.base_path = os.path.expanduser(base_path)
-        self.bazel_path = os.path.expanduser(bazel_path)
-
-        configuration_path = os.path.join(self.base_path, 'versions.json')
+        configuration_path = os.path.join(base_path, 'versions.json')
         with open(configuration_path) as file:
             configuration_dict = json.load(file)
             if configuration_dict['app'] is None:
@@ -120,24 +114,41 @@ class BuildEnvironment:
             else:
                 self.xcode_version = configuration_dict['xcode']
 
+class BuildEnvironment:
+    def __init__(
+            self,
+            base_path,
+            bazel_path,
+            override_bazel_version,
+            override_xcode_version
+            ):
+        self.base_path = os.path.expanduser(base_path)
+        self.bazel_path = os.path.expanduser(bazel_path)
+
+        versions = BuildEnvironmentVersions(base_path=self.base_path)
+
         actual_bazel_version = get_bazel_version(self.bazel_path)
-        if actual_bazel_version != self.bazel_version:
+        if actual_bazel_version != versions.bazel_version:
             if override_bazel_version:
                 print('Overriding the required bazel version {} with {} as reported by {}'.format(
-                    self.bazel_version, actual_bazel_version, self.bazel_path))
+                    versions.bazel_version, actual_bazel_version, self.bazel_path))
                 self.bazel_version = actual_bazel_version
             else:
                 print('Required bazel version is "{}", but "{}"" is reported by {}'.format(
-                    self.bazel_version, actual_bazel_version, self.bazel_path))
+                    versions.bazel_version, actual_bazel_version, self.bazel_path))
                 exit(1)
 
         actual_xcode_version = get_xcode_version()
-        if actual_xcode_version != self.xcode_version:
+        if actual_xcode_version != versions.xcode_version:
             if override_xcode_version:
                 print('Overriding the required Xcode version {} with {} as reported by \'xcode-select -p\''.format(
-                    self.xcode_version, actual_xcode_version, self.bazel_path))
-                self.xcode_version = actual_xcode_version
+                    versions.xcode_version, actual_xcode_version, self.bazel_path))
+                versions.xcode_version = actual_xcode_version
             else:
                 print('Required Xcode version is {}, but {} is reported by \'xcode-select -p\''.format(
-                    self.xcode_version, actual_xcode_version, self.bazel_path))
+                    versions.xcode_version, actual_xcode_version, self.bazel_path))
                 exit(1)
+
+        self.app_version = versions.app_version
+        self.xcode_version = versions.xcode_version
+        self.bazel_version = versions.bazel_version
