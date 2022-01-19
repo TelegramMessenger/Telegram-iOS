@@ -210,6 +210,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private var originalProjectedContentViewFrame: (CGRect, CGRect)?
     private var contentAreaInScreenSpace: CGRect?
+    private var customPosition: CGPoint?
     private let contentContainerNode: ContextContentContainerNode
     private var actionsContainerNode: ContextActionsContainerNode
     private var reactionContextNode: ReactionContextNode?
@@ -546,6 +547,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 let referenceNode = transitionInfo.referenceNode
                 self.contentContainerNode.contentNode = .reference(node: referenceNode)
                 self.contentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
+                self.customPosition = transitionInfo.customPosition
                 var projectedFrame = convertFrame(referenceNode.view.bounds, from: referenceNode.view, to: self.view)
                 projectedFrame.origin.x += transitionInfo.insets.left
                 projectedFrame.size.width -= transitionInfo.insets.left + transitionInfo.insets.right
@@ -1542,6 +1544,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         }
                         contentHeight -= offsetDelta
                     }
+                    
+                    if let customPosition = self.customPosition {
+                        originalActionsFrame.origin.x = floor(originalContentFrame.center.x - originalActionsFrame.width / 2.0) + customPosition.x
+                        originalActionsFrame.origin.y = floor(originalContentFrame.center.y - originalActionsFrame.height / 2.0) + customPosition.y
+                    }
 
                     let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
                     if self.scrollNode.view.contentSize != scrollContentSize {
@@ -2023,11 +2030,13 @@ public final class ContextControllerReferenceViewInfo {
     public let referenceNode: ContextReferenceContentNode
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
+    public let customPosition: CGPoint?
     
-    public init(referenceNode: ContextReferenceContentNode, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets()) {
+    public init(referenceNode: ContextReferenceContentNode, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
         self.referenceNode = referenceNode
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
+        self.customPosition = customPosition
     }
 }
 
