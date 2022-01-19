@@ -207,6 +207,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.tabBarItem.image = icon
                 self.tabBarItem.selectedImage = icon
                 self.tabBarItem.animationName = "TabChats"
+                self.tabBarItem.animationOffset = CGPoint(x: 0.0, y: UIScreenPixel)
                 
                 let leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
                 leftBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit

@@ -654,10 +654,11 @@ class TabBarNode: ASDisplayNode {
                 
                 let scaleFactor: CGFloat = horizontal ? 0.8 : 1.0
                 node.animationContainerNode.subnodeTransform = CATransform3DMakeScale(scaleFactor, scaleFactor, 1.0)
+                let animationOffset: CGPoint = self.tabBarItems[i].item.animationOffset
                 if horizontal {
                     node.animationNode.frame = CGRect(origin: CGPoint(x: -10.0 - UIScreenPixel, y: -4.0 - UIScreenPixel), size: CGSize(width: 51.0, height: 51.0))
                 } else {
-                    node.animationNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeSize.width - 51.0) / 2.0), y: -10.0 - UIScreenPixel), size: CGSize(width: 51.0, height: 51.0))
+                    node.animationNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((nodeSize.width - 51.0) / 2.0), y: -10.0 - UIScreenPixel).offsetBy(dx: animationOffset.x, dy: animationOffset.y), size: CGSize(width: 51.0, height: 51.0))
                 }
                 
                 if container.badgeValue != container.appliedBadgeValue {
