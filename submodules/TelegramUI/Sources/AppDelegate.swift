@@ -443,10 +443,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             return data
         }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
-        
-        guard let appGroupUrl = maybeAppGroupUrl else {
-            self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
-            return true
+
+        var appGroupUrl: URL!
+        if maybeAppGroupUrl != nil {
+            appGroupUrl = maybeAppGroupUrl!
+        } else {
+            guard BuildConfig.isNonDevAccount(),
+                  let appDocUrl = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else {
+                self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
+                return true
+            }
+            appGroupUrl = appDocUrl
         }
         
         var isDebugConfiguration = false
@@ -643,7 +650,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 completion(false)
             }
         }, siriAuthorization: {
-            if #available(iOS 10, *) {
+            if #available(iOS 10, *), !BuildConfig.isNonDevAccount() {
                 switch INPreferences.siriAuthorizationStatus() {
                     case .authorized:
                         return .allowed

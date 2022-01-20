@@ -5,6 +5,7 @@ load(
     "telegram_app_center_id",
     "telegram_is_internal_build",
     "telegram_is_appstore_build",
+    "telegram_is_non_dev_account",
     "telegram_appstore_id",
     "telegram_app_specific_url_scheme",
 )
@@ -23,6 +24,7 @@ objc_library(
         "-DAPP_CONFIG_APP_CENTER_ID=\\\"{}\\\"".format(telegram_app_center_id),
         "-DAPP_CONFIG_IS_INTERNAL_BUILD={}".format(telegram_is_internal_build),
         "-DAPP_CONFIG_IS_APPSTORE_BUILD={}".format(telegram_is_appstore_build),
+        "-DAPP_CONFIG_NO_DEV_ACCOUNT={}".format("true" if telegram_is_non_dev_account else "false"),
         "-DAPP_CONFIG_APPSTORE_ID={}".format(telegram_appstore_id),
         "-DAPP_SPECIFIC_URL_SCHEME=\\\"{}\\\"".format(telegram_app_specific_url_scheme),
     ],

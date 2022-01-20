@@ -6,6 +6,7 @@ telegram_team_id = "C67CF9S4VU"
 telegram_app_center_id = "0"
 telegram_is_internal_build = "false"
 telegram_is_appstore_build = "true"
+telegram_is_non_dev_account = False
 telegram_appstore_id = "686449807"
 telegram_app_specific_url_scheme = "tg"
 telegram_aps_environment = "production"

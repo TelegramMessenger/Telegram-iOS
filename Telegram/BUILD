@@ -35,6 +35,7 @@ load(
     "telegram_enable_icloud",
     "telegram_enable_siri",
     "telegram_enable_watch",
+    "telegram_is_non_dev_account",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -450,11 +451,16 @@ aps_fragment = "" if telegram_aps_environment == "" else """
 <string>{telegram_aps_environment}</string>
 """.format(telegram_aps_environment=telegram_aps_environment)
 
-app_groups_fragment = """
+app_groups_fragment = "" if telegram_is_non_dev_account else """
     <key>com.apple.security.application-groups</key>
     <array>
         <string>group.{telegram_bundle_id}</string>
     </array>
+""".format(
+    telegram_bundle_id=telegram_bundle_id
+)
+
+app_id_fragment = """
     <key>application-identifier</key>
     <string>{telegram_team_id}.{telegram_bundle_id}</string>
 """.format(
@@ -462,7 +468,7 @@ app_groups_fragment = """
     telegram_bundle_id=telegram_bundle_id
 )
 
-communication_notifications_fragment = """
+communication_notifications_fragment = "" if telegram_is_non_dev_account else """
 <key>com.apple.developer.usernotifications.communication</key>
 <true/>
 """
@@ -473,6 +479,7 @@ plist_fragment(
     template = "".join([
         aps_fragment,
         app_groups_fragment,
+        app_id_fragment,
         siri_fragment,
         associated_domains_fragment,
         icloud_fragment,
