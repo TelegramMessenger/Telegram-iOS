@@ -3,6 +3,7 @@ import CloudKit
 import MtProtoKit
 import SwiftSignalKit
 import EncryptionProvider
+import BuildConfig
 
 private enum FetchError {
     case generic
@@ -15,6 +16,9 @@ private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
         #if targetEnvironment(simulator)
         return EmptyDisposable
         #else
+        if BuildConfig.isNonDevAccount() {
+            return EmptyDisposable
+        }
         let container = CKContainer.default()
         let publicDatabase = container.database(with: .public)
         let recordId = CKRecord.ID(recordName: "emergency-datacenter-\(prefix)")

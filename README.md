@@ -106,3 +106,21 @@ Each release is built using specific Xcode and Bazel versions (see `versions.jso
 python3 build-system/Make/Make.py --overrideBazelVersion build ... # Don't check the version of Bazel
 python3 build-system/Make/Make.py --overrideXcodeVersion build ... # Don't check the version of Xcode
 ```
+
+# Build without developer account
+
+In case if you have no Developer account you still can build Telegram with your Apple ID.
+
+The steps are the same but ake sure that your specificed those properties in your `variables.bzl`:
+ - `telegram_bundle_id` - any free bundle_id
+ - `telegram_api_id` - can be obtained from https://my.telegram.org/apps
+ - `telegram_api_hash` - can be obtained from https://my.telegram.org/apps
+ - `telegram_team_id` - can be obtained from https://developer.apple.com/account/#!/membership
+ - `telegram_app_center_id = "0"`
+ - `telegram_is_internal_build = "true"`
+ - `telegram_is_appstore_build = "false"`
+ - `telegram_is_non_dev_account = True`
+ - `telegram_aps_environment = ""`
+ - `telegram_enable_siri = False`
+ - `telegram_enable_icloud = False`
+ - `telegram_enable_watch = False`

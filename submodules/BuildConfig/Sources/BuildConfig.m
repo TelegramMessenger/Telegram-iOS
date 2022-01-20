@@ -484,4 +484,8 @@ API_AVAILABLE(ios(10))
     });
 }
 
++ (bool)isNonDevAccount {
+    return APP_CONFIG_NO_DEV_ACCOUNT;
+}
+
 @end
