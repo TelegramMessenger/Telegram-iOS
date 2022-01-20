@@ -111,7 +111,7 @@ python3 build-system/Make/Make.py --overrideXcodeVersion build ... # Don't check
 
 In case if you have no Developer account you still can build Telegram with your Apple ID.
 
-The steps are the same but ake sure that your specificed those properties in your `variables.bzl`:
+The steps are the same but be sure that you specify those properties in your `variables.bzl`:
  - `telegram_bundle_id` - any free bundle_id
  - `telegram_api_id` - can be obtained from https://my.telegram.org/apps
  - `telegram_api_hash` - can be obtained from https://my.telegram.org/apps
