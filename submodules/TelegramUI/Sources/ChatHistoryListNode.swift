@@ -2595,7 +2595,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                             largeApplicationAnimation: reaction.effectAnimation
                                         ),
                                         targetView: targetView,
-                                        hideNode: true,
                                         completion: { [weak standaloneReactionAnimation] in
                                             standaloneReactionAnimation?.removeFromSupernode()
                                         }

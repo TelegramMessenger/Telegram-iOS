@@ -1146,7 +1146,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         }
                                         break inner
                                     } else if let file = media as? TelegramMediaFile {
-                                        if file.isVideo, !file.isInstantVideo, let _ = file.dimensions {
+                                        if file.isVideo, !file.isInstantVideo && !file.isVideoSticker, let _ = file.dimensions {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append((message, .file(file), fitSize))
                                         }

@@ -1,7 +1,7 @@
 import Foundation
 import AsyncDisplayKit
 
-public final class ContextReferenceContentNode: ASDisplayNode {
+open class ContextReferenceContentNode: ASDisplayNode {
 }
 
 public final class ContextExtractedContentContainingNode: ASDisplayNode {

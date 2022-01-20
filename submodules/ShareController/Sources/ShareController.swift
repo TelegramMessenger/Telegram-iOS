@@ -516,7 +516,7 @@ public final class ShareController: ViewController {
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
             })
         }
-        self.controllerNode.share = { [weak self] text, peerIds in
+        self.controllerNode.share = { [weak self] text, peerIds, showNames, silently in
             guard let strongSelf = self else {
                 return .complete()
             }
@@ -528,6 +528,21 @@ public final class ShareController: ViewController {
                 subject = selectedValue.subject
             }
             
+            func transformMessages(_ messages: [EnqueueMessage], showNames: Bool, silently: Bool) -> [EnqueueMessage] {
+                return messages.map { message in
+                    return message.withUpdatedAttributes({ attributes in
+                        var attributes = attributes
+                        if !showNames {
+                            attributes.append(ForwardOptionsMessageAttribute(hideNames: true, hideCaptions: false))
+                        }
+                        if silently {
+                            attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+                        }
+                        return attributes
+                    })
+                }
+            }
+            
             switch subject {
             case let .url(url):
                 for peerId in peerIds {
@@ -537,6 +552,7 @@ public final class ShareController: ViewController {
                     } else {
                         messages.append(.message(text: url, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                     }
+                    messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .text(string):
@@ -546,6 +562,7 @@ public final class ShareController: ViewController {
                         messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                     }
                     messages.append(.message(text: string, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .quote(string, url):
@@ -558,12 +575,14 @@ public final class ShareController: ViewController {
                     attributedText.append(NSAttributedString(string: "\n\n\(url)"))
                     let entities = generateChatInputTextEntities(attributedText)
                     messages.append(.message(text: attributedText.string, attributes: [TextEntitiesMessageAttribute(entities: entities)], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .image(representations):
                 for peerId in peerIds {
                     var messages: [EnqueueMessage] = []
                     messages.append(.message(text: text, attributes: [], mediaReference: .standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .media(mediaReference):
@@ -578,6 +597,7 @@ public final class ShareController: ViewController {
                         messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                     }
                     messages.append(.message(text: sendTextAsCaption ? text : "", attributes: [], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .mapMedia(media):
@@ -587,6 +607,7 @@ public final class ShareController: ViewController {
                         messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
                     }
                     messages.append(.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                    messages = transformMessages(messages, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messages))
                 }
             case let .messages(messages):
@@ -598,6 +619,7 @@ public final class ShareController: ViewController {
                     for message in messages {
                         messagesToEnqueue.append(.forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil))
                     }
+                    messagesToEnqueue = transformMessages(messagesToEnqueue, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue))
                 }
             case let .fromExternal(f):
@@ -1140,8 +1162,13 @@ public class ShareToInstagramActivity: UIActivity {
     }
     
     public override func perform() {
-        if let url = self.activityItems.first as? URL, let data = try? Data(contentsOf: url) {
-            let pasteboardItems: [[String: Any]] = [["com.instagram.sharedSticker.backgroundImage": data]]
+        if let url = self.activityItems.first as? URL, let data = try? Data(contentsOf: url, options: .mappedIfSafe) {
+            let pasteboardItems: [[String: Any]]
+            if url.path.hasSuffix(".mp4") {
+                pasteboardItems = [["com.instagram.sharedSticker.backgroundVideo": data]]
+            } else {
+                pasteboardItems = [["com.instagram.sharedSticker.backgroundImage": data]]
+            }
             if #available(iOS 10.0, *) {
                 UIPasteboard.general.setItems(pasteboardItems, options: [.expirationDate: Date().addingTimeInterval(5 * 60)])
             } else {

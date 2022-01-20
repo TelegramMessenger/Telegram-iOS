@@ -72,7 +72,7 @@ int inputAvailable(void)
 	tv.tv_usec = 0;
 	FD_ZERO(&fds);
 #if defined(_WIN32) && !defined(__MINGW32__)
-	FD_SET(_fileno(stdin), &fds);
+	FD_SET((SOCKET)_fileno(stdin), &fds);
   	select(_fileno(stdin) + 1, &fds, NULL, NULL, &tv);
 #else
 	FD_SET(STDIN_FILENO, &fds);
@@ -308,7 +308,6 @@ main(int argc, char *argv[])
 	while (!done && !input_done) {
 		if (inputAvailable()) {
 			if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-				buffer[strlen(buffer)] = '\0';
 				usrsctp_sendv(sock, buffer, strlen(buffer), NULL, 0, NULL, 0, SCTP_SENDV_NOINFO, 0);
 			} else {
 				if (usrsctp_shutdown(sock, SHUT_WR) < 0) {

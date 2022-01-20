@@ -171,7 +171,6 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                                     largeApplicationAnimation: reaction.effectAnimation
                                 ),
                                 targetView: targetView,
-                                hideNode: true,
                                 completion: { [weak standaloneReactionAnimation] in
                                 standaloneReactionAnimation?.removeFromSupernode()
                                 }
@@ -306,6 +305,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0

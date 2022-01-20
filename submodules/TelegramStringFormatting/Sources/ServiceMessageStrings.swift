@@ -252,17 +252,22 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                     
                     let string = textWithRanges._tuple.0
-                    let stringLength = (clippedText as NSString).length
+                    let stringLength = (string as NSString).length
+                    let messageLength = (clippedText as NSString).length
                     var ranges = textWithRanges._tuple.1
                     let entityOffset = ranges.first(where: { $0.0 == 1 })?.1.location ?? 0
                     var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
                     for entity in entities {
-                        if entity.range.startIndex >= stringLength {
+                        if entity.range.startIndex >= messageLength {
                             continue
                         }
-                        let index = ranges.count
-                        ranges.append((ranges.count, NSRange(location: entityOffset + entity.range.startIndex, length: entity.range.count)))
-                        attributes[index] = spoilerAttributes(primaryTextColor: primaryTextColor)
+                        let location = entityOffset + entity.range.startIndex
+                        let length = max(0, min(entity.range.count, stringLength - location - 1))
+                        if length > 0 {
+                            let index = ranges.count
+                            ranges.append((ranges.count, NSRange(location: location, length: length)))
+                            attributes[index] = spoilerAttributes(primaryTextColor: primaryTextColor)
+                        }
                     }
                     attributedString = addAttributesToStringWithRanges((string, ranges), body: bodyAttributes, argumentAttributes: attributes)
                 case .game:

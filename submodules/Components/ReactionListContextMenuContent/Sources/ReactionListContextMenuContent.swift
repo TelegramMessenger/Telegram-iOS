@@ -126,7 +126,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.titleLabelNode.isUserInteractionEnabled = false
                 
                 if let reaction = reaction {
-                    self.reactionIconNode = ReactionImageNode(context: context, availableReactions: availableReactions, reaction: reaction)
+                    self.reactionIconNode = ReactionImageNode(context: context, availableReactions: availableReactions, reaction: reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
                     self.reactionIconNode?.isUserInteractionEnabled = false
                     self.iconNode = nil
                 } else {
@@ -354,7 +354,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 let reaction: String? = item.reaction
                 if let reaction = reaction {
                     if self.reactionIconNode == nil {
-                        let reactionIconNode = ReactionImageNode(context: self.context, availableReactions: self.availableReactions, reaction: reaction)
+                        let reactionIconNode = ReactionImageNode(context: self.context, availableReactions: self.availableReactions, reaction: reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
                         self.reactionIconNode = reactionIconNode
                         self.addSubnode(reactionIconNode)
                     }

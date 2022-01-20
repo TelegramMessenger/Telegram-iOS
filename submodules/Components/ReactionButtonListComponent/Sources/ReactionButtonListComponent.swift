@@ -179,13 +179,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceNode {
                                     
                                     if previousComponent != component {
                                         componentAlpha = animationFraction
-                                        componentVerticalOffset = (1.0 - animationFraction) * 8.0
+                                        componentVerticalOffset = -(1.0 - animationFraction) * 8.0
                                         if previousComponent.string < component.string {
                                             componentVerticalOffset = -componentVerticalOffset
                                         }
                                         
                                         let previousComponentAlpha = 1.0 - componentAlpha
-                                        var previousComponentVerticalOffset = -animationFraction * 8.0
+                                        var previousComponentVerticalOffset = animationFraction * 8.0
                                         if previousComponent.string < component.string {
                                             previousComponentVerticalOffset = -previousComponentVerticalOffset
                                         }

@@ -343,6 +343,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = 16.0 + params.leftInset + sideImageInset
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     hasBottomCorners = true
@@ -358,7 +359,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     if strongSelf.imageNode == nil, let availableReactions = item.availableReactions {
-                        let imageNode = ReactionImageNode(context: item.context, availableReactions: availableReactions, reaction: item.reaction)
+                        let imageNode = ReactionImageNode(context: item.context, availableReactions: availableReactions, reaction: item.reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
                         strongSelf.imageNode = imageNode
                         strongSelf.addSubnode(imageNode)
                     }

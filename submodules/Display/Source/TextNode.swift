@@ -208,7 +208,13 @@ public final class TextNodeLayout: NSObject {
                 hasRTL = true
             }
             
-            let lineFrame = displayLineFrame(frame: line.frame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: size), cutout: cutout)
+            let lineFrame: CGRect
+            switch self.resolvedAlignment {
+            case .center:
+                lineFrame = CGRect(origin: CGPoint(x: floor((size.width - line.frame.size.width) / 2.0), y: line.frame.minY), size: line.frame.size)
+            default:
+                lineFrame = displayLineFrame(frame: line.frame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: size), cutout: cutout)
+            }
             
             spoilers.append(contentsOf: line.spoilers.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
             spoilerWords.append(contentsOf: line.spoilerWords.map { ( $0.range, $0.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)) })
@@ -1073,7 +1079,6 @@ public class TextNode: ASDisplayNode {
                                 break
                             }
                         }
-//                        brokenLineRange.length = CTLineGetGlyphCount(coreTextLine) - 1
                         if brokenLineRange.location + brokenLineRange.length > attributedString.length {
                             brokenLineRange.length = attributedString.length - brokenLineRange.location
                         }
@@ -1338,7 +1343,7 @@ public class TextNode: ASDisplayNode {
                     context.saveGState()
                     var clipRects: [CGRect] = []
                     for spoiler in line.spoilerWords {
-                        var spoilerClipRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                        var spoilerClipRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY - UIScreenPixel)
                         spoilerClipRect.size.height += 1.0 + UIScreenPixel
                         clipRects.append(spoilerClipRect)
                     }
@@ -1375,7 +1380,7 @@ public class TextNode: ASDisplayNode {
                         context.restoreGState()
                     } else {
                         for spoiler in line.spoilerWords {
-                            var spoilerClearRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                            var spoilerClearRect = spoiler.frame.offsetBy(dx: lineFrame.minX, dy: lineFrame.minY - UIScreenPixel)
                             spoilerClearRect.size.height += 1.0 + UIScreenPixel
                             clearRects.append(spoilerClearRect)
                         }
