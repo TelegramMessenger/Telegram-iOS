@@ -6,12 +6,6 @@ public struct MessageReaction: Equatable, PostboxCoding {
     public var isSelected: Bool
     
     public init(value: String, count: Int32, isSelected: Bool) {
-        var value = value
-        
-        if value == "❤️" {
-            value = "❤"
-        }
-        
         self.value = value
         self.count = count
         self.isSelected = isSelected
@@ -33,20 +27,28 @@ public struct MessageReaction: Equatable, PostboxCoding {
 public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
     public struct RecentPeer: Equatable, PostboxCoding {
         public var value: String
+        public var isLarge: Bool
+        public var isUnseen: Bool
         public var peerId: PeerId
         
-        public init(value: String, peerId: PeerId) {
+        public init(value: String, isLarge: Bool, isUnseen: Bool, peerId: PeerId) {
             self.value = value
+            self.isLarge = isLarge
+            self.isUnseen = isUnseen
             self.peerId = peerId
         }
         
         public init(decoder: PostboxDecoder) {
             self.value = decoder.decodeStringForKey("v", orElse: "")
+            self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
+            self.isUnseen = decoder.decodeInt32ForKey("u", orElse: 0) != 0
             self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         }
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeString(self.value, forKey: "v")
+            encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
+            encoder.encodeInt32(self.isUnseen ? 1 : 0, forKey: "u")
             encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
         }
     }
@@ -89,11 +91,33 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         }
         return true
     }
+    
+    public var hasUnseen: Bool {
+        for recentPeer in self.recentPeers {
+            if recentPeer.isUnseen {
+                return true
+            }
+        }
+        return false
+    }
+    
+    public func withAllSeen() -> ReactionsMessageAttribute {
+        return ReactionsMessageAttribute(
+            canViewList: self.canViewList,
+            reactions: self.reactions,
+            recentPeers: self.recentPeers.map { recentPeer in
+                var recentPeer = recentPeer
+                recentPeer.isUnseen = false
+                return recentPeer
+            }
+        )
+    }
 }
 
 public final class PendingReactionsMessageAttribute: MessageAttribute {
     public let accountPeerId: PeerId?
     public let value: String?
+    public let isLarge: Bool
     
     public var associatedPeerIds: [PeerId] {
         if let accountPeerId = self.accountPeerId {
@@ -103,14 +127,16 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         }
     }
     
-    public init(accountPeerId: PeerId?, value: String?) {
+    public init(accountPeerId: PeerId?, value: String?, isLarge: Bool) {
         self.accountPeerId = accountPeerId
         self.value = value
+        self.isLarge = isLarge
     }
     
     required public init(decoder: PostboxDecoder) {
         self.accountPeerId = decoder.decodeOptionalInt64ForKey("ap").flatMap(PeerId.init)
         self.value = decoder.decodeOptionalStringForKey("v")
+        self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -124,5 +150,6 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         } else {
             encoder.encodeNil(forKey: "v")
         }
+        encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
     }
 }

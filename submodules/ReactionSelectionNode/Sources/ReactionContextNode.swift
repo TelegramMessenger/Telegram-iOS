@@ -70,7 +70,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var validLayout: (CGSize, UIEdgeInsets, CGRect)?
     private var isLeftAligned: Bool = true
     
-    public var reactionSelected: ((ReactionContextItem) -> Void)?
+    public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
     
     private var hapticFeedback: HapticFeedback?
     private var standaloneReactionAnimation: StandaloneReactionAnimation?
@@ -721,7 +721,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.longPressTimer?.invalidate()
             self.continuousHaptic = nil
             self.didTriggerExpandedReaction = true
-            self.highlightGestureFinished(performAction: true)
+            self.highlightGestureFinished(performAction: true, isLarge: true)
         default:
             break
         }
@@ -732,7 +732,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         case .ended:
             let point = recognizer.location(in: self.view)
             if let reaction = self.reaction(at: point) {
-                self.reactionSelected?(reaction)
+                self.reactionSelected?(reaction, false)
             }
         default:
             break
@@ -755,10 +755,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func highlightGestureFinished(performAction: Bool) {
+        self.highlightGestureFinished(performAction: performAction, isLarge: false)
+    }
+    
+    private func highlightGestureFinished(performAction: Bool, isLarge: Bool) {
         if let highlightedReaction = self.highlightedReaction {
             self.highlightedReaction = nil
             if performAction {
-                self.performReactionSelection(reaction: highlightedReaction)
+                self.performReactionSelection(reaction: highlightedReaction, isLarge: isLarge)
             } else {
                 if let (size, insets, anchorRect) = self.validLayout {
                     self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
@@ -819,10 +823,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         return self.reactionItemNode(at: point)?.item
     }
     
-    public func performReactionSelection(reaction: ReactionContextItem.Reaction) {
+    public func performReactionSelection(reaction: ReactionContextItem.Reaction, isLarge: Bool) {
         for (_, itemNode) in self.visibleItemNodes {
             if itemNode.item.reaction == reaction {
-                self.reactionSelected?(itemNode.item)
+                self.reactionSelected?(itemNode.item, isLarge)
                 break
             }
         }

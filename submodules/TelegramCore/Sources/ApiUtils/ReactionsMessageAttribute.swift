@@ -18,8 +18,10 @@ extension ReactionsMessageAttribute {
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
                     switch recentReaction {
-                    case let .messageUserReaction(userId, reaction):
-                        return ReactionsMessageAttribute.RecentPeer(value: reaction, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
+                    case let .messagePeerReaction(flags, peerId, reaction):
+                        let isLarge = (flags & (1 << 0)) != 0
+                        let isUnseen = (flags & (1 << 1)) != 0
+                        return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId)
                     }
                 }
             } else {
@@ -103,7 +105,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
                 }
             }
             if let value = pending.value {
-                recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: value, peerId: accountPeerId))
+                recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: value, isLarge: false, isUnseen: false, peerId: accountPeerId))
             }
         }
         for i in (0 ..< reactions.count).reversed() {
@@ -137,8 +139,10 @@ extension ReactionsMessageAttribute {
             if let recentReactions = recentReactions {
                 parsedRecentReactions = recentReactions.map { recentReaction -> ReactionsMessageAttribute.RecentPeer in
                     switch recentReaction {
-                    case let .messageUserReaction(userId, reaction):
-                        return ReactionsMessageAttribute.RecentPeer(value: reaction, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)))
+                    case let .messagePeerReaction(flags, peerId, reaction):
+                        let isLarge = (flags & (1 << 0)) != 0
+                        let isUnseen = (flags & (1 << 1)) != 0
+                        return ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: isLarge, isUnseen: isUnseen, peerId: peerId.peerId)
                     }
                 }
             } else {

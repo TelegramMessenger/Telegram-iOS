@@ -285,11 +285,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     animateReactionsIn = true
                 }
                 
-                reactionContextNode.reactionSelected = { [weak self] reaction in
+                reactionContextNode.reactionSelected = { [weak self] reaction, isLarge in
                     guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
                         return
                     }
-                    controller.reactionSelected?(reaction)
+                    controller.reactionSelected?(reaction, isLarge)
                 }
             }
             contentTopInset += 70.0

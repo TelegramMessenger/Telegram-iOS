@@ -307,6 +307,7 @@ public final class AccountViewTracker {
     private var updatedUnsupportedMediaDisposables = DisposableDict<Int32>()
     
     private var updatedSeenPersonalMessageIds = Set<MessageId>()
+    private var updatedReactionsSeenForMessageIds = Set<MessageId>()
     
     private var cachedDataContexts: [PeerId: PeerCachedDataContext] = [:]
     private var cachedChannelParticipantsContexts: [PeerId: CachedChannelParticipantsContext] = [:]
@@ -1227,6 +1228,36 @@ public final class AccountViewTracker {
         }
     }
     
+    public func updateMarkReactionsSeenForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            let addedMessageIds: [MessageId] = Array(messageIds)
+            if !addedMessageIds.isEmpty {
+                if let account = self.account {
+                    let _ = (account.postbox.transaction { transaction -> Void in
+                        for id in addedMessageIds {
+                            if let _ = transaction.getMessage(id) {
+                                /*transaction.updateMessage(id, update: { currentMessage in
+                                    var attributes = currentMessage.attributes
+                                    loop: for j in 0 ..< attributes.count {
+                                        if let attribute = attributes[j] as? ConsumablePersonalMentionMessageAttribute {
+                                            attributes[j] = ConsumablePersonalMentionMessageAttribute(consumed: attribute.consumed, pending: true)
+                                            break loop
+                                        }
+                                    }
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                })*/
+
+                                if transaction.getPendingMessageAction(type: .readReaction, id: id) == nil {
+                                    transaction.setPendingMessageAction(type: .readReaction, id: id, action: ReadReactionAction())
+                                }
+                            }
+                        }
+                    }).start()
+                }
+            }
+        }
+    }
+    
     public func forceUpdateCachedPeerData(peerId: PeerId) {
         self.queue.async {
             let context: PeerCachedDataContext
@@ -1756,23 +1787,45 @@ public final class AccountViewTracker {
         }
     }
     
-    public func unseenPersonalMessagesCount(peerId: PeerId) -> Signal<Int32, NoError> {
+    public func unseenPersonalMessagesAndReactionCount(peerId: PeerId) -> Signal<(mentionCount: Int32, reactionCount: Int32), NoError> {
         if let account = self.account {
-            let pendingKey: PostboxViewKey = .pendingMessageActionsSummary(type: .consumeUnseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
-            let summaryKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
-            return account.postbox.combinedView(keys: [pendingKey, summaryKey])
-            |> map { views -> Int32 in
-                var count: Int32 = 0
-                if let view = views.views[pendingKey] as? PendingMessageActionsSummaryView {
-                    count -= view.count
+            let pendingMentionsKey: PostboxViewKey = .pendingMessageActionsSummary(type: .consumeUnseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            let summaryMentionsKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            
+            let pendingReactionsKey: PostboxViewKey = .pendingMessageActionsSummary(type: .readReaction, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            let summaryReactionsKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenReaction, peerId: peerId, namespace: Namespaces.Message.Cloud)
+            
+            return account.postbox.combinedView(keys: [pendingMentionsKey, summaryMentionsKey, pendingReactionsKey, summaryReactionsKey])
+            |> map { views -> (mentionCount: Int32, reactionCount: Int32) in
+                var mentionCount: Int32 = 0
+                if let view = views.views[pendingMentionsKey] as? PendingMessageActionsSummaryView {
+                    mentionCount -= view.count
                 }
-                if let view = views.views[summaryKey] as? MessageHistoryTagSummaryView {
+                if let view = views.views[summaryMentionsKey] as? MessageHistoryTagSummaryView {
                     if let unseenCount = view.count {
-                        count += unseenCount
+                        mentionCount += unseenCount
                     }
                 }
-                return max(0, count)
-            } |> distinctUntilChanged
+                var reactionCount: Int32 = 0
+                if let view = views.views[pendingReactionsKey] as? PendingMessageActionsSummaryView {
+                    reactionCount -= view.count
+                }
+                if let view = views.views[summaryReactionsKey] as? MessageHistoryTagSummaryView {
+                    if let unseenCount = view.count {
+                        reactionCount += unseenCount
+                    }
+                }
+                return (max(0, mentionCount), max(0, reactionCount))
+            }
+            |> distinctUntilChanged(isEqual: { lhs, rhs in
+                if lhs.mentionCount != rhs.mentionCount {
+                    return false
+                }
+                if lhs.reactionCount != rhs.reactionCount {
+                    return false
+                }
+                return true
+            })
         } else {
             return .never()
         }
@@ -1802,7 +1855,29 @@ public final class AccountViewTracker {
     
     public func tailChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
-            return self.wrappedChatListView(signal: account.postbox.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
+            return self.wrappedChatListView(signal: account.postbox.tailChatListView(
+                groupId: groupId,
+                filterPredicate: filterPredicate,
+                count: count,
+                summaryComponents: ChatListEntrySummaryComponents(
+                    components: [
+                        ChatListEntryMessageTagSummaryKey(
+                            tag: .unseenPersonalMessage,
+                            actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+                        ): ChatListEntrySummaryComponents.Component(
+                            tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                            actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                        ),
+                        ChatListEntryMessageTagSummaryKey(
+                            tag: .unseenReaction,
+                            actionType: PendingMessageActionType.readReaction
+                        ): ChatListEntrySummaryComponents.Component(
+                            tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                            actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                        )
+                    ]
+                )
+            ))
         } else {
             return .never()
         }
@@ -1810,7 +1885,30 @@ public final class AccountViewTracker {
     
     public func aroundChatListView(groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate? = nil, index: ChatListIndex, count: Int) -> Signal<(ChatListView, ViewUpdateType), NoError> {
         if let account = self.account {
-            return self.wrappedChatListView(signal: account.postbox.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: count, summaryComponents: ChatListEntrySummaryComponents(tagSummary: ChatListEntryMessageTagSummaryComponent(tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud))))
+            return self.wrappedChatListView(signal: account.postbox.aroundChatListView(
+                groupId: groupId,
+                filterPredicate: filterPredicate,
+                index: index,
+                count: count,
+                summaryComponents: ChatListEntrySummaryComponents(
+                    components: [
+                        ChatListEntryMessageTagSummaryKey(
+                            tag: .unseenPersonalMessage,
+                            actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+                        ): ChatListEntrySummaryComponents.Component(
+                            tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                            actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                        ),
+                        ChatListEntryMessageTagSummaryKey(
+                            tag: .unseenReaction,
+                            actionType: PendingMessageActionType.readReaction
+                        ): ChatListEntrySummaryComponents.Component(
+                            tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                            actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                        )
+                    ]
+                )
+            ))
         } else {
             return .never()
         }

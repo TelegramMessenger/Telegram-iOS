@@ -9,6 +9,7 @@ private let badgeFont = Font.regular(13.0)
 enum ChatHistoryNavigationButtonType {
     case down
     case mentions
+    case reactions
 }
 
 class ChatHistoryNavigationButtonNode: ASControlNode {
@@ -53,6 +54,8 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
                 self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
             case .mentions:
                 self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
+            case .reactions:
+                self.imageNode.image = PresentationResourcesChat.chatHistoryReactionsButtonImage(theme)
         }
         self.imageNode.isLayerBacked = true
         
@@ -92,6 +95,8 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
                     self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
                 case .mentions:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
+                case .reactions:
+                    self.imageNode.image = PresentationResourcesChat.chatHistoryReactionsButtonImage(theme)
             }
             self.badgeBackgroundNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBadgeImage(theme)
             

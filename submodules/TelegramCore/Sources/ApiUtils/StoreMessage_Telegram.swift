@@ -6,6 +6,7 @@ import TelegramApi
 public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], media: [Media], textEntities: [MessageTextEntity]?, isPinned: Bool) -> (MessageTags, GlobalMessageTags) {
     var isSecret = false
     var isUnconsumedPersonalMention = false
+    var hasUnseenReactions = false
     for attribute in attributes {
         if let timerAttribute = attribute as? AutoclearTimeoutMessageAttribute {
             if timerAttribute.timeout > 0 && timerAttribute.timeout <= 60 {
@@ -19,6 +20,8 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
             if !mentionAttribute.consumed {
                 isUnconsumedPersonalMention = true
             }
+        } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
+            hasUnseenReactions = true
         }
     }
     
@@ -27,6 +30,9 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
     
     if isUnconsumedPersonalMention {
         tags.insert(.unseenPersonalMessage)
+    }
+    if hasUnseenReactions {
+        tags.insert(.unseenReaction)
     }
     
     if isPinned {

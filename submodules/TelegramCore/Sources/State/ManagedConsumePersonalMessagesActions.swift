@@ -76,11 +76,11 @@ private final class ManagedConsumePersonalMessagesActionsHelper {
     }
 }
 
-private func withTakenAction(postbox: Postbox, type: PendingMessageActionType, id: MessageId, _ f: @escaping (Transaction, PendingMessageActionsEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
+private func withTakenAction<T: PendingMessageActionData>(postbox: Postbox, type: PendingMessageActionType, actionType: T.Type, id: MessageId, _ f: @escaping (Transaction, PendingMessageActionsEntry?) -> Signal<Void, NoError>) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PendingMessageActionsEntry?
         
-        if let action = transaction.getPendingMessageAction(type: type, id: id) as? ConsumePersonalMessageAction {
+        if let action = transaction.getPendingMessageAction(type: type, id: id) as? T {
             result = PendingMessageActionsEntry(id: id, action: action)
         }
         
@@ -113,7 +113,7 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
             }
             
             for (entry, disposable) in beginOperations {
-                let signal = withTakenAction(postbox: postbox, type: .consumeUnseenPersonalMessage, id: entry.id, { transaction, entry -> Signal<Void, NoError> in
+                let signal = withTakenAction(postbox: postbox, type: .consumeUnseenPersonalMessage, actionType: ConsumePersonalMessageAction.self, id: entry.id, { transaction, entry -> Signal<Void, NoError> in
                     if let entry = entry {
                         if let _ = entry.action as? ConsumePersonalMessageAction {
                             return synchronizeConsumeMessageContents(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
@@ -132,6 +132,69 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
             
             for (entry, disposable) in beginValidateOperations {
                 let signal = synchronizeUnseenPersonalMentionsTag(postbox: postbox, network: network, entry: entry)
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                })
+                disposable.set(signal.start())
+            }
+        })
+        
+        return ActionDisposable {
+            let disposables = helper.with { helper -> [Disposable] in
+                return helper.reset()
+            }
+            for disposable in disposables {
+                disposable.dispose()
+            }
+            disposable.dispose()
+        }
+    }
+}
+
+func managedReadReactionActions(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
+        
+        let actionsKey = PostboxViewKey.pendingMessageActions(type: .readReaction)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
+        let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
+            var entries: [PendingMessageActionsEntry] = []
+            var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+            if let v = view.views[actionsKey] as? PendingMessageActionsView {
+                entries = v.entries
+            }
+            if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
+                invalidateEntries = v.entries
+            }
+            
+            let (disposeOperations, beginOperations, beginValidateOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) in
+                return helper.update(entries: entries, invalidateEntries: invalidateEntries)
+            }
+            
+            for disposable in disposeOperations {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in beginOperations {
+                let signal = withTakenAction(postbox: postbox, type: .readReaction, actionType: ReadReactionAction.self, id: entry.id, { transaction, entry -> Signal<Void, NoError> in
+                    if let entry = entry {
+                        if let _ = entry.action as? ReadReactionAction {
+                            return synchronizeReadMessageReactions(transaction: transaction, postbox: postbox, network: network, stateManager: stateManager, id: entry.id)
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                    return .complete()
+                })
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.setPendingMessageAction(type: .readReaction, id: entry.id, action: nil)
+                })
+                
+                disposable.set(signal.start())
+            }
+            
+            for (entry, disposable) in beginValidateOperations {
+                let signal = synchronizeUnseenReactionsTag(postbox: postbox, network: network, entry: entry)
                 |> then(postbox.transaction { transaction -> Void in
                     transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
                 })
@@ -219,6 +282,44 @@ private func synchronizeConsumeMessageContents(transaction: Transaction, postbox
     }
 }
 
+private func synchronizeReadMessageReactions(transaction: Transaction, postbox: Postbox, network: Network, stateManager: AccountStateManager, id: MessageId) -> Signal<Void, NoError> {
+    guard let inputPeer = transaction.getPeer(id.peerId).flatMap(apiInputPeer) else {
+        return .complete()
+    }
+    return network.request(Api.functions.messages.readReactions(peer: inputPeer))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, NoError> in
+        return .single(nil)
+    }
+    |> mapToSignal { result -> Signal<Void, NoError> in
+        if let result = result {
+            switch result {
+            case let .affectedHistory(pts, ptsCount, _):
+                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+            }
+        }
+        return postbox.transaction { transaction -> Void in
+            transaction.setPendingMessageAction(type: .readReaction, id: id, action: nil)
+            transaction.updateMessage(id, update: { currentMessage in
+                var storeForwardInfo: StoreMessageForwardInfo?
+                if let forwardInfo = currentMessage.forwardInfo {
+                    storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                }
+                var attributes = currentMessage.attributes
+                loop: for j in 0 ..< attributes.count {
+                    if let attribute = attributes[j] as? ReactionsMessageAttribute, attribute.hasUnseen {
+                        attributes[j] = attribute.withAllSeen()
+                        break loop
+                    }
+                }
+                var updatedTags = currentMessage.tags
+                updatedTags.remove(.unseenReaction)
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+            })
+        }
+    }
+}
+
 private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
@@ -235,7 +336,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     let apiTopMessage: Int32
                                     let apiUnreadMentionsCount: Int32
                                     switch dialog {
-                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _, _):
+                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadMentionsCount = unreadMentionsCount
                                         
@@ -246,6 +347,48 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     
                                     return postbox.transaction { transaction -> Void in
                                         transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
+                                    }
+                                } else {
+                                    return .complete()
+                                }
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+        } else {
+            return .complete()
+        }
+    } |> switchToLatest
+}
+
+private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
+            return network.request(Api.functions.messages.getPeerDialogs(peers: [.inputDialogPeer(peer: inputPeer)]))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    if let result = result {
+                        switch result {
+                            case let .peerDialogs(dialogs, _, _, _, _):
+                                if let dialog = dialogs.filter({ $0.peerId == entry.key.peerId }).first {
+                                    let apiTopMessage: Int32
+                                    let apiUnreadReactionsCount: Int32
+                                    switch dialog {
+                                        case let .dialog(_, _, topMessage, _, _, _, _, unreadReactionsCount, _, _, _, _):
+                                            apiTopMessage = topMessage
+                                            apiUnreadReactionsCount = unreadReactionsCount
+                                        
+                                        case .dialogFolder:
+                                            assertionFailure()
+                                            return .complete()
+                                    }
+                                    
+                                    return postbox.transaction { transaction -> Void in
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadReactionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()

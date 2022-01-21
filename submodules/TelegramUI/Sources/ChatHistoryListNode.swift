@@ -452,6 +452,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var canReadHistoryDisposable: Disposable?
 
     private var messageIdsScheduledForMarkAsSeen = Set<MessageId>()
+    private var messageIdsWithReactionsScheduledForMarkAsSeen = Set<MessageId>()
     
     private var chatHistoryLocationValue: ChatHistoryLocationInput? {
         didSet {
@@ -486,6 +487,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
+    private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
     private var currentLaterPrefetchMessages: [(Message, Media)] = []
@@ -723,6 +725,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 } else {
                     strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds)
                 }
+            }
+        }
+        
+        self.unseenReactionsProcessingManager.process = { [weak self] messageIds in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.canReadHistoryValue {
+                strongSelf.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+            } else {
+                strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds)
             }
         }
         
@@ -1328,6 +1341,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
                         context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
                     }
+                    
+                    if strongSelf.canReadHistoryValue && !strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
+                        let messageIds = strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen
+                        strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
+                        context?.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+                    }
                 }
             }
         })
@@ -1803,6 +1822,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
+            var messageIdsWithUnseenReactions: [MessageId] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1819,6 +1839,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         var contentRequiredValidation = false
                         var mediaRequiredValidation = false
+                        var hasUnseenReactions = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -1832,6 +1853,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 hasUnconsumedContent = true
                             } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
                                 contentRequiredValidation = true
+                            } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
+                                hasUnseenReactions = true
                             }
                         }
                         for media in message.media {
@@ -1871,6 +1894,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
+                        if hasUnseenReactions {
+                            messageIdsWithUnseenReactions.append(message.id)
+                        }
                         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
@@ -1883,10 +1909,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         for (message, _, _, _, _) in messages {
                             var hasUnconsumedMention = false
                             var hasUnconsumedContent = false
+                            var hasUnseenReactions = false
                             if message.tags.contains(.unseenPersonalMessage) {
                                 for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                                         hasUnconsumedMention = true
+                                    } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
+                                        hasUnseenReactions = true
                                     }
                                 }
                             }
@@ -1905,6 +1934,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             }
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
+                            }
+                            if hasUnseenReactions {
+                                messageIdsWithUnseenReactions.append(message.id)
                             }
                             if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                                 isTopReplyThreadMessageShownValue = true
@@ -2038,6 +2070,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !messageIdsWithUnseenPersonalMention.isEmpty {
                 self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
+            }
+            if !messageIdsWithUnseenReactions.isEmpty {
+                self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions)
             }
             if !messageIdsWithPossibleReactions.isEmpty {
                 self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions)
@@ -2347,7 +2382,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
                 var newIncomingReactions: [MessageId: String] = [:]
-                if case let .peer(peerId) = strongSelf.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser, let previousHistoryView = strongSelf.historyView {
+                if case .peer = strongSelf.chatLocation, let previousHistoryView = strongSelf.historyView {
                     var updatedIncomingReactions: [MessageId: String] = [:]
                     for entry in transition.historyView.filteredEntries {
                         switch entry {
@@ -2356,9 +2391,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 continue
                             }
                             if let reactions = message.reactionsAttribute {
-                                for reaction in reactions.reactions {
-                                    if !reaction.isSelected {
-                                        updatedIncomingReactions[message.id] = reaction.value
+                                for recentPeer in reactions.recentPeers {
+                                    if recentPeer.isUnseen {
+                                        updatedIncomingReactions[message.id] = recentPeer.value
                                     }
                                 }
                             }
@@ -2368,9 +2403,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     continue
                                 }
                                 if let reactions = message.0.reactionsAttribute {
-                                    for reaction in reactions.reactions {
-                                        if !reaction.isSelected {
-                                            updatedIncomingReactions[message.0.id] = reaction.value
+                                    for recentPeer in reactions.recentPeers {
+                                        if recentPeer.isUnseen {
+                                            updatedIncomingReactions[message.0.id] = recentPeer.value
                                         }
                                     }
                                 }
@@ -2385,9 +2420,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if let updatedReaction = updatedIncomingReactions[message.id] {
                                 var previousReaction: String?
                                 if let reactions = message.reactionsAttribute {
-                                    for reaction in reactions.reactions {
-                                        if !reaction.isSelected {
-                                            previousReaction = reaction.value
+                                    for recentPeer in reactions.recentPeers {
+                                        if recentPeer.isUnseen {
+                                            previousReaction = recentPeer.value
                                         }
                                     }
                                 }
@@ -2400,9 +2435,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if let updatedReaction = updatedIncomingReactions[message.0.id] {
                                     var previousReaction: String?
                                     if let reactions = message.0.reactionsAttribute {
-                                        for reaction in reactions.reactions {
-                                            if !reaction.isSelected {
-                                                previousReaction = reaction.value
+                                        for recentPeer in reactions.recentPeers {
+                                            if recentPeer.isUnseen {
+                                                previousReaction = recentPeer.value
                                             }
                                         }
                                     }
@@ -2565,8 +2600,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 
                 if !newIncomingReactions.isEmpty, let chatDisplayNode = strongSelf.controllerInteraction.chatControllerNode() as? ChatControllerNode {
+                    var visibleNewIncomingReactionMessageIds: [MessageId] = []
                     strongSelf.forEachVisibleItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let updatedReaction = newIncomingReactions[item.content.firstMessage.id], let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                        guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let updatedReaction = newIncomingReactions[item.content.firstMessage.id] else {
+                            return
+                        }
+                        visibleNewIncomingReactionMessageIds.append(item.content.firstMessage.id)
+                        
+                        if let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
                             for reaction in availableReactions.reactions {
                                 guard let centerAnimation = reaction.centerAnimation else {
                                     continue
@@ -2602,6 +2643,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             }
                         }
+                    }
+                    
+                    if !visibleNewIncomingReactionMessageIds.isEmpty {
+                        strongSelf.unseenReactionsProcessingManager.add(visibleNewIncomingReactionMessageIds)
                     }
                 }
                 
