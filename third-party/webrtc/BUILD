@@ -11,8 +11,7 @@ config_setting(
 optimization_flags = select({
     ":debug_build": [
         "-O2",
-        #"-DNDEBUG",
-        #"-DRTC_DCHECK_IS_ON",
+        "-DNDEBUG",
     ],
     "//conditions:default": ["-DNDEBUG"],
 })
