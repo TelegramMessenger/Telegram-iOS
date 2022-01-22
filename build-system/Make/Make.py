@@ -7,15 +7,15 @@ import sys
 import tempfile
 import subprocess
 
-from BuildEnvironment import is_apple_silicon, resolve_executable, call_executable, BuildEnvironment
+from BuildEnvironment import resolve_executable, call_executable, BuildEnvironment
 from ProjectGeneration import generate
-
+from BazelLocation import locate_bazel
 
 class BazelCommandLine:
-    def __init__(self, bazel_path, override_bazel_version, override_xcode_version, bazel_user_root):
+    def __init__(self, bazel, override_bazel_version, override_xcode_version, bazel_user_root):
         self.build_environment = BuildEnvironment(
             base_path=os.getcwd(),
-            bazel_path=bazel_path,
+            bazel_path=bazel,
             override_bazel_version=override_bazel_version,
             override_xcode_version=override_xcode_version
         )
@@ -27,6 +27,9 @@ class BazelCommandLine:
         self.configuration_args = None
         self.configuration_path = None
         self.split_submodules = False
+        self.custom_target = None
+        self.continue_on_error = False
+        self.enable_sandbox = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -314,9 +317,9 @@ class BazelCommandLine:
         call_executable(combined_arguments)
 
 
-def clean(arguments):
+def clean(bazel, arguments):
     bazel_command_line = BazelCommandLine(
-        bazel_path=arguments.bazel,
+        bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion,
         bazel_user_root=arguments.bazelUserRoot
@@ -355,9 +358,9 @@ def resolve_configuration(bazel_command_line: BazelCommandLine, arguments):
         raise Exception('Neither configurationPath nor configurationGenerator are set')
 
 
-def generate_project(arguments):        
+def generate_project(bazel, arguments):
     bazel_command_line = BazelCommandLine(
-        bazel_path=arguments.bazel,
+        bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion,
         bazel_user_root=arguments.bazelUserRoot
@@ -401,9 +404,9 @@ def generate_project(arguments):
     )
 
 
-def build(arguments):
+def build(bazel, arguments):
     bazel_command_line = BazelCommandLine(
-        bazel_path=arguments.bazel,
+        bazel=bazel,
         override_bazel_version=arguments.overrideBazelVersion,
         override_xcode_version=arguments.overrideXcodeVersion,
         bazel_user_root=arguments.bazelUserRoot
@@ -463,7 +466,7 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--bazel',
-        required=True,
+        required=False,
         help='Use custom bazel binary',
         metavar='path'
     )
@@ -596,7 +599,8 @@ if __name__ == '__main__':
         '--disableParallelSwiftmoduleGeneration',
         action='store_true',
         default=False,
-        help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core systems.'
+        help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core '
+             'systems. '
     )
     buildParser.add_argument(
         '--target',
@@ -629,13 +633,19 @@ if __name__ == '__main__':
     if args.commandName is None:
         exit(0)
 
+    bazel_path = None
+    if args.bazel is None:
+        bazel_path = locate_bazel(base_path=os.getcwd())
+    else:
+        bazel_path = args.bazel
+
     try:
         if args.commandName == 'clean':
-            clean(arguments=args)
+            clean(bazel=bazel_path, arguments=args)
         elif args.commandName == 'generateProject':
-            generate_project(arguments=args)
+            generate_project(bazel=bazel_path, arguments=args)
         elif args.commandName == 'build':
-            build(arguments=args)
+            build(bazel=bazel_path, arguments=args)
         else:
             raise Exception('Unknown command')
     except KeyboardInterrupt:
