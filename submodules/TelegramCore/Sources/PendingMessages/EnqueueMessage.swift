@@ -284,7 +284,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             }
         }
         switch message {
-            case let .message(_, _, _, replyToMessageId, _, _):
+            case let .message(_, attributes, _, replyToMessageId, _, _):
                 if let replyToMessageId = replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
                     var canBeForwarded = true
                     if replyMessage.id.namespace != Namespaces.Message.Cloud {
@@ -297,7 +297,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                     }
                     if canBeForwarded {
-                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none, attributes: [], correlationId: nil)))
+                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none, attributes: attributes, correlationId: nil)))
                     }
                 }
             case let .forward(sourceId, _, _, _):

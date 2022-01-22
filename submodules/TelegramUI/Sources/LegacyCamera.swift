@@ -227,7 +227,7 @@ func presentedLegacyShortcutCamera(context: AccountContext, saveCapturedMedia: B
                 nativeGenerator(_1, _2, _3, nil)
             })
             if let parentController = parentController {
-                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account in
+                parentController.present(ShareController(context: context, subject: .fromExternal({ peerIds, text, account, silently in
                     return legacyAssetPickerEnqueueMessages(account: account, signals: signals!)
                     |> `catch` { _ -> Signal<[LegacyAssetPickerEnqueueMessage], NoError> in
                         return .single([])

@@ -9,6 +9,7 @@ import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ContextUI
+import SoftwareVideo
 
 public final class StickerPreviewPeekContent: PeekControllerContent {
     let account: Account
@@ -57,6 +58,7 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
     private var textNode: ASTextNode
     private var imageNode: ASImageNode
     private var animationNode: AnimatedStickerNode?
+    private var videoNode: VideoStickerNode?
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -79,6 +81,16 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
                     self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
                 }
                 self.animationNode?.visibility = true
+            case .video:
+                let videoNode = VideoStickerNode()
+                self.videoNode = videoNode
+                
+                if let resource = item.resource as? TelegramMediaResource {
+                    let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
+                    
+                    videoNode.update(account: account, fileReference: .standalone(media: dummyFile))
+                }
+                videoNode.update(isPlaying: true)
         }
         if case let .image(data) = item.content, let image = UIImage(data: data) {
             self.imageNode.image = image
@@ -89,7 +101,9 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         
         self.isUserInteractionEnabled = false
         
-        if let animationNode = self.animationNode {
+        if let videoNode = self.videoNode {
+            self.addSubnode(videoNode)
+        } else if let animationNode = self.animationNode {
             self.addSubnode(animationNode)
         } else {
             self.addSubnode(self.imageNode)
@@ -108,7 +122,10 @@ private final class StickerPreviewPeekContentNode: ASDisplayNode, PeekController
         
         self.imageNode.frame = imageFrame
         
-        if let animationNode = self.animationNode {
+        if let videoNode = self.videoNode {
+            videoNode.frame = imageFrame
+            videoNode.updateLayout(size: imageFrame.size)
+        } else if let animationNode = self.animationNode {
             animationNode.frame = imageFrame
             animationNode.updateLayout(size: imageFrame.size)
         }

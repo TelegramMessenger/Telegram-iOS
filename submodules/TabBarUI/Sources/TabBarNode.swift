@@ -723,7 +723,9 @@ class TabBarNode: ASDisplayNode {
                 let previousSelectedIndex = self.selectedIndex
                 self.itemSelected(closestNode.0, longTap, [container.imageNode.imageNode, container.imageNode.textImageNode, container.badgeContainerNode])
                 if previousSelectedIndex != closestNode.0 {
-                    container.imageNode.animationNode.play()
+                    if let selectedIndex = self.selectedIndex, let _ = self.tabBarItems[selectedIndex].item.animationName {
+                        container.imageNode.animationNode.play()
+                    }
                 }
             }
         }

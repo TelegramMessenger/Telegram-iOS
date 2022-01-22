@@ -2167,7 +2167,13 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
     }
 }
 
-func renderVideo(context: AccountContext, backgroundImage: UIImage, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
+private enum RenderVideoResult {
+    case progress(Float)
+    case completion(URL)
+    case error
+}
+
+private func renderVideo(context: AccountContext, backgroundImage: UIImage, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: AnyMediaReference.standalone(media: media))
     |> deliverOnMainQueue).start(next: { value, isImage in
         guard case let .data(data) = value, data.complete else {

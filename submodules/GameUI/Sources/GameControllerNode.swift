@@ -143,7 +143,7 @@ final class GameControllerNode: ViewControllerTracingNode {
         if eventName == "share_game" || eventName == "share_score" {
             if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
                 if eventName == "share_score" {
-                    self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text, account in
+                    self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text, account, _ in
                         if let strongSelf = self {
                             let signals = peerIds.map { TelegramEngine(account: account).messages.forwardGameWithScore(messageId: strongSelf.message.id, to: $0, as: nil) }
                             return .single(.preparing)
