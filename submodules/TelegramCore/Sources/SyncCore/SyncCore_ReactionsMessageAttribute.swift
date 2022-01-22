@@ -6,7 +6,6 @@ public struct MessageReaction: Equatable, PostboxCoding {
     public var isSelected: Bool
     
     public init(value: String, count: Int32, isSelected: Bool) {
-        var value = value
         self.value = value
         self.count = count
         self.isSelected = isSelected
