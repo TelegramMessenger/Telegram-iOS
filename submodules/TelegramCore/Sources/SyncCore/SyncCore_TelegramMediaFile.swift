@@ -482,18 +482,15 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         if self.mimeType == "video/webm" {
             return true
         }
-        if let _ = self.fileName, self.mimeType == "video/webm" {
+        if self.mimeType == "video/webm" {
             var hasSticker = false
-            var hasAnimated = false
             for attribute in self.attributes {
                 if case .Sticker = attribute {
                     hasSticker = true
-                }
-                if case .Animated = attribute {
-                    hasAnimated = true
+                    break
                 }
             }
-            return hasSticker && hasAnimated
+            return hasSticker
         }
         return false
     }

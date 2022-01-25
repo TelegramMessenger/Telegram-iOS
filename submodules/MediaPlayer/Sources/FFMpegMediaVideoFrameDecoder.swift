@@ -307,18 +307,45 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         let bytesPerRowUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
         let bytesPerRowA = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 2)
 
-        var base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!
+        var requiresAlphaMultiplication = false
+        
+        var base: UnsafeMutableRawPointer
+        if case .YUVA = frame.pixelFormat {
+            requiresAlphaMultiplication = true
+            
+            base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2)!
+            if bytesPerRowA == frame.lineSize[3] {
+                memcpy(base, frame.data[3]!, bytesPerRowA * Int(frame.height))
+            } else {
+                var dest = base
+                var src = frame.data[3]!
+                let lineSize = Int(frame.lineSize[3])
+                for _ in 0 ..< Int(frame.height) {
+                    memcpy(dest, src, lineSize)
+                    dest = dest.advanced(by: bytesPerRowA)
+                    src = src.advanced(by: lineSize)
+                }
+            }
+        }
+        
+        base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!
         if bytesPerRowY == frame.lineSize[0] {
             memcpy(base, frame.data[0]!, bytesPerRowY * Int(frame.height))
         } else {
             var dest = base
             var src = frame.data[0]!
-            let linesize = Int(frame.lineSize[0])
+            let lineSize = Int(frame.lineSize[0])
             for _ in 0 ..< Int(frame.height) {
-                memcpy(dest, src, linesize)
+                memcpy(dest, src, lineSize)
                 dest = dest.advanced(by: bytesPerRowY)
-                src = src.advanced(by: linesize)
+                src = src.advanced(by: lineSize)
             }
+        }
+        
+        if requiresAlphaMultiplication {
+            var y = vImage_Buffer(data: CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!, height: vImagePixelCount(frame.height), width: vImagePixelCount(bytesPerRowY), rowBytes: bytesPerRowY)
+            var a = vImage_Buffer(data: CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2)!, height: vImagePixelCount(frame.height), width: vImagePixelCount(bytesPerRowY), rowBytes: bytesPerRowA)
+            let _ = vImagePremultiplyData_Planar8(&y, &a, &y, vImage_Flags(kvImageDoNotTile))
         }
 
         base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)!
@@ -327,27 +354,11 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         } else {
             var dest = base
             var src = dstPlane
-            let linesize = Int(frame.lineSize[1]) * 2
+            let lineSize = Int(frame.lineSize[1]) * 2
             for _ in 0 ..< Int(frame.height / 2) {
-                memcpy(dest, src, linesize)
+                memcpy(dest, src, lineSize)
                 dest = dest.advanced(by: bytesPerRowUV)
-                src = src.advanced(by: linesize)
-            }
-        }
-
-        if case .YUVA = frame.pixelFormat {
-            base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2)!
-            if bytesPerRowA == frame.lineSize[3] {
-                memcpy(base, frame.data[3]!, bytesPerRowA * Int(frame.height))
-            } else {
-                var dest = base
-                var src = frame.data[3]!
-                let linesize = Int(frame.lineSize[3])
-                for _ in 0 ..< Int(frame.height) {
-                    memcpy(dest, src, linesize)
-                    dest = dest.advanced(by: bytesPerRowA)
-                    src = src.advanced(by: linesize)
-                }
+                src = src.advanced(by: lineSize)
             }
         }
 

@@ -354,7 +354,8 @@ public final class SparseDiscreteScrollingArea: ASDisplayNode {
                 backgroundColor: theme.list.itemBlocksBackgroundColor,
                 shadowColor: .black,
                 foregroundColor: theme.list.itemPrimaryTextColor,
-                dateString: "Date"
+                dateString: "Date",
+                previousDateString: nil
             )),
             environment: {},
             containerSize: containerSize

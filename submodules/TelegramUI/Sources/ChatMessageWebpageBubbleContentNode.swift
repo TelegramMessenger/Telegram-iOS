@@ -76,7 +76,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                         }
-                        item.controllerInteraction.openPeer(id, navigationData, nil)
+                        item.controllerInteraction.openPeer(id, navigationData, nil, nil)
                     case let .join(_, joinHash):
                         item.controllerInteraction.openJoinLink(joinHash)
                     }

@@ -2335,7 +2335,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false, skipThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false, skipThumbnail: Bool = false, skipBlurIfLarge: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryPhotoDatas(account: account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: autoFetchFullSize, attemptSynchronously: attemptSynchronously)
     
     return signal
@@ -2385,7 +2385,8 @@ public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepr
             
             var blurredThumbnailImage: UIImage?
             if let thumbnailImage = thumbnailImage, !skipThumbnail {
-                if max(thumbnailImage.width, thumbnailImage.height) > 200 {
+                let maxThumbnailSide = max(thumbnailImage.width, thumbnailImage.height)
+                if maxThumbnailSide > 200 || (maxThumbnailSide > 120 && maxThumbnailSide < 200 && skipBlurIfLarge)  {
                     blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
                 } else {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)

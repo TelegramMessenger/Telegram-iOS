@@ -66,7 +66,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             } else {
                 return false
             }
-        }, openPeer: { _, _, _ in
+        }, openPeer: { _, _, _, _ in
         }, openPeerMention: { _ in
         }, openMessageContextMenu: { _, _, _, _, _ in
         }, openMessageReactionContextMenu: { _, _, _, _ in

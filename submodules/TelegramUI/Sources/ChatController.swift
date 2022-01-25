@@ -852,7 +852,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, openPeer: { [weak self] peerId in
                 if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
                 }
             }, openHashtag: { [weak self] peerName, hashtag in
                 if let strongSelf = self {
@@ -920,7 +920,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             })))
-        }, openPeer: { [weak self] id, navigation, fromMessage in
+        }, openPeer: { [weak self] id, navigation, fromMessage, _ in
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
@@ -1141,7 +1141,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
-                        strongSelf.openPeer(peerId: id, navigation: .default, fromMessage: message)
+                        strongSelf.openPeer(peerId: id, navigation: .default, fromMessage: MessageReference(message))
                     })
                 })))
                 
@@ -10963,7 +10963,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .mention(peerId, mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
                 }
@@ -11051,7 +11051,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .mention(peerId, mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
                 }
@@ -11160,7 +11160,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .mention(peerId, mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil)
+                    strongSelf.controllerInteraction?.openPeer(peerId, .default, nil, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.peerMention(peerId, mention), nil)
                 }
@@ -12978,7 +12978,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: Message?, expandAvatar: Bool = false) {
+    private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: MessageReference?, expandAvatar: Bool = false) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             if case let .peer(currentPeerId) = self.chatLocation, peerId == currentPeerId {
                 switch navigation {
@@ -13008,8 +13008,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         switch navigation {
                             case .info, .default:
                                 let peerSignal: Signal<Peer?, NoError>
-                                if let fromMessage = fromMessage {
-                                    peerSignal = loadedPeerFromMessage(account: self.context.account, peerId: peerId, messageId: fromMessage.id)
+                                if let messageId = fromMessage?.id {
+                                    peerSignal = loadedPeerFromMessage(account: self.context.account, peerId: peerId, messageId: messageId)
                                 } else {
                                     peerSignal = self.context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
                                 }

@@ -468,6 +468,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     private(set) var currentPaneKey: PeerInfoPaneKey?
     var pendingSwitchToPaneKey: PeerInfoPaneKey?
+    var expandOnSwitch = false
     
     var currentPane: PeerInfoPaneWrapper? {
         if let currentPaneKey = self.currentPaneKey {
@@ -550,6 +551,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 }
             } else if strongSelf.pendingSwitchToPaneKey != key {
                 strongSelf.pendingSwitchToPaneKey = key
+                strongSelf.expandOnSwitch = true
                 
                 if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
                     strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.4, curve: .spring))
@@ -967,7 +969,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             }
         }
         if let previousCurrentPaneKey = previousCurrentPaneKey, self.currentPaneKey != previousCurrentPaneKey {
-            self.currentPaneUpdated?(true)
+            self.currentPaneUpdated?(self.expandOnSwitch)
+            self.expandOnSwitch = false
         }
         if updateCurrentPaneStatus {
             self.currentPaneStatusPromise.set(self.currentPane?.node.status ?? .single(nil))

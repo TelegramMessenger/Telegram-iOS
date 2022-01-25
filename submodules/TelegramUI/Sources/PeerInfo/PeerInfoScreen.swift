@@ -1607,7 +1607,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     private var didSetReady = false
     
-    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, ignoreGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?) {
+    init(controller: PeerInfoScreenImpl, context: AccountContext, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool, hintGroupInCommon: PeerId?, requestsContext: PeerInvitationImportersContext?) {
         self.controller = controller
         self.context = context
         self.peerId = peerId
@@ -1758,7 +1758,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 return false
             }
             return strongSelf.openMessage(id: message.id)
-        }, openPeer: { [weak self] id, navigation, _ in
+        }, openPeer: { [weak self] id, navigation, _, _ in
             if let id = id {
                 self?.openPeer(peerId: id, navigation: navigation)
             }
@@ -2285,7 +2285,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let items: [ContextMenuItem] = [
                 .action(ContextMenuActionItem(text: presentationData.strings.Conversation_LinkDialogOpen, icon: { _ in nil }, action: { _, f in
                     f(.dismissWithoutContent)
-                    self?.chatInterfaceInteraction.openPeer(peer.id, .default, nil)
+                    self?.chatInterfaceInteraction.openPeer(peer.id, .default, nil, nil)
                 }))
             ]
             let contextController = ContextController(account: strongSelf.context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
@@ -2893,7 +2893,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }))
             }
         } else {
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, ignoreGroupInCommon: ignoreGroupInCommon, existingRequestsContext: requestsContext)
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
                         
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
                 guard let strongSelf = self, let peer = strongSelf.data?.peer else {
@@ -7001,7 +7001,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     private let nearbyPeerDistance: Int32?
     private let callMessages: [Message]
     private let isSettings: Bool
-    private let ignoreGroupInCommon: PeerId?
+    private let hintGroupInCommon: PeerId?
     private weak var requestsContext: PeerInvitationImportersContext?
     
     fileprivate var presentationData: PresentationData
@@ -7027,7 +7027,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, ignoreGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
@@ -7036,7 +7036,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         self.nearbyPeerDistance = nearbyPeerDistance
         self.callMessages = callMessages
         self.isSettings = isSettings
-        self.ignoreGroupInCommon = ignoreGroupInCommon
+        self.hintGroupInCommon = hintGroupInCommon
         self.requestsContext = requestsContext
         
         self.presentationData = updatedPresentationData?.0 ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -7324,7 +7324,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, ignoreGroupInCommon: self.ignoreGroupInCommon, requestsContext: requestsContext)
+        self.displayNode = PeerInfoScreenNode(controller: self, context: self.context, peerId: self.peerId, avatarInitiallyExpanded: self.avatarInitiallyExpanded, isOpenedFromChat: self.isOpenedFromChat, nearbyPeerDistance: self.nearbyPeerDistance, callMessages: self.callMessages, isSettings: self.isSettings, hintGroupInCommon: self.hintGroupInCommon, requestsContext: requestsContext)
         self.controllerNode.accountsAndPeers.set(self.accountsAndPeers.get() |> map { $0.1 })
         self.controllerNode.activeSessionsContextAndCount.set(self.activeSessionsContextAndCount.get())
         self.cachedDataPromise.set(self.controllerNode.cachedDataPromise.get())

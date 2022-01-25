@@ -343,7 +343,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.isReady.set(videoNode.ready |> map { return true })
     }
     
-    func setup(item: PeerInfoAvatarListItem, progress: Signal<Float?, NoError>? = nil, synchronous: Bool, fullSizeOnly: Bool = false) {
+    func setup(item: PeerInfoAvatarListItem, isMain: Bool, progress: Signal<Float?, NoError>? = nil, synchronous: Bool, fullSizeOnly: Bool = false) {
         self.item = item
         self.progress = progress
         
@@ -385,7 +385,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 id = self.peer.id.id._internalGetInt64Value()
             }
         }
-        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly, skipBlurIfLarge: isMain), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
         
         if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
@@ -1157,13 +1157,13 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                         if case .custom = self.items[i], self.updateCustomItemsOnlySynchronously {
                             synchronous = true
                         }
-                        current.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
+                        current.setup(item: self.items[i], isMain: i == 0, synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     }
                 } else if let peer = self.peer {
                     wasAdded = true
                     let addedItemNode = PeerInfoAvatarListItemNode(context: self.context, peer: peer)
                     itemNode = addedItemNode
-                    addedItemNode.setup(item: self.items[i], progress: i == 0 ? self.additionalEntryProgress : nil, synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
+                    addedItemNode.setup(item: self.items[i], isMain: i == 0, progress: i == 0 ? self.additionalEntryProgress : nil, synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     self.itemNodes[self.items[i].id] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
                 }

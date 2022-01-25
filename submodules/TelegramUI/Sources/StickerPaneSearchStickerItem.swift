@@ -156,7 +156,9 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
             self.textNode.attributedText = NSAttributedString(string: code ?? "", font: textFont, textColor: .black)
             
             if let dimensions = stickerItem.file.dimensions {
-                if stickerItem.file.isAnimatedSticker {
+                if stickerItem.file.isVideoSticker {
+                    
+                } else if stickerItem.file.isAnimatedSticker {
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))

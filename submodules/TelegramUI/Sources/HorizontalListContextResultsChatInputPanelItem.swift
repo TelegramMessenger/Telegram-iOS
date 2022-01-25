@@ -88,6 +88,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
     private let imageNodeBackground: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    private var videoStickerNode: VideoStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
     private var videoLayer: (SoftwareVideoThumbnailNode, SoftwareVideoLayerFrameManager, SampleBufferLayer)?
     private var currentImageResource: TelegramMediaResource?
@@ -416,28 +417,37 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             animationNode.removeFromSupernode()
                         }
                         
+                        if let videoStickerNode = strongSelf.videoStickerNode {
+                            strongSelf.videoStickerNode = nil
+                            videoStickerNode.removeFromSupernode()
+                        }
+                        
                         if let animatedStickerFile = animatedStickerFile {
-                            let animationNode: AnimatedStickerNode
-                            if let currentAnimationNode = strongSelf.animationNode {
-                                animationNode = currentAnimationNode
+                            if animatedStickerFile.isVideoSticker {
+                                
                             } else {
-                                animationNode = AnimatedStickerNode()
-                                animationNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
-                                animationNode.visibility = true
-                                if let placeholderNode = strongSelf.placeholderNode {
-                                    strongSelf.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                                let animationNode: AnimatedStickerNode
+                                if let currentAnimationNode = strongSelf.animationNode {
+                                    animationNode = currentAnimationNode
                                 } else {
-                                    strongSelf.addSubnode(animationNode)
+                                    animationNode = AnimatedStickerNode()
+                                    animationNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                                    animationNode.visibility = true
+                                    if let placeholderNode = strongSelf.placeholderNode {
+                                        strongSelf.insertSubnode(animationNode, belowSubnode: placeholderNode)
+                                    } else {
+                                        strongSelf.addSubnode(animationNode)
+                                    }
+                                    strongSelf.animationNode = animationNode
                                 }
-                                strongSelf.animationNode = animationNode
+                                animationNode.started = { [weak self] in
+                                    self?.imageNode.alpha = 0.0
+                                }
+                                let dimensions = animatedStickerFile.dimensions ?? PixelDimensions(width: 512, height: 512)
+                                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                                strongSelf.fetchDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(animatedStickerFile), resource: animatedStickerFile.resource).start())
+                                animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                             }
-                            animationNode.started = { [weak self] in
-                                self?.imageNode.alpha = 0.0
-                            }
-                            let dimensions = animatedStickerFile.dimensions ?? PixelDimensions(width: 512, height: 512)
-                            let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                            strongSelf.fetchDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(animatedStickerFile), resource: animatedStickerFile.resource).start())
-                            animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     

@@ -7253,3 +7253,6 @@ Sorry for the inconvenience.";
 
 "Conversation.ReadAllReactions" = "Read All Reactions";
 "ChatList.UserReacted" = "Reacted %@ to your message";
+
+"SharedMedia.CommonGroupCount_1" = "%@ group in common";
+"SharedMedia.CommonGroupCount_any" = "%@ groups in common";
