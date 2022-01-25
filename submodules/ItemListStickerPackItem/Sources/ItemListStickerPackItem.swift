@@ -12,6 +12,7 @@ import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
+import SoftwareVideo
 
 public struct ItemListStickerPackItemEditing: Equatable {
     public var editable: Bool
@@ -121,7 +122,7 @@ public final class ItemListStickerPackItem: ListViewItem, ItemListItem {
 
 public enum StickerPackThumbnailItem: Equatable {
     case still(TelegramMediaImageRepresentation)
-    case animated(MediaResource, PixelDimensions)
+    case animated(MediaResource, PixelDimensions, Bool)
     
     public static func ==(lhs: StickerPackThumbnailItem, rhs: StickerPackThumbnailItem) -> Bool {
         switch lhs {
@@ -131,8 +132,8 @@ public enum StickerPackThumbnailItem: Equatable {
             } else {
                 return false
             }
-        case let .animated(lhsResource, lhsDimensions):
-            if case let .animated(rhsResource, rhsDimensions) = rhs, lhsResource.isEqual(to: rhsResource), lhsDimensions == rhsDimensions {
+        case let .animated(lhsResource, lhsDimensions, lhsIsVideo):
+            if case let .animated(rhsResource, rhsDimensions, rhsIsVideo) = rhs, lhsResource.isEqual(to: rhsResource), lhsDimensions == rhsDimensions, lhsIsVideo == rhsIsVideo {
                 return true
             } else {
                 return false
@@ -158,6 +159,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     
     fileprivate let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
+    private var videoNode: VideoStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
     private let unreadNode: ASImageNode
     private let titleNode: TextNode
@@ -471,16 +473,15 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             var thumbnailItem: StickerPackThumbnailItem?
             var resourceReference: MediaResourceReference?
             if let thumbnail = item.packInfo.thumbnail {
-                if item.packInfo.flags.contains(.isAnimated) {
-                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions)
-                    resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
+                if item.packInfo.flags.contains(.isAnimated) || item.packInfo.flags.contains(.isVideo)  {
+                    thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, item.packInfo.flags.contains(.isVideo))
                 } else {
                     thumbnailItem = .still(thumbnail)
-                    resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
                 }
+                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: item.packInfo.id.id, accessHash: item.packInfo.accessHash), resource: thumbnail.resource)
             } else if let item = item.topItem {
-                if item.file.isAnimatedSticker {
-                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100))
+                if item.file.isAnimatedSticker || item.file.isVideoSticker {
+                    thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker)
                     resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                 } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                     thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
@@ -507,7 +508,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
                             updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource, nilIfEmpty: true)
                         }
-                    case let .animated(resource, _):
+                    case let .animated(resource, _, _):
                         imageSize = imageBoundingSize
                     
                         if fileUpdated {
@@ -745,29 +746,51 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     let boundingSize = CGSize(width: 34.0, height: 34.0)
                     if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
                         let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                        transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
+                        
                         var thumbnailDimensions = PixelDimensions(width: 512, height: 512)
                         switch thumbnailItem {
                             case let .still(representation):
-                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                                 thumbnailDimensions = representation.dimensions
-                            case let .animated(resource, _):
-                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
-                                
-                                let animationNode: AnimatedStickerNode
-                                if let current = strongSelf.animationNode {
-                                    animationNode = current
+                            case let .animated(resource, _, isVideo):
+                                if isVideo {
+                                    let videoNode: VideoStickerNode
+                                    if let current = strongSelf.videoNode {
+                                        videoNode = current
+                                    } else {
+                                        videoNode = VideoStickerNode()
+                                        strongSelf.videoNode = videoNode
+                                        strongSelf.addSubnode(videoNode)
+                                        
+                                        if let resource = resource as? TelegramMediaResource {
+                                            let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
+                                            videoNode.update(account: item.account, fileReference: .standalone(media: dummyFile))
+                                        }
+                                    }
+                                    videoNode.updateLayout(size: imageFrame.size)
+                                    videoNode.update(isPlaying: strongSelf.visibility != .none && item.playAnimatedStickers)
+                                    videoNode.isHidden = !item.playAnimatedStickers
+                                    strongSelf.imageNode.isHidden = item.playAnimatedStickers
+                                    if let videoNode = strongSelf.videoNode {
+                                        transition.updateFrame(node: videoNode, frame: imageFrame)
+                                    }
                                 } else {
-                                    animationNode = AnimatedStickerNode()
-                                    strongSelf.animationNode = animationNode
-                                    strongSelf.addSubnode(animationNode)
-                                    
-                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource), width: 80, height: 80, mode: .cached)
-                                }
-                                animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
-                                animationNode.isHidden = !item.playAnimatedStickers
-                                strongSelf.imageNode.isHidden = item.playAnimatedStickers
-                                if let animationNode = strongSelf.animationNode {
-                                    transition.updateFrame(node: animationNode, frame: imageFrame)
+                                    let animationNode: AnimatedStickerNode
+                                    if let current = strongSelf.animationNode {
+                                        animationNode = current
+                                    } else {
+                                        animationNode = AnimatedStickerNode()
+                                        strongSelf.animationNode = animationNode
+                                        strongSelf.addSubnode(animationNode)
+                                        
+                                        animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource), width: 80, height: 80, mode: .cached)
+                                    }
+                                    animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
+                                    animationNode.isHidden = !item.playAnimatedStickers
+                                    strongSelf.imageNode.isHidden = item.playAnimatedStickers
+                                    if let animationNode = strongSelf.animationNode {
+                                        transition.updateFrame(node: animationNode, frame: imageFrame)
+                                    }
                                 }
                         }
                         
