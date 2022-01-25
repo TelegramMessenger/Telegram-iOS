@@ -1136,7 +1136,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                         item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
                                     }
                                 }
-                                item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                                item.controllerInteraction.openPeer(openPeerId, navigate, MessageReference(item.message), item.message.peers[openPeerId])
                             }
                         })
                     }

@@ -502,9 +502,9 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else {
                 if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
-                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil)
+                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, nil)
                 } else {
-                    self.controllerInteraction.openPeer(self.peerId, .info, nil)
+                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, nil)
                 }
             }
         }

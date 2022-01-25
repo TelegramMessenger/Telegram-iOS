@@ -853,7 +853,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
-                    item.controllerInteraction.openPeer(peerId, .info, nil)
+                    item.controllerInteraction.openPeer(peerId, .info, nil, nil)
             }
         }
     }

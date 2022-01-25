@@ -53,7 +53,7 @@ public enum ChatControllerInteractionReaction {
 
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void
+    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
     let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
@@ -152,7 +152,7 @@ public final class ChatControllerInteraction {
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
-        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void,
+        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingNode, ContextGesture?, String) -> Void,
@@ -327,7 +327,7 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+        return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, presentControllerInCurrent: { _, _ in }, navigationController: {
             return nil

@@ -1282,14 +1282,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, stats: readStats, action: { c, f, stats in
                     if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
                         c.dismiss(completion: {
-                            controllerInteraction.openPeer(stats.peers[0].id, .default, nil)
+                            controllerInteraction.openPeer(stats.peers[0].id, .default, nil, nil)
                         })
                     } else if (stats != nil && !stats!.peers.isEmpty) || reactionCount != 0 {
                         c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), reaction: nil, readStats: stats, back: { [weak c] in
                             c?.popItems()
                         }, openPeer: { [weak c] id in
                             c?.dismiss(completion: {
-                                controllerInteraction.openPeer(id, .default, nil)
+                                controllerInteraction.openPeer(id, .default, nil, nil)
                             })
                         })), tip: nil)))
                     } else {
