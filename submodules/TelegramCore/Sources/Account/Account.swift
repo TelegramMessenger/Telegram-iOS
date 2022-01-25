@@ -1086,6 +1086,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedConsumePersonalMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedReadReactionActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenPersonalMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
+        self.managedOperationsDisposable.add(managedSynchronizeMarkAllUnseenReactionsOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedApplyPendingMessageReactionsActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeEmojiKeywordsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedApplyPendingScheduledMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())

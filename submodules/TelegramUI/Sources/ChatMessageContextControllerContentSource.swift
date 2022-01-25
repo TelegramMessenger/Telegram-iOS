@@ -160,3 +160,37 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
     }
 }
 
+final class ChatMessageNavigationButtonContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    let centerActionsHorizontally: Bool = true
+    
+    private weak var chatNode: ChatControllerNode?
+    private let contentNode: ContextExtractedContentContainingNode
+    
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    init(chatNode: ChatControllerNode, contentNode: ContextExtractedContentContainingNode) {
+        self.chatNode = chatNode
+        self.contentNode = contentNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        guard let chatNode = self.chatNode else {
+            return nil
+        }
+        
+        return ContextControllerTakeViewInfo(contentContainingNode: self.contentNode, contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        guard let chatNode = self.chatNode else {
+            return nil
+        }
+        
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+    }
+}

@@ -157,6 +157,7 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramDeviceContactImportedData.self, f: { TelegramDeviceContactImportedData(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
+    declareEncodable(SynchronizeMarkAllUnseenReactionsOperation.self, f: { SynchronizeMarkAllUnseenReactionsOperation(decoder: $0) })
     declareEncodable(SynchronizeAppLogEventsOperation.self, f: { SynchronizeAppLogEventsOperation(decoder: $0) })
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })

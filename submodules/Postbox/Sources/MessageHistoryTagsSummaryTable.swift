@@ -133,7 +133,7 @@ class MessageHistoryTagsSummaryTable: Table {
     func removeMessage(key: MessageHistoryTagsSummaryKey, id: MessageId.Id, updatedSummaries: inout [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], invalidateSummaries: inout [InvalidatedMessageHistoryTagsSummaryEntryOperation]) {
         if let current = self.get(key) {
             if current.count == 0 {
-                self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag), operations: &invalidateSummaries)
+                //self.invalidateTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: key.peerId, namespace: key.namespace, tagMask: key.tag), operations: &invalidateSummaries)
             } else {
                 self.set(key, summary: current.withAddedCount(-1), updatedSummaries: &updatedSummaries)
             }

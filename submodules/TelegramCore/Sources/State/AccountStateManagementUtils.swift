@@ -3313,39 +3313,6 @@ func replayFinalState(
                         attributes.append(updatedReactions)
                     }
                     
-                    if let eventTimestamp = eventTimestamp, !currentMessage.flags.contains(.Incoming), let chatPeer = currentMessage.peers[currentMessage.id.peerId] {
-                        let _ = chatPeer
-                        
-                        var previousCount = 0
-                        if let previousReactions = previousReactions {
-                            for reaction in previousReactions.reactions {
-                                previousCount += Int(reaction.count)
-                            }
-                        }
-                        
-                        var updatedCount = 0
-                        for reaction in updatedReactions.reactions {
-                            updatedCount += Int(reaction.count)
-                        }
-                        
-                        if updatedCount > previousCount {
-                            if let topPeer = updatedReactions.recentPeers.last {
-                                var wasPresentBefore = false
-                                if let previousReactions = previousReactions {
-                                    for recentPeer in previousReactions.recentPeers {
-                                        if recentPeer.peerId == topPeer.peerId {
-                                            wasPresentBefore = true
-                                            break
-                                        }
-                                    }
-                                }
-                                if !wasPresentBefore, let reactionAuthor = transaction.getPeer(topPeer.peerId), transaction.isPeerContact(peerId: topPeer.peerId) {
-                                    generatedEvent = (reactionAuthor: reactionAuthor, message: currentMessage.withUpdatedAttributes(attributes), timestamp: eventTimestamp)
-                                }
-                            }
-                        }
-                    }
-                    
                     var tags = currentMessage.tags
                     if updatedReactions.hasUnseen {
                         tags.insert(.unseenReaction)

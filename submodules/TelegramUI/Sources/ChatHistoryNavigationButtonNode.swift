@@ -12,7 +12,9 @@ enum ChatHistoryNavigationButtonType {
     case reactions
 }
 
-class ChatHistoryNavigationButtonNode: ASControlNode {
+class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
+    let containerNode: ContextExtractedContentContainingNode
+    private let buttonNode: HighlightTrackingButtonNode
     private let backgroundNode: NavigationBackgroundNode
     private let imageNode: ASImageNode
     private let badgeBackgroundNode: ASImageNode
@@ -22,9 +24,9 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         didSet {
             if (oldValue != nil) != (self.tapped != nil) {
                 if self.tapped != nil {
-                    self.addTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
+                    self.buttonNode.addTarget(self, action: #selector(self.onTap), forControlEvents: .touchUpInside)
                 } else {
-                    self.removeTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
+                    self.buttonNode.removeTarget(self, action: #selector(self.onTap), forControlEvents: .touchUpInside)
                 }
             }
         }
@@ -44,6 +46,9 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     init(theme: PresentationTheme, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
         self.type = type
+        
+        self.containerNode = ContextExtractedContentContainingNode()
+        self.buttonNode = HighlightTrackingButtonNode()
 
         self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
@@ -71,18 +76,30 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         self.badgeTextNode.displaysAsynchronously = false
         
         super.init()
-
-        self.addSubnode(self.backgroundNode)
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 38.0 / 2.0, transition: .immediate)
-
-        self.addSubnode(self.imageNode)
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         
-        self.addSubnode(self.badgeBackgroundNode)
-        self.addSubnode(self.badgeTextNode)
+        self.targetNodeForActivationProgress = self.buttonNode
         
-        self.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        self.addSubnode(self.containerNode)
+        
+        let size = CGSize(width: 38.0, height: 38.0)
+        
+        self.containerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.containerNode.contentRect = CGRect(origin: CGPoint(), size: size)
+        
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.containerNode.contentNode.addSubnode(self.buttonNode)
+
+        self.buttonNode.addSubnode(self.backgroundNode)
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: size.width / 2.0, transition: .immediate)
+
+        self.buttonNode.addSubnode(self.imageNode)
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.buttonNode.addSubnode(self.badgeBackgroundNode)
+        self.buttonNode.addSubnode(self.badgeTextNode)
+        
+        self.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     func updateTheme(theme: PresentationTheme) {

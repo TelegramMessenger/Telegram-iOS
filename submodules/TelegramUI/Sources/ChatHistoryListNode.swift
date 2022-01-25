@@ -732,7 +732,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.canReadHistoryValue {
+            if strongSelf.canReadHistoryValue && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                 strongSelf.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
             } else {
                 strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds)
@@ -1342,7 +1342,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
                     }
                     
-                    if strongSelf.canReadHistoryValue && !strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
+                    if strongSelf.canReadHistoryValue && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
                         let messageIds = strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen
                         strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
                         context?.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)

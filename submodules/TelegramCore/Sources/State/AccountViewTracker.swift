@@ -1228,6 +1228,29 @@ public final class AccountViewTracker {
         }
     }
     
+    public func updateMarkAllReactionsSeen(peerId: PeerId) {
+        self.queue.async {
+            guard let account = self.account else {
+                return
+            }
+            let _ = (account.postbox.transaction { transaction -> Set<MessageId> in
+                let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .unseenReaction).map({ $0.id }))
+                if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud), summary.count > 0 {
+                    var maxId: Int32 = summary.range.maxId
+                    if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                        maxId = index.id.id
+                    }
+                    
+                    transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: 0, maxId: maxId)
+                    addSynchronizeMarkAllUnseenReactionsOperation(transaction: transaction, peerId: peerId, maxId: summary.range.maxId)
+                }
+                
+                return ids
+            }
+            |> deliverOn(self.queue)).start()
+        }
+    }
+    
     public func updateMarkReactionsSeenForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
             let addedMessageIds: [MessageId] = Array(messageIds)
