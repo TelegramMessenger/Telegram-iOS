@@ -7242,3 +7242,11 @@ Sorry for the inconvenience.";
 
 "Conversation.CopyProtectionForwardingDisabledBot" = "Forwards from this bot are restricted";
 "Conversation.CopyProtectionSavingDisabledBot" = "Saving from this bot is restricted";
+
+"Channel.ChannelSubscribersHeader" = "CHANNEL SUBSCRIBERS";
+
+"Channel.Members.Contacts" = "CONTACTS IN THIS CHANNEL";
+"Channel.Members.Other" = "OTHERS SUBSCRIBERS";
+
+"Group.Members.Contacts" = "CONTACTS IN THIS GROUP";
+"Group.Members.Other" = "OTHERS MEMBERS";

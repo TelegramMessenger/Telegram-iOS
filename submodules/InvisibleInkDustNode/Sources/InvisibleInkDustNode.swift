@@ -59,22 +59,29 @@ public class InvisibleInkDustNode: ASDisplayNode {
         
     public var isRevealed = false
     
+    private var exploding = false
+    
     public init(textNode: TextNode?) {
         self.textNode = textNode
         
         self.emitterNode = ASDisplayNode()
+        self.emitterNode.isUserInteractionEnabled = false
         self.emitterNode.clipsToBounds = true
         
         self.textMaskNode = ASDisplayNode()
+        self.textMaskNode.isUserInteractionEnabled = false
         self.textSpotNode = ASImageNode()
         self.textSpotNode.contentMode = .scaleToFill
+        self.textSpotNode.isUserInteractionEnabled = false
         
         self.emitterMaskNode = ASDisplayNode()
         self.emitterSpotNode = ASImageNode()
         self.emitterSpotNode.contentMode = .scaleToFill
+        self.emitterSpotNode.isUserInteractionEnabled = false
         
         self.emitterMaskFillNode = ASDisplayNode()
         self.emitterMaskFillNode.backgroundColor = .white
+        self.emitterMaskFillNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -135,7 +142,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tap(_:))))
     }
     
-    public func update(revealed: Bool) {
+    public func update(revealed: Bool, animated: Bool = true) {
         guard self.isRevealed != revealed, let textNode = self.textNode else {
             return
         }
@@ -143,13 +150,18 @@ public class InvisibleInkDustNode: ASDisplayNode {
         self.isRevealed = revealed
         
         if revealed {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .linear) : .immediate
             transition.updateAlpha(node: self, alpha: 0.0)
             transition.updateAlpha(node: textNode, alpha: 1.0)
         } else {
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
+            let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.4, curve: .linear) : .immediate
             transition.updateAlpha(node: self, alpha: 1.0)
             transition.updateAlpha(node: textNode, alpha: 0.0)
+            
+            if self.exploding {
+                self.exploding = false
+                self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
+            }
         }
     }
     
@@ -159,6 +171,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         self.isRevealed = true
+        self.exploding = true
         
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
@@ -214,6 +227,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
+            self.exploding = false
             self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             self.textSpotNode.layer.removeAllAnimations()
             

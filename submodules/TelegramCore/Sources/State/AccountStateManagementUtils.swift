@@ -3280,14 +3280,14 @@ func replayFinalState(
                         return state
                     })
                 }
-            case let .UpdateMessageReactions(messageId, reactions, eventTimestamp):
-                var generatedEvent: (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)?
+            case let .UpdateMessageReactions(messageId, reactions, _):
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                     
                     let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                     var attributes = currentMessage.attributes
                     var previousReactions: ReactionsMessageAttribute?
+                    let _ = previousReactions
                     var added = false
                     loop: for j in 0 ..< attributes.count {
                         if let attribute = attributes[j] as? ReactionsMessageAttribute {

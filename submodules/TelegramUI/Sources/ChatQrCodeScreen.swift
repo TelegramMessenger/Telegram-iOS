@@ -2167,7 +2167,13 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
     }
 }
 
-func renderVideo(context: AccountContext, backgroundImage: UIImage, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
+private enum RenderVideoResult {
+    case progress(Float)
+    case completion(URL)
+    case error
+}
+
+private func renderVideo(context: AccountContext, backgroundImage: UIImage, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: AnyMediaReference.standalone(media: media))
     |> deliverOnMainQueue).start(next: { value, isImage in
         guard case let .data(data) = value, data.complete else {
@@ -2187,7 +2193,6 @@ func renderVideo(context: AccountContext, backgroundImage: UIImage, media: Teleg
             let timeRange = CMTimeRange(start: .zero, duration: duration)
             try compositionTrack.insertTimeRange(timeRange, of: assetTrack, at: .zero)
         } catch {
-            print(error)
             completion(nil)
             return
         }
@@ -2228,7 +2233,6 @@ func renderVideo(context: AccountContext, backgroundImage: UIImage, media: Teleg
         instruction.layerInstructions = [layerInstruction]
 
         guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
-            print("Cannot create export session.")
             completion(nil)
             return
         }
@@ -2240,13 +2244,11 @@ func renderVideo(context: AccountContext, backgroundImage: UIImage, media: Teleg
         export.outputURL = exportURL
         
         export.exportAsynchronously {
-            DispatchQueue.main.async {
+            Queue.mainQueue().async {
                 switch export.status {
                 case .completed:
                     completion(exportURL)
                 default:
-                    print("Something went wrong during export.")
-                    print(export.error ?? "unknown error")
                     completion(nil)
                     break
                 }

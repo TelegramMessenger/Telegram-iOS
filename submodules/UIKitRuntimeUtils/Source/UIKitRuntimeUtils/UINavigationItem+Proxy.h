@@ -49,5 +49,6 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem * _Nonnull item, UITabBa
 - (void)removeSetSelectedImageListener:(NSInteger)key;
 
 @property (nonatomic, strong) NSString * _Nullable animationName;
+@property (nonatomic, assign) CGPoint animationOffset;
 
 @end

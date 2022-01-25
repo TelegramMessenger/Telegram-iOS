@@ -1086,44 +1086,46 @@ public class TextNode: ASDisplayNode {
                     }
                     
                     var headIndent: CGFloat = 0.0
-                    attributedString.enumerateAttributes(in: NSMakeRange(brokenLineRange.location, brokenLineRange.length), options: []) { attributes, range, _ in
-                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
-                            var ascent: CGFloat = 0.0
-                            var descent: CGFloat = 0.0
-                            CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                            
-                            var startIndex: Int?
-                            var currentIndex: Int?
-                            
-                            let nsString = (attributedString.string as NSString)
-                            nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
-                                if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
-                                    if let currentStartIndex = startIndex {
-                                        startIndex = nil
-                                        let endIndex = range.location
-                                        addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                    if brokenLineRange.location >= 0 && brokenLineRange.length > 0 && brokenLineRange.location + brokenLineRange.length <= attributedString.length {
+                        attributedString.enumerateAttributes(in: NSMakeRange(brokenLineRange.location, brokenLineRange.length), options: []) { attributes, range, _ in
+                            if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                var startIndex: Int?
+                                var currentIndex: Int?
+                                
+                                let nsString = (attributedString.string as NSString)
+                                nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                                    if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                                        if let currentStartIndex = startIndex {
+                                            startIndex = nil
+                                            let endIndex = range.location
+                                            addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                                        }
+                                    } else if startIndex == nil {
+                                        startIndex = range.location
                                     }
-                                } else if startIndex == nil {
-                                    startIndex = range.location
+                                    currentIndex = range.location + range.length
                                 }
-                                currentIndex = range.location + range.length
+                                
+                                if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                                    startIndex = nil
+                                    let endIndex = currentIndex
+                                    addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex, rightInset: truncated ? 12.0 : 0.0)
+                                }
+                                
+                                addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                                let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                                let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                                let x = lowerX < upperX ? lowerX : upperX
+                                strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
+                                headIndent = paragraphStyle.headIndent
+                                
                             }
-                            
-                            if let currentStartIndex = startIndex, let currentIndex = currentIndex {
-                                startIndex = nil
-                                let endIndex = currentIndex
-                                addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex, rightInset: truncated ? 12.0 : 0.0)
-                            }
-                            
-                            addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                        } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
-                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
-                            let x = lowerX < upperX ? lowerX : upperX
-                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                        } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
-                            headIndent = paragraphStyle.headIndent
-                            
                         }
                     }
                     
