@@ -683,7 +683,7 @@ public struct PresentationResourcesChat {
                 context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
                 context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
                 
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/ScheduleIcon"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
                 }
             })

@@ -877,7 +877,13 @@ public final class AccountViewTracker {
                                                     if !added {
                                                         attributes.append(updatedReactions)
                                                     }
-                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                                    var tags = currentMessage.tags
+                                                    if updatedReactions.hasUnseen {
+                                                        tags.insert(.unseenReaction)
+                                                    } else {
+                                                        tags.remove(.unseenReaction)
+                                                    }
+                                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                                 })
                                             default:
                                                 break
@@ -1167,6 +1173,23 @@ public final class AccountViewTracker {
             }
             let _ = (account.postbox.transaction { transaction -> Set<MessageId> in
                 let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .unseenPersonalMessage).map({ $0.id }))
+                
+                for id in ids {
+                    transaction.updateMessage(id, update: { currentMessage in
+                        let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                        var attributes = currentMessage.attributes
+                        for i in 0 ..< attributes.count {
+                            if let attribute = attributes[i] as? ConsumablePersonalMentionMessageAttribute {
+                                attributes[i] = ConsumablePersonalMentionMessageAttribute(consumed: true, pending: attribute.pending)
+                                break
+                            }
+                        }
+                        var tags = currentMessage.tags
+                        tags.remove(.unseenPersonalMessage)
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    })
+                }
+                
                 if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud), summary.count > 0 {
                     var maxId: Int32 = summary.range.maxId
                     if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
@@ -1179,9 +1202,7 @@ public final class AccountViewTracker {
                 
                 return ids
             }
-            |> deliverOn(self.queue)).start(next: { _ in
-                //self?.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
-            })
+            |> deliverOn(self.queue)).start()
         }
     }
     
@@ -1235,7 +1256,24 @@ public final class AccountViewTracker {
             }
             let _ = (account.postbox.transaction { transaction -> Set<MessageId> in
                 let ids = Set(transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .unseenReaction).map({ $0.id }))
-                if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud), summary.count > 0 {
+                
+                for id in ids {
+                    transaction.updateMessage(id, update: { currentMessage in
+                        let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                        var attributes = currentMessage.attributes
+                        for i in 0 ..< attributes.count {
+                            if let attribute = attributes[i] as? ReactionsMessageAttribute {
+                                attributes[i] = attribute.withAllSeen()
+                                break
+                            }
+                        }
+                        var tags = currentMessage.tags
+                        tags.remove(.unseenReaction)
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    })
+                }
+                
+                if let summary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud) {
                     var maxId: Int32 = summary.range.maxId
                     if let index = transaction.getTopPeerMessageIndex(peerId: peerId, namespace: Namespaces.Message.Cloud) {
                         maxId = index.id.id

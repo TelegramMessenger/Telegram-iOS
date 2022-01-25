@@ -983,6 +983,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         initialHideAuthor = true
                         messageText = psaText
                     }
+                
+                    switch itemPeer.peer {
+                    case .user:
+                        if let attribute = messages.first?._asMessage().reactionsAttribute {
+                            loop: for recentPeer in attribute.recentPeers {
+                                if recentPeer.isUnseen {
+                                    messageText = item.presentationData.strings.ChatList_UserReacted(recentPeer.value).string
+                                    break loop
+                                }
+                            }
+                        }
+                    default:
+                        break
+                    }
                     
                     contentData = .chat(itemPeer: itemPeer, peer: peer, hideAuthor: hideAuthor, messageText: messageText, spoilers: spoilers)
                     hideAuthor = initialHideAuthor
@@ -1307,12 +1321,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
 
             if !isPeerGroup {
-                if hasUnseenMentions || hasUnseenReactions {
+                if hasUnseenMentions {
                     if case .archive = item.peerGroupId {
                         currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveMention(item.presentationData.theme, diameter: badgeDiameter)
                     } else {
                         currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundMention(item.presentationData.theme, diameter: badgeDiameter)
                     }
+                    mentionBadgeContent = .mention
+                } else if hasUnseenReactions {
+                    currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundReactions(item.presentationData.theme, diameter: badgeDiameter)
                     mentionBadgeContent = .mention
                 } else if item.index.pinningIndex != nil && promoInfo == nil && currentBadgeBackgroundImage == nil {
                     currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme, diameter: badgeDiameter)

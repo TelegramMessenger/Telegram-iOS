@@ -274,6 +274,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatListBadgeBackgroundActive(CGFloat)
     case chatListBadgeBackgroundInactive(CGFloat)
     case chatListBadgeBackgroundMention(CGFloat)
+    case badgeBackgroundReactions(CGFloat)
     case chatListBadgeBackgroundInactiveMention(CGFloat)
     case chatListBadgeBackgroundPinned(CGFloat)
     

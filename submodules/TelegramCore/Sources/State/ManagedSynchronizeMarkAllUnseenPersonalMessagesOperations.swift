@@ -283,7 +283,33 @@ private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox
     guard let inputPeer = transaction.getPeer(peerId).flatMap(apiInputPeer) else {
         return .complete()
     }
-    let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel)
+    
+    let signal = network.request(Api.functions.messages.readReactions(peer: inputPeer))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
+        return .fail(true)
+    }
+    |> mapToSignal { result -> Signal<Void, Bool> in
+        if let result = result {
+            switch result {
+            case let .affectedHistory(pts, ptsCount, offset):
+                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                if offset == 0 {
+                    return .fail(true)
+                } else {
+                    return .complete()
+                }
+            }
+        } else {
+            return .fail(true)
+        }
+    }
+    return (signal |> restart)
+    |> `catch` { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
+    
+    /*let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel)
     let limit: Int32 = 100
     let oneOperation: (Int32) -> Signal<Int32?, MTRpcError> = { maxId in
         return network.request(Api.functions.messages.getUnreadReactions(peer: inputPeer, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
@@ -365,7 +391,7 @@ private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox
     return loopOperations
     |> `catch` { _ -> Signal<Void, NoError> in
         return .complete()
-    }
+    }*/
 }
 
 func markUnseenReactionMessage(transaction: Transaction, id: MessageId, addSynchronizeAction: Bool) {
@@ -386,7 +412,9 @@ func markUnseenReactionMessage(transaction: Transaction, id: MessageId, addSynch
                         break loop
                     }
                 }
-                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                var tags = currentMessage.tags
+                tags.remove(.unseenReaction)
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
             })
             
             if addSynchronizeAction {

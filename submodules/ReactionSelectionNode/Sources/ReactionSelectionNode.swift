@@ -130,8 +130,12 @@ final class ReactionNode: ASDisplayNode {
             self.animationNode = animationNode
             self.addSubnode(animationNode)
             
+            var didReportStarted = false
             animationNode.started = { [weak self] in
-                self?.expandedAnimationDidBegin?()
+                if !didReportStarted {
+                    didReportStarted = true
+                    self?.expandedAnimationDidBegin?()
+                }
             }
             
             if largeExpanded {

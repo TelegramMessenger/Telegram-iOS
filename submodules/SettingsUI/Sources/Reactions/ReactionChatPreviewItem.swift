@@ -170,7 +170,9 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                                     applicationAnimation: aroundAnimation,
                                     largeApplicationAnimation: reaction.effectAnimation
                                 ),
+                                isLarge: false,
                                 targetView: targetView,
+                                addStandaloneReactionAnimation: nil,
                                 completion: { [weak standaloneReactionAnimation] in
                                 standaloneReactionAnimation?.removeFromSupernode()
                                 }

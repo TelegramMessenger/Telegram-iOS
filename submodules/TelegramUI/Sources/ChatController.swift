@@ -1294,7 +1294,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 applicationAnimation: aroundAnimation,
                                                 largeApplicationAnimation: reaction.effectAnimation
                                             ),
+                                            isLarge: false,
                                             targetView: targetView,
+                                            addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                                standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                                strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                            },
                                             completion: { [weak standaloneReactionAnimation] in
                                                 standaloneReactionAnimation?.removeFromSupernode()
                                             }
@@ -5944,7 +5953,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                             applicationAnimation: aroundAnimation,
                                                             largeApplicationAnimation: reaction.effectAnimation
                                                         ),
+                                                        isLarge: false,
                                                         targetView: targetView,
+                                                        addStandaloneReactionAnimation: { standaloneReactionAnimation in
+                                                            guard let strongSelf = self else {
+                                                                return
+                                                            }
+                                                            strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                                            standaloneReactionAnimation.frame = strongSelf.chatDisplayNode.bounds
+                                                            strongSelf.chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                                                        },
                                                         completion: { [weak standaloneReactionAnimation] in
                                                             standaloneReactionAnimation?.removeFromSupernode()
                                                         }
@@ -12505,10 +12523,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let messageId = messageLocation.messageId, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         self.loadingMessage.set(.single(nil))
                         self.messageIndexDisposable.set(nil)
+                        
+                        var delayCompletion = true
+                        if self.chatDisplayNode.historyNode.isMessageVisible(id: messageId) {
+                            delayCompletion = false
+                        }
+                        
                         self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
-                        Queue.mainQueue().after(0.25, {
-                            completion?()
-                        })
+                        
+                        if delayCompletion {
+                            Queue.mainQueue().after(0.25, {
+                                completion?()
+                            })
+                        } else {
+                            Queue.mainQueue().justDispatch({
+                                completion?()
+                            })
+                        }
                         
                         if case let .id(_, maybeTimecode) = messageLocation, let timecode = maybeTimecode {
                             let _ = self.controllerInteraction?.openMessage(message, .timecode(timecode))

@@ -7252,3 +7252,4 @@ Sorry for the inconvenience.";
 "Group.Members.Other" = "OTHERS MEMBERS";
 
 "Conversation.ReadAllReactions" = "Read All Reactions";
+"ChatList.UserReacted" = "Reacted %@ to your message";
