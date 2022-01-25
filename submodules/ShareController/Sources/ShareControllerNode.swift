@@ -191,29 +191,35 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.actionButtonNode.contextAction = { [weak self] node, gesture in
             if let strongSelf = self, let context = strongSelf.context, let node = node as? ContextReferenceContentNode {
                 let presentationData = strongSelf.presentationData
+                let fromForeignApp = strongSelf.fromForeignApp
                 let items: Signal<ContextController.Items, NoError> =
                 strongSelf.showNames.get()
                 |> map { showNamesValue in
-                    return ContextController.Items(content: .list([
-                        .action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowSendersName, icon: { theme in
-                            if showNamesValue {
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                            } else {
-                                return nil
-                            }
-                        }, action: { _, _ in
-                            self?.showNames.set(true)
-                        })),
-                        .action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideSendersName, icon: { theme in
-                            if !showNamesValue {
-                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                            } else {
-                                return nil
-                            }
-                        }, action: { _, _ in
-                            self?.showNames.set(false)
-                        })),
-                        .separator,
+                    var items: [ContextMenuItem] = []
+                    if !fromForeignApp {
+                        items.append(contentsOf: [
+                            .action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowSendersName, icon: { theme in
+                                if showNamesValue {
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                                } else {
+                                    return nil
+                                }
+                            }, action: { _, _ in
+                                self?.showNames.set(true)
+                            })),
+                            .action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideSendersName, icon: { theme in
+                                if !showNamesValue {
+                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                                } else {
+                                    return nil
+                                }
+                            }, action: { _, _ in
+                                self?.showNames.set(false)
+                            })),
+                            .separator,
+                        ])
+                    }
+                    items.append(contentsOf: [
                         .action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                             f(.default)
                             if let strongSelf = self {
@@ -225,8 +231,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             if let strongSelf = self {
                                 strongSelf.send(showNames: showNamesValue, silently: false)
                             }
-                        })),
-                    ]))
+                        }))
+                    ])
+                    return ContextController.Items(content: .list(items))
                 }
                 let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: -116.0))), items: items, gesture: gesture)
                 contextController.immediateItemsTransitionAnimation = true

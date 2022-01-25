@@ -206,7 +206,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 self.tabBarItem.image = icon
                 self.tabBarItem.selectedImage = icon
-                self.tabBarItem.animationName = "TabChats"
+                if !self.presentationData.reduceMotion {
+                    self.tabBarItem.animationName = "TabChats"
+                    self.tabBarItem.animationOffset = CGPoint(x: 0.0, y: UIScreenPixel)
+                }
                 
                 let leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
                 leftBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
@@ -519,6 +522,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
             backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
             self.navigationItem.backBarButtonItem = backBarButtonItem
+            
+            if !self.presentationData.reduceMotion {
+                self.tabBarItem.animationName = "TabChats"
+            } else {
+                self.tabBarItem.animationName = nil
+            }
         } else {
             let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
             backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back

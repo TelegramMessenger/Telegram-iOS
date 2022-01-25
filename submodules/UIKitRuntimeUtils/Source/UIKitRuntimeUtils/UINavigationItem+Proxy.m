@@ -17,6 +17,7 @@ static const void *setBackBarButtonItemListenerBagKey = &setBackBarButtonItemLis
 static const void *setBadgeListenerBagKey = &setBadgeListenerBagKey;
 static const void *badgeKey = &badgeKey;
 static const void *animationNameKey = &animationNameKey;
+static const void *animationOffsetKey = &animationOffsetKey;
 
 @implementation UINavigationItem (Proxy)
 
@@ -404,14 +405,18 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem *item, UITabBarItemSetBa
 
 - (void)setAnimationName:(NSString *)animationName {
     [self setAssociatedObject:animationName forKey:animationNameKey];
-    
-//    [(NSBag *)[self associatedObjectForKey:setBadgeListenerBagKey] enumerateItems:^(UITabBarItemSetBadgeListener listener) {
-//        listener(badge);
-//    }];
 }
 
 - (NSString *)animationName {
     return [self associatedObjectForKey:animationNameKey];
+}
+
+- (void)setAnimationOffset:(CGPoint)animationOffset {
+    [self setAssociatedObject:[NSValue valueWithCGPoint:animationOffset] forKey:animationOffsetKey];
+}
+
+- (CGPoint)animationOffset {
+    return ((NSValue *)[self associatedObjectForKey:animationOffsetKey]).CGPointValue;
 }
 
 @end

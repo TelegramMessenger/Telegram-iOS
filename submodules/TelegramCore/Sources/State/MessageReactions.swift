@@ -256,7 +256,9 @@ public extension EngineMessageReactionListContext.State {
             }
             for recentPeer in reactionsAttribute.recentPeers {
                 if let peer = message.peers[recentPeer.peerId] {
-                    items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value))
+                    if reaction == nil || recentPeer.value == reaction {
+                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value))
+                    }
                 }
             }
         }
@@ -348,6 +350,8 @@ public final class EngineMessageReactionListContext {
             
             if initialState.canLoadMore {
                 self.loadMore()
+            } else {
+                self.statePromise.set(.single(self.state))
             }
         }
         

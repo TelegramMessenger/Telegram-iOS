@@ -4,6 +4,43 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
+private func reactionGeneratedEvent(_ previousReactions: ReactionsMessageAttribute?, _ updatedReactions: ReactionsMessageAttribute?, message: Message, transaction: Transaction) -> (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)? {
+    
+    if let updatedReactions = updatedReactions, !message.flags.contains(.Incoming), message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+        let prev = previousReactions?.reactions ?? []
+        
+        let updated = updatedReactions.reactions.filter { value in
+            return !prev.contains(where: {
+                $0.value == value.value && $0.count == value.count
+            })
+        }
+        let myUpdated = updatedReactions.reactions.filter { value in
+            return value.isSelected
+        }.first
+        let myPrevious = prev.filter { value in
+            return value.isSelected
+        }.first
+        
+        let previousCount = prev.reduce(0, {
+            $0 + $1.count
+        })
+        let updatedCount = updatedReactions.reactions.reduce(0, {
+            $0 + $1.count
+        })
+        
+        let newReaction = updated.filter {
+            !$0.isSelected
+        }.first?.value
+        
+        if !updated.isEmpty && myUpdated == myPrevious, updatedCount >= previousCount, let value = newReaction {
+            if let reactionAuthor = transaction.getPeer(message.id.peerId) {
+                return (reactionAuthor: reactionAuthor, reaction: value, message: message, timestamp: Int32(Date().timeIntervalSince1970))
+            }
+        }
+    }
+    return nil
+}
+
 
 private func peerIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<PeerId> {
     var peerIds = Set<PeerId>()
@@ -2435,7 +2472,7 @@ func replayFinalState(
     }
     var wasScheduledMessageIds:[MessageId] = []
     var addedIncomingMessageIds: [MessageId] = []
-    var addedReactionEvents: [(reactionAuthor: Peer, message: Message, timestamp: Int32)] = []
+    var addedReactionEvents: [(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)] = []
     
     if !wasOperationScheduledMessageIds.isEmpty {
         let existingIds = transaction.filterStoredMessageIds(Set(wasOperationScheduledMessageIds))
@@ -2675,6 +2712,7 @@ func replayFinalState(
                     invalidateGroupStats.insert(Namespaces.PeerGroup.archive)
                 }
             case let .EditMessage(id, message):
+                var generatedEvent: (reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)?
                 transaction.updateMessage(id, update: { previousMessage in
                     var updatedFlags = message.flags
                     var updatedLocalTags = message.localTags
@@ -2686,8 +2724,21 @@ func replayFinalState(
                     } else {
                         updatedFlags.remove(.Incoming)
                     }
+                    
+                    let peers: [PeerId:Peer] = previousMessage.peers.reduce([:], { current, value in
+                        var current = current
+                        current[value.0] = value.1
+                        return current
+                    })
+                    
+                    if let message = locallyRenderedMessage(message: message, peers: peers) {
+                        generatedEvent = reactionGeneratedEvent(previousMessage.reactionsAttribute, message.reactionsAttribute, message: message, transaction: transaction)
+                    }
                     return .update(message.withUpdatedLocalTags(updatedLocalTags).withUpdatedFlags(updatedFlags))
                 })
+                if let generatedEvent = generatedEvent {
+                    addedReactionEvents.append(generatedEvent)
+                }
             case let .UpdateMessagePoll(pollId, apiPoll, results):
                 if let poll = transaction.getMedia(pollId) as? TelegramMediaPoll {
                     var updatedPoll = poll
@@ -3236,14 +3287,14 @@ func replayFinalState(
                         return state
                     })
                 }
-            case let .UpdateMessageReactions(messageId, reactions, eventTimestamp):
-                var generatedEvent: (reactionAuthor: Peer, message: Message, timestamp: Int32)?
+            case let .UpdateMessageReactions(messageId, reactions, _):
                 transaction.updateMessage(messageId, update: { currentMessage in
                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                     
                     let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                     var attributes = currentMessage.attributes
                     var previousReactions: ReactionsMessageAttribute?
+                    let _ = previousReactions
                     var added = false
                     loop: for j in 0 ..< attributes.count {
                         if let attribute = attributes[j] as? ReactionsMessageAttribute {
@@ -3304,9 +3355,6 @@ func replayFinalState(
                     
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
-                if let generatedEvent = generatedEvent {
-                    addedReactionEvents.append(generatedEvent)
-                }
         }
     }
     
