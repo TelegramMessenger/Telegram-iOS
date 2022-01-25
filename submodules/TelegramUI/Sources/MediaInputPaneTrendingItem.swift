@@ -115,7 +115,9 @@ final class TrendingTopItemNode: ASDisplayNode {
         self.file = item.file
         self.itemSize = itemSize
         
-        if item.file.isAnimatedSticker {
+        if item.file.isVideoSticker {
+            
+        } else if item.file.isAnimatedSticker {
             let animationNode: AnimatedStickerNode
             if let currentAnimationNode = self.animationNode {
                 animationNode = currentAnimationNode

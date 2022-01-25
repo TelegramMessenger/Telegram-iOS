@@ -679,7 +679,20 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     Queue.mainQueue().after(1.0) {
                         var firstItem: StickerPackItem?
                         if let firstStickerItem = firstStickerItem, let resource = firstStickerItem.resource as? TelegramMediaResource {
-                            firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: firstStickerItem.mimeType, size: nil, attributes: [.FileName(fileName: ""), .ImageSize(size: firstStickerItem.dimensions)]), indexKeys: [])
+                            var fileAttributes: [TelegramMediaFileAttribute] = []
+                            if firstStickerItem.mimeType == "video/webm" {
+                                fileAttributes.append(.FileName(fileName: "sticker.webm"))
+                                fileAttributes.append(.Animated)
+                                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                            } else if firstStickerItem.mimeType == "application/x-tgsticker" {
+                                fileAttributes.append(.FileName(fileName: "sticker.tgs"))
+                                fileAttributes.append(.Animated)
+                                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                            } else {
+                                fileAttributes.append(.FileName(fileName: "sticker.webp"))
+                            }
+                            fileAttributes.append(.ImageSize(size: firstStickerItem.dimensions))
+                            firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: firstStickerItem.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
                         }
                         strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { action in
                             if case .info = action {

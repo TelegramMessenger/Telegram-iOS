@@ -196,7 +196,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let isVisible = self.visibility != .none
             
             if wasVisible != isVisible {
-                self.animationNode?.visibility = isVisible && (self.layoutParams?.0.playAnimatedStickers ?? true)
+                let visibility = isVisible && (self.layoutParams?.0.playAnimatedStickers ?? true)
+                self.videoNode?.update(isPlaying: visibility)
+                self.animationNode?.visibility = visibility
             }
         }
     }

@@ -48,8 +48,7 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                     case let .progress(progress):
                         return .single(.progress(progress))
                     case let .inputFile(file):
-                        var flags: Int32 = 0
-                        flags |= (1 << 4)
+                        let flags: Int32 = 0
                         var attributes: [Api.DocumentAttribute] = []
                         attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
                         attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
@@ -134,8 +133,13 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
             }
             if resources.count == stickers.count {
                 var flags: Int32 = 0
-                if case .animation = type {
-                    flags |= (1 << 1)
+                switch type {
+                    case .animation:
+                        flags |= (1 << 1)
+                    case .video:
+                        flags |= (1 << 4)
+                    default:
+                        break
                 }
                 var inputStickers: [Api.InputStickerSetItem] = []
                 let stickerDocuments = thumbnail != nil ? resources.dropLast() : resources

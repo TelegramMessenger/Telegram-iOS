@@ -590,6 +590,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
                         availablePanes?.append(.groupsInCommon)
+                    } else if hintGroupInCommon != nil {
+                        availablePanes?.append(.groupsInCommon)
                     }
                 } else if hintGroupInCommon != nil {
                     availablePanes = [.groupsInCommon]

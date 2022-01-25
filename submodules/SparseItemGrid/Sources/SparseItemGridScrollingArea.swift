@@ -555,22 +555,170 @@ private final class ShadowRoundedRectangle: Component {
     }
 }
 
+public final class RollingText: Component {
+    private final class MeasureState: Equatable {
+        let attributedText: NSAttributedString
+        let availableSize: CGSize
+        let size: CGSize
+        
+        init(attributedText: NSAttributedString, availableSize: CGSize, size: CGSize) {
+            self.attributedText = attributedText
+            self.availableSize = availableSize
+            self.size = size
+        }
+
+        static func ==(lhs: MeasureState, rhs: MeasureState) -> Bool {
+            if !lhs.attributedText.isEqual(rhs.attributedText) {
+                return false
+            }
+            if lhs.availableSize != rhs.availableSize {
+                return false
+            }
+            if lhs.size != rhs.size {
+                return false
+            }
+            return true
+        }
+    }
+    
+    public final class View: UIView {
+        private var measureState: MeasureState?
+        private var containerView: UIImageView
+        
+        private var snapshotView: UIView?
+
+        public override init(frame: CGRect) {
+            self.containerView = UIImageView()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.containerView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        public func update(component: RollingText, availableSize: CGSize) -> CGSize {
+            let attributedText = NSAttributedString(string: component.text, attributes: [
+                NSAttributedString.Key.font: component.font,
+                NSAttributedString.Key.foregroundColor: component.color
+            ])
+            
+            if let measureState = self.measureState {
+                if measureState.attributedText.isEqual(to: attributedText) && measureState.availableSize == availableSize {
+                    return measureState.size
+                }
+            }
+            
+            var boundingRect = attributedText.boundingRect(with: availableSize, options: .usesLineFragmentOrigin, context: nil)
+            boundingRect.size.width = ceil(boundingRect.size.width)
+            boundingRect.size.height = ceil(boundingRect.size.height)
+            
+            if let animation = component.animation {
+                if let snapshotView = self.snapshotView {
+                    self.snapshotView = nil
+                    snapshotView.removeFromSuperview()
+                    
+                    self.containerView.layer.removeAnimation(forKey: "opacity")
+                }
+                if let snapshotView = self.containerView.snapshotView(afterScreenUpdates: true) {
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animation ? 12.0 : -12.0), duration: 0.2, removeOnCompletion: false, additive: true, completion: { [weak self, weak snapshotView] _ in
+                        self?.snapshotView = nil
+                        snapshotView?.removeFromSuperview()
+                    })
+                    snapshotView.frame = CGRect(origin: CGPoint(x: boundingRect.width - snapshotView.frame.width, y: 0.0), size: snapshotView.frame.size)
+                        
+                    self.addSubview(snapshotView)
+                    self.snapshotView = snapshotView
+                    
+                    self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.containerView.layer.animatePosition(from: animation ? CGPoint(x: 0.0, y: -12.0) : CGPoint(x: 0.0, y: 12.0), to: CGPoint(), duration: 0.2, additive: true)
+                }
+            }
+
+            self.containerView.frame = CGRect(origin: CGPoint(), size: boundingRect.size)
+            
+            let measureState = MeasureState(attributedText: attributedText, availableSize: availableSize, size: boundingRect.size)
+            if #available(iOS 10.0, *) {
+                let renderer = UIGraphicsImageRenderer(bounds: CGRect(origin: CGPoint(), size: measureState.size))
+                let image = renderer.image { context in
+                    UIGraphicsPushContext(context.cgContext)
+                    measureState.attributedText.draw(at: CGPoint())
+                    UIGraphicsPopContext()
+                }
+                self.containerView.image = image
+            } else {
+                UIGraphicsBeginImageContextWithOptions(measureState.size, false, 0.0)
+                measureState.attributedText.draw(at: CGPoint())
+                self.containerView.image = UIGraphicsGetImageFromCurrentImageContext()
+                UIGraphicsEndImageContext()
+            }
+
+            self.measureState = measureState
+            
+            return boundingRect.size
+        }
+    }
+    
+    public let text: String
+    public let font: UIFont
+    public let color: UIColor
+    public let animation: Bool?
+    
+    public init(text: String, font: UIFont, color: UIColor, animation: Bool?) {
+        self.text = text
+        self.font = font
+        self.color = color
+        self.animation = animation
+    }
+
+    public static func ==(lhs: RollingText, rhs: RollingText) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        if !lhs.font.isEqual(rhs.font) {
+            return false
+        }
+        if !lhs.color.isEqual(rhs.color) {
+            return false
+        }
+        if lhs.animation != rhs.animation {
+            return false
+        }
+        return true
+    }
+    
+    public func makeView() -> View {
+        return View()
+    }
+    
+    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize)
+    }
+}
+
+
 final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
     let backgroundColor: UIColor
     let shadowColor: UIColor
     let foregroundColor: UIColor
     let dateString: String
+    let previousDateString: String?
 
     init(
         backgroundColor: UIColor,
         shadowColor: UIColor,
         foregroundColor: UIColor,
-        dateString: String
+        dateString: String,
+        previousDateString: String?
     ) {
         self.backgroundColor = backgroundColor
         self.shadowColor = shadowColor
         self.foregroundColor = foregroundColor
         self.dateString = dateString
+        self.previousDateString = previousDateString
     }
 
     static func ==(lhs: SparseItemGridScrollingIndicatorComponent, rhs: SparseItemGridScrollingIndicatorComponent) -> Bool {
@@ -586,19 +734,90 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
         if lhs.dateString != rhs.dateString {
             return false
         }
+        if lhs.previousDateString != rhs.previousDateString {
+            return false
+        }
         return true
     }
 
     static var body: Body {
         let rect = Child(ShadowRoundedRectangle.self)
-        let text = Child(Text.self)
+        let textMonth = Child(RollingText.self)
+        let textYear = Child(RollingText.self)
 
         return { context in
-            let text = text.update(
-                component: Text(
-                    text: context.component.dateString,
-                    font: Font.medium(13.0),
-                    color: context.component.foregroundColor
+            let components = context.component.dateString.components(separatedBy: " ")
+            let month = components.first ?? ""
+            let year = components.last ?? ""
+            
+            var monthAnimation: Bool?
+            var yearAnimation: Bool?
+            if let previousDateString = context.component.previousDateString {
+                func monthValue(_ string: String) -> Int {
+                    switch string {
+                        case "January":
+                            return 1
+                        case "February":
+                            return 2
+                        case "March":
+                            return 3
+                        case "April":
+                            return 4
+                        case "May":
+                            return 5
+                        case "June":
+                            return 6
+                        case "July":
+                            return 7
+                        case "August":
+                            return 8
+                        case "September":
+                            return 9
+                        case "October":
+                            return 10
+                        case "November":
+                            return 11
+                        case "December":
+                            return 12
+                        default:
+                            return 0
+                    }
+                }
+                let monValue = monthValue(month)
+                let yearValue = Int(year) ?? 0
+                
+                let previousComponents = previousDateString.components(separatedBy: " ")
+                let previousMonth = previousComponents.first ?? ""
+                let previousYear = previousComponents.last ?? ""
+                
+                let previousMonValue = monthValue(previousMonth)
+                let previousYearValue = Int(previousYear) ?? 0
+                
+                if yearValue != previousYearValue {
+                    yearAnimation = yearValue > previousYearValue
+                    monthAnimation = yearAnimation
+                } else if monValue != previousMonValue {
+                    monthAnimation = monValue > previousMonValue
+                }
+            }
+            
+            let textMonth = textMonth.update(
+                component: RollingText(
+                    text: month,
+                    font: Font.with(size: 13.0, design: .regular, weight: .medium, traits: .monospacedNumbers),
+                    color: context.component.foregroundColor,
+                    animation: monthAnimation
+                ),
+                availableSize: CGSize(width: 200.0, height: 100.0),
+                transition: .immediate
+            )
+            
+            let textYear = textYear.update(
+                component: RollingText(
+                    text: year,
+                    font: Font.with(size: 13.0, design: .regular, weight: .medium, traits: .monospacedNumbers),
+                    color: context.component.foregroundColor,
+                    animation: yearAnimation
                 ),
                 availableSize: CGSize(width: 200.0, height: 100.0),
                 transition: .immediate
@@ -608,7 +827,7 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
                 component: ShadowRoundedRectangle(
                     color: context.component.backgroundColor
                 ),
-                availableSize: CGSize(width: text.size.width + 26.0, height: 32.0),
+                availableSize: CGSize(width: textMonth.size.width + 3.0 + textYear.size.width + 26.0, height: 32.0),
                 transition: .immediate
             )
 
@@ -620,10 +839,16 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
             context.add(rect
                 .position(CGPoint(x: rectFrame.midX, y: rectFrame.midY))
             )
+            
+            let offset = CGSize(width: textMonth.size.width + 3.0 + textYear.size.width, height: textMonth.size.height).centered(in: rectFrame)
 
-            let textFrame = text.size.centered(in: rectFrame)
-            context.add(text
-                .position(CGPoint(x: textFrame.midX, y: textFrame.midY))
+            let monthTextFrame = textMonth.size.leftCentered(in: rectFrame).offsetBy(dx: offset.minX, dy: 0.0)
+            let yearTextFrame = textYear.size.leftCentered(in: rectFrame).offsetBy(dx: offset.minX + monthTextFrame.width + 3.0, dy: 0.0)
+            context.add(textMonth
+                .position(CGPoint(x: monthTextFrame.midX, y: monthTextFrame.midY))
+            )
+            context.add(textYear
+                .position(CGPoint(x: yearTextFrame.midX, y: yearTextFrame.midY))
             )
 
             return rect.size
@@ -900,6 +1125,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.hapticFeedback.tap()
     }
 
+    private var dateString: String?
+    
     public func update(
         containerSize: CGSize,
         containerInsets: UIEdgeInsets,
@@ -912,6 +1139,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     ) {
         self.containerSize = containerSize
         self.theme = theme
+        let previousDateString = self.dateString
+        self.dateString = dateString
 
         if self.dateIndicator.alpha.isZero {
             let transition: ContainedViewLayoutTransition = .immediate
@@ -928,7 +1157,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
                 backgroundColor: theme.list.itemBlocksBackgroundColor,
                 shadowColor: .black,
                 foregroundColor: theme.list.itemPrimaryTextColor,
-                dateString: dateString
+                dateString: dateString,
+                previousDateString: previousDateString
             )),
             environment: {},
             containerSize: containerSize

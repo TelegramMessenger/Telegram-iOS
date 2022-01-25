@@ -7250,3 +7250,6 @@ Sorry for the inconvenience.";
 
 "Group.Members.Contacts" = "CONTACTS IN THIS GROUP";
 "Group.Members.Other" = "OTHERS MEMBERS";
+
+"SharedMedia.CommonGroupCount_1" = "%@ group in common";
+"SharedMedia.CommonGroupCount_any" = "%@ groups in common";
