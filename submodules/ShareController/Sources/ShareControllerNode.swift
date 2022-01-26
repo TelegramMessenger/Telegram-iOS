@@ -825,7 +825,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 }
             })
         }
-        let openShare: (Bool, ASDisplayNode?, ContextGesture?) -> Void = { [weak self] reportReady, node, gesture in
+        let openShare: (Bool) -> Void = { [weak self] reportReady in
             guard let strongSelf = self, let shareExternal = strongSelf.shareExternal else {
                 return
             }
@@ -881,7 +881,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
         }
         peersContentNode.openShare = { node, gesture in
-            openShare(false, node, gesture)
+            openShare(false)
         }
         peersContentNode.segmentedSelectedIndexUpdated = { [weak self] index in
             if let strongSelf = self, let _ = strongSelf.segmentedValues {
@@ -890,7 +890,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
         }
         if self.immediateExternalShare {
-            openShare(true, nil, nil)
+            openShare(true)
         } else {
             self.transitionToContentNode(peersContentNode, animated: animated)
             self.ready.set(.single(true))
