@@ -266,6 +266,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
                         EnginePeer.Presence(status: .present(until: presenceTimestamp + 1000), lastActivity: presenceTimestamp)
                     },
                     hasUnseenMentions: false,
+                    hasUnseenReactions: false,
                     draftState: nil,
                     inputActivities: hasInputActivity ? [(author, .typingText)] : [],
                     promoInfo: nil,

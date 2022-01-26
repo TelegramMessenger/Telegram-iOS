@@ -33,7 +33,7 @@ final class ChatMessageThrottledProcessingManager {
             
             for id in messageIds {
                 if let processedTimestamp = self.processed[id] {
-                    if let submitInterval = self.submitInterval, (timestamp - processedTimestamp) >= submitInterval {
+                    if let submitInterval = self.submitInterval, (submitInterval.isZero || (timestamp - processedTimestamp) >= submitInterval) {
                         self.processed[id] = timestamp
                         self.processedList.append(id)
                         self.buffer.insert(id)

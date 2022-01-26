@@ -210,6 +210,7 @@ public enum PresentationResourceKey: Int32 {
     
     case chatHistoryNavigationButtonImage
     case chatHistoryMentionsButtonImage
+    case chatHistoryReactionsButtonImage
     case chatHistoryNavigationButtonBadgeImage
     
     case chatMessageAttachedContentButtonIncoming
@@ -273,6 +274,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatListBadgeBackgroundActive(CGFloat)
     case chatListBadgeBackgroundInactive(CGFloat)
     case chatListBadgeBackgroundMention(CGFloat)
+    case badgeBackgroundReactions(CGFloat)
     case chatListBadgeBackgroundInactiveMention(CGFloat)
     case chatListBadgeBackgroundPinned(CGFloat)
     

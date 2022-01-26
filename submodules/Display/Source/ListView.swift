@@ -2800,6 +2800,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         var frame = itemNode.frame
                         frame.origin.y += offset
                         itemNode.updateFrame(frame, within: self.visibleSize)
+                        self.didScrollWithOffset?(-offset, .immediate, itemNode)
                         if let accessoryItemNode = itemNode.accessoryItemNode {
                             itemNode.layoutAccessoryItemNode(accessoryItemNode, leftInset: listInsets.left, rightInset: listInsets.right)
                         }

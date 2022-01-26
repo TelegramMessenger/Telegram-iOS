@@ -1683,7 +1683,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                     
                     for dialog in dialogs {
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, notifySettings, pts, _, folderId):
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId):
                                 let peerId = peer.peerId
                                 
                                 updatedState.setNeedsHoleFromPreviousState(peerId: peerId, namespace: Namespaces.Message.Cloud, validateChannelPts: pts)
@@ -1728,7 +1728,8 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                                 updatedState.updateNotificationSettings(.peer(peer.peerId), notificationSettings: notificationSettings)
                                 
                                 updatedState.resetReadState(peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
-                                updatedState.resetMessageTagSummary(peer.peerId, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                                updatedState.resetMessageTagSummary(peer.peerId, tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                                updatedState.resetMessageTagSummary(peer.peerId, tag: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
                                 updatedState.peerChatInfos[peer.peerId] = PeerChatInfo(notificationSettings: notificationSettings)
                                 if let pts = pts {
                                     channelStates[peer.peerId] = ChannelState(pts: pts, invalidatedPts: pts, synchronizedUntilMessageId: nil)
@@ -1897,7 +1898,7 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
         
         var storeMessages: [StoreMessage] = []
         var readStates: [PeerId: [MessageId.Namespace: PeerReadState]] = [:]
-        var mentionTagSummaries: [PeerId: MessageHistoryTagNamespaceSummary] = [:]
+        var mentionTagSummaries: [PeerId: (tag: MessageTags, summary: MessageHistoryTagNamespaceSummary)] = [:]
         var channelStates: [PeerId: AccountStateChannelState] = [:]
         var invalidateChannelStates: [PeerId: Int32] = [:]
         var channelSynchronizedUntilMessage: [PeerId: MessageId.Id] = [:]
@@ -1916,12 +1917,13 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                         let apiTopMessage: Int32
                         let apiUnreadCount: Int32
                         let apiUnreadMentionsCount: Int32
+                        let apiUnreadReactionsCount: Int32
                         var apiChannelPts: Int32?
                         let apiNotificationSettings: Api.PeerNotifySettings
                         let apiMarkedUnread: Bool
                         let groupId: PeerGroupId
                         switch dialog {
-                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, peerNotificationSettings, pts, _, folderId):
+                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, peerNotificationSettings, pts, _, folderId):
                                 apiPeer = peer
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
@@ -1929,6 +1931,7 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                                 apiUnreadCount = unreadCount
                                 apiMarkedUnread = (flags & (1 << 3)) != 0
                                 apiUnreadMentionsCount = unreadMentionsCount
+                                apiUnreadReactionsCount = unreadReactionsCount
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
                                 groupId = PeerGroupId(rawValue: folderId ?? 0)
@@ -1945,7 +1948,8 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
                         readStates[peerId]![Namespaces.Message.Cloud] = .idBased(maxIncomingReadId: apiReadInboxMaxId, maxOutgoingReadId: apiReadOutboxMaxId, maxKnownId: apiTopMessage, count: apiUnreadCount, markedUnread: apiMarkedUnread)
                         
                         if apiTopMessage != 0 {
-                            mentionTagSummaries[peerId] = MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage))
+                            mentionTagSummaries[peerId] = (MessageTags.unseenPersonalMessage, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage)))
+                            mentionTagSummaries[peerId] = (MessageTags.unseenReaction, MessageHistoryTagNamespaceSummary(version: 1, count: apiUnreadReactionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: apiTopMessage)))
                         }
                         
                         if let apiChannelPts = apiChannelPts {
@@ -2003,7 +2007,7 @@ private func resetChannels(network: Network, peers: [Peer], state: AccountMutabl
         }
         
         for (peerId, tagSummary) in mentionTagSummaries {
-            updatedState.resetMessageTagSummary(peerId, namespace: Namespaces.Message.Cloud, count: tagSummary.count, range: tagSummary.range)
+            updatedState.resetMessageTagSummary(peerId, tag: tagSummary.tag, namespace: Namespaces.Message.Cloud, count: tagSummary.summary.count, range: tagSummary.summary.range)
         }
         
         for (peerId, channelState) in channelStates {
@@ -2153,18 +2157,18 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                     case let .channelDifferenceTooLong(_, timeout, dialog, messages, chats, users):
                         apiTimeout = timeout
                         
-                        var parameters: (peer: Api.Peer, pts: Int32, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32)?
+                    var parameters: (peer: Api.Peer, pts: Int32, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32)?
                         
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, _, pts, _, _):
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, _, pts, _, _):
                                 if let pts = pts {
-                                    parameters = (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount)
+                                    parameters = (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount)
                                 }
                             case .dialogFolder:
                                 break
                         }
                         
-                        if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount) = parameters {
+                        if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount) = parameters {
                             updatedState.updateChannelState(peer.peerId, pts: pts)
                             updatedState.updateChannelInvalidationPts(peer.peerId, invalidationPts: pts)
                             
@@ -2198,7 +2202,8 @@ private func pollChannel(network: Network, peer: Peer, state: AccountMutableStat
                         
                             updatedState.resetReadState(peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
                         
-                            updatedState.resetMessageTagSummary(peer.peerId, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                            updatedState.resetMessageTagSummary(peer.peerId, tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
+                            updatedState.resetMessageTagSummary(peer.peerId, tag: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
                         } else {
                             assertionFailure()
                         }
@@ -2896,14 +2901,16 @@ func replayFinalState(
                 }
             case let .UpdatePeerChatUnreadMark(peerId, namespace, value):
                 transaction.applyMarkUnread(peerId: peerId, namespace: namespace, value: value, interactive: false)
-            case let .ResetMessageTagSummary(peerId, namespace, count, range):
-                transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: namespace, count: count, maxId: range.maxId)
+            case let .ResetMessageTagSummary(peerId, tag, namespace, count, range):
+                transaction.replaceMessageTagSummary(peerId: peerId, tagMask: tag, namespace: namespace, count: count, maxId: range.maxId)
                 if count == 0 {
-                    transaction.removeHole(peerId: peerId, namespace: namespace, space: .tag(.unseenPersonalMessage), range: 1 ... (Int32.max - 1))
-                    let ids = transaction.getMessageIndicesWithTag(peerId: peerId, namespace: namespace, tag: .unseenPersonalMessage).map({ $0.id })
-                    Logger.shared.log("State", "will call markUnseenPersonalMessage for \(ids.count) messages")
-                    for id in ids {
-                        markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
+                    transaction.removeHole(peerId: peerId, namespace: namespace, space: .tag(tag), range: 1 ... (Int32.max - 1))
+                    if tag == .unseenPersonalMessage {
+                        let ids = transaction.getMessageIndicesWithTag(peerId: peerId, namespace: namespace, tag: tag).map({ $0.id })
+                        Logger.shared.log("State", "will call markUnseenPersonalMessage for \(ids.count) messages")
+                        for id in ids {
+                            markUnseenPersonalMessage(transaction: transaction, id: id, addSynchronizeAction: false)
+                        }
                     }
                 }
             case let .UpdateState(innerState):
@@ -3305,8 +3312,15 @@ func replayFinalState(
                     if !added {
                         attributes.append(updatedReactions)
                     }
-                                        
-                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    
+                    var tags = currentMessage.tags
+                    if updatedReactions.hasUnseen {
+                        tags.insert(.unseenReaction)
+                    } else {
+                        tags.remove(.unseenReaction)
+                    }
+                    
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                 })
         }
     }

@@ -402,7 +402,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                 highlightedActionNode.performAction()
                             }
                             if let highlightedReaction = strongSelf.highlightedReaction {
-                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
+                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction, isLarge: false)
                             }
                         } else {
                             if let highlightedActionNode = strongSelf.highlightedActionNode {
@@ -481,7 +481,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             }
                             
                             if let highlightedReaction = strongSelf.highlightedReaction {
-                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction)
+                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction, isLarge: false)
                             }
                         } else {
                             if let highlightedActionNode = strongSelf.highlightedActionNode {
@@ -1340,11 +1340,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.reactionContextNode = reactionContextNode
             self.addSubnode(reactionContextNode)
             
-            reactionContextNode.reactionSelected = { [weak self] reaction in
+            reactionContextNode.reactionSelected = { [weak self] reaction, isLarge in
                 guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
                     return
                 }
-                controller.reactionSelected?(reaction)
+                controller.reactionSelected?(reaction, isLarge)
             }
         }
 
@@ -2226,7 +2226,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private var shouldBeDismissedDisposable: Disposable?
     
-    public var reactionSelected: ((ReactionContextItem) -> Void)?
+    public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
     
     public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
         self.account = account

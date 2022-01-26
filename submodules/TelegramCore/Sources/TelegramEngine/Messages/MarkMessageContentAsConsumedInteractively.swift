@@ -3,7 +3,6 @@ import Postbox
 import TelegramApi
 import SwiftSignalKit
 
-
 func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if let message = transaction.getMessage(messageId), message.flags.contains(.Incoming) {
@@ -122,6 +121,39 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
                     }
                     return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
+                })
+            }
+        }
+    }
+}
+
+func _internal_markReactionsAsSeenInteractively(postbox: Postbox, messageId: MessageId) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Void in
+        if let message = transaction.getMessage(messageId), message.tags.contains(.unseenReaction) {
+            var updateMessage = false
+            var updatedAttributes = message.attributes
+            
+            for i in 0 ..< updatedAttributes.count {
+                if let attribute = updatedAttributes[i] as? ReactionsMessageAttribute, attribute.hasUnseen {
+                    updatedAttributes[i] = attribute.withAllSeen()
+                    updateMessage = true
+                    
+                    if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    } else {
+                        transaction.setPendingMessageAction(type: .readReaction, id: messageId, action: ReadReactionAction())
+                    }
+                }
+            }
+            
+            if updateMessage {
+                transaction.updateMessage(message.id, update: { currentMessage in
+                    var storeForwardInfo: StoreMessageForwardInfo?
+                    if let forwardInfo = currentMessage.forwardInfo {
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature, psaType: forwardInfo.psaType, flags: forwardInfo.flags)
+                    }
+                    var tags = currentMessage.tags
+                    tags.remove(.unseenReaction)
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: updatedAttributes, media: currentMessage.media))
                 })
             }
         }
