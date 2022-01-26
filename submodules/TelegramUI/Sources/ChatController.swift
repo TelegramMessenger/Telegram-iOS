@@ -13004,7 +13004,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 if let peerId = peerId {
                     do {
-                        let selfPeerId = self.chatLocation.peerId
+                        var chatPeerId: PeerId?
+                        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {
+                            chatPeerId = peer.id
+                        } else if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .group = peer.info, case .member = peer.participationStatus {
+                            chatPeerId = peer.id
+                        }
+                        
                         switch navigation {
                             case .info, .default:
                                 let peerSignal: Signal<Peer?, NoError>
@@ -13016,8 +13022,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, let peer = peer {
                                         var mode: PeerInfoControllerMode = .generic
-                                        if let _ = fromMessage {
-                                            mode = .group(selfPeerId)
+                                        if let _ = fromMessage, let chatPeerId = chatPeerId {
+                                            mode = .group(chatPeerId)
                                         }
                                         var expandAvatar = expandAvatar
                                         if peer.smallProfileImage == nil {
