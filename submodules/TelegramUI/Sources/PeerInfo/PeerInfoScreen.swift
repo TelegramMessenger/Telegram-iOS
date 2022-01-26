@@ -2893,7 +2893,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }))
             }
         } else {
-            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
+            screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: nil, existingRequestsContext: requestsContext)
                         
             self.headerNode.displayAvatarContextMenu = { [weak self] node, gesture in
                 guard let strongSelf = self, let peer = strongSelf.data?.peer else {
@@ -7148,7 +7148,24 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                                 drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
                             })?.withRenderingMode(.alwaysOriginal)
                             
-                            subscriber.putNext(image.flatMap { ($0, $0) })
+                            let selectedImage = generateImage(size, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                                if let cgImage = image?.cgImage {
+                                    context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+                                }
+                                context.setLineWidth(1.0)
+                                context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
+                                context.strokeEllipse(in: CGRect(x: 1.5, y: 1.5, width: 28.0, height: 28.0))
+                            })?.withRenderingMode(.alwaysOriginal)
+                            
+                            if let image = image, let selectedImage = selectedImage {
+                                subscriber.putNext((image, selectedImage))
+                            } else {
+                                subscriber.putNext(nil)
+                            }
                             subscriber.putCompletion()
                             return EmptyDisposable
                         }
