@@ -902,19 +902,22 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
             }
-        
-            if let cachedData = data.cachedData as? CachedUserData {
-                if cachedData.isBlocked {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
-                        interaction.updateBlocked(false)
-                    }))
+            
+            var isBlocked = false
+            if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
+                isBlocked = true
+            }
+            
+            if isBlocked {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
+                    interaction.updateBlocked(false)
+                }))
+            } else {
+                if user.flags.contains(.isSupport) || data.isContact {
                 } else {
-                    if user.flags.contains(.isSupport) || data.isContact {
-                    } else {
-                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
-                            interaction.updateBlocked(true)
-                        }))
-                    }
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                        interaction.updateBlocked(true)
+                    }))
                 }
             }
         }
