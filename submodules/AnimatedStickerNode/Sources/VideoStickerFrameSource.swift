@@ -38,7 +38,8 @@ private final class VideoStickerFrameSourceCache {
         self.width = width
         self.height = height
         
-        let path = "\(pathPrefix)_\(width)x\(height).vstickerframecache"
+        let version: Int = 0
+        let path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
         var file = ManagedFile(queue: queue, path: path, mode: .readwrite)
         if let file = file {
             self.file = file
@@ -330,7 +331,7 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
                 let frameAndLoop = self.source.readFrame(maxPts: nil)
                 if frameAndLoop.0 == nil {
                     if frameAndLoop.3 && self.frameCount == 0 {
-                        self.frameCount = frameIndex + 1
+                        self.frameCount = frameIndex
                         self.cache?.storeFrameCount(self.frameCount)
                     }
                     return nil
