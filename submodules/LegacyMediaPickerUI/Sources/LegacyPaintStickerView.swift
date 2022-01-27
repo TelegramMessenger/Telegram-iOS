@@ -60,7 +60,7 @@ class LegacyPaintStickerView: UIView, TGPhotoPaintStickerRenderView {
     
     private func setup() {
         if let dimensions = self.file.dimensions {
-            if self.file.isAnimatedSticker {
+            if self.file.isAnimatedSticker || self.file.isVideoSticker {
                 if self.animationNode == nil {
                     let animationNode = AnimatedStickerNode()
                     self.animationNode = animationNode

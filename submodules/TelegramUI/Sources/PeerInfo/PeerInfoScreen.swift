@@ -3226,7 +3226,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
                             let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                 return true
                             })
                             strongSelf.controller?.present(controller, in: .window(.root))
@@ -5370,7 +5370,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
                     let coder = PostboxEncoder()
                     coder.encodeRootObject(fileReference.media)
-                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker, node.view, rect)
+                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                     return true
                 })
                 strongSelf.controller?.present(controller, in: .window(.root))

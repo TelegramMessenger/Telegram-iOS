@@ -387,6 +387,11 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
                 currentFrame += 1
             }
             
+            if frameCount > 0 {
+                file.seek(position: 4)
+                let _ = file.write(&frameCount, count: 4)
+            }
+            
             subscriber.putNext(.tempFile(tempFile))
             subscriber.putCompletion()
             /*print("animation render time \(CACurrentMediaTime() - startTime)")

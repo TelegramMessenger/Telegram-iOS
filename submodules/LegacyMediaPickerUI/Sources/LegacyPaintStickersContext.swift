@@ -94,7 +94,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             self.account = account
             self.entity = entity
             self.file = file
-            self.animated = file.isAnimatedSticker
+            self.animated = file.isAnimatedSticker || file.isVideoSticker
             
             if file.isAnimatedSticker || file.isVideoSticker {
                 self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
