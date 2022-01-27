@@ -31,7 +31,6 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ContextUI:ContextUI",
-        "//submodules/SoftwareVideo:SoftwareVideo",
     ],
     visibility = [
         "//visibility:public",

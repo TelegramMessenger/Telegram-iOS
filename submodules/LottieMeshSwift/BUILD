@@ -76,6 +76,7 @@ swift_library(
     deps = [
         ":LottieMeshBinding",
         "//submodules/Postbox:Postbox",
+        "//submodules/ManagedFile:ManagedFile",
     ],
     visibility = [
         "//visibility:public",

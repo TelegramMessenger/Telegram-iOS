@@ -1,5 +1,6 @@
 import Foundation
 import SwiftSignalKit
+import ManagedFile
 
 private final class ResourceStatusContext {
     var status: MediaResourceStatus?

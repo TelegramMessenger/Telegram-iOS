@@ -3,6 +3,7 @@ import Metal
 import MetalKit
 import LottieMeshBinding
 import Postbox
+import ManagedFile
 
 enum TriangleFill {
     struct Color {

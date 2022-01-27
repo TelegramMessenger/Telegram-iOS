@@ -11,7 +11,6 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import ShimmerEffect
-import SoftwareVideo
 
 final class StickerPackPreviewInteraction {
     var previewedItem: ImportStickerPack.Sticker?
@@ -61,7 +60,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private var isVerified: Bool?
     private let imageNode: ASImageNode
     private var animationNode: AnimatedStickerNode?
-    private var videoNode: VideoStickerNode?
     private var placeholderNode: ShimmerEffectNode?
     
     private var theme: PresentationTheme?
@@ -121,7 +119,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             self.imageNode.image = image
                             dimensions = image.size
                         }
-                    case .animation:
+                    case .animation, .video:
                         self.imageNode.isHidden = true
                         
                         if isVerified {
@@ -140,42 +138,13 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             
                             let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
                             if let resource = stickerItem.resource {
-                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
+                                var isVideo = false
+                                if case .video = stickerItem.content {
+                                    isVideo = true
+                                }
+                                animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .direct(cachePathPrefix: nil))
                             }
                             animationNode.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
-                        } else {
-                            let placeholderNode = ShimmerEffectNode()
-                            self.placeholderNode = placeholderNode
-
-                            self.addSubnode(placeholderNode)
-                            if let (absoluteRect, containerSize) = self.absoluteLocation {
-                                placeholderNode.updateAbsoluteRect(absoluteRect, within: containerSize)
-                            }
-                        }
-                    case .video:
-                        self.imageNode.isHidden = true
-                    
-                        if isVerified {
-                            let videoNode = VideoStickerNode()
-                            self.videoNode = videoNode
-                            
-                            if let resource = stickerItem.resource as? TelegramMediaResource {
-                                let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
-                                
-                                videoNode.update(account: account, fileReference: .standalone(media: dummyFile))
-                            }
-                            
-                            if let placeholderNode = self.placeholderNode {
-                                self.placeholderNode = nil
-                                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak placeholderNode] _ in
-                                    placeholderNode?.removeFromSupernode()
-                                })
-                                self.insertSubnode(videoNode, belowSubnode: placeholderNode)
-                            } else {
-                                self.addSubnode(videoNode)
-                            }
-                            
-                            videoNode.update(isPlaying: self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true)
                         } else {
                             let placeholderNode = ShimmerEffectNode()
                             self.placeholderNode = placeholderNode
@@ -208,11 +177,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             if let animationNode = self.animationNode {
                 animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
                 animationNode.updateLayout(size: imageSize)
-            }
-            
-            if let videoNode = self.videoNode {
-                videoNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
-                videoNode.updateLayout(size: imageSize)
             }
             
             if let placeholderNode = self.placeholderNode, let theme = self.theme {

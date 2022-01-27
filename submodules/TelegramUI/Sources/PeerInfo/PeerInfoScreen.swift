@@ -902,19 +902,22 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }))
                 }
             }
-        
-            if let cachedData = data.cachedData as? CachedUserData {
-                if cachedData.isBlocked {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
-                        interaction.updateBlocked(false)
-                    }))
+            
+            var isBlocked = false
+            if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
+                isBlocked = true
+            }
+            
+            if isBlocked {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Unblock : presentationData.strings.Conversation_Unblock, action: {
+                    interaction.updateBlocked(false)
+                }))
+            } else {
+                if user.flags.contains(.isSupport) || data.isContact {
                 } else {
-                    if user.flags.contains(.isSupport) || data.isContact {
-                    } else {
-                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
-                            interaction.updateBlocked(true)
-                        }))
-                    }
+                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                        interaction.updateBlocked(true)
+                    }))
                 }
             }
         }
@@ -3034,38 +3037,48 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             var previousCall: CachedChannelData.ActiveCall?
             var currentCall: CachedChannelData.ActiveCall?
             
-            if let previousCachedData = previousData?.cachedData as? CachedChannelData, let cachedData = data.cachedData as? CachedChannelData {
-                previousCall = previousCachedData.activeCall
-                currentCall = cachedData.activeCall
-            } else if let previousCachedData = previousData?.cachedData as? CachedGroupData, let cachedData = data.cachedData as? CachedGroupData {
-                previousCall = previousCachedData.activeCall
-                currentCall = cachedData.activeCall
-            }
-            
-            
             var previousCallsPrivate: Bool?
             var currentCallsPrivate: Bool?
             var previousVideoCallsAvailable: Bool? = true
             var currentVideoCallsAvailable: Bool?
-                        
-            if let previousCachedData = previousData?.cachedData as? CachedUserData, let cachedData = data.cachedData as? CachedUserData {
+            
+            var previousAbout: String?
+            var currentAbout: String?
+            
+            if let previousCachedData = previousData?.cachedData as? CachedChannelData, let cachedData = data.cachedData as? CachedChannelData {
+                previousCall = previousCachedData.activeCall
+                currentCall = cachedData.activeCall
+                previousAbout = previousCachedData.about
+                currentAbout = cachedData.about
+            } else if let previousCachedData = previousData?.cachedData as? CachedGroupData, let cachedData = data.cachedData as? CachedGroupData {
+                previousCall = previousCachedData.activeCall
+                currentCall = cachedData.activeCall
+                previousAbout = previousCachedData.about
+                currentAbout = cachedData.about
+            } else if let previousCachedData = previousData?.cachedData as? CachedUserData, let cachedData = data.cachedData as? CachedUserData {
                 previousCallsPrivate = previousCachedData.callsPrivate
                 currentCallsPrivate = cachedData.callsPrivate
-                
                 previousVideoCallsAvailable = previousCachedData.videoCallsAvailable
                 currentVideoCallsAvailable = cachedData.videoCallsAvailable
+                previousAbout = previousCachedData.about
+                currentAbout = cachedData.about
             }
             
-            if let previousSuggestPhoneNumberConfirmation = previousData?.globalSettings?.suggestPhoneNumberConfirmation, previousSuggestPhoneNumberConfirmation != data.globalSettings?.suggestPhoneNumberConfirmation {
-                infoUpdated = true
+            if self.isSettings {
+                if let previousSuggestPhoneNumberConfirmation = previousData?.globalSettings?.suggestPhoneNumberConfirmation, previousSuggestPhoneNumberConfirmation != data.globalSettings?.suggestPhoneNumberConfirmation {
+                    infoUpdated = true
+                }
+                if let previousSuggestPasswordConfirmation = previousData?.globalSettings?.suggestPasswordConfirmation, previousSuggestPasswordConfirmation != data.globalSettings?.suggestPasswordConfirmation {
+                    infoUpdated = true
+                }
             }
-            if let previousSuggestPasswordConfirmation = previousData?.globalSettings?.suggestPasswordConfirmation, previousSuggestPasswordConfirmation != data.globalSettings?.suggestPasswordConfirmation {
-                infoUpdated = true
-            }
-            if previousCallsPrivate != currentCallsPrivate || previousVideoCallsAvailable != currentVideoCallsAvailable {
+            if previousCallsPrivate != currentCallsPrivate || (previousVideoCallsAvailable != currentVideoCallsAvailable && currentVideoCallsAvailable != nil) {
                 infoUpdated = true
             }
             if (previousCall == nil) != (currentCall == nil) {
+                infoUpdated = true
+            }
+            if (previousAbout?.isEmpty ?? true) != (currentAbout?.isEmpty ?? true) {
                 infoUpdated = true
             }
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: self.didSetReady && (membersUpdated || infoUpdated) ? .animated(duration: 0.3, curve: .spring) : .immediate)
@@ -3213,7 +3226,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
                             let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                 return true
                             })
                             strongSelf.controller?.present(controller, in: .window(.root))
@@ -5357,7 +5370,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
                     let coder = PostboxEncoder()
                     coder.encodeRootObject(fileReference.media)
-                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker, node.view, rect)
+                    completion?(coder.makeData(), fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                     return true
                 })
                 strongSelf.controller?.present(controller, in: .window(.root))
@@ -7148,7 +7161,24 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                                 drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
                             })?.withRenderingMode(.alwaysOriginal)
                             
-                            subscriber.putNext(image.flatMap { ($0, $0) })
+                            let selectedImage = generateImage(size, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                                context.scaleBy(x: 1.0, y: -1.0)
+                                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                                if let cgImage = image?.cgImage {
+                                    context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+                                }
+                                context.setLineWidth(1.0)
+                                context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
+                                context.strokeEllipse(in: CGRect(x: 1.5, y: 1.5, width: 28.0, height: 28.0))
+                            })?.withRenderingMode(.alwaysOriginal)
+                            
+                            if let image = image, let selectedImage = selectedImage {
+                                subscriber.putNext((image, selectedImage))
+                            } else {
+                                subscriber.putNext(nil)
+                            }
                             subscriber.putCompletion()
                             return EmptyDisposable
                         }

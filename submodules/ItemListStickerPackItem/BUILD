@@ -22,7 +22,6 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ShimmerEffect:ShimmerEffect",
-        "//submodules/SoftwareVideo:SoftwareVideo",
     ],
     visibility = [
         "//visibility:public",

@@ -556,6 +556,11 @@ private final class ShadowRoundedRectangle: Component {
 }
 
 public final class RollingText: Component {
+    public enum AnimationDirection {
+        case up
+        case down
+    }
+    
     private final class MeasureState: Equatable {
         let attributedText: NSAttributedString
         let availableSize: CGSize
@@ -623,18 +628,20 @@ public final class RollingText: Component {
                     self.containerView.layer.removeAnimation(forKey: "opacity")
                 }
                 if let snapshotView = self.containerView.snapshotView(afterScreenUpdates: true) {
+                    let horizontalOffset = boundingRect.width - snapshotView.frame.width
+                    let verticalOffset: CGFloat = 12.0
+                    
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: animation ? 12.0 : -12.0), duration: 0.2, removeOnCompletion: false, additive: true, completion: { [weak self, weak snapshotView] _ in
+                    snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: horizontalOffset, y: animation == .up ? verticalOffset : -verticalOffset), duration: 0.2, removeOnCompletion: false, additive: true, completion: { [weak self, weak snapshotView] _ in
                         self?.snapshotView = nil
                         snapshotView?.removeFromSuperview()
                     })
-                    snapshotView.frame = CGRect(origin: CGPoint(x: boundingRect.width - snapshotView.frame.width, y: 0.0), size: snapshotView.frame.size)
                         
                     self.addSubview(snapshotView)
                     self.snapshotView = snapshotView
                     
                     self.containerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    self.containerView.layer.animatePosition(from: animation ? CGPoint(x: 0.0, y: -12.0) : CGPoint(x: 0.0, y: 12.0), to: CGPoint(), duration: 0.2, additive: true)
+                    self.containerView.layer.animatePosition(from: CGPoint(x: -horizontalOffset, y: animation == .up ? -verticalOffset : verticalOffset), to: CGPoint(), duration: 0.2, additive: true)
                 }
             }
 
@@ -665,9 +672,9 @@ public final class RollingText: Component {
     public let text: String
     public let font: UIFont
     public let color: UIColor
-    public let animation: Bool?
+    public let animation: AnimationDirection?
     
-    public init(text: String, font: UIFont, color: UIColor, animation: Bool?) {
+    public init(text: String, font: UIFont, color: UIColor, animation: AnimationDirection?) {
         self.text = text
         self.font = font
         self.color = color
@@ -704,21 +711,21 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
     let backgroundColor: UIColor
     let shadowColor: UIColor
     let foregroundColor: UIColor
-    let dateString: String
-    let previousDateString: String?
+    let date: (String, Int32)
+    let previousDate: (String, Int32)?
 
     init(
         backgroundColor: UIColor,
         shadowColor: UIColor,
         foregroundColor: UIColor,
-        dateString: String,
-        previousDateString: String?
+        date: (String, Int32),
+        previousDate: (String, Int32)?
     ) {
         self.backgroundColor = backgroundColor
         self.shadowColor = shadowColor
         self.foregroundColor = foregroundColor
-        self.dateString = dateString
-        self.previousDateString = previousDateString
+        self.date = date
+        self.previousDate = previousDate
     }
 
     static func ==(lhs: SparseItemGridScrollingIndicatorComponent, rhs: SparseItemGridScrollingIndicatorComponent) -> Bool {
@@ -731,10 +738,10 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
         if lhs.foregroundColor != rhs.foregroundColor {
             return false
         }
-        if lhs.dateString != rhs.dateString {
+        if lhs.date != rhs.date {
             return false
         }
-        if lhs.previousDateString != rhs.previousDateString {
+        if lhs.previousDate?.0 != rhs.previousDate?.0 || lhs.previousDate?.1 != rhs.previousDate?.1 {
             return false
         }
         return true
@@ -746,58 +753,29 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
         let textYear = Child(RollingText.self)
 
         return { context in
-            let components = context.component.dateString.components(separatedBy: " ")
+            let date = context.component.date
+            
+            let components = date.0.components(separatedBy: " ")
             let month = components.first ?? ""
             let year = components.last ?? ""
             
-            var monthAnimation: Bool?
-            var yearAnimation: Bool?
-            if let previousDateString = context.component.previousDateString {
-                func monthValue(_ string: String) -> Int {
-                    switch string {
-                        case "January":
-                            return 1
-                        case "February":
-                            return 2
-                        case "March":
-                            return 3
-                        case "April":
-                            return 4
-                        case "May":
-                            return 5
-                        case "June":
-                            return 6
-                        case "July":
-                            return 7
-                        case "August":
-                            return 8
-                        case "September":
-                            return 9
-                        case "October":
-                            return 10
-                        case "November":
-                            return 11
-                        case "December":
-                            return 12
-                        default:
-                            return 0
-                    }
+            var monthAnimation: RollingText.AnimationDirection?
+            var yearAnimation: RollingText.AnimationDirection?
+            
+            if let previousDate = context.component.previousDate {
+                func unpackDateTag(_ packedValue: Int32) -> (month: Int32, year: Int32) {
+                    let year = Int32(bitPattern: (UInt32(bitPattern: packedValue) >> 0) & 0xffff)
+                    let month = Int32(bitPattern: (UInt32(bitPattern: packedValue) >> 16) & 0xffff)
+                    return (month, year)
                 }
-                let monValue = monthValue(month)
-                let yearValue = Int(year) ?? 0
+                let currentValue = unpackDateTag(date.1)
+                let previousValue = unpackDateTag(previousDate.1)
                 
-                let previousComponents = previousDateString.components(separatedBy: " ")
-                let previousMonth = previousComponents.first ?? ""
-                let previousYear = previousComponents.last ?? ""
-                
-                let previousMonValue = monthValue(previousMonth)
-                let previousYearValue = Int(previousYear) ?? 0
-                
-                if yearValue != previousYearValue {
-                    yearAnimation = yearValue > previousYearValue
+                if currentValue.year != previousValue.year {
+                    yearAnimation = currentValue.year > previousValue.year ? .up : .down
                     monthAnimation = yearAnimation
-                } else if monValue != previousMonValue {
-                    monthAnimation = monValue > previousMonValue
+                } else if currentValue.month != previousValue.month {
+                    monthAnimation = currentValue.month > previousValue.month ? .up : .down
                 }
             }
             
@@ -828,7 +806,7 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
                     color: context.component.backgroundColor
                 ),
                 availableSize: CGSize(width: textMonth.size.width + 3.0 + textYear.size.width + 26.0, height: 32.0),
-                transition: .immediate
+                transition: .easeInOut(duration: 0.2)
             )
 
             let rectFrame = rect.size.centered(around: CGPoint(
@@ -1125,7 +1103,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.hapticFeedback.tap()
     }
 
-    private var dateString: String?
+    private var currentDate: (String, Int32)?
     
     public func update(
         containerSize: CGSize,
@@ -1133,14 +1111,14 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         contentHeight: CGFloat,
         contentOffset: CGFloat,
         isScrolling: Bool,
-        dateString: String,
+        date: (String, Int32),
         theme: PresentationTheme,
         transition: ContainedViewLayoutTransition
     ) {
         self.containerSize = containerSize
         self.theme = theme
-        let previousDateString = self.dateString
-        self.dateString = dateString
+        let previousDate = self.currentDate
+        self.currentDate = date
 
         if self.dateIndicator.alpha.isZero {
             let transition: ContainedViewLayoutTransition = .immediate
@@ -1151,14 +1129,15 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             self.updateActivityTimer(isScrolling: true)
         }
 
+        let animateIndicatorFrame = previousDate != nil && previousDate?.1 != date.1
         let indicatorSize = self.dateIndicator.update(
-            transition: .immediate,
+            transition: animateIndicatorFrame ? .easeInOut(duration: 0.2) : .immediate,
             component: AnyComponent(SparseItemGridScrollingIndicatorComponent(
                 backgroundColor: theme.list.itemBlocksBackgroundColor,
                 shadowColor: .black,
                 foregroundColor: theme.list.itemPrimaryTextColor,
-                dateString: dateString,
-                previousDateString: previousDateString
+                date: date,
+                previousDate: previousDate
             )),
             environment: {},
             containerSize: containerSize
@@ -1199,7 +1178,11 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             scrollableHeight: contentHeight - containerSize.height
         )
 
-        transition.updateFrame(view: self.dateIndicator, frame: CGRect(origin: CGPoint(x: containerSize.width - 12.0 - indicatorSize.width, y: dateIndicatorPosition), size: indicatorSize))
+        var indicatorFrameTransition = transition
+        if animateIndicatorFrame {
+            indicatorFrameTransition = .animated(duration: 0.2, curve: .easeInOut)
+        }
+        indicatorFrameTransition.updateFrame(view: self.dateIndicator, frame: CGRect(origin: CGPoint(x: containerSize.width - 12.0 - indicatorSize.width, y: dateIndicatorPosition), size: indicatorSize))
         if isScrolling {
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
             transition.updateAlpha(layer: self.dateIndicator.layer, alpha: 1.0)

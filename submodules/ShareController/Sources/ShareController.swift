@@ -685,7 +685,7 @@ public final class ShareController: ViewController {
                 |> take(1)
             }
         }
-        self.controllerNode.shareExternal = { [weak self] asImage in
+        self.controllerNode.shareExternal = { [weak self] _ in
             if let strongSelf = self {
                 var collectableItems: [CollectableExternalShareItem] = []
                 var subject = strongSelf.subject
@@ -694,7 +694,7 @@ public final class ShareController: ViewController {
                     subject = selectedValue.subject
                 }
                 var messageUrl: String?
-                var messagesToShare: [Message]?
+//                var messagesToShare: [Message]?
                 switch subject {
                     case let .url(text):
                         collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", author: nil, timestamp: nil, mediaReference: nil))
@@ -711,7 +711,7 @@ public final class ShareController: ViewController {
                         let latLong = "\(media.latitude),\(media.longitude)"
                         collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .messages(messages):
-                        messagesToShare = messages
+//                        messagesToShare = messages
                         for message in messages {
                             var url: String?
                             var selectedMedia: Media?
@@ -801,16 +801,16 @@ public final class ShareController: ViewController {
                                 |> filter { $0 }
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] _ in
-                                    if asImage, let messages = messagesToShare {
-                                        self?.openShareAsImage?(messages)
-                                    } else {
+//                                    if asImage, let messages = messagesToShare {
+//                                        self?.openShareAsImage?(messages)
+//                                    } else {
                                         let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
                                         if let strongSelf = self, let window = strongSelf.view.window, let rootViewController = window.rootViewController {
                                             activityController.popoverPresentationController?.sourceView = window
                                             activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                                             rootViewController.present(activityController, animated: true, completion: nil)
                                         }
-                                    }
+//                                    }
                                 })
                             }
                             return .done

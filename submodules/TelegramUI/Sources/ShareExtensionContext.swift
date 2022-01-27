@@ -23,6 +23,7 @@ import ChatImportUI
 import ZipArchive
 import ActivityIndicator
 import DebugSettingsUI
+import ManagedFile
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 

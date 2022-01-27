@@ -11,7 +11,6 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import ShimmerEffect
-import SoftwareVideo
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
@@ -61,7 +60,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private var isEmpty: Bool?
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    private var videoNode: VideoStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
     
     private var theme: PresentationTheme?
@@ -69,9 +67,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     override var isVisibleInGrid: Bool {
         didSet {
             let visibility = self.isVisibleInGrid && (self.interaction?.playAnimatedStickers ?? true)
-            if let videoNode = self.videoNode {
-                videoNode.update(isPlaying: visibility)
-            } else if let animationNode = self.animationNode {
+            if let animationNode = self.animationNode {
                 animationNode.visibility = visibility
             }
         }
@@ -146,22 +142,13 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isEmpty != isEmpty {
             if let stickerItem = stickerItem {
-                if stickerItem.file.isVideoSticker {
-                    if self.videoNode == nil {
-                        let videoNode = VideoStickerNode()
-                        self.videoNode = videoNode
-                        self.addSubnode(videoNode)
-                        videoNode.started = { [weak self] in
-                            self?.imageNode.isHidden = true
-                        }
-                    }
-                    self.videoNode?.update(account: account, fileReference: stickerPackFileReference(stickerItem.file))
-
-                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
-                } else if stickerItem.file.isAnimatedSticker {
+                if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    if stickerItem.file.isVideoSticker {
+                        self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                    } else {
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    }
                     
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
@@ -173,7 +160,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         }
                     }
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
@@ -225,10 +212,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                 self.imageNode.frame = imageFrame
-                if let videoNode = self.videoNode {
-                    videoNode.frame = imageFrame
-                    videoNode.updateLayout(size: imageSize)
-                }
                 if let animationNode = self.animationNode {
                     animationNode.frame = imageFrame
                     animationNode.updateLayout(size: imageSize)

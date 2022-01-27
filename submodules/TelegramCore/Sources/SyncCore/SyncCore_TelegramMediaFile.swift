@@ -480,9 +480,6 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     
     public var isVideoSticker: Bool {
         if self.mimeType == "video/webm" {
-            return true
-        }
-        if self.mimeType == "video/webm" {
             var hasSticker = false
             for attribute in self.attributes {
                 if case .Sticker = attribute {

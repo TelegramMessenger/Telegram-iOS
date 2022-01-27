@@ -117,6 +117,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         return .image
     case let .file(file):
         var fileName: String = ""
+        var isAnimation = false
         for attribute in file.attributes {
             switch attribute {
             case let .Sticker(text, _, _):
@@ -137,7 +138,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
                 }
             case let .Video(_, _, flags):
                 if file.isAnimated {
-                    return .animation
+                    isAnimation = true
                 } else {
                     if flags.contains(.instantRoundVideo) {
                         return .videoMessage
@@ -149,7 +150,10 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
                 break
             }
         }
-        if file.isAnimatedSticker {
+        if isAnimation {
+            return .animation
+        }
+        if file.isVideoSticker || file.isAnimatedSticker {
             return .sticker("")
         }
         return .file(fileName)
@@ -259,14 +263,20 @@ public func trimToLineCount(_ text: String, lineCount: Int) -> String {
     if lineCount < 1 {
         return ""
     }
-    
-    let lines = text.split { $0.isNewline }
+
     var result = ""
-    for line in lines.prefix(lineCount) {
+    
+    var i = 0
+    text.enumerateLines { line, stop in
         if !result.isEmpty {
             result += "\n"
         }
         result += line
+        i += 1
+        if i == lineCount {
+            stop = true
+        }
     }
+    
     return result
 }

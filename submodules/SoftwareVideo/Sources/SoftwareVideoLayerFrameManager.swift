@@ -6,8 +6,8 @@ import SwiftSignalKit
 import CoreMedia
 import UniversalMediaPlayer
 
-private let applyQueue = Queue()
-private let workers = ThreadPool(threadCount: 3, threadPriority: 0.2)
+public let softwareVideoApplyQueue = Queue()
+public let softwareVideoWorkers = ThreadPool(threadCount: 3, threadPriority: 0.2)
 private var nextWorker = 0
 
 public final class SoftwareVideoLayerFrameManager {
@@ -52,7 +52,7 @@ public final class SoftwareVideoLayerFrameManager {
         self.resource = resource
         self.hintVP9 = hintVP9
         self.secondaryResource = secondaryResource
-        self.queue = ThreadPoolQueue(threadPool: workers)
+        self.queue = ThreadPoolQueue(threadPool: softwareVideoWorkers)
         self.layerHolder = layerHolder
         layerHolder.layer.videoGravity = .resizeAspectFill
         layerHolder.layer.masksToBounds = true
@@ -108,7 +108,7 @@ public final class SoftwareVideoLayerFrameManager {
         |> take(1)
         
         self.dataDisposable.set((firstReady
-        |> deliverOn(applyQueue)).start(next: { [weak self] path, resource in
+        |> deliverOn(softwareVideoApplyQueue)).start(next: { [weak self] path, resource in
             if let strongSelf = self {
                 let size = fileSize(path)
                 Logger.shared.log("SoftwareVideo", "loaded video from \(stringForResource(resource)) (file size: \(String(describing: size))")
@@ -119,7 +119,7 @@ public final class SoftwareVideoLayerFrameManager {
     }
     
     public func tick(timestamp: Double) {
-        applyQueue.async {
+        softwareVideoApplyQueue.async {
             if self.baseTimestamp == nil && !self.frames.isEmpty {
                 self.baseTimestamp = timestamp
             }
@@ -199,7 +199,7 @@ public final class SoftwareVideoLayerFrameManager {
                         hadLoop = true
                     }
                     
-                    applyQueue.async {
+                    softwareVideoApplyQueue.async {
                         if let strongSelf = self {
                             strongSelf.polling = false
                             if let (_, rotationAngle, aspect, _) = frameAndLoop {

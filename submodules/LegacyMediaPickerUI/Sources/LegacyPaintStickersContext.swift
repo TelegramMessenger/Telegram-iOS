@@ -94,10 +94,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             self.account = account
             self.entity = entity
             self.file = file
-            self.animated = file.isAnimatedSticker
+            self.animated = file.isAnimatedSticker || file.isVideoSticker
             
-            if file.isAnimatedSticker {
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource)
+            if file.isAnimatedSticker || file.isVideoSticker {
+                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
                 if let source = self.source {
                     let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))

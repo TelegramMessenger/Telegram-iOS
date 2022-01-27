@@ -294,6 +294,38 @@ public final class CachedAnimatedStickerRepresentation: CachedMediaResourceRepre
     }
 }
 
+public final class CachedVideoStickerRepresentation: CachedMediaResourceRepresentation {
+    public let keepDuration: CachedMediaRepresentationKeepDuration = .shortLived
+    
+    public let width: Int32
+    public let height: Int32
+    
+    public var uniqueId: String {
+        let version: Int = 2
+        return "video-sticker-\(self.width)x\(self.height)-v\(version)"
+        
+    }
+    
+    public init(width: Int32, height: Int32) {
+        self.width = width
+        self.height = height
+    }
+    
+    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if let other = to as? CachedVideoStickerRepresentation {
+            if other.width != self.width {
+                return false
+            }
+            if other.height != self.height {
+                return false
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
 public final class CachedPreparedPatternWallpaperRepresentation: CachedMediaResourceRepresentation {
     public let keepDuration: CachedMediaRepresentationKeepDuration = .general
     

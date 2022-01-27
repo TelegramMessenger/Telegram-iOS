@@ -11,7 +11,6 @@ import ItemListStickerPackItem
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
-import SoftwareVideo
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
@@ -84,7 +83,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private let scalingNode: ASDisplayNode
     private let imageNode: TransformImageNode
     private var animatedStickerNode: AnimatedStickerNode?
-    private var videoNode: VideoStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
     private let highlightNode: ASImageNode
     private let titleNode: ImmediateTextNode
@@ -109,9 +107,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         didSet {
             if self.visibilityStatus != oldValue {
                 let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
-                let visibility = self.visibilityStatus && loopAnimatedStickers
-                self.videoNode?.update(isPlaying: visibility)
-                self.animatedStickerNode?.visibility = visibility
+                self.animatedStickerNode?.visibility = self.visibilityStatus && loopAnimatedStickers
             }
         }
     }
@@ -218,7 +214,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         if self.currentThumbnailItem != thumbnailItem {
             self.currentThumbnailItem = thumbnailItem
-            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
@@ -233,59 +228,46 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         
                         let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
     
-                        if isVideo {
-                            let videoNode: VideoStickerNode
-                            if let current = self.videoNode {
-                                videoNode = current
-                            } else {
-                                videoNode = VideoStickerNode()
-                                videoNode.started = { [weak self] in
-                                    self?.imageNode.isHidden = true
-                                }
-                                self.videoNode = videoNode
-                                if let placeholderNode = self.placeholderNode {
-                                    self.scalingNode.insertSubnode(videoNode, belowSubnode: placeholderNode)
-                                } else {
-                                    self.scalingNode.addSubnode(videoNode)
-                                }
-                                
-                                if let resource = resource as? TelegramMediaResource {
-                                    let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
-                                    videoNode.update(account: account, fileReference: .standalone(media: dummyFile))
-                                }
-                            }
-                            videoNode.update(isPlaying: self.visibilityStatus && loopAnimatedStickers)
+                        let animatedStickerNode: AnimatedStickerNode
+                        if let current = self.animatedStickerNode {
+                            animatedStickerNode = current
                         } else {
-                            let animatedStickerNode: AnimatedStickerNode
-                            if let current = self.animatedStickerNode {
-                                animatedStickerNode = current
-                            } else {
-                                animatedStickerNode = AnimatedStickerNode()
-                                animatedStickerNode.started = { [weak self] in
-                                    self?.imageNode.isHidden = true
-                                }
-                                self.animatedStickerNode = animatedStickerNode
-                                if let placeholderNode = self.placeholderNode {
-                                    self.scalingNode.insertSubnode(animatedStickerNode, belowSubnode: placeholderNode)
-                                } else {
-                                    self.scalingNode.addSubnode(animatedStickerNode)
-                                }
-                                animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
+                            animatedStickerNode = AnimatedStickerNode()
+                            animatedStickerNode.started = { [weak self] in
+                                self?.imageNode.isHidden = true
+                                self?.removePlaceholder(animated: false)
                             }
-                            animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
+                            self.animatedStickerNode = animatedStickerNode
+                            if let placeholderNode = self.placeholderNode {
+                                self.scalingNode.insertSubnode(animatedStickerNode, belowSubnode: placeholderNode)
+                            } else {
+                                self.scalingNode.addSubnode(animatedStickerNode)
+                            }
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
                         }
+                        animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
                 if let resourceReference = resourceReference {
                     self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
                 }
             }
-                        
-            if let placeholderNode = self.placeholderNode {
-                let imageSize = boundingImageSize
-                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
+                                    
+            self.updateIsHighlighted()
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            var imageSize = PixelDimensions(width: 512, height: 512)
+            var immediateThumbnailData: Data?
+            if let data = info.immediateThumbnailData {
+                if info.flags.contains(.isVideo) {
+                    imageSize = PixelDimensions(width: 100, height: 100)
+                }
+                immediateThumbnailData = data
+            } else if let data = item?.file.immediateThumbnailData {
+                immediateThumbnailData = data
             }
             
-            self.updateIsHighlighted()
+            placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: immediateThumbnailData, size: boundingImageSize, imageSize: imageSize.cgSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)
@@ -313,10 +295,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         if let animatedStickerNode = self.animatedStickerNode {
             animatedStickerNode.frame = self.imageNode.frame
             animatedStickerNode.updateLayout(size: self.imageNode.frame.size)
-        }
-        if let videoNode = self.videoNode {
-            videoNode.frame = self.imageNode.frame
-            videoNode.updateLayout(size: self.imageNode.frame.size)
         }
         if let placeholderNode = self.placeholderNode {
             placeholderNode.bounds = CGRect(origin: CGPoint(), size: boundingImageSize)
@@ -374,7 +352,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
             
             var snapshotImageNode: TransformImageNode?
             var snapshotAnimationNode: AnimatedStickerNode?
-            var snapshotVideoNode: VideoStickerNode?
             switch thumbnailItem {
                 case let .still(representation):
                     imageSize = representation.dimensions.cgSize.aspectFitted(boundingImageSize)
@@ -387,27 +364,15 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     
                     snapshotImageNode = imageNode
                 case let .animated(resource, _, isVideo):
-                    if isVideo {
-                        let videoNode = VideoStickerNode()
-                        if let resource = resource as? TelegramMediaResource {
-                            let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
-                            videoNode.update(account: account, fileReference: .standalone(media: dummyFile))
-                        }
-                        videoNode.update(isPlaying: self.visibilityStatus && loopAnimatedStickers)
-                        scalingNode.addSubnode(videoNode)
-                        
-                        snapshotVideoNode = videoNode
-                    } else {
-                        let animatedStickerNode = AnimatedStickerNode()
-                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
-                        animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
-                        scalingNode.addSubnode(animatedStickerNode)
-                        
-                        animatedStickerNode.cloneCurrentFrame(from: self.animatedStickerNode)
-                        animatedStickerNode.play(fromIndex: self.animatedStickerNode?.currentFrameIndex)
-                        
-                        snapshotAnimationNode = animatedStickerNode
-                    }
+                    let animatedStickerNode = AnimatedStickerNode()
+                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
+                    animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
+                    scalingNode.addSubnode(animatedStickerNode)
+                    
+                    animatedStickerNode.cloneCurrentFrame(from: self.animatedStickerNode)
+                    animatedStickerNode.play(fromIndex: self.animatedStickerNode?.currentFrameIndex)
+                    
+                    snapshotAnimationNode = animatedStickerNode
             }
             
             containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)
@@ -427,11 +392,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 animatedStickerNode.frame = imageFrame
                 animatedStickerNode.updateLayout(size: imageFrame.size)
             }
-            if let videoStickerNode = snapshotVideoNode {
-                videoStickerNode.frame = imageFrame
-                videoStickerNode.updateLayout(size: imageFrame.size)
-            }
-            
+
             let expanded = self.currentExpanded
             let scale = expanded ? 1.0 : boundingImageScale
             let boundsSize = expanded ? expandedBoundingSize : CGSize(width: boundingSize.height, height: boundingSize.height)

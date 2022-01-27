@@ -17,7 +17,6 @@ import AnimationUI
 import StickerResources
 import AvatarNode
 import AccountContext
-import SoftwareVideo
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let elevatedLayout: Bool
@@ -28,7 +27,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let iconCheckNode: RadialStatusNode?
     private let animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
-    private var videoNode: VideoStickerNode?
     private var slotMachineNode: SlotMachineAnimationNode?
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
@@ -95,7 +93,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = true
                 self.originalRemainingSeconds = 5
@@ -116,7 +113,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 }
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -127,7 +123,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_archiveswipe", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
+            
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -138,7 +134,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
+            
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -149,7 +145,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: isOn ? "anim_autoremove_on" : "anim_autoremove_off", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
+                
                 if let title = title {
                     self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 }
@@ -162,7 +158,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -177,7 +172,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -192,7 +186,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 undoTextColor = UIColor(rgb: 0xff7b74)
             
@@ -211,7 +204,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_linkcopied", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -226,7 +218,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_banned", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -244,7 +235,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
-                self.videoNode = nil
+            
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = false
                 self.originalRemainingSeconds = 5
@@ -254,7 +245,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let formattedString = presentationData.strings.ChatList_AddedToFolderTooltip(chatTitle, folderTitle)
                 
@@ -272,8 +262,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
-                self.videoNode = nil
+
                 let formattedString = presentationData.strings.ChatList_RemovedFromFolderTooltip(chatTitle, folderTitle)
                 
                 let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
@@ -290,8 +279,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_payment", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
-
+                
                 let formattedString = presentationData.strings.Checkout_SuccessfulTooltip(currencyValue, itemTitle)
 
                 let string = NSMutableAttributedString(attributedString: NSAttributedString(string: formattedString.string, font: Font.regular(14.0), textColor: .white))
@@ -308,7 +296,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: isHidden ? "anim_message_hidepin" : "anim_message_unpin", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -343,7 +330,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_swipereply", colors: [:], scale: 1.0)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
+                
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 self.textNode.maximumNumberOfLines = 2
@@ -435,19 +422,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case .still:
                         break
                     case let .animated(resource, isVideo):
-                        if isVideo {
-                            let videoNode = VideoStickerNode()
-                            self.videoNode = videoNode
-                            
-                            if let resource = resource._asResource() as? TelegramMediaResource {
-                                let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
-                                videoNode.update(account: context.account, fileReference: .standalone(media: dummyFile))
-                            }
-                        } else {
-                            let animatedStickerNode = AnimatedStickerNode()
-                            self.animatedStickerNode = animatedStickerNode
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource()), width: 80, height: 80, mode: .cached)
-                        }
+                        let animatedStickerNode = AnimatedStickerNode()
+                        self.animatedStickerNode = animatedStickerNode
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: isVideo), width: 80, height: 80, mode: .cached)
                     }
                 }
             case let .dice(dice, context, text, action):
@@ -510,7 +487,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: cancelled ? "anim_proximity_cancelled" : "anim_proximity_set", colors: [:], scale: 0.45)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -529,7 +505,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -547,7 +522,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: slowdown ? "anim_voicespeedstop" : "anim_voicespeed", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -563,7 +537,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: savedMessages ? "anim_savedmessages" : "anim_forward", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -579,7 +552,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_gigagroup", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -595,7 +567,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_linkrevoked", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -611,7 +582,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_vcrecord", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -627,7 +597,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_vcflag", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -643,7 +612,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_vcspeak", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -732,7 +700,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case let .animated(resource):
                         let animatedStickerNode = AnimatedStickerNode()
                         self.animatedStickerNode = animatedStickerNode
-                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource()), width: 80, height: 80, mode: .cached)
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: file.isVideoSticker), width: 80, height: 80, mode: .cached)
                     }
                 }
             case let .copy(text):
@@ -741,7 +709,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_copy", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -777,7 +744,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_inviterequest", colors: [:], scale: 0.066)
                 self.animatedStickerNode = nil
-                self.videoNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 self.textNode.maximumNumberOfLines = 2
@@ -824,7 +790,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
         self.stillStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
-        self.videoNode.flatMap(self.panelWrapperNode.addSubnode)
         self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.avatarNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
@@ -852,9 +817,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.undoButtonNode.addTarget(self, action: #selector(self.undoButtonPressed), forControlEvents: .touchUpInside)
         
         self.animatedStickerNode?.started = { [weak self] in
-            self?.stillStickerNode?.isHidden = true
-        }
-        self.videoNode?.started = { [weak self] in
             self?.stillStickerNode?.isHidden = true
         }
     }
@@ -1041,20 +1003,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 transition.updateFrame(node: stillStickerNode, frame: iconFrame)
             }
             
-            if let videoNode = self.videoNode {
-                videoNode.updateLayout(size: iconFrame.size)
-                transition.updateFrame(node: videoNode, frame: iconFrame)
-            } else if let animatedStickerNode = self.animatedStickerNode {
+            if let animatedStickerNode = self.animatedStickerNode {
                 animatedStickerNode.updateLayout(size: iconFrame.size)
                 transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
             } else if let slotMachineNode = self.slotMachineNode {
                 transition.updateFrame(node: slotMachineNode, frame: iconFrame)
             }
-        } else if let videoNode = self.videoNode {
-            let iconSize = CGSize(width: 32.0, height: 32.0)
-            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
-            videoNode.updateLayout(size: iconFrame.size)
-            transition.updateFrame(node: videoNode, frame: iconFrame)
         } else if let animatedStickerNode = self.animatedStickerNode {
             let iconSize = CGSize(width: 32.0, height: 32.0)
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
@@ -1105,7 +1059,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             })
         }
         
-        self.videoNode?.update(isPlaying: true)
         self.animatedStickerNode?.visibility = true
         
         self.checkTimer()

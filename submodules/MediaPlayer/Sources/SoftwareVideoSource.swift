@@ -199,6 +199,14 @@ public final class SoftwareVideoSource {
         return (frames.first, endOfStream)
     }
     
+    public func getFramerate() -> Int {
+        if let videoStream = self.videoStream {
+            return Int(videoStream.fps.seconds)
+        } else {
+            return 0
+        }
+    }
+    
     public func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {
         guard let videoStream = self.videoStream, let avFormatContext = self.avFormatContext else {
             return (nil, 0.0, 1.0, false)

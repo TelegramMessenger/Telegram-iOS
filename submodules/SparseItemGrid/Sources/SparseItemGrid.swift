@@ -1095,13 +1095,14 @@ public final class SparseItemGrid: ASDisplayNode {
                         scrollingArea.feedbackTap()
                     }
                 }
+                
                 scrollingArea.update(
                     containerSize: layout.containerLayout.size,
                     containerInsets: layout.containerLayout.insets,
                     contentHeight: contentHeight,
                     contentOffset: self.scrollView.bounds.minY,
                     isScrolling: self.scrollView.isDragging || self.scrollView.isDecelerating || self.decelerationAnimator != nil,
-                    dateString: dateString ?? "",
+                    date: (dateString ?? "", tag ?? 0),
                     theme: self.theme,
                     transition: .immediate
                 )

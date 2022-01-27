@@ -900,7 +900,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
                                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                     return true
                                 })
                                 strongSelf.present(controller, in: .window(.root))
@@ -3129,7 +3129,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         legacyMediaEditor(context: strongSelf.context, peer: peer, media: mediaReference, initialCaption: NSAttributedString(string: message.text), snapshots: [], transitionCompletion: nil, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
                                 let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                     return true
                                 })
                                 strongSelf.present(controller, in: .window(.root))
@@ -10337,7 +10337,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
                             let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                 return true
                             })
                             strongSelf.present(controller, in: .window(.root))
@@ -10431,7 +10431,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }, presentStickers: { [weak self] completion in
                 if let strongSelf = self {
                     let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                        completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                         return true
                     })
                     strongSelf.present(controller, in: .window(.root))
@@ -10629,7 +10629,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             controller.presentStickers = { [weak self] completion in
                                 if let strongSelf = self {
                                     let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                        completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                         return true
                                     })
                                     strongSelf.present(controller, in: .window(.root))
@@ -10676,7 +10676,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
                             let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                                 return true
                             })
                             strongSelf.present(controller, in: .window(.root))
@@ -10738,7 +10738,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controller.presentStickers = { [weak self] completion in
                     if let strongSelf = self {
                         let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                            completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                             return true
                         })
                         strongSelf.present(controller, in: .window(.root))
@@ -11466,7 +11466,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }, presentStickers: { [weak self] completion in
                     if let strongSelf = self {
                         let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, node, rect in
-                            completion(fileReference.media, fileReference.media.isAnimatedSticker, node.view, rect)
+                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, node.view, rect)
                             return true
                         })
                         strongSelf.present(controller, in: .window(.root))
@@ -13011,7 +13011,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 if let peerId = peerId {
                     do {
-                        let selfPeerId = self.chatLocation.peerId
+                        var chatPeerId: PeerId?
+                        if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramGroup {
+                            chatPeerId = peer.id
+                        } else if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .group = peer.info, case .member = peer.participationStatus {
+                            chatPeerId = peer.id
+                        }
+                        
                         switch navigation {
                             case .info, .default:
                                 let peerSignal: Signal<Peer?, NoError>
@@ -13023,8 +13029,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, let peer = peer {
                                         var mode: PeerInfoControllerMode = .generic
-                                        if let _ = fromMessage {
-                                            mode = .group(selfPeerId)
+                                        if let _ = fromMessage, let chatPeerId = chatPeerId {
+                                            mode = .group(chatPeerId)
                                         }
                                         var expandAvatar = expandAvatar
                                         if peer.smallProfileImage == nil {
