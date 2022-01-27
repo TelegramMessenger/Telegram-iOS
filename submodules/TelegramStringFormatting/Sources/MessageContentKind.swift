@@ -263,14 +263,20 @@ public func trimToLineCount(_ text: String, lineCount: Int) -> String {
     if lineCount < 1 {
         return ""
     }
-    
-    let lines = text.split { $0.isNewline }
+
     var result = ""
-    for line in lines.prefix(lineCount) {
+    
+    var i = 0
+    text.enumerateLines { line, stop in
         if !result.isEmpty {
             result += "\n"
         }
         result += line
+        i += 1
+        if i == lineCount {
+            stop = true
+        }
     }
+    
     return result
 }

@@ -15,7 +15,7 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
         queue.async { [weak self] in
             switch type {
             case .argb:
-                let calculatedBytesPerRow =  DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
+                let calculatedBytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
                 assert(bytesPerRow == calculatedBytesPerRow)
             case .yuva:
                 break

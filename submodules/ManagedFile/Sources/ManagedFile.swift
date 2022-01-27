@@ -1,12 +1,6 @@
 import Foundation
 import SwiftSignalKit
 
-public enum ManagedFileMode {
-    case read
-    case readwrite
-    case append
-}
-
 private func wrappedWrite(_ fd: Int32, _ data: UnsafeRawPointer, _ count: Int) -> Int {
     return write(fd, data, count)
 }
@@ -16,11 +10,17 @@ private func wrappedRead(_ fd: Int32, _ data: UnsafeMutableRawPointer, _ count: 
 }
 
 public final class ManagedFile {
+    public enum Mode {
+        case read
+        case readwrite
+        case append
+    }
+    
     private let queue: Queue?
     private let fd: Int32
-    private let mode: ManagedFileMode
+    private let mode: Mode
     
-    public init?(queue: Queue?, path: String, mode: ManagedFileMode) {
+    public init?(queue: Queue?, path: String, mode: Mode) {
         if let queue = queue {
             assert(queue.isCurrent())
         }
@@ -73,8 +73,10 @@ public final class ManagedFile {
             assert(queue.isCurrent())
         }
         var result = Data(count: count)
-        result.withUnsafeMutableBytes { rawBytes -> Void in
-            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+        result.withUnsafeMutableBytes { buffer -> Void in
+            guard let bytes = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                return
+            }
             let readCount = self.read(bytes, count)
             assert(readCount == count)
         }

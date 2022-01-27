@@ -31,6 +31,8 @@ swift_library(
         "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/MediaResources:MediaResources",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/ManagedFile:ManagedFile",
     ],
     visibility = [
         "//visibility:public",

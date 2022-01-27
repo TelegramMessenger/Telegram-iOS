@@ -12,7 +12,6 @@ import StickerResources
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
-import SoftwareVideo
 
 public struct ItemListStickerPackItemEditing: Equatable {
     public var editable: Bool
@@ -159,7 +158,6 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
     
     fileprivate let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    private var videoNode: VideoStickerNode?
     private var placeholderNode: StickerShimmerEffectNode?
     private let unreadNode: ASImageNode
     private let titleNode: TextNode
@@ -197,7 +195,6 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             
             if wasVisible != isVisible {
                 let visibility = isVisible && (self.layoutParams?.0.playAnimatedStickers ?? true)
-                self.videoNode?.update(isPlaying: visibility)
                 self.animationNode?.visibility = visibility
             }
         }
@@ -755,44 +752,21 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             case let .still(representation):
                                 thumbnailDimensions = representation.dimensions
                             case let .animated(resource, _, isVideo):
-                                if isVideo {
-                                    let videoNode: VideoStickerNode
-                                    if let current = strongSelf.videoNode {
-                                        videoNode = current
-                                    } else {
-                                        videoNode = VideoStickerNode()
-                                        strongSelf.videoNode = videoNode
-                                        strongSelf.addSubnode(videoNode)
-                                        
-                                        if let resource = resource as? TelegramMediaResource {
-                                            let dummyFile = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 1), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/webm", size: resource.size ?? 1, attributes: [.Video(duration: 1, size: PixelDimensions(width: 100, height: 100), flags: [])])
-                                            videoNode.update(account: item.account, fileReference: .standalone(media: dummyFile))
-                                        }
-                                    }
-                                    videoNode.updateLayout(size: imageFrame.size)
-                                    videoNode.update(isPlaying: strongSelf.visibility != .none && item.playAnimatedStickers)
-                                    videoNode.isHidden = !item.playAnimatedStickers
-                                    strongSelf.imageNode.isHidden = item.playAnimatedStickers
-                                    if let videoNode = strongSelf.videoNode {
-                                        transition.updateFrame(node: videoNode, frame: imageFrame)
-                                    }
+                                let animationNode: AnimatedStickerNode
+                                if let current = strongSelf.animationNode {
+                                    animationNode = current
                                 } else {
-                                    let animationNode: AnimatedStickerNode
-                                    if let current = strongSelf.animationNode {
-                                        animationNode = current
-                                    } else {
-                                        animationNode = AnimatedStickerNode()
-                                        strongSelf.animationNode = animationNode
-                                        strongSelf.addSubnode(animationNode)
-                                        
-                                        animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource), width: 80, height: 80, mode: .cached)
-                                    }
-                                    animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
-                                    animationNode.isHidden = !item.playAnimatedStickers
-                                    strongSelf.imageNode.isHidden = item.playAnimatedStickers
-                                    if let animationNode = strongSelf.animationNode {
-                                        transition.updateFrame(node: animationNode, frame: imageFrame)
-                                    }
+                                    animationNode = AnimatedStickerNode()
+                                    strongSelf.animationNode = animationNode
+                                    strongSelf.addSubnode(animationNode)
+                                    
+                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, mode: .cached)
+                                }
+                                animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
+                                animationNode.isHidden = !item.playAnimatedStickers
+                                strongSelf.imageNode.isHidden = item.playAnimatedStickers
+                                if let animationNode = strongSelf.animationNode {
+                                    transition.updateFrame(node: animationNode, frame: imageFrame)
                                 }
                         }
                         

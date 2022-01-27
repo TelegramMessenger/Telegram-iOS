@@ -26,7 +26,6 @@ import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
 import LottieMeshSwift
-import SoftwareVideo
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -51,19 +50,6 @@ extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
         return 0
     }
 
-    func setFrameIndex(_ frameIndex: Int) {
-    }
-}
-
-extension VideoStickerNode: GenericAnimatedStickerNode {
-    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
-        
-    }
-    
-    var currentFrameIndex: Int {
-        return 0
-    }
-    
     func setFrameIndex(_ frameIndex: Int) {
     }
 }
@@ -451,25 +437,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 self.animationNode = animationNode
             }
-        } else if let telegramFile = self.telegramFile, telegramFile.mimeType == "video/webm" {
-            let videoNode = VideoStickerNode()
-            videoNode.started = { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.imageNode.alpha = 0.0
-                    if !strongSelf.enableSynchronousImageApply {
-                        let current = CACurrentMediaTime()
-                        if let setupTimestamp = strongSelf.setupTimestamp, current - setupTimestamp > 0.3 {
-                            if !strongSelf.placeholderNode.alpha.isZero {
-                                strongSelf.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                strongSelf.removePlaceholder(animated: true)
-                            }
-                        } else {
-                            strongSelf.removePlaceholder(animated: false)
-                        }
-                    }
-                }
-            }
-            self.animationNode = videoNode
         } else {
             let animationNode = AnimatedStickerNode()
             animationNode.started = { [weak self] in
@@ -587,21 +554,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         let isPlaying = self.visibilityStatus && !self.forceStopAnimations
-        if let videoNode = self.animationNode as? VideoStickerNode {
-            if self.isPlaying != isPlaying {
-                self.isPlaying = isPlaying
-                
-                if self.isPlaying && !self.didSetUpAnimationNode {
-                    self.didSetUpAnimationNode = true
-                                    
-                    if let file = self.telegramFile {
-                        videoNode.update(account: item.context.account, fileReference: .standalone(media: file))
-                    }
-                }
-                
-                videoNode.update(isPlaying: isPlaying)
-            }
-        } else if let animationNode = self.animationNode as? AnimatedStickerNode {
+        if let animationNode = self.animationNode as? AnimatedStickerNode {
             if !isPlaying {
                 for decorationNode in self.additionalAnimationNodes {
                     if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
@@ -678,7 +631,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
                         let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
                         self.animationSize = fittedSize
-                        animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
+                        animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier, isVideo: file.isVideoSticker), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
                     }
                 }
             }
@@ -1195,9 +1148,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if strongSelf.animationNode?.supernode === strongSelf.contextSourceNode.contentNode {
                         strongSelf.animationNode?.frame = animationNodeFrame
-                        if let videoNode = strongSelf.animationNode as? VideoStickerNode {
-                            videoNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
-                        }
                         if let animationNode = strongSelf.animationNode as? AnimatedStickerNode {
                             animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                         }

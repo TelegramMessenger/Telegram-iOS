@@ -17,6 +17,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/FastBlur:FastBlur",
         "//submodules/MozjpegBinding:MozjpegBinding",
+        "//submodules/ManagedFile:ManagedFile",
     ],
     visibility = [
         "//visibility:public",
