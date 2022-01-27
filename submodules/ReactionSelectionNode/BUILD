@@ -21,6 +21,9 @@ swift_library(
         "//submodules/StickerResources:StickerResources",
         "//submodules/AccountContext:AccountContext",
         "//submodules/Components/ReactionButtonListComponent:ReactionButtonListComponent",
+        "//submodules/lottie-ios:Lottie",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/AvatarNode:AvatarNode",
     ],
     visibility = [
         "//visibility:public",

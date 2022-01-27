@@ -8,6 +8,9 @@ import AccountContext
 import TelegramAnimatedStickerNode
 import ReactionButtonListComponent
 import SwiftSignalKit
+import Lottie
+import AppBundle
+import AvatarNode
 
 public final class ReactionContextItem {
     public struct Reaction: Equatable {
@@ -656,6 +659,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             context: strongSelf.context,
                             theme: strongSelf.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                             reaction: itemNode.item,
+                            avatarPeers: [],
                             isLarge: false,
                             targetView: targetView,
                             addStandaloneReactionAnimation: nil,
@@ -859,17 +863,19 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     
     private weak var targetView: UIView?
     
+    private var colorCallbacks: [LOTColorValueCallback] = []
+    
     override public init() {
         super.init()
         
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, reaction: reaction, isLarge: isLarge, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, reaction: reaction, avatarPeers: avatarPeers, isLarge: isLarge, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
-    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -960,6 +966,45 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         additionalAnimationNode.updateLayout(size: effectFrame.size)
         self.addSubnode(additionalAnimationNode)
         
+        if !isLarge, let url = getAppBundle().url(forResource: "effectavatar", withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+            let view = LOTAnimationView(model: composition, in: getAppBundle())
+            view.animationSpeed = 1.0
+            view.backgroundColor = nil
+            view.isOpaque = false
+            
+            var avatarIndex = 0
+            
+            let keypathIndices: [Int] = Array((1 ... 3).map({ $0 }).shuffled())
+            for i in keypathIndices {
+                var peer: EnginePeer?
+                if avatarIndex < avatarPeers.count {
+                    peer = avatarPeers[avatarIndex]
+                }
+                avatarIndex += 1
+                
+                if let peer = peer {
+                    let avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 16.0))
+                    
+                    let avatarContainer = UIView(frame: CGRect(origin: CGPoint(x: -100.0, y: -100.0), size: CGSize(width: 200.0, height: 200.0)))
+                    
+                    avatarNode.frame = CGRect(origin: CGPoint(x: floor((200.0 - 40.0) / 2.0), y: floor((200.0 - 40.0) / 2.0)), size: CGSize(width: 40.0, height: 40.0))
+                    avatarNode.setPeer(context: context, theme: context.sharedContext.currentPresentationData.with({ $0 }).theme, peer: peer)
+                    avatarNode.transform = CATransform3DMakeScale(200.0 / 40.0, 200.0 / 40.0, 1.0)
+                    avatarContainer.addSubnode(avatarNode)
+                    
+                    view.addSubview(avatarContainer, toKeypathLayer: LOTKeypath(string: "Avatar \(i).Ellipse 1"))
+                }
+                
+                let colorCallback = LOTColorValueCallback(color: UIColor.clear.cgColor)
+                self.colorCallbacks.append(colorCallback)
+                view.setValueDelegate(colorCallback, for: LOTKeypath(string: "Avatar \(i).Ellipse 1.Fill 1.Color"))
+            }
+            
+            view.frame = additionalAnimationNode.bounds
+            additionalAnimationNode.view.addSubview(view)
+            view.play()
+        }
+        
         var mainAnimationCompleted = false
         var additionalAnimationCompleted = false
         let intermediateCompletion: () -> Void = {
@@ -990,6 +1035,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                                 context: itemNode.context,
                                 theme: itemNode.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                                 reaction: itemNode.item,
+                                avatarPeers: avatarPeers,
                                 isLarge: false,
                                 targetView: targetView,
                                 addStandaloneReactionAnimation: nil,
@@ -1119,7 +1165,7 @@ public final class StandaloneDismissReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionDismiss(sourceView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
+    public func animateReactionDismiss(sourceView: UIView, hideNode: Bool, isIncoming: Bool, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = sourceView.snapshotContentTree() else {
             completion()
             return
@@ -1133,7 +1179,7 @@ public final class StandaloneDismissReactionAnimation: ASDisplayNode {
         self.view.addSubview(sourceSnapshotView)
         
         var targetOffset: CGFloat = 120.0
-        if sourceRect.midX > self.bounds.width / 2.0 {
+        if !isIncoming {
             targetOffset = -targetOffset
         }
         let targetPoint = CGPoint(x: sourceRect.midX + targetOffset, y: sourceRect.midY)
