@@ -288,7 +288,7 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
                 let _ = file.write(data, count: length)
             }
                         
-            var fps: Int32 = Int32(source.getFramerate())
+            var fps: Int32 = Int32(min(30, source.getFramerate()))
             var frameCount: Int32 = 0
             writeData(&fps, length: 4)
             writeData(&frameCount, length: 4)

@@ -214,7 +214,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         if self.currentThumbnailItem != thumbnailItem {
             self.currentThumbnailItem = thumbnailItem
-            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
@@ -236,6 +235,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             animatedStickerNode = AnimatedStickerNode()
                             animatedStickerNode.started = { [weak self] in
                                 self?.imageNode.isHidden = true
+                                self?.removePlaceholder(animated: false)
                             }
                             self.animatedStickerNode = animatedStickerNode
                             if let placeholderNode = self.placeholderNode {
@@ -251,13 +251,23 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
                 }
             }
-                        
-            if let placeholderNode = self.placeholderNode {
-                let imageSize = boundingImageSize
-                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
+                                    
+            self.updateIsHighlighted()
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            var imageSize = PixelDimensions(width: 512, height: 512)
+            var immediateThumbnailData: Data?
+            if let data = info.immediateThumbnailData {
+                if info.flags.contains(.isVideo) {
+                    imageSize = PixelDimensions(width: 100, height: 100)
+                }
+                immediateThumbnailData = data
+            } else if let data = item?.file.immediateThumbnailData {
+                immediateThumbnailData = data
             }
             
-            self.updateIsHighlighted()
+            placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: immediateThumbnailData, size: boundingImageSize, imageSize: imageSize.cgSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)

@@ -301,7 +301,7 @@ public final class CachedVideoStickerRepresentation: CachedMediaResourceRepresen
     public let height: Int32
     
     public var uniqueId: String {
-        let version: Int = 0
+        let version: Int = 1
         return "video-sticker-\(self.width)x\(self.height)-v\(version)"
         
     }

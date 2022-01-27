@@ -282,7 +282,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
                     if item.stickerItem.file.isVideoSticker {
-                        self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: !item.large, synchronousLoad: synchronousLoads && isVisible))
+                        self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: false, synchronousLoad: synchronousLoads && isVisible))
                     } else {
                         self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(fittedSize)))
                     }

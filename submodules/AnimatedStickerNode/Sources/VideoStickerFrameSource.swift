@@ -299,13 +299,13 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
         self.height = height
         self.bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(self.width))
         self.currentFrame = 0
-       
+  
         self.cache = cachePathPrefix.flatMap { cachePathPrefix in
             VideoStickerFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height)
         }
         
         self.source = SoftwareVideoSource(path: path, hintVP9: true)
-        self.frameRate = self.source.getFramerate()
+        self.frameRate = min(30, self.source.getFramerate())
                 
         self.frameCount = (self.cache?.frameCount).flatMap { Int($0) } ?? 0
     }

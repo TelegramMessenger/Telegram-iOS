@@ -251,11 +251,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             case .YUV:
                 pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
             case .YUVA:
-//                if #available(iOS 13.0, *) {
-//                    pixelFormat = kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar
-//                } else {
-                    pixelFormat = kCVPixelFormatType_32ARGB
-//                }
+                pixelFormat = kCVPixelFormatType_32ARGB
             default:
                 pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
         }
@@ -286,22 +282,6 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
 
-        let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
-        let uvPlaneSize = srcPlaneSize * 2
-
-        let uvPlane: UnsafeMutablePointer<UInt8>
-        if let (existingUvPlane, existingUvPlaneSize) = self.uvPlane, existingUvPlaneSize == uvPlaneSize {
-            uvPlane = existingUvPlane
-        } else {
-            if let (existingDstPlane, _) = self.uvPlane {
-                free(existingDstPlane)
-            }
-            uvPlane = malloc(uvPlaneSize)!.assumingMemoryBound(to: UInt8.self)
-            self.uvPlane = (uvPlane, uvPlaneSize)
-        }
-                
-        fillDstPlane(uvPlane, frame.data[1]!, frame.data[2]!, srcPlaneSize)
-
         let status = CVPixelBufferLockBaseAddress(pixelBuffer, [])
         if status != kCVReturnSuccess {
             return nil
@@ -310,8 +290,24 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         var base: UnsafeMutableRawPointer
         if pixelFormat == kCVPixelFormatType_32ARGB {
             let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-            decodeYUVAPlanesToRGBA(frame.data[0], uvPlane, frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow))
+            decodeYUVAPlanesToRGBA(frame.data[0], Int32(frame.lineSize[0]), frame.data[1], Int32(frame.lineSize[1]), frame.data[2], Int32(frame.lineSize[2]), frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow))
         } else {
+            let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
+            let uvPlaneSize = srcPlaneSize * 2
+
+            let uvPlane: UnsafeMutablePointer<UInt8>
+            if let (existingUvPlane, existingUvPlaneSize) = self.uvPlane, existingUvPlaneSize == uvPlaneSize {
+                uvPlane = existingUvPlane
+            } else {
+                if let (existingDstPlane, _) = self.uvPlane {
+                    free(existingDstPlane)
+                }
+                uvPlane = malloc(uvPlaneSize)!.assumingMemoryBound(to: UInt8.self)
+                self.uvPlane = (uvPlane, uvPlaneSize)
+            }
+                    
+            fillDstPlane(uvPlane, frame.data[1]!, frame.data[2]!, srcPlaneSize)
+
             let bytesPerRowY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
             let bytesPerRowUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
             let bytesPerRowA = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 2)

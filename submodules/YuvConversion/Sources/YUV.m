@@ -169,7 +169,7 @@ void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height,
     }
 }
 
-void decodeYUVAPlanesToRGBA(uint8_t const *yPlane, uint8_t const *uvPlane, uint8_t const *alphaPlane, uint8_t *argb, int width, int height, int bytesPerRow) {
+void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint8_t const *srcCbData, int srcCbBytesPerRow, uint8_t const *srcCrData, int srcCrBytesPerRow, uint8_t const *alphaData, uint8_t *argb, int width, int height, int bytesPerRow) {
     static vImage_YpCbCrToARGB info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -180,31 +180,36 @@ void decodeYUVAPlanesToRGBA(uint8_t const *yPlane, uint8_t const *uvPlane, uint8
     vImage_Error error = kvImageNoError;
     
     vImage_Buffer srcYp;
-    srcYp.data = (void *)(yPlane + 0);
+    srcYp.data = (void *)(srcYpData);
     srcYp.width = width;
     srcYp.height = height;
-    srcYp.rowBytes = width * 1;
+    srcYp.rowBytes = srcYpBytesPerRow;
     
-    vImage_Buffer srcCbCr;
-    srcCbCr.data = (void *)(uvPlane);
-    srcCbCr.width = width;
-    srcCbCr.height = height;
-    srcCbCr.rowBytes = width * 1;
+    vImage_Buffer srcCb;
+    srcCb.data = (void *)(srcCbData);
+    srcCb.width = width / 2;
+    srcCb.height = height;
+    srcCb.rowBytes = srcCbBytesPerRow;
+    
+    vImage_Buffer srcCr;
+    srcCr.data = (void *)(srcCrData);
+    srcCr.width = width / 2;
+    srcCr.height = height;
+    srcCr.rowBytes = srcCrBytesPerRow;
     
     vImage_Buffer dest;
     dest.data = (void *)argb;
     dest.width = width;
     dest.height = height;
     dest.rowBytes = bytesPerRow;
+    error = vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(&srcYp, &srcCb, &srcCr, &dest, &info, NULL, 0xff, kvImageDoNotTile);
     
-    error = vImageConvert_420Yp8_CbCr8ToARGB8888(&srcYp, &srcCbCr, &dest, &info, NULL, 0xff, kvImageDoNotTile);
-    
-    int i = 0;
     for (int y = 0; y < height; y += 1) {
         uint8_t *argbRow = argb + y * bytesPerRow;
+        int alphaRow = y * srcYpBytesPerRow;
+        
         for (int x = 0; x < width; x += 1) {
-            argbRow[x * 4] = alphaPlane[i];
-            i += 1;
+            argbRow[x * 4] = alphaData[alphaRow + x];
         }
     }
 
