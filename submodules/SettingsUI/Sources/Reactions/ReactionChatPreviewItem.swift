@@ -170,6 +170,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                                     applicationAnimation: aroundAnimation,
                                     largeApplicationAnimation: reaction.effectAnimation
                                 ),
+                                avatarPeers: [],
                                 isLarge: false,
                                 targetView: targetView,
                                 addStandaloneReactionAnimation: nil,

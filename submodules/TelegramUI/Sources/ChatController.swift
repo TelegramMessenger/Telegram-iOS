@@ -1294,6 +1294,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 applicationAnimation: aroundAnimation,
                                                 largeApplicationAnimation: reaction.effectAnimation
                                             ),
+                                            avatarPeers: [],
                                             isLarge: false,
                                             targetView: targetView,
                                             addStandaloneReactionAnimation: { standaloneReactionAnimation in
@@ -1331,7 +1332,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let standaloneDismissAnimation = StandaloneDismissReactionAnimation()
                             standaloneDismissAnimation.frame = strongSelf.chatDisplayNode.bounds
                             strongSelf.chatDisplayNode.addSubnode(standaloneDismissAnimation)
-                            standaloneDismissAnimation.animateReactionDismiss(sourceView: targetView, hideNode: hideRemovedReaction, completion: { [weak standaloneDismissAnimation] in
+                            standaloneDismissAnimation.animateReactionDismiss(sourceView: targetView, hideNode: hideRemovedReaction, isIncoming: message.effectivelyIncoming(strongSelf.context.account.peerId), completion: { [weak standaloneDismissAnimation] in
                                 standaloneDismissAnimation?.removeFromSupernode()
                             })
                         }
@@ -4682,7 +4683,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
                     let topVisibleMessage: MessageId?
-                    topVisibleMessage = topVisibleMessageRange?.upperBound
+                    topVisibleMessage = topVisibleMessageRange?.upperBound.id
                     
                     if let scrolledToMessageId = scrolledToMessageId {
                         if let topVisibleMessage = topVisibleMessage {
@@ -5909,18 +5910,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             guard item.message.id == messageId else {
                                                 return
                                             }
-                                            var maybeUpdatedReaction: String?
+                                            var maybeUpdatedReaction: (String, Bool, EnginePeer?)?
                                             if let attribute = item.message.reactionsAttribute {
                                                 for recentPeer in attribute.recentPeers {
                                                     if recentPeer.isUnseen {
-                                                        maybeUpdatedReaction = recentPeer.value
+                                                        maybeUpdatedReaction = (recentPeer.value, recentPeer.isLarge, item.message.peers[recentPeer.peerId].flatMap(EnginePeer.init))
                                                         break
                                                     }
                                                 }
                                             }
                                             
-                                            guard let updatedReaction = maybeUpdatedReaction else {
+                                            guard let (updatedReaction, updatedReactionIsLarge, updatedReactionPeer) = maybeUpdatedReaction else {
                                                 return
+                                            }
+                                            
+                                            var avatarPeers: [EnginePeer] = []
+                                            if let updatedReactionPeer = updatedReactionPeer {
+                                                avatarPeers.append(updatedReactionPeer)
                                             }
                                             
                                             guard let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) else {
@@ -5953,7 +5959,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                             applicationAnimation: aroundAnimation,
                                                             largeApplicationAnimation: reaction.effectAnimation
                                                         ),
-                                                        isLarge: false,
+                                                        avatarPeers: avatarPeers,
+                                                        isLarge: updatedReactionIsLarge,
                                                         targetView: targetView,
                                                         addStandaloneReactionAnimation: { standaloneReactionAnimation in
                                                             guard let strongSelf = self else {
