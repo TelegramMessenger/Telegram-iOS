@@ -24,7 +24,8 @@ private final class VideoStickerFrameSourceCache {
     private let width: Int
     private let height: Int
     
-    public var frameCount: Int32 = 0
+    public private(set) var frameRate: Int32 = 0
+    public private(set) var frameCount: Int32 = 0
     
     private var isStoringFrames = Set<Int>()
     
@@ -38,7 +39,7 @@ private final class VideoStickerFrameSourceCache {
         self.width = width
         self.height = height
         
-        let version: Int = 0
+        let version: Int = 1
         let path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
         var file = ManagedFile(queue: queue, path: path, mode: .readwrite)
         if let file = file {
@@ -63,12 +64,18 @@ private final class VideoStickerFrameSourceCache {
     }
     
     private func initializeFrameTable() {
+        var reset = true
         if let size = self.file.getSize(), size >= maximumFrameCount {
-            let _ = self.readFrameRate()
-        } else {
+            if self.readFrameRate() {
+                reset = false
+            }
+        }
+        if reset {
             self.file.truncate(count: 0)
             var zero: Int32 = 0
             let _ = self.file.write(&zero, count: 4)
+            let _ = self.file.write(&zero, count: 4)
+            
             for _ in 0 ..< maximumFrameCount {
                 let _ = self.file.write(&zero, count: 4)
                 let _ = self.file.write(&zero, count: 4)
@@ -82,6 +89,19 @@ private final class VideoStickerFrameSourceCache {
         }
        
         self.file.seek(position: 0)
+        var frameRate: Int32 = 0
+        if self.file.read(&frameRate, 4) != 4 {
+            return false
+        }
+        if frameRate < 0 {
+            return false
+        }
+        if frameRate == 0 {
+            return false
+        }
+        self.frameRate = frameRate
+        
+        self.file.seek(position: 4)
         
         var frameCount: Int32 = 0
         if self.file.read(&frameCount, 4) != 4 {
@@ -111,7 +131,7 @@ private final class VideoStickerFrameSourceCache {
             return .notFound
         }
         
-        self.file.seek(position: Int64(4 + index * 4 * 2))
+        self.file.seek(position: Int64(8 + index * 4 * 2))
         var offset: Int32 = 0
         var length: Int32 = 0
         if self.file.read(&offset, 4) != 4 {
@@ -133,9 +153,13 @@ private final class VideoStickerFrameSourceCache {
         return .range(Int(offset) ..< Int(offset + length))
     }
     
-    func storeFrameCount(_ count: Int) {
+    func storeFrameRateAndCount(frameRate: Int, frameCount: Int) {
         self.file.seek(position: 0)
-        var frameCount = Int32(count)
+        var frameRate = Int32(frameRate)
+        let _ = self.file.write(&frameRate, count: 4)
+       
+        self.file.seek(position: 4)
+        var frameCount = Int32(frameCount)
         let _ = self.file.write(&frameCount, count: 4)
     }
     
@@ -166,7 +190,7 @@ private final class VideoStickerFrameSourceCache {
                     return
                 }
                 
-                strongSelf.file.seek(position: Int64(4 + index * 4 * 2))
+                strongSelf.file.seek(position: Int64(8 + index * 4 * 2))
                 var offset = Int32(currentSize)
                 var length = Int32(compressedData.count)
                 let _ = strongSelf.file.write(&offset, count: 4)
@@ -208,7 +232,7 @@ private final class VideoStickerFrameSourceCache {
                     return
                 }
                 
-                strongSelf.file.seek(position: Int64(4 + index * 4 * 2))
+                strongSelf.file.seek(position: Int64(8 + index * 4 * 2))
                 var offset = Int32(currentSize)
                 var length = Int32(compressedData.count)
                 let _ = strongSelf.file.write(&offset, count: 4)
@@ -287,7 +311,7 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
     let frameRate: Int
     fileprivate var currentFrame: Int
     
-    private let source: SoftwareVideoSource
+    private let source: SoftwareVideoSource?
     
     var frameIndex: Int {
         return self.currentFrame % self.frameCount
@@ -305,10 +329,16 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
             VideoStickerFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height)
         }
         
-        self.source = SoftwareVideoSource(path: path, hintVP9: true)
-        self.frameRate = min(30, self.source.getFramerate())
-                
-        self.frameCount = (self.cache?.frameCount).flatMap { Int($0) } ?? 0
+        if let cache = self.cache, cache.frameCount > 0 {
+            self.source = nil
+            self.frameRate = Int(cache.frameRate)
+            self.frameCount = Int(cache.frameCount)
+        } else {
+            let source = SoftwareVideoSource(path: path, hintVP9: true)
+            self.source = source
+            self.frameRate = min(30, source.getFramerate())
+            self.frameCount = 0
+        }
     }
     
     deinit {
@@ -327,12 +357,12 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
         if draw {
             if let cache = self.cache, let yuvData = cache.readUncompressedYuvaFrame(index: frameIndex) {
                 return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.width * 2, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
-            } else {
-                let frameAndLoop = self.source.readFrame(maxPts: nil)
+            } else if let source = self.source {
+                let frameAndLoop = source.readFrame(maxPts: nil)
                 if frameAndLoop.0 == nil {
                     if frameAndLoop.3 && self.frameCount == 0 {
                         self.frameCount = frameIndex
-                        self.cache?.storeFrameCount(self.frameCount)
+                        self.cache?.storeFrameRateAndCount(frameRate: self.frameRate, frameCount: self.frameCount)
                     }
                     return nil
                 }
@@ -365,6 +395,8 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
                 self.cache?.storeUncompressedRgbFrame(index: frameIndex, rgbData: frameData)
                 
                 return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
+            } else {
+                return nil
             }
         } else {
             return nil
