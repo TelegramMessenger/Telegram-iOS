@@ -38,13 +38,15 @@ public final class ManagedAnimationState {
             guard let path = item.source.path else {
                 return nil
             }
-            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            guard var data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
                 return nil
             }
-            guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
-                return nil
+            if path.hasSuffix(".json") {
+                
+            } else if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                data = unpackedData
             }
-            guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, cacheKey: item.source.cacheKey) else {
+            guard let instance = LottieInstance(data: data, fitzModifier: .none, cacheKey: item.source.cacheKey) else {
                 return nil
             }
             resolvedInstance = instance
@@ -92,7 +94,10 @@ public enum ManagedAnimationSource: Equatable {
     var path: String? {
         switch self {
             case let .local(name):
-                return getAppBundle().path(forResource: name, ofType: "tgs")
+                if let tgsPath = getAppBundle().path(forResource: name, ofType: "tgs") {
+                    return tgsPath
+                }
+                return getAppBundle().path(forResource: name, ofType: "json")
             case let .resource(account, resource):
                 return account.postbox.mediaBox.completedResourcePath(resource._asResource())
         }

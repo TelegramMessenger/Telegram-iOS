@@ -424,7 +424,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     case let .animated(resource, isVideo):
                         let animatedStickerNode = AnimatedStickerNode()
                         self.animatedStickerNode = animatedStickerNode
-                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: isVideo), width: 80, height: 80, mode: .cached)
+                        animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: isVideo), width: 80, height: 80, mode: .direct(cachePathPrefix: nil))
                     }
                 }
             case let .dice(dice, context, text, action):

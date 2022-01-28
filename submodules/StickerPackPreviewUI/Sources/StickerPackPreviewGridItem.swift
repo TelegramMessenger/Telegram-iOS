@@ -153,7 +153,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
                         self.animationNode = animationNode
-                        self.addSubnode(animationNode)
+                        self.insertSubnode(animationNode, aboveSubnode: self.imageNode)
                         animationNode.started = { [weak self] in
                             self?.imageNode.isHidden = true
                             self?.removePlaceholder(animated: false)
@@ -196,16 +196,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         let bounds = self.bounds
         let boundsSide = min(bounds.size.width - 14.0, bounds.size.height - 14.0)
         let boundingSize = CGSize(width: boundsSide, height: boundsSide)
-        
-        if let placeholderNode = self.placeholderNode {
-            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
-            placeholderNode.frame = bounds
-            
-            if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
-                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
-            }
-        }
-        
+                
         if let (_, item) = self.currentState {
             if let item = item, let dimensions = item.file.dimensions?.cgSize {
                 let imageSize = dimensions.aspectFitted(boundingSize)
@@ -216,6 +207,18 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     animationNode.frame = imageFrame
                     animationNode.updateLayout(size: imageSize)
                 }
+            }
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            let imageFrame = self.imageNode.frame
+            
+//            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
+            let placeholderFrame = imageFrame
+            placeholderNode.frame = imageFrame
+            
+            if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
+                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
             }
         }
     }

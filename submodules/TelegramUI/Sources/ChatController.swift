@@ -7573,7 +7573,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> switchToLatest
                     |> deliverOnMainQueue).start(next: { [weak self] added in
                         if let strongSelf = self {
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: false, action: { _ in return false }), in: .current)
+                            strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
                         }
                     })
                 }

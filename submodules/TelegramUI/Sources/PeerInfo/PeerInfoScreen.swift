@@ -2835,7 +2835,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
             case .qrCode:
                 strongSelf.openQrCode()
-            case .editPhoto, .editVideo:
+            case .editPhoto, .editVideo, .moreToSearch:
                 break
             }
         }
