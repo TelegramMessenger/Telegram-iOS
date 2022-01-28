@@ -8547,7 +8547,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     var items: [ContextMenuItem] = []
                     for peer in peers {
-                        items.append(.action(ContextMenuActionItem(text: EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: EnginePeer(peer), size: avatarSize)), action: { _, f in
+                        let title: String
+                        let iconSource: ContextMenuActionItemIconSource?
+                        if peer.id == strongSelf.context.account.peerId {
+                            title = strongSelf.presentationData.strings.DialogList_SavedMessages
+                            iconSource = nil
+                        } else {
+                            title = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                            iconSource = ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: EnginePeer(peer), size: avatarSize))
+                        }
+                        
+                        let isSavedMessages = peer.id == strongSelf.context.account.peerId
+                        
+                        items.append(.action(ContextMenuActionItem(text: title, icon: { _ in
+                            if isSavedMessages {
+                                return generateAvatarImage(size: avatarSize, icon: savedMessagesIcon, iconScale: 0.5, color: .blue)
+                            }
+                            return nil
+                        }, iconSource: iconSource, action: { _, f in
                             f(.default)
                             
                             guard let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController else {

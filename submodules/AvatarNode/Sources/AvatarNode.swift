@@ -12,7 +12,7 @@ import Emoji
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
 private let phoneIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/PhoneIcon"), color: .white)
-private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
+public let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 private let repliesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/RepliesMessagesIcon"), color: .white)
 
@@ -683,7 +683,7 @@ public enum AvatarBackgroundColor {
     case violet
 }
 
-public func generateAvatarImage(size: CGSize, icon: UIImage?, color: AvatarBackgroundColor) -> UIImage? {
+public func generateAvatarImage(size: CGSize, icon: UIImage?, iconScale: CGFloat = 1.0, color: AvatarBackgroundColor) -> UIImage? {
     return generateImage(size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.beginPath()
@@ -730,7 +730,8 @@ public func generateAvatarImage(size: CGSize, icon: UIImage?, color: AvatarBackg
         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
         
         if let icon = icon {
-            let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - icon.size.width) / 2.0), y: floor((size.height - icon.size.height) / 2.0)), size: icon.size)
+            let iconSize = CGSize(width: icon.size.width * iconScale, height: icon.size.height * iconScale)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
             context.draw(icon.cgImage!, in: iconFrame)
         }
     })
