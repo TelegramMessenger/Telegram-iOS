@@ -622,6 +622,10 @@ public final class AnimatedStickerNode: ASDisplayNode {
             guard let frameSource = maybeFrameSource else {
                 return
             }
+            if frameSource.frameCount == 0 {
+                return
+            }
+            
             let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
                 return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
             })
