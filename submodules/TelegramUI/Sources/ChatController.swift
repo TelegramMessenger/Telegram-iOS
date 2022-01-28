@@ -2920,7 +2920,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .speak:
                 speakText(text.string)
             case .translate:
-                translateText(context: context, text: text.string)
+                let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { sharedData in
+                    let translationSettings: TranslationSettings
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                        translationSettings = current
+                    } else {
+                        translationSettings = TranslationSettings.defaultSettings
+                    }
+                    
+                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                    
+                    translateText(context: context, text: text.string, fromLang: language)
+                })
             }
         }, displayImportedMessageTooltip: { [weak self] _ in
             guard let strongSelf = self else {
