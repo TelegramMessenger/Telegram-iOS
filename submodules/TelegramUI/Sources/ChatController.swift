@@ -14766,7 +14766,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-private final class ChatControllerContextReferenceContentSource: ContextReferenceContentSource {
+final class ChatControllerContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceNode: ContextReferenceContentNode
     private let insets: UIEdgeInsets
