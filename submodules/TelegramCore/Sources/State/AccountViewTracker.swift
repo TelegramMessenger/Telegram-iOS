@@ -1868,9 +1868,9 @@ public final class AccountViewTracker {
                     }
                 }
                 var reactionCount: Int32 = 0
-                if let view = views.views[pendingReactionsKey] as? PendingMessageActionsSummaryView {
+                /*if let view = views.views[pendingReactionsKey] as? PendingMessageActionsSummaryView {
                     reactionCount -= view.count
-                }
+                }*/
                 if let view = views.views[summaryReactionsKey] as? MessageHistoryTagSummaryView {
                     if let unseenCount = view.count {
                         reactionCount += unseenCount
