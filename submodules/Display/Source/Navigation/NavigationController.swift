@@ -1323,6 +1323,30 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     open override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        for i in 0 ..< viewControllers.count {
+            guard let controller = viewControllers[i] as? ViewController else {
+                continue
+            }
+            if self.viewControllers.contains(where: { $0 === controller }) {
+                continue
+            }
+            if let customNavigationData = controller.customNavigationData {
+                var found = false
+                for previousIndex in (0 ..< self.viewControllers.count).reversed() {
+                    let previousController = self.viewControllers[previousIndex]
+                    
+                    if let previousController = previousController as? ViewController, let previousCustomNavigationDataSummary = previousController.customNavigationDataSummary {
+                        controller.customNavigationDataSummary = customNavigationData.combine(summary: previousCustomNavigationDataSummary)
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    controller.customNavigationDataSummary = customNavigationData.combine(summary: nil)
+                }
+            }
+        }
+        
         self._viewControllers = viewControllers.map { controller in
             let controller = controller as! ViewController
             controller.navigation_setNavigationController(self)

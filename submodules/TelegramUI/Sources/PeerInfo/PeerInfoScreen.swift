@@ -7059,6 +7059,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         return self._ready
     }
     
+    override public var customNavigationData: CustomViewControllerNavigationData? {
+        get {
+            if !self.isSettings {
+                return ChatControllerNavigationData(peerId: self.peerId)
+            } else {
+                return nil
+            }
+        }
+    }
+    
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
@@ -7427,6 +7437,53 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         super.viewWillDisappear(animated)
         
         self.dismissAllTooltips()
+    }
+    
+    override public func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        var chatNavigationStack: [PeerId] = []
+        if !self.isSettings, let summary = self.customNavigationDataSummary as? ChatControllerNavigationDataSummary {
+            chatNavigationStack.removeAll()
+            chatNavigationStack = summary.peerIds.filter({ $0 != peerId })
+        }
+        
+        if !chatNavigationStack.isEmpty {
+            self.navigationBar?.backButtonNode.isGestureEnabled = true
+            self.navigationBar?.backButtonNode.activated = { [weak self] gesture, _ in
+                guard let strongSelf = self else {
+                    gesture.cancel()
+                    return
+                }
+                
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                    return chatNavigationStack.compactMap(transaction.getPeer)
+                }
+                |> deliverOnMainQueue).start(next: { peers in
+                    guard let strongSelf = self, let backButtonNode = strongSelf.navigationBar?.backButtonNode else {
+                        return
+                    }
+                    
+                    let avatarSize = CGSize(width: 28.0, height: 28.0)
+                    
+                    var items: [ContextMenuItem] = []
+                    for peer in peers {
+                        items.append(.action(ContextMenuActionItem(text: EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: EnginePeer(peer), size: avatarSize)), action: { _, f in
+                            f(.default)
+                            
+                            guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
+                                return
+                            }
+
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true, completion: { _ in
+                            }))
+                        })))
+                    }
+                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceNode: backButtonNode, insets: UIEdgeInsets(), contentInsets: UIEdgeInsets(top: 0.0, left: -15.0, bottom: 0.0, right: -15.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                    strongSelf.presentInGlobalOverlay(contextController)
+                })
+            }
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

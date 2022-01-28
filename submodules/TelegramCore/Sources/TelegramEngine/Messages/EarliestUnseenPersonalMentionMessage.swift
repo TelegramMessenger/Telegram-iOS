@@ -15,6 +15,9 @@ func _internal_earliestUnseenPersonalMentionMessage(account: Account, peerId: Pe
         if view.0.isLoading {
             return .single(.loading)
         }
+        if case .FillHole = view.1 {
+            return _internal_earliestUnseenPersonalMentionMessage(account: account, peerId: peerId)
+        }
         if let message = view.0.entries.first?.message {
             if peerId.namespace == Namespaces.Peer.CloudChannel {
                 var invalidatedPts: Int32?
@@ -78,6 +81,9 @@ func _internal_earliestUnseenPersonalReactionMessage(account: Account, peerId: P
     |> mapToSignal { view -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> in
         if view.0.isLoading {
             return .single(.loading)
+        }
+        if case .FillHole = view.1 {
+            return _internal_earliestUnseenPersonalReactionMessage(account: account, peerId: peerId)
         }
         if let message = view.0.entries.first?.message {
             if peerId.namespace == Namespaces.Peer.CloudChannel {

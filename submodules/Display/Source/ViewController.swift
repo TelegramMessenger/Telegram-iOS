@@ -73,6 +73,13 @@ public enum TabBarItemContextActionType {
     case whenActive
 }
 
+public protocol CustomViewControllerNavigationData: AnyObject {
+    func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary?
+}
+
+public protocol CustomViewControllerNavigationDataSummary: AnyObject {
+}
+
 @objc open class ViewController: UIViewController, ContainableController {
     public struct NavigationLayout {
         public var navigationFrame: CGRect
@@ -273,6 +280,13 @@ public enum TabBarItemContextActionType {
             return nil
         }
     }
+    
+    open var customNavigationData: CustomViewControllerNavigationData? {
+        get {
+            return nil
+        }
+    }
+    open var customNavigationDataSummary: CustomViewControllerNavigationDataSummary?
     
     public internal(set) var isInFocus: Bool = false {
         didSet {

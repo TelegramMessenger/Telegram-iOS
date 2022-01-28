@@ -7,6 +7,7 @@ func _internal_installInteractiveReadMessagesAction(postbox: Postbox, stateManag
     return postbox.installStoreMessageAction(peerId: peerId, { messages, transaction in
         var consumeMessageIds: [MessageId] = []
         var readReactionIds: [MessageId] = []
+        readReactionIds.removeAll()
         
         var readMessageIndexByNamespace: [MessageId.Namespace: MessageIndex] = [:]
         
@@ -32,7 +33,7 @@ func _internal_installInteractiveReadMessagesAction(postbox: Postbox, stateManag
                     consumeMessageIds.append(id)
                 }
                 if hasUnseenReactions {
-                    readReactionIds.append(id)
+                    //readReactionIds.append(id)
                 }
                 
                 if !message.flags.intersection(.IsIncomingMask).isEmpty {
@@ -56,6 +57,7 @@ func _internal_installInteractiveReadMessagesAction(postbox: Postbox, stateManag
                         }
                     }
                 }
+                var tags = currentMessage.tags
                 if readReactionIds.contains(id) {
                     reactionsLoop: for j in 0 ..< attributes.count {
                         if let attribute = attributes[j] as? ReactionsMessageAttribute {
@@ -63,9 +65,8 @@ func _internal_installInteractiveReadMessagesAction(postbox: Postbox, stateManag
                             break reactionsLoop
                         }
                     }
+                    tags.remove(.unseenReaction)
                 }
-                var tags = currentMessage.tags
-                tags.remove(.unseenReaction)
                 return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
             })
             
@@ -149,7 +150,7 @@ private final class StoreOrUpdateMessageActionImpl: StoreOrUpdateMessageAction {
                 }
                 var tags = currentMessage.tags
                 tags.remove(.unseenReaction)
-                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
             })
             transaction.setPendingMessageAction(type: .readReaction, id: id, action: ReadReactionAction())
         }

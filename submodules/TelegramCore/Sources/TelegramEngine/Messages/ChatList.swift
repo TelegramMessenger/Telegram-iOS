@@ -231,7 +231,7 @@ extension EngineChatList.Item {
                 tag: .unseenReaction,
                 actionType: PendingMessageActionType.readReaction
             )] {
-                hasUnseenReactions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
+                hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
             }
             
             self.init(

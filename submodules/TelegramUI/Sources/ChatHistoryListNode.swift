@@ -1905,8 +1905,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                                         hasUnconsumedMention = true
-                                    } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
-                                        hasUnseenReactions = true
                                     }
                                 }
                             }
@@ -1921,6 +1919,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     }
                                 } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                     hasUnconsumedContent = true
+                                } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
+                                    hasUnseenReactions = true
                                 }
                             }
                             if hasUnconsumedMention && !hasUnconsumedContent {
