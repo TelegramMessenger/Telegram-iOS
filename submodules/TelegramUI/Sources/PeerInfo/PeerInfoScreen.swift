@@ -4977,10 +4977,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     })]
                     
-
-                    if canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages) {
+                    let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                    if canTranslate {
                         actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuTranslate, accessibilityLabel: presentationData.strings.Conversation_ContextMenuTranslate), action: {
-                            translateText(context: context, text: text)
+                            translateText(context: context, text: text, fromLang: language)
                         }))
                     }
                     

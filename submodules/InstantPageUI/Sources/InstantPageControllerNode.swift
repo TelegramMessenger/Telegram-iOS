@@ -1046,9 +1046,10 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })]
                 
-                if canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages) {
+                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                if canTranslate {
                     actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: {
-                        translateText(context: context, text: text)
+                        translateText(context: context, text: text, fromLang: language)
                     }))
                 }
                 

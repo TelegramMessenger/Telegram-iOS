@@ -313,5 +313,9 @@ public extension TelegramEngine {
         public func messageReactionList(message: EngineMessage, reaction: String?) -> EngineMessageReactionListContext {
             return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
         }
+        
+        public func translate(text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
+            return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
+        }
     }
 }
