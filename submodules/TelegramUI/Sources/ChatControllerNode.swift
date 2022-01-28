@@ -487,7 +487,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.historyNodeContainer)
-        self.addSubnode(self.navigateButtons)
 
         self.addSubnode(self.inputPanelBackgroundNode)
         self.addSubnode(self.inputPanelBackgroundSeparatorNode)
@@ -499,6 +498,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
 
         self.addSubnode(self.messageTransitionNode)
+        self.addSubnode(self.navigateButtons)
         self.addSubnode(self.presentationContextMarker)
 
         self.navigationBar?.additionalContentNode.addSubnode(self.titleAccessoryPanelContainer)

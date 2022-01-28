@@ -660,6 +660,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             theme: strongSelf.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                             reaction: itemNode.item,
                             avatarPeers: [],
+                            playHaptic: false,
                             isLarge: false,
                             targetView: targetView,
                             addStandaloneReactionAnimation: nil,
@@ -719,11 +720,32 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.longPressRecognizer?.state = .cancelled
+                    strongSelf.longPressRecognizer?.state = .ended
                 }, queue: .mainQueue())
                 self.longPressTimer?.start()
             }
-        case .ended, .cancelled:
+        case .changed:
+            let point = recognizer.location(in: self.view)
+            var shouldCancel = false
+            if let itemNode = self.reactionItemNode(at: point) {
+                if self.highlightedReaction != itemNode.item.reaction {
+                    shouldCancel = true
+                }
+            } else {
+                shouldCancel = true
+            }
+            if shouldCancel {
+                self.longPressRecognizer?.state = .cancelled
+            }
+        case .cancelled:
+            self.longPressTimer?.invalidate()
+            self.continuousHaptic = nil
+            
+            self.highlightedReaction = nil
+            if let (size, insets, anchorRect) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.3, curve: .spring), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+            }
+        case .ended:
             self.longPressTimer?.invalidate()
             self.continuousHaptic = nil
             self.didTriggerExpandedReaction = true
@@ -871,14 +893,18 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
-        self.animateReactionSelection(context: context, theme: theme, reaction: reaction, avatarPeers: avatarPeers, isLarge: isLarge, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+        self.animateReactionSelection(context: context, theme: theme, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
-    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], playHaptic: Bool,  isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
+        }
+        
+        if playHaptic {
+            self.hapticFeedback.tap()
         }
         
         self.targetView = targetView
@@ -966,7 +992,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         additionalAnimationNode.updateLayout(size: effectFrame.size)
         self.addSubnode(additionalAnimationNode)
         
-        if !isLarge, let url = getAppBundle().url(forResource: "effectavatar", withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+        if !isLarge, !avatarPeers.isEmpty, let url = getAppBundle().url(forResource: "effectavatar", withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
             let view = LOTAnimationView(model: composition, in: getAppBundle())
             view.animationSpeed = 1.0
             view.backgroundColor = nil
@@ -1036,6 +1062,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                                 theme: itemNode.context.sharedContext.currentPresentationData.with({ $0 }).theme,
                                 reaction: itemNode.item,
                                 avatarPeers: avatarPeers,
+                                playHaptic: false,
                                 isLarge: false,
                                 targetView: targetView,
                                 addStandaloneReactionAnimation: nil,
