@@ -5910,7 +5910,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         switch result {
                             case let .result(messageId):
                                 if let messageId = messageId {
-                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, nil), completion: {
+                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, nil), scrollPosition: .center(.top), completion: {
                                         guard let strongSelf = self else {
                                             return
                                         }
