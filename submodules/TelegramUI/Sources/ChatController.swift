@@ -14875,7 +14875,9 @@ final class ChatControllerNavigationDataSummary: CustomViewControllerNavigationD
     
     func adding(peerId: PeerId) -> ChatControllerNavigationDataSummary {
         var peerIds = self.peerIds
-        peerIds.removeAll(where: { $0 == peerId })
+        if let index = peerIds.firstIndex(of: peerId) {
+            peerIds.removeSubrange(0 ... index)
+        }
         peerIds.insert(peerId, at: 0)
         return ChatControllerNavigationDataSummary(peerIds: peerIds)
     }

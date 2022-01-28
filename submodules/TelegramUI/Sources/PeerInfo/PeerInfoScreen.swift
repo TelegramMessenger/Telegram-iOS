@@ -7059,6 +7059,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         return self._ready
     }
     
+    override public var customNavigationData: CustomViewControllerNavigationData? {
+        get {
+            if !self.isSettings {
+                return ChatControllerNavigationData(peerId: self.peerId)
+            } else {
+                return nil
+            }
+        }
+    }
+    
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil) {
