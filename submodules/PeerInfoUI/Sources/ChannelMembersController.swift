@@ -292,7 +292,7 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
     
     var entries: [ChannelMembersEntry] = []
     
-    if let participants = participants {
+    if let participants = participants, let contacts = contacts {
         var canAddMember: Bool = false
         if let peer = view.peers[view.peerId] as? TelegramChannel {
             canAddMember = peer.hasPermission(.inviteMembers)
@@ -322,7 +322,7 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
         var existingPeerIds = Set<PeerId>()
         
         var addedContactsHeader = false
-        if let contacts = contacts, !contacts.isEmpty {
+        if !contacts.isEmpty {
             addedContactsHeader = true
             
             entries.append(.contactsTitle(presentationData.theme, isGroup ? presentationData.strings.Group_Members_Contacts : presentationData.strings.Channel_Members_Contacts))
@@ -603,11 +603,13 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
         currentPeers = peers
         
         var animateChanges = false
-        if let previousContacts = previousContacts, let contacts = contacts, previousContacts.count >= contacts.count {
-            animateChanges = true
-        }
-        if let previousPeers = previousPeers, let peers = peers, previousPeers.count >= peers.count {
-            animateChanges = true
+        if let previousContacts = previousContacts, let contacts = contacts, let previousPeers = previousPeers, let peers = peers {
+            if previousContacts.count >= contacts.count {
+                animateChanges = true
+            }
+            if previousPeers.count >= peers.count {
+                animateChanges = true
+            }
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.Group_Members_Title : presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)

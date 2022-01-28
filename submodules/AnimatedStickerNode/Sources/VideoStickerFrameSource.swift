@@ -205,48 +205,6 @@ private final class VideoStickerFrameSourceCache {
         }
     }
     
-    func storeUncompressedYuvaFrame(index: Int, yuvaData: Data) {
-        if index < 0 || index >= maximumFrameCount {
-            return
-        }
-        if self.isStoringFrames.contains(index) {
-            return
-        }
-        self.isStoringFrames.insert(index)
-        
-        let width = self.width
-        let height = self.height
-        
-        let queue = self.queue
-        self.storeQueue.async { [weak self] in
-            let compressedData = compressFrame(width: width, height: height, yuvaData: yuvaData)
-            
-            queue.async {
-                guard let strongSelf = self else {
-                    return
-                }
-                guard let currentSize = strongSelf.file.getSize() else {
-                    return
-                }
-                guard let compressedData = compressedData else {
-                    return
-                }
-                
-                strongSelf.file.seek(position: Int64(8 + index * 4 * 2))
-                var offset = Int32(currentSize)
-                var length = Int32(compressedData.count)
-                let _ = strongSelf.file.write(&offset, count: 4)
-                let _ = strongSelf.file.write(&length, count: 4)
-                strongSelf.file.seek(position: Int64(currentSize))
-                compressedData.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
-                    if let baseAddress = buffer.baseAddress {
-                        let _ = strongSelf.file.write(baseAddress, count: Int(length))
-                    }
-                }
-            }
-        }
-    }
-    
     func readUncompressedYuvaFrame(index: Int) -> Data? {
         if index < 0 || index >= maximumFrameCount {
             return nil

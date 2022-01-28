@@ -1086,7 +1086,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                     if let file = media as? TelegramMediaFile, !chatPresentationInterfaceState.copyProtectionEnabled && !message.isCopyProtected() {
                         if file.isVideo {
-                            if file.isAnimated {
+                            if file.isAnimated && !file.isVideoSticker {
                                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_LinkDialogSave, icon: { theme in
                                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                                 }, action: { _, f in
