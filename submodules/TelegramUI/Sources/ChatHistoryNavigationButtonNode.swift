@@ -138,9 +138,9 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
             
             let badgeSize = self.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
             let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
-            let backgroundFrame = CGRect(origin: CGPoint(x: floor((38.0 - backgroundSize.width) / 2.0), y: -6.0), size: backgroundSize)
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((38.0 - backgroundSize.width) / 2.0), y: -9.0), size: backgroundSize)
             self.badgeBackgroundNode.frame = backgroundFrame
-            self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: -5.0), size: badgeSize)
+            self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: -8.0), size: badgeSize)
         } else {
             self.badgeBackgroundNode.isHidden = true
             self.badgeTextNode.isHidden = true
