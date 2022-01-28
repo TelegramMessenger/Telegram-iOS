@@ -1329,7 +1329,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     mentionBadgeContent = .mention
                 } else if hasUnseenReactions {
-                    currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundReactions(item.presentationData.theme, diameter: badgeDiameter)
+                    if isRemovedFromTotalUnreadCount {
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundInactiveReactions(item.presentationData.theme, diameter: badgeDiameter)
+                    } else {
+                        currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundReactions(item.presentationData.theme, diameter: badgeDiameter)
+                    }
                     mentionBadgeContent = .mention
                 } else if item.index.pinningIndex != nil && promoInfo == nil && currentBadgeBackgroundImage == nil {
                     currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme, diameter: badgeDiameter)
