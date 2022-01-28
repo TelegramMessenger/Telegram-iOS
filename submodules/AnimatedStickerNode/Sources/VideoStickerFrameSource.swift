@@ -6,6 +6,7 @@ import UniversalMediaPlayer
 import CoreMedia
 import ManagedFile
 import Accelerate
+import TelegramCore
 
 private let sharedStoreQueue = Queue.concurrentDefaultQueue()
 
@@ -20,6 +21,7 @@ private final class VideoStickerFrameSourceCache {
     
     private let queue: Queue
     private let storeQueue: Queue
+    private let path: String
     private let file: ManagedFile
     private let width: Int
     private let height: Int
@@ -28,6 +30,9 @@ private final class VideoStickerFrameSourceCache {
     public private(set) var frameCount: Int32 = 0
     
     private var isStoringFrames = Set<Int>()
+    var storedFrames: Int {
+        return self.isStoringFrames.count
+    }
     
     private var scratchBuffer: Data
     private var decodeBuffer: Data
@@ -40,13 +45,13 @@ private final class VideoStickerFrameSourceCache {
         self.height = height
         
         let version: Int = 1
-        let path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
-        var file = ManagedFile(queue: queue, path: path, mode: .readwrite)
+        self.path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
+        var file = ManagedFile(queue: queue, path: self.path, mode: .readwrite)
         if let file = file {
             self.file = file
         } else {
-            let _ = try? FileManager.default.removeItem(atPath: path)
-            file = ManagedFile(queue: queue, path: path, mode: .readwrite)
+            let _ = try? FileManager.default.removeItem(atPath: self.path)
+            file = ManagedFile(queue: queue, path: self.path, mode: .readwrite)
             if let file = file {
                 self.file = file
             } else {
@@ -61,6 +66,12 @@ private final class VideoStickerFrameSourceCache {
         self.decodeBuffer = Data(count: yuvaLength)
         
         self.initializeFrameTable()
+    }
+    
+    deinit {
+        if self.frameCount == 0 {
+            let _ = try? FileManager.default.removeItem(atPath: self.path)
+        }
     }
     
     private func initializeFrameTable() {
@@ -107,6 +118,7 @@ private final class VideoStickerFrameSourceCache {
         if self.file.read(&frameCount, 4) != 4 {
             return false
         }
+        
         if frameCount < 0 {
             return false
         }
@@ -178,48 +190,6 @@ private final class VideoStickerFrameSourceCache {
         let queue = self.queue
         self.storeQueue.async { [weak self] in
             let compressedData = compressFrame(width: width, height: height, rgbData: rgbData)
-            
-            queue.async {
-                guard let strongSelf = self else {
-                    return
-                }
-                guard let currentSize = strongSelf.file.getSize() else {
-                    return
-                }
-                guard let compressedData = compressedData else {
-                    return
-                }
-                
-                strongSelf.file.seek(position: Int64(8 + index * 4 * 2))
-                var offset = Int32(currentSize)
-                var length = Int32(compressedData.count)
-                let _ = strongSelf.file.write(&offset, count: 4)
-                let _ = strongSelf.file.write(&length, count: 4)
-                strongSelf.file.seek(position: Int64(currentSize))
-                compressedData.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
-                    if let baseAddress = buffer.baseAddress {
-                        let _ = strongSelf.file.write(baseAddress, count: Int(length))
-                    }
-                }
-            }
-        }
-    }
-    
-    func storeUncompressedYuvaFrame(index: Int, yuvaData: Data) {
-        if index < 0 || index >= maximumFrameCount {
-            return
-        }
-        if self.isStoringFrames.contains(index) {
-            return
-        }
-        self.isStoringFrames.insert(index)
-        
-        let width = self.width
-        let height = self.height
-        
-        let queue = self.queue
-        self.storeQueue.async { [weak self] in
-            let compressedData = compressFrame(width: width, height: height, yuvaData: yuvaData)
             
             queue.async {
                 guard let strongSelf = self else {
@@ -360,9 +330,22 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
             } else if let source = self.source {
                 let frameAndLoop = source.readFrame(maxPts: nil)
                 if frameAndLoop.0 == nil {
-                    if frameAndLoop.3 && self.frameCount == 0 {
-                        self.frameCount = frameIndex
-                        self.cache?.storeFrameRateAndCount(frameRate: self.frameRate, frameCount: self.frameCount)
+                    if frameAndLoop.3 {
+                        if self.frameCount == 0 {
+                            if let cache = self.cache {
+                                if cache.storedFrames == frameIndex {
+                                    self.frameCount = frameIndex
+                                    cache.storeFrameRateAndCount(frameRate: self.frameRate, frameCount: self.frameCount)
+                                } else {
+                                    Logger.shared.log("VideoSticker", "Missed a frame? \(frameIndex) \(cache.storedFrames)")
+                                }
+                            } else {
+                                self.frameCount = frameIndex
+                            }
+                        }
+                        self.currentFrame = 0
+                    } else {
+                        Logger.shared.log("VideoSticker", "Skipped a frame?")
                     }
                     return nil
                 }
