@@ -117,7 +117,8 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         return .image
     case let .file(file):
         var fileName: String = ""
-        var isAnimation = false
+        
+        var result: MessageContentKind?
         for attribute in file.attributes {
             switch attribute {
             case let .Sticker(text, _, _):
@@ -138,20 +139,20 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
                 }
             case let .Video(_, _, flags):
                 if file.isAnimated {
-                    isAnimation = true
+                    result = .animation
                 } else {
                     if flags.contains(.instantRoundVideo) {
-                        return .videoMessage
+                        result = .videoMessage
                     } else {
-                        return .video
+                        result = .video
                     }
                 }
             default:
                 break
             }
         }
-        if isAnimation {
-            return .animation
+        if let result = result {
+            return result
         }
         if file.isVideoSticker || file.isAnimatedSticker {
             return .sticker("")
