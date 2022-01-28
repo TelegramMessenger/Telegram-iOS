@@ -20,6 +20,7 @@ private final class VideoStickerFrameSourceCache {
     
     private let queue: Queue
     private let storeQueue: Queue
+    private let path: String
     private let file: ManagedFile
     private let width: Int
     private let height: Int
@@ -40,13 +41,13 @@ private final class VideoStickerFrameSourceCache {
         self.height = height
         
         let version: Int = 1
-        let path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
-        var file = ManagedFile(queue: queue, path: path, mode: .readwrite)
+        self.path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
+        var file = ManagedFile(queue: queue, path: self.path, mode: .readwrite)
         if let file = file {
             self.file = file
         } else {
-            let _ = try? FileManager.default.removeItem(atPath: path)
-            file = ManagedFile(queue: queue, path: path, mode: .readwrite)
+            let _ = try? FileManager.default.removeItem(atPath: self.path)
+            file = ManagedFile(queue: queue, path: self.path, mode: .readwrite)
             if let file = file {
                 self.file = file
             } else {
@@ -61,6 +62,12 @@ private final class VideoStickerFrameSourceCache {
         self.decodeBuffer = Data(count: yuvaLength)
         
         self.initializeFrameTable()
+    }
+    
+    deinit {
+        if self.frameCount == 0 {
+            let _ = try? FileManager.default.removeItem(atPath: self.path)
+        }
     }
     
     private func initializeFrameTable() {
