@@ -1298,6 +1298,9 @@ public final class AccountViewTracker {
                         for id in addedMessageIds {
                             if let _ = transaction.getMessage(id) {
                                 transaction.updateMessage(id, update: { currentMessage in
+                                    if !currentMessage.tags.contains(.unseenReaction) {
+                                        return .skip
+                                    }
                                     var attributes = currentMessage.attributes
                                     loop: for j in 0 ..< attributes.count {
                                         if let attribute = attributes[j] as? ReactionsMessageAttribute {
