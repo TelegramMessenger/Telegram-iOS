@@ -5661,7 +5661,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                //print("sendMessages \(correlationIds)")
                 let peerId = strongSelf.chatLocation.peerId
                 strongSelf.commitPurposefulAction()
                 
