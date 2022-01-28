@@ -33,6 +33,7 @@ swift_library(
         "//submodules/MediaResources:MediaResources",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/ManagedFile:ManagedFile",
+        "//submodules/TelegramCore:TelegramCore",
     ],
     visibility = [
         "//visibility:public",

@@ -6,6 +6,7 @@ import UniversalMediaPlayer
 import CoreMedia
 import ManagedFile
 import Accelerate
+import TelegramCore
 
 private let sharedStoreQueue = Queue.concurrentDefaultQueue()
 
@@ -29,6 +30,9 @@ private final class VideoStickerFrameSourceCache {
     public private(set) var frameCount: Int32 = 0
     
     private var isStoringFrames = Set<Int>()
+    var storedFrames: Int {
+        return self.isStoringFrames.count
+    }
     
     private var scratchBuffer: Data
     private var decodeBuffer: Data
@@ -114,6 +118,7 @@ private final class VideoStickerFrameSourceCache {
         if self.file.read(&frameCount, 4) != 4 {
             return false
         }
+        
         if frameCount < 0 {
             return false
         }
@@ -325,9 +330,22 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
             } else if let source = self.source {
                 let frameAndLoop = source.readFrame(maxPts: nil)
                 if frameAndLoop.0 == nil {
-                    if frameAndLoop.3 && self.frameCount == 0 {
-                        self.frameCount = frameIndex
-                        self.cache?.storeFrameRateAndCount(frameRate: self.frameRate, frameCount: self.frameCount)
+                    if frameAndLoop.3 {
+                        if self.frameCount == 0 {
+                            if let cache = self.cache {
+                                if cache.storedFrames == frameIndex {
+                                    self.frameCount = frameIndex
+                                    cache.storeFrameRateAndCount(frameRate: self.frameRate, frameCount: self.frameCount)
+                                } else {
+                                    Logger.shared.log("VideoSticker", "Missed a frame? \(frameIndex) \(cache.storedFrames)")
+                                }
+                            } else {
+                                self.frameCount = frameIndex
+                            }
+                        }
+                        self.currentFrame = 0
+                    } else {
+                        Logger.shared.log("VideoSticker", "Skipped a frame?")
                     }
                     return nil
                 }
