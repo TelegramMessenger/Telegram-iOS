@@ -128,7 +128,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                             imageDimensions = representation.dimensions.cgSize
                         }
                         break
-                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                    } else if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
                         updatedMediaReference = .message(message: MessageReference(message), media: file)
                         
                         if let dimensions = file.dimensions {

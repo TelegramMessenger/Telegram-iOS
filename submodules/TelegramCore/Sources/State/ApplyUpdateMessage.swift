@@ -184,7 +184,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                                     sentStickers.append(file)
                                 }
                             case .Animated:
-                                sentGifs.append(file)
+                                if !file.isVideoSticker {
+                                    sentGifs.append(file)
+                                }
                             default:
                                 break
                             }
