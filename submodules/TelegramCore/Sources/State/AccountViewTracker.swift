@@ -1297,16 +1297,21 @@ public final class AccountViewTracker {
                     let _ = (account.postbox.transaction { transaction -> Void in
                         for id in addedMessageIds {
                             if let _ = transaction.getMessage(id) {
-                                /*transaction.updateMessage(id, update: { currentMessage in
+                                transaction.updateMessage(id, update: { currentMessage in
+                                    if !currentMessage.tags.contains(.unseenReaction) {
+                                        return .skip
+                                    }
                                     var attributes = currentMessage.attributes
                                     loop: for j in 0 ..< attributes.count {
-                                        if let attribute = attributes[j] as? ConsumablePersonalMentionMessageAttribute {
-                                            attributes[j] = ConsumablePersonalMentionMessageAttribute(consumed: attribute.consumed, pending: true)
+                                        if let attribute = attributes[j] as? ReactionsMessageAttribute {
+                                            attributes[j] = attribute.withAllSeen()
                                             break loop
                                         }
                                     }
-                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
-                                })*/
+                                    var tags = currentMessage.tags
+                                    tags.remove(.unseenReaction)
+                                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init), authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                                })
 
                                 if transaction.getPendingMessageAction(type: .readReaction, id: id) == nil {
                                     transaction.setPendingMessageAction(type: .readReaction, id: id, action: ReadReactionAction())
