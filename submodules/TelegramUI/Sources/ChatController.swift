@@ -1295,6 +1295,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 largeApplicationAnimation: reaction.effectAnimation
                                             ),
                                             avatarPeers: [],
+                                            playHaptic: false,
                                             isLarge: false,
                                             targetView: targetView,
                                             addStandaloneReactionAnimation: { standaloneReactionAnimation in
@@ -5925,7 +5926,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                             
                                             var avatarPeers: [EnginePeer] = []
-                                            if let updatedReactionPeer = updatedReactionPeer {
+                                            if item.message.id.peerId.namespace != Namespaces.Peer.CloudUser, let updatedReactionPeer = updatedReactionPeer {
                                                 avatarPeers.append(updatedReactionPeer)
                                             }
                                             
@@ -5960,6 +5961,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                             largeApplicationAnimation: reaction.effectAnimation
                                                         ),
                                                         avatarPeers: avatarPeers,
+                                                        playHaptic: true,
                                                         isLarge: updatedReactionIsLarge,
                                                         targetView: targetView,
                                                         addStandaloneReactionAnimation: { standaloneReactionAnimation in

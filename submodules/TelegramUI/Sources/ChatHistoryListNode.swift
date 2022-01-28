@@ -2705,6 +2705,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
                         
+                        var avatarPeers: [EnginePeer] = []
+                        if item.message.id.peerId.namespace != Namespaces.Peer.CloudUser, let updateReactionPeer = updateReactionPeer {
+                            avatarPeers = [updateReactionPeer]
+                        }
+                        
                         chatDisplayNode.addSubnode(standaloneReactionAnimation)
                         standaloneReactionAnimation.frame = chatDisplayNode.bounds
                         standaloneReactionAnimation.animateReactionSelection(
@@ -2719,7 +2724,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 applicationAnimation: aroundAnimation,
                                 largeApplicationAnimation: reaction.effectAnimation
                             ),
-                            avatarPeers: updateReactionPeer.flatMap({ [$0] }) ?? [],
+                            avatarPeers: avatarPeers,
+                            playHaptic: true,
                             isLarge: updatedReactionIsLarge,
                             targetView: targetView,
                             addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
