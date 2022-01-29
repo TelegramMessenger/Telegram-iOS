@@ -169,7 +169,7 @@ void decodeYUVAToRGBA(uint8_t const *yuva, uint8_t *argb, int width, int height,
     }
 }
 
-void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint8_t const *srcCbData, int srcCbBytesPerRow, uint8_t const *srcCrData, int srcCrBytesPerRow, uint8_t const *alphaData, uint8_t *argb, int width, int height, int bytesPerRow) {
+void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint8_t const *srcCbData, int srcCbBytesPerRow, uint8_t const *srcCrData, int srcCrBytesPerRow, bool hasAlpha, uint8_t const *alphaData, uint8_t *argb, int width, int height, int bytesPerRow) {
     static vImage_YpCbCrToARGB info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -204,12 +204,14 @@ void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint
     dest.rowBytes = bytesPerRow;
     error = vImageConvert_420Yp8_Cb8_Cr8ToARGB8888(&srcYp, &srcCb, &srcCr, &dest, &info, NULL, 0xff, kvImageDoNotTile);
     
-    for (int y = 0; y < height; y += 1) {
-        uint8_t *argbRow = argb + y * bytesPerRow;
-        int alphaRow = y * srcYpBytesPerRow;
-        
-        for (int x = 0; x < width; x += 1) {
-            argbRow[x * 4] = alphaData[alphaRow + x];
+    if (hasAlpha) {
+        for (int y = 0; y < height; y += 1) {
+            uint8_t *argbRow = argb + y * bytesPerRow;
+            int alphaRow = y * srcYpBytesPerRow;
+            
+            for (int x = 0; x < width; x += 1) {
+                argbRow[x * 4] = alphaData[alphaRow + x];
+            }
         }
     }
 
