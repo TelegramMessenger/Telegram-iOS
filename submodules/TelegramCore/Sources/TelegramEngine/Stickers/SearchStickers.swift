@@ -117,7 +117,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                                 matchingRecentItemsIds.insert(file.fileId)
                             }
                             recentItemsIds.insert(file.fileId)
-                            if file.isAnimatedSticker {
+                            if file.isAnimatedSticker || file.isVideoSticker {
                                 recentAnimatedItems.append(file)
                             } else {
                                 recentItems.append(file)
@@ -147,7 +147,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                             }
                         }
                         if !recentItemsIds.contains(item.file.fileId) {
-                            if item.file.isAnimatedSticker {
+                            if item.file.isAnimatedSticker || item.file.isVideoSticker {
                                 installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
                             } else {
                                 installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
@@ -199,7 +199,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             
             for file in cached.items {
                 if !currentItemIds.contains(file.fileId) {
-                    if file.isAnimatedSticker {
+                    if file.isAnimatedSticker || file.isVideoSticker {
                         cachedAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                     } else {
                         cachedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
@@ -230,7 +230,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
                                 files.append(file)
                                 if !currentItemIds.contains(id) {
-                                    if file.isAnimatedSticker {
+                                    if file.isAnimatedSticker || file.isVideoSticker {
                                         animatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                                     } else {
                                         items.append(FoundStickerItem(file: file, stringRepresentations: []))
