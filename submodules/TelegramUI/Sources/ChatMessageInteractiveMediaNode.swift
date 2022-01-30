@@ -440,7 +440,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                 }
                 unboundSize = CGSize(width: floor(dimensions.cgSize.width * 0.5), height: floor(dimensions.cgSize.height * 0.5))
-                if file.isAnimated {
+                if file.isSticker || file.isAnimatedSticker || file.isVideoSticker {
+                    unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
+                    isSticker = true
+                } else if file.isAnimated {
                     unboundSize = unboundSize.aspectFilled(CGSize(width: 480.0, height: 480.0))
                 } else if file.isVideo && !file.isAnimated, case let .constrained(constrainedSize) = sizeCalculation {
                     if unboundSize.width > unboundSize.height {
@@ -449,9 +452,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         maxDimensions = CGSize(width: constrainedSize.width, height: layoutConstants.video.maxVerticalHeight)
                     }
                     maxHeight = maxDimensions.height
-                } else if file.isSticker || file.isAnimatedSticker {
-                    unboundSize = unboundSize.aspectFilled(CGSize(width: 162.0, height: 162.0))
-                    isSticker = true
                 }
                 isInlinePlayableVideo = file.isVideo && !isSecretMedia
             } else if let image = media as? TelegramMediaWebFile, let dimensions = image.dimensions {
@@ -712,7 +712,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     updateImageSignal = { synchronousLoad, _ in
                                         return chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
                                     }
-                                } else if file.isSticker {
+                                } else if file.isSticker || file.isVideoSticker {
                                     updateImageSignal = { synchronousLoad, _ in
                                         return chatMessageSticker(account: context.account, file: file, small: false)
                                     }
@@ -729,7 +729,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 uploading = true
                             }
                             
-                            if file.isVideo && !isSecretMedia && automaticPlayback && !uploading {
+                            if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !uploading {
                                 updateVideoFile = file
                                 if hasCurrentVideoNode {
                                     if let currentFile = currentMedia as? TelegramMediaFile {
@@ -751,7 +751,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     replaceVideoNode = false
                                 }
                                 
-                                if file.isAnimatedSticker {
+                                if file.isAnimatedSticker || file.isVideoSticker {
                                     updateAnimatedStickerFile = file
                                     if hasCurrentAnimatedStickerNode {
                                         if let currentMedia = currentMedia {
@@ -870,6 +870,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                         }
                     }
+                    
+                    
                     
                     let arguments = TransformImageArguments(corners: corners, imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: isInlinePlayableVideo ? .fill(.black) : .blurBackground, emptyColor: emptyColor, custom: patternArguments)
                     
@@ -1200,14 +1202,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         } else if let fetchStatus = self.fetchStatus {
             switch fetchStatus {
                 case .Local:
-                    if let file = media as? TelegramMediaFile, file.isVideo {
+                    if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
                         progressRequired = true
                     } else if isSecretMedia {
                         progressRequired = true
                     } else if let webpage = webpage, case let .Loaded(content) = webpage.content {
                         if content.embedUrl != nil {
                             progressRequired = true
-                        } else if let file = content.file, file.isVideo, !file.isAnimated {
+                        } else if let file = content.file, file.isVideo, !file.isAnimated && !file.isVideoSticker {
                             progressRequired = true
                         }
                     }
@@ -1335,7 +1337,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                     
                     if let file = self.media as? TelegramMediaFile {
-                        if wideLayout {
+                        if file.isVideoSticker {
+                            state = .none
+                            badgeContent = nil
+                        } else if wideLayout {
                             if let size = file.size {
                                  let sizeString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: formatting)) / \(dataSizeString(size, forceDecimal: true, formatting: formatting))"
                                 if let duration = file.duration, !message.flags.contains(.Unsent) {
@@ -1425,7 +1430,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
                     } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
                         state = .customIcon(secretProgressIcon)
-                    } else if let file = media as? TelegramMediaFile {
+                    } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
                         if !isInlinePlayableVideo && file.isVideo {
                             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
@@ -1439,13 +1444,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             state = .play(messageTheme.mediaOverlayControlColors.foregroundColor)
                         }
                     }
-                    if let file = media as? TelegramMediaFile, let duration = file.duration {
+                    if let file = media as? TelegramMediaFile, let duration = file.duration, !file.isVideoSticker {
                         let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                         badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                     }
                 case .Remote:
                     state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
-                    if let file = self.media as? TelegramMediaFile {
+                    if let file = self.media as? TelegramMediaFile, !file.isVideoSticker {
                         do {
                             let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                             if wideLayout {
