@@ -507,8 +507,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
                             updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource, nilIfEmpty: true)
                         }
-                    case let .animated(resource, _, _):
-                        imageSize = imageBoundingSize
+                    case let .animated(resource, dimensions, _):
+                        imageSize = dimensions.cgSize.aspectFitted(imageBoundingSize)
                     
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageBoundingSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
