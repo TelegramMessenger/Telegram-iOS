@@ -67,9 +67,6 @@ private final class SortHeaderButton: HighlightableButtonNode {
             strongSelf.contextAction?(strongSelf.containerNode, gesture)
         }
 
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
-        self.referenceNode.frame = self.containerNode.bounds
-        
         self.update(theme: presentationData.theme, strings: presentationData.strings)
     }
 
@@ -82,10 +79,15 @@ private final class SortHeaderButton: HighlightableButtonNode {
         self.textNode.attributedText = NSAttributedString(string: strings.Contacts_Sort, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
         let size = self.textNode.updateLayout(CGSize(width: 100.0, height: 44.0))
         self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((44.0 - size.height) / 2.0)), size: size)
+        
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 44.0))
+        self.referenceNode.frame = self.containerNode.bounds
     }
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        return CGSize(width: 44.0, height: 44.0)
+        let size = self.textNode.updateLayout(CGSize(width: 100.0, height: 44.0))
+        
+        return CGSize(width: size.width, height: 44.0)
     }
 
     func onLayout() {

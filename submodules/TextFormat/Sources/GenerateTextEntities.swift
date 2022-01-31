@@ -193,7 +193,7 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                                     guard let host = url.host?.lowercased() else {
                                         return
                                     }
-                                    if host == "telegram.org" || host == "t.me" {
+                                    if ["telegram.org", "www.telegram.org", "t.me", "www.t.me"].contains(host) {
                                     } else {
                                         return
                                     }
