@@ -215,8 +215,6 @@ void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint
         }
     }
 
-    error = vImagePremultiplyData_ARGB8888(&dest, &dest, kvImageDoNotTile);
-    
     uint8_t permuteMap[4] = {3, 2, 1, 0};
     error = vImagePermuteChannels_ARGB8888(&dest, &dest, permuteMap, kvImageDoNotTile);
     

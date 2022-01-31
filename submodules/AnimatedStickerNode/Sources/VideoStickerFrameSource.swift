@@ -44,7 +44,7 @@ private final class VideoStickerFrameSourceCache {
         self.width = width
         self.height = height
         
-        let version: Int = 1
+        let version: Int = 2
         self.path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
         var file = ManagedFile(queue: queue, path: self.path, mode: .readwrite)
         if let file = file {
