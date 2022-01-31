@@ -63,6 +63,7 @@ public final class ChannelMembersSearchController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.presentationData.strings.Channel_Members_Title
+        
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.scrollToTop = { [weak self] in
@@ -86,6 +87,18 @@ public final class ChannelMembersSearchController: ViewController {
             }
             strongSelf.presentationData = presentationData
             strongSelf.controllerNode.updatePresentationData(presentationData)
+        })
+        
+        let _ = (context.account.postbox.loadedPeerWithId(peerId)
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            if let strongSelf = self {
+                if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                    strongSelf.title = strongSelf.presentationData.strings.Channel_Subscribers_Title
+                } else {
+                    strongSelf.title = strongSelf.presentationData.strings.Channel_Members_Title
+                }
+            }
         })
     }
     

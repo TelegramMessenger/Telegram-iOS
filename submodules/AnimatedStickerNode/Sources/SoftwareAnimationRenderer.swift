@@ -4,13 +4,14 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import YuvConversion
+import Accelerate
 
 final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private var highlightedContentNode: ASDisplayNode?
     private var highlightedColor: UIColor?
     private var highlightReplacesContent = false
         
-    func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, completion: @escaping () -> Void) {
+    func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, mulAlpha: Bool, completion: @escaping () -> Void) {
         assert(bytesPerRow > 0)
         queue.async { [weak self] in
             switch type {
@@ -38,11 +39,22 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                             decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(contextBytesPerRow))
                         }
                     case .argb:
-                        data.withUnsafeBytes { bytes -> Void in
+                        var data = data
+                        data.withUnsafeMutableBytes { bytes -> Void in
                             guard let baseAddress = bytes.baseAddress else {
                                 return
                             }
-                            memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
+                            if mulAlpha {
+                                var srcData = vImage_Buffer(data: baseAddress.assumingMemoryBound(to: UInt8.self), height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: bytesPerRow)
+                                var destData = vImage_Buffer(data: pixelData, height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: bytesPerRow)
+                                
+                                let permuteMap: [UInt8] = [3, 2, 1, 0]
+                                vImagePermuteChannels_ARGB8888(&srcData, &destData, permuteMap, vImage_Flags(kvImageDoNotTile))
+                                vImagePremultiplyData_ARGB8888(&destData, &destData, vImage_Flags(kvImageDoNotTile))
+                                vImagePermuteChannels_ARGB8888(&destData, &destData, permuteMap, vImage_Flags(kvImageDoNotTile))
+                            } else {
+                                memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
+                            }
                         }
                     }
                 })

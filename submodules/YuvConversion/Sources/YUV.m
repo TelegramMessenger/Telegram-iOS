@@ -1,7 +1,7 @@
 #import <YuvConversion/YUV.h>
 #import <Accelerate/Accelerate.h>
 
-void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height, int bytesPerRow) {
+void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height, int bytesPerRow, bool unpremultiply) {
     static vImage_ARGBToYpCbCr info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -19,8 +19,10 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height,
     
     uint8_t permuteMap[4] = {3, 2, 1, 0};
     error = vImagePermuteChannels_ARGB8888(&src, &src, permuteMap, kvImageDoNotTile);
-    
-    error = vImageUnpremultiplyData_ARGB8888(&src, &src, kvImageDoNotTile);
+  
+    if (unpremultiply) {
+        error = vImageUnpremultiplyData_ARGB8888(&src, &src, kvImageDoNotTile);
+    }
     
     uint8_t *alpha = yuva + width * height * 2;
     int i = 0;
@@ -51,7 +53,7 @@ void encodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height,
         return;
     }
 }
-void resizeAndEncodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height, int bytesPerRow, int originalWidth, int originalHeight, int originalBytesPerRow) {
+void resizeAndEncodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, int height, int bytesPerRow, int originalWidth, int originalHeight, int originalBytesPerRow, bool unpremultiply) {
     static vImage_ARGBToYpCbCr info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -80,7 +82,9 @@ void resizeAndEncodeRGBAToYUVA(uint8_t *yuva, uint8_t const *argb, int width, in
     uint8_t permuteMap[4] = {3, 2, 1, 0};
     error = vImagePermuteChannels_ARGB8888(&dst, &dst, permuteMap, kvImageDoNotTile);
     
-    error = vImageUnpremultiplyData_ARGB8888(&dst, &dst, kvImageDoNotTile);
+    if (unpremultiply) {
+        error = vImageUnpremultiplyData_ARGB8888(&dst, &dst, kvImageDoNotTile);
+    }
     
     uint8_t *alpha = yuva + width * height * 2;
     int i = 0;
@@ -173,10 +177,10 @@ void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint
     static vImage_YpCbCrToARGB info;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 0, 128, 255, 255, 255, 1, 255, 0 };
-        vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_709_2, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
+        vImage_YpCbCrPixelRange pixelRange = (vImage_YpCbCrPixelRange){ 16, 128, 235, 240, 255, 0, 255, 0 };
+        vImageConvert_YpCbCrToARGB_GenerateConversion(kvImage_YpCbCrToARGBMatrix_ITU_R_601_4, &pixelRange, &info, kvImage420Yp8_Cb8_Cr8, kvImageARGB8888, 0);
     });
-    
+                
     vImage_Error error = kvImageNoError;
     
     vImage_Buffer srcYp;
@@ -216,6 +220,7 @@ void decodeYUVAPlanesToRGBA(uint8_t const *srcYpData, int srcYpBytesPerRow, uint
     }
 
     uint8_t permuteMap[4] = {3, 2, 1, 0};
+    error = vImageUnpremultiplyData_ARGB8888(&dest, &dest, kvImageDoNotTile);
     error = vImagePermuteChannels_ARGB8888(&dest, &dest, permuteMap, kvImageDoNotTile);
     
     if (error != kvImageNoError) {

@@ -72,8 +72,9 @@ public final class AnimatedStickerFrame {
     let index: Int
     let isLastFrame: Bool
     let totalFrames: Int
+    let multiplyAlpha: Bool
     
-    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, index: Int, isLastFrame: Bool, totalFrames: Int) {
+    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, index: Int, isLastFrame: Bool, totalFrames: Int, multiplyAlpha: Bool = false) {
         self.data = data
         self.type = type
         self.width = width
@@ -83,6 +84,7 @@ public final class AnimatedStickerFrame {
         self.index = index
         self.isLastFrame = isLastFrame
         self.totalFrames = totalFrames
+        self.multiplyAlpha = multiplyAlpha
     }
 }
 
@@ -422,7 +424,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 return
                             }
                             
-                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -527,7 +529,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
 
                             assert(frame.bytesPerRow != 0)
                             
-                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -679,7 +681,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         return
                     }
                     
-                    strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                    strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                         guard let strongSelf = self else {
                             return
                         }
