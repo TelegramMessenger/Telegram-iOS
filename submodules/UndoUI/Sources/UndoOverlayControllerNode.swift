@@ -348,7 +348,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 enum StickerPackThumbnailItem {
                     case still(TelegramMediaImageRepresentation)
-                    case animated(EngineMediaResource, Bool)
+                    case animated(EngineMediaResource, PixelDimensions, Bool)
                 }
                 
                 var thumbnailItem: StickerPackThumbnailItem?
@@ -356,14 +356,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 if let thumbnail = info.thumbnail {
                     if info.flags.contains(.isAnimated) || info.flags.contains(.isVideo) {
-                        thumbnailItem = .animated(EngineMediaResource(thumbnail.resource), info.flags.contains(.isVideo))
+                        thumbnailItem = .animated(EngineMediaResource(thumbnail.resource), thumbnail.dimensions, info.flags.contains(.isVideo))
                     } else {
                         thumbnailItem = .still(thumbnail)
                     }
                     resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
                 } else if let item = topItem {
                     if item.file.isAnimatedSticker || item.file.isVideoSticker {
-                        thumbnailItem = .animated(EngineMediaResource(item.file.resource), item.file.isVideoSticker)
+                        thumbnailItem = .animated(EngineMediaResource(item.file.resource), item.file.dimensions ?? PixelDimensions(width: 512, height: 512), item.file.isVideoSticker)
                         resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
                     } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                         thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
@@ -383,8 +383,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         self.stickerImageSize = stillImageSize
                         
                         updatedImageSignal = chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: representation.resource)
-                    case let .animated(resource, _):
-                        self.stickerImageSize = imageBoundingSize
+                    case let .animated(resource, dimensions, _):
+                        self.stickerImageSize = dimensions.cgSize.aspectFitted(imageBoundingSize)
                         
                         updatedImageSignal = chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: resource._asResource(), animated: true)
                     }
@@ -421,7 +421,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     switch thumbnailItem {
                     case .still:
                         break
-                    case let .animated(resource, isVideo):
+                    case let .animated(resource, _, isVideo):
                         let animatedStickerNode = AnimatedStickerNode()
                         self.animatedStickerNode = animatedStickerNode
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: isVideo), width: 80, height: 80, mode: .direct(cachePathPrefix: nil))

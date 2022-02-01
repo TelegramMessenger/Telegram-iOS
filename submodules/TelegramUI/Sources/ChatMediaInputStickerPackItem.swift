@@ -364,7 +364,9 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     scalingNode.addSubnode(imageNode)
                     
                     snapshotImageNode = imageNode
-                case let .animated(resource, _, isVideo):
+                case let .animated(resource, dimensions, isVideo):
+                    imageSize = dimensions.cgSize.aspectFitted(boundingImageSize)
+                
                     let animatedStickerNode = AnimatedStickerNode()
                     animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
                     animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
