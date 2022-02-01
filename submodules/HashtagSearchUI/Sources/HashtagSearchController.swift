@@ -19,6 +19,7 @@ public final class HashtagSearchController: TelegramBaseController {
     private let openMessageFromSearchDisposable = MetaDisposable()
     
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     private var controllerNode: HashtagSearchControllerNode {
         return self.displayNode as! HashtagSearchControllerNode
@@ -38,12 +39,12 @@ public final class HashtagSearchController: TelegramBaseController {
         self.title = query
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
-        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
-        
         let location: SearchMessagesLocation = .general(tags: nil, minDate: nil, maxDate: nil)
         let search = context.engine.messages.searchMessages(location: location, query: query, state: nil)
-        let foundMessages: Signal<[ChatListSearchEntry], NoError> = search
-        |> map { result, _ in
+        let foundMessages: Signal<[ChatListSearchEntry], NoError> = combineLatest(search, self.context.sharedContext.presentationData)
+        |> map { result, presentationData in
+            let result = result.0
+            let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap(EnginePeerReadCounters.init), chatListPresentationData, result.totalCount, nil, false) })
         }
         let interaction = ChatListNodeInteraction(activateSearch: {
@@ -101,6 +102,24 @@ public final class HashtagSearchController: TelegramBaseController {
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })
+        
+        self.presentationDataDisposable = (self.context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                let previousTheme = strongSelf.presentationData.theme
+                let previousStrings = strongSelf.presentationData.strings
+                
+                strongSelf.presentationData = presentationData
+                
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings {
+                    strongSelf.updateThemeAndStrings()
+                }
+            }
+        })
+        
+        self.scrollToTop = { [weak self] in
+            self?.controllerNode.scrollToTop()
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -109,11 +128,12 @@ public final class HashtagSearchController: TelegramBaseController {
     
     deinit {
         self.transitionDisposable?.dispose()
+        self.presentationDataDisposable?.dispose()
         self.openMessageFromSearchDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = HashtagSearchControllerNode(context: self.context, peer: self.peer, query: self.query, theme: self.presentationData.theme, strings: self.presentationData.strings, navigationBar: self.navigationBar, navigationController: self.navigationController as? NavigationController)
+        self.displayNode = HashtagSearchControllerNode(context: self.context, peer: self.peer, query: self.query, navigationBar: self.navigationBar, navigationController: self.navigationController as? NavigationController)
         if let chatController = self.controllerNode.chatController {
             chatController.parentController = self
         }
@@ -124,6 +144,14 @@ public final class HashtagSearchController: TelegramBaseController {
     private var suspendNavigationBarLayout: Bool = false
     private var suspendedNavigationBarLayout: ContainerViewLayout?
     private var additionalNavigationBarBackgroundHeight: CGFloat = 0.0
+    
+    private func updateThemeAndStrings() {
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        
+        self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
+        
+        self.controllerNode.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
+    }
 
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.suspendNavigationBarLayout {

@@ -1970,7 +1970,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 strongSelf.chatDisplayNode.dismissInput()
                 openChatTheme(context: strongSelf.context, message: message, pushController: { [weak self] c in
-                    (self?.navigationController as? NavigationController)?.pushViewController(c)
+                    self?.effectiveNavigationController?.pushViewController(c)
                 }, present: { [weak self] c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 })
@@ -12417,7 +12417,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func openMessageReplies(messageId: MessageId, displayProgressInMessage: MessageId?, isChannelPost: Bool, atMessage atMessageId: MessageId?, displayModalProgress: Bool) {
-        guard let navigationController = self.navigationController as? NavigationController else {
+        guard let navigationController = self.effectiveNavigationController else {
             return
         }
         
