@@ -743,14 +743,18 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
                     
                     let boundingSize = CGSize(width: 34.0, height: 34.0)
-                    if let thumbnailItem = thumbnailItem, let imageSize = imageSize {
-                        let imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                    let imageFrame: CGRect
+                    if let imageSize = imageSize {
+                        imageFrame = CGRect(origin: CGPoint(x: params.leftInset + revealOffset + editingOffset + 15.0 + floor((boundingSize.width - imageSize.width) / 2.0), y: floor((layout.contentSize.height - imageSize.height) / 2.0)), size: imageSize)
+                    } else {
+                        imageFrame = CGRect()
+                    }
+                    if let thumbnailItem = thumbnailItem {
                         transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                         
-                        var thumbnailDimensions = PixelDimensions(width: 512, height: 512)
                         switch thumbnailItem {
-                            case let .still(representation):
-                                thumbnailDimensions = representation.dimensions
+                            case .still:
+                                break
                             case let .animated(resource, _, isVideo):
                                 let animationNode: AnimatedStickerNode
                                 if let current = strongSelf.animationNode {
@@ -769,12 +773,23 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     transition.updateFrame(node: animationNode, frame: imageFrame)
                                 }
                         }
-                        
-                        if let placeholderNode = strongSelf.placeholderNode {
-                            placeholderNode.frame = imageFrame
-                            
-                            placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.packInfo.immediateThumbnailData, size: imageFrame.size, imageSize: thumbnailDimensions.cgSize)
+                    }
+                    
+                    if let placeholderNode = strongSelf.placeholderNode {
+                        var imageSize = PixelDimensions(width: 512, height: 512)
+                        var immediateThumbnailData: Data?
+                        if let data = item.packInfo.immediateThumbnailData {
+                            if item.packInfo.flags.contains(.isVideo) {
+                                imageSize = PixelDimensions(width: 100, height: 100)
+                            }
+                            immediateThumbnailData = data
+                        } else if let data = item.topItem?.file.immediateThumbnailData {
+                            immediateThumbnailData = data
                         }
+                        
+                        placeholderNode.frame = imageFrame
+                        
+                        placeholderNode.update(backgroundColor: nil, foregroundColor: item.presentationData.theme.list.disclosureArrowColor.blitOver(item.presentationData.theme.list.itemBlocksBackgroundColor, alpha: 0.55), shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: immediateThumbnailData, size: imageFrame.size, imageSize: imageSize.cgSize)
                     }
                     
                     if let updatedImageSignal = updatedImageSignal {
