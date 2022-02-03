@@ -390,11 +390,13 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             
-            if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
-                for url in files {
-                    if url.lastPathComponent.hasPrefix("account-") {
-                        if !validPaths.contains(url.lastPathComponent) {
-                            try? FileManager.default.removeItem(at: url)
+            DispatchQueue.global(qos: .utility).async {
+                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
+                    for url in files {
+                        if url.lastPathComponent.hasPrefix("account-") {
+                            if !validPaths.contains(url.lastPathComponent) {
+                                try? FileManager.default.removeItem(at: url)
+                            }
                         }
                     }
                 }
