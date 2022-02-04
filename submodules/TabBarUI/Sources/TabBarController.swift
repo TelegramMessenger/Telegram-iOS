@@ -124,9 +124,11 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     private let pendingControllerDisposable = MetaDisposable()
     
     private var theme: TabBarControllerTheme
+    private var showTabNames: Bool
     
-    public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme) {
+    public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme, showTabNames: Bool) {
         self.theme = theme
+        self.showTabNames = showTabNames
         
         super.init(navigationBarPresentationData: nil)
         
@@ -190,7 +192,7 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = TabBarControllerNode(theme: self.theme, itemSelected: { [weak self] index, longTap, itemNodes in
+        self.displayNode = TabBarControllerNode(theme: self.theme, showTabNames: self.showTabNames, itemSelected: { [weak self] index, longTap, itemNodes in
             if let strongSelf = self {
                 if longTap, let controller = strongSelf.controllers[index] as? TabBarContainedController {
                     controller.presentTabBarPreviewingController(sourceNodes: itemNodes)

@@ -982,9 +982,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let mosaicStatusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.mosaicStatusNode)
         
-        let currentShareButtonNode = self.shareButtonNode
-        let currentTrButtonNode = self.trButtonNode
-        
         let layoutConstants = self.layoutConstants
         
         let currentItem = self.appliedItem
@@ -1005,8 +1002,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 actionButtonsLayout: actionButtonsLayout,
                 reactionButtonsLayout: reactionButtonsLayout,
                 mosaicStatusLayout: mosaicStatusLayout,
-                currentShareButtonNode: currentShareButtonNode,
-                currentTrButtonNode: currentTrButtonNode,
                 wantTrButton: self.wantTrButton,
                 layoutConstants: layoutConstants,
                 currentItem: currentItem,
@@ -2214,61 +2209,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             layoutInsets.top += 4.0
         }
         
-        var updatedShareButtonBackground: UIImage?
-        var updatedTrButtonBackground: UIImage?
-        
-        var updatedShareButtonNode: HighlightableButtonNode?
-        if needsShareButton {
-            if currentShareButtonNode != nil {
-                updatedShareButtonNode = currentShareButtonNode
-                if item.presentationData.theme !== currentItem?.presentationData.theme {
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                    if case .pinnedMessages = item.associatedData.subject {
-                        updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
-                    } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                        updatedShareButtonBackground = graphics.chatBubbleNavigateButtonImage
-                    } else {
-                        updatedShareButtonBackground = graphics.chatBubbleShareButtonImage
-                    }
-                }
-            } else {
-                let buttonNode = HighlightableButtonNode()
-                let buttonIcon: UIImage?
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                if case .pinnedMessages = item.associatedData.subject {
-                    buttonIcon = graphics.chatBubbleNavigateButtonImage
-                } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                    buttonIcon = graphics.chatBubbleNavigateButtonImage
-                } else {
-                    buttonIcon = graphics.chatBubbleShareButtonImage
-                }
-                buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
-                updatedShareButtonNode = buttonNode
-            }
-        }
-        
-        var updatedTrButtonNode: HighlightableButtonNode?
-        if needTrButton {
-            if currentTrButtonNode != nil {
-                updatedTrButtonNode = currentTrButtonNode
-                if item.presentationData.theme !== currentItem?.presentationData.theme {
-                    let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                    updatedTrButtonBackground = graphics.chatBubbleTrButtonImage
-                }
-            } else {
-                let buttonNode = HighlightableButtonNode()
-                let buttonIcon: UIImage?
-                let graphics = PresentationResourcesChat.additionalGraphics(item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
-                buttonIcon = graphics.chatBubbleTrButtonImage
-
-                buttonNode.setBackgroundImage(buttonIcon, for: [.normal])
-                updatedTrButtonNode = buttonNode
-            }
-        }
-        
-        // Suppress warnings
-        if updatedShareButtonBackground != nil && updatedTrButtonBackground != nil && updatedShareButtonNode != nil && updatedTrButtonNode != nil {}
-        
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
         let graphics = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
@@ -2961,7 +2901,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     totalShareButtonOffset = shareButtonWidth + shareButtonOffset
                 }
                 
-                animation.animator.updateFrame(layer: shareButtonNode.layer, frame: CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0 - totalShareButtonOffset), size: buttonSize), completion: nil)
+                animation.animator.updateFrame(layer: trButtonNode.layer, frame: CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0 - totalShareButtonOffset), size: buttonSize), completion: nil)
                 
             }
         } else {
