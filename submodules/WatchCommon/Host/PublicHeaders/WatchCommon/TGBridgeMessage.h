@@ -50,7 +50,7 @@ typedef NS_ENUM(NSUInteger, TGBridgeMessageDeliveryState) {
 @property (nonatomic, strong) NSArray *media;
 @property (nonatomic) bool forceReply;
 
-- (NSIndexSet *)involvedUserIds;
+- (NSArray<NSNumber *> *)involvedUserIds;
 - (NSArray *)textCheckingResults;
 
 + (instancetype)temporaryNewMessageForText:(NSString *)text userId:(int32_t)userId;

@@ -1,8 +1,7 @@
 import Foundation
 import SwiftSignalKit
-
 import Crc32
-
+import ManagedFile
 
 private final class MediaBoxFileMap {
     fileprivate(set) var sum: Int32

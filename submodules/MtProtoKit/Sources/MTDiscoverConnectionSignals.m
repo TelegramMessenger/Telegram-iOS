@@ -249,7 +249,7 @@
         MTMetaDisposable *disposable = [[MTMetaDisposable alloc] init];
         
         [[MTContext contextQueue] dispatchOnQueue:^{
-            MTDatacenterAuthAction *action = [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:MTDatacenterAuthInfoSelectorEphemeralMain isCdn:false completion:^(__unused MTDatacenterAuthAction *action, bool success) {
+            MTDatacenterAuthAction *action = [[MTDatacenterAuthAction alloc] initWithAuthKeyInfoSelector:MTDatacenterAuthInfoSelectorEphemeralMain isCdn:false skipBind:false completion:^(__unused MTDatacenterAuthAction *action, bool success) {
                 [subscriber putNext:@(!success)];
                 [subscriber putCompletion];
             }];

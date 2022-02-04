@@ -23,6 +23,7 @@ public enum ItemListDisclosureLabelStyle {
     case multilineDetailText
     case badge(UIColor)
     case color(UIColor)
+    case image(image: UIImage, size: CGSize)
 }
 
 public class ItemListDisclosureItem: ListViewItem, ItemListItem {
@@ -234,6 +235,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     updatedLabelImage = generateFilledCircleImage(diameter: 17.0, color: color)
                 }
             }
+            if case let .image(image, _) = item.labelStyle {
+                updatedLabelImage = image
+            }
             
             let badgeDiameter: CGFloat = 20.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -425,6 +429,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true
@@ -468,7 +473,16 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.labelNode.frame = labelFrame
  
-                    if case .color = item.labelStyle {
+                    if case let .image(_, size) = item.labelStyle {
+                        if let updatedLabelImage = updatedLabelImage {
+                            strongSelf.labelImageNode.image = updatedLabelImage
+                        }
+                        if strongSelf.labelImageNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.labelImageNode)
+                        }
+                        
+                        strongSelf.labelImageNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - size.width - 30.0, y: floor((layout.contentSize.height - size.height) / 2.0)), size: size)
+                    } else if case .color = item.labelStyle {
                         if let updatedLabelImage = updatedLabelImage {
                             strongSelf.labelImageNode.image = updatedLabelImage
                         }

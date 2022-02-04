@@ -217,6 +217,40 @@
 "PUSH_CHAT_MESSAGE_GAME_SCORE" = "%1$@ scored %4$@ in game %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_VIDEOS" = "%1$@ sent %3$@ videos to the group %2$@";
 
+"PUSH_REACT_TEXT" = "%1$@|%2$@ to your %3$@";
+"PUSH_REACT_NOTEXT" = "%1$@|%2$@ to your message";
+"PUSH_REACT_PHOTO" = "%1$@|%2$@ to your photo";
+"PUSH_REACT_VIDEO" = "%1$@|%2$@ to your video";
+"PUSH_REACT_ROUND" = "%1$@|%2$@ to your video message";
+"PUSH_REACT_DOC" = "%1$@|%2$@ to your file";
+"PUSH_REACT_STICKER" = "%1$@|%2$@ to your %3$@sticker";
+"PUSH_REACT_AUDIO" = "%1$@|%2$@ to your voice message";
+"PUSH_REACT_CONTACT" = "%1$@|%2$@ to your contact %3$@";
+"PUSH_REACT_GEO" = "%1$@|%2$@ to your map";
+"PUSH_REACT_GEOLIVE" = "%1$@|%2$@ to your live location";
+"PUSH_REACT_POLL" = "%1$@|%2$@ to your poll %3$@";
+"PUSH_REACT_QUIZ" = "%1$@|%2$@ to your quiz %3$@";
+"PUSH_REACT_GAME" = "%1$@|%2$@ to your game";
+"PUSH_REACT_INVOICE" = "%1$@|%2$@ to your invoice";
+"PUSH_REACT_GIF" = "%1$@|%2$@ to your GIF";
+
+"PUSH_CHAT_REACT_TEXT" = "%2$@|%1$@ %3$@ to your %4$@";
+"PUSH_CHAT_REACT_NOTEXT" = "%2$@|%1$@ %3$@ to your message";
+"PUSH_CHAT_REACT_PHOTO" = "%2$@|%1$@ %3$@ to your photo";
+"PUSH_CHAT_REACT_VIDEO" = "%2$@|%1$@ %3$@ to your video";
+"PUSH_CHAT_REACT_ROUND" = "%2$@|%1$@ %3$@ to your video message";
+"PUSH_CHAT_REACT_DOC" = "%2$@|%1$@ %3$@ to your file";
+"PUSH_CHAT_REACT_STICKER" = "%2$@|%1$@ %3$@ to your %4$@sticker";
+"PUSH_CHAT_REACT_AUDIO" = "%2$@|%1$@ %3$@ to your voice message";
+"PUSH_CHAT_REACT_CONTACT" = "%2$@|%1$@ %3$@ to your contact %4$@";
+"PUSH_CHAT_REACT_GEO" = "%2$@|%1$@ %3$@ to your map";
+"PUSH_CHAT_REACT_GEOLIVE" = "%2$@|%1$@ %3$@ to your live location";
+"PUSH_CHAT_REACT_POLL" = "%2$@|%1$@ %3$@ to your poll %4$@";
+"PUSH_CHAT_REACT_QUIZ" = "%2$@|%1$@ %3$@ to your quiz %4$@";
+"PUSH_CHAT_REACT_GAME" = "%2$@|%1$@ %3$@ to your game";
+"PUSH_CHAT_REACT_INVOICE" = "%2$@|%1$@ %3$@ to your invoice";
+"PUSH_CHAT_REACT_GIF" = "%2$@|%1$@ %3$@ to your GIF";
+
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
 "PUSH_SENDER_YOU" = "📅 You";
 
@@ -7123,15 +7157,102 @@ Sorry for the inconvenience.";
 "ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
 
 "Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
-"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
+"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the number that called.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
 
 "Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
 
 "Contacts.AddContact" = "Add Contact";
 
-"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
+"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in the chat.";
 "Conversation.LargeEmojiEnable" = "Enable Large Emoji";
 "Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
 
+"PeerInfo.QRCode.Title" = "QR Code";
+
 "ChatList.Archive" = "Archive";
+
+"TextFormat.Spoiler" = "Spoiler";
+
+"Conversation.ContextMenuTranslate" = "Translate";
+
+"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need them again.";
+
+"ChatSettings.StickersAndReactions" = "Stickers and Emoji";
+
+"Localization.TranslateMessages" = "Translate Messages";
+"Localization.ShowTranslate" = "Show Translate Button";
+"Localization.ShowTranslateInfo" = "Show a 'Translate' button in the message action menu.";
+"Localization.DoNotTranslate" = "Do Not Translate";
+"Localization.DoNotTranslateInfo" = "Do not show the 'Translate' button in the message action menu for this language.";
+"Localization.DoNotTranslateManyInfo" = "Do not show the 'Translate' button in the message action menu for these languages.";
+"Localization.InterfaceLanguage" = "Interface Language";
+
+"DoNotTranslate.Title" = "Do Not Translate";
+
+"Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
+"Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";
+
+"Contacts.ScanQrCode" = "Scan QR Code";
+"Contacts.QrCode.MyCode" = "My QR Code";
+"Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
+
+"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Telegram to ON.";
+
+"Share.ShareToInstagramStories" = "Share to Instagram Stories";
+
+"PeerInfo.AllowedReactions.Title" = "Reactions";
+"PeerInfo.AllowedReactions.AllowAllText" = "Allow Reactions";
+"PeerInfo.AllowedReactions.AllowAllGroupInfo" = "Allow subscribers to react to group messages.";
+"PeerInfo.AllowedReactions.AllowAllChannelInfo" = "Allow subscribers to react to channel posts.";
+"PeerInfo.AllowedReactions.ReactionListHeader" = "AVAILABLE REACTIONS";
+
+"PeerInfo.Reactions" = "Reactions";
+"PeerInfo.ReactionsDisabled" = "Disabled";
+
+"Settings.QuickReactionSetup.NavigationTitle" = "Quick Reaction";
+"Settings.QuickReactionSetup.Title" = "Quick Reaction";
+"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON A MESSAGE TO REACT";
+"Settings.QuickReactionSetup.DemoInfo" = "You can double tap on message for a quick reaction.";
+"Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
+"Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
+"Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
+
+"Chat.ContextReactionCount_1" = "1 reaction";
+"Chat.ContextReactionCount_any" = "%@ reactions";
+"Chat.OutgoingContextReactionCount_1" = "1 reacted";
+"Chat.OutgoingContextReactionCount_any" = "%@ reacted";
+"Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";
+
+"Contacts.Sort" = "Sort";
+"Contacts.Sort.ByName" = "by Name";
+"Contacts.Sort.ByLastSeen" = "by Last Seen";
+
+"ClearCache.Progress" = "Clearing the Cache • %d%";
+"ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";
+
+"Share.ShareAsLink" = "Share as Link";
+"Share.ShareAsImage" = "Share as Image";
+
+"Share.MessagePreview" = "Message Preview";
+"Share.ShareMessage" = "Share Message";
+
+"Conversation.UserSendMessage" = "SEND MESSAGE";
+
+"Conversation.CopyProtectionForwardingDisabledBot" = "Forwards from this bot are restricted";
+"Conversation.CopyProtectionSavingDisabledBot" = "Saving from this bot is restricted";
+
+"Channel.ChannelSubscribersHeader" = "CHANNEL SUBSCRIBERS";
+
+"Channel.Members.Contacts" = "CONTACTS IN THIS CHANNEL";
+"Channel.Members.Other" = "OTHERS SUBSCRIBERS";
+
+"Group.Members.Contacts" = "CONTACTS IN THIS GROUP";
+"Group.Members.Other" = "OTHERS MEMBERS";
+
+"Conversation.ReadAllReactions" = "Read All Reactions";
+"ChatList.UserReacted" = "Reacted %@ to your message";
+
+"SharedMedia.CommonGroupCount_1" = "%@ group in common";
+"SharedMedia.CommonGroupCount_any" = "%@ groups in common";

@@ -125,9 +125,7 @@ private enum PeerMembersListEntry: Comparable, Identifiable {
                     action(member, .open)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in
-                }, contextAction: nil/*{ node, gesture in
-                    openPeerContextAction(peer, node, gesture)
-                 }*/, hasTopStripe: false, noInsets: true, disableInteractiveTransitionIfNecessary: true)
+                }, contextAction: nil, hasTopStripe: false, noInsets: true, noCorners: true, disableInteractiveTransitionIfNecessary: true)
         }
     }
 }

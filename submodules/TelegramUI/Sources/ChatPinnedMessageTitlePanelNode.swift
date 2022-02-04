@@ -15,6 +15,8 @@ import AnimatedCountLabelNode
 import AnimatedNavigationStripeNode
 import ContextUI
 import RadialStatusNode
+import InvisibleInkDustNode
+import TextFormat
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -50,6 +52,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let lineNode: AnimatedNavigationStripeNode
     private let titleNode: AnimatedCountLabelNode
     private let textNode: TextNode
+    private var spoilerTextNode: TextNode?
+    private var dustNode: InvisibleInkDustNode?
     
     private let imageNode: TransformImageNode
     private let imageNodeContainer: ASDisplayNode
@@ -67,6 +71,15 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var statusDisposable: Disposable?
 
     private let queue = Queue()
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let containerResult = self.contentTextContainer.hitTest(point.offsetBy(dx: -self.contentTextContainer.frame.minX, dy: -self.contentTextContainer.frame.minY), with: event)
+        if containerResult?.asyncdisplaykit_node === self.dustNode, self.dustNode?.isRevealed == false {
+            return containerResult
+        }
+        let result = super.hitTest(point, with: event)
+        return result
+    }
     
     init(context: AccountContext) {
         self.context = context
@@ -267,6 +280,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.currentMessage = interfaceState.pinnedMessage
             
             if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
+                self.dustNode?.update(revealed: false, animated: false)
                 self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
             }
         }
@@ -349,6 +363,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let makeTitleLayout = self.titleNode.asyncLayout()
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeSpoilerTextLayout = TextNode.asyncLayout(self.spoilerTextNode)
         let imageNodeLayout = self.imageNode.asyncLayout()
         
         let previousMediaReference = self.previousMediaReference
@@ -451,7 +466,37 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             let (titleLayout, titleApply) = makeTitleLayout(CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), titleStrings)
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: foldLineBreaks(descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId).0), font: Font.regular(15.0), textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            let (textString, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
+            
+            let messageText: NSAttributedString
+            let textFont = Font.regular(15.0)
+            if isText {
+                let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                    if case .Spoiler = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                let textColor = theme.chat.inputPanel.primaryTextColor
+                if entities.count > 0 {
+                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                } else {
+                    messageText = NSAttributedString(string: foldLineBreaks(textString), font: textFont, textColor: textColor)
+                }
+            } else {
+                messageText = NSAttributedString(string: foldLineBreaks(textString), font: textFont, textColor: message.media.isEmpty || message.media.first is TelegramMediaWebpage ? theme.chat.inputPanel.primaryTextColor : theme.chat.inputPanel.secondaryTextColor)
+            }
+            
+            let textConstrainedSize = CGSize(width: width - textLineInset - contentLeftInset - rightInset - textRightInset, height: CGFloat.greatestFiniteMagnitude)
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0)))
+            
+            let spoilerTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            if !textLayout.spoilers.isEmpty {
+                spoilerTextLayoutAndApply = makeSpoilerTextLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 0.0, bottom: 2.0, right: 0.0), displaySpoilers: true))
+            } else {
+                spoilerTextLayoutAndApply = nil
+            }
             
             Queue.mainQueue().async {
                 if let strongSelf = self {
@@ -460,10 +505,48 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     
                     strongSelf.previousMediaReference = updatedMediaReference
                     
-                    animationTransition.updateFrameAdditive(node: strongSelf.contentTextContainer, frame: CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 0.0), size: CGSize()))
+                    animationTransition.updateFrameAdditive(node: strongSelf.contentTextContainer, frame: CGRect(origin: CGPoint(x: contentLeftInset + textLineInset, y: 0.0), size: CGSize(width: width, height: panelHeight)))
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 5.0), size: titleLayout.size)
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
+                    
+                    let textFrame = CGRect(origin: CGPoint(x: 0.0, y: 23.0), size: textLayout.size)
+                    strongSelf.textNode.frame = textFrame
+                    
+                    
+                    if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
+                        let spoilerTextNode = spoilerTextApply()
+                        if strongSelf.spoilerTextNode == nil {
+                            spoilerTextNode.alpha = 0.0
+                            spoilerTextNode.isUserInteractionEnabled = false
+                            spoilerTextNode.contentMode = .topLeft
+                            spoilerTextNode.contentsScale = UIScreenScale
+                            spoilerTextNode.displaysAsynchronously = false
+                            strongSelf.contentTextContainer.insertSubnode(spoilerTextNode, aboveSubnode: strongSelf.textNode)
+                            
+                            strongSelf.spoilerTextNode = spoilerTextNode
+                        }
+                        
+                        strongSelf.spoilerTextNode?.frame = textFrame
+                        
+                        let dustNode: InvisibleInkDustNode
+                        if let current = strongSelf.dustNode {
+                            dustNode = current
+                        } else {
+                            dustNode = InvisibleInkDustNode(textNode: spoilerTextNode)
+                            strongSelf.dustNode = dustNode
+                            strongSelf.contentTextContainer.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
+                        }
+                        dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                        dustNode.update(size: dustNode.frame.size, color: theme.chat.inputPanel.secondaryTextColor, textColor: theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                    } else if let spoilerTextNode = strongSelf.spoilerTextNode {
+                        strongSelf.spoilerTextNode = nil
+                        spoilerTextNode.removeFromSupernode()
+                        
+                        if let dustNode = strongSelf.dustNode {
+                            strongSelf.dustNode = nil
+                            dustNode.removeFromSupernode()
+                        }
+                    }
                     
                     let lineFrame = CGRect(origin: CGPoint(x: contentLeftInset, y: 0.0), size: CGSize(width: 2.0, height: panelHeight))
                     animationTransition.updateFrame(node: strongSelf.lineNode, frame: lineFrame)

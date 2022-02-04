@@ -61,8 +61,4 @@ bazel-testlogs
 bazel-testlogs/*
 */*.swp
 *.swp
-build-input/data
-build-input/data/*
-build-input/gen
-build-input/gen/*
-*.pyc
+build-input/*

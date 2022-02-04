@@ -119,7 +119,7 @@
         }
         else {
             
-            [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent];
+            [context authInfoForDatacenterWithIdRequired:_targetDatacenterId isCdn:false selector:MTDatacenterAuthInfoSelectorPersistent allowUnboundEphemeralKeys:false];
         }
     }
 }

@@ -734,7 +734,7 @@ final class PeerChannelMemberCategoriesContext {
         let context: ChannelMemberCategoryListContext
         let emptyTimeout: Double
         switch key {
-            case .admins(nil), .banned(nil), .recentSearch(nil), .restricted(nil), .restrictedAndBanned(nil), .recent:
+            case .admins(nil), .banned(nil), .recentSearch(nil), .restricted(nil), .restrictedAndBanned(nil), .recent, .contacts:
                 emptyTimeout = defaultEmptyTimeout
             default:
                 emptyTimeout = 0.0

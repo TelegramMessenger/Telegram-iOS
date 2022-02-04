@@ -66,7 +66,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     override var isVisibleInGrid: Bool {
         didSet {
-            self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
+            let visibility = self.isVisibleInGrid && (self.interaction?.playAnimatedStickers ?? true)
+            if let animationNode = self.animationNode {
+                animationNode.visibility = visibility
+            }
         }
     }
     
@@ -139,21 +142,25 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem || self.isEmpty != isEmpty {
             if let stickerItem = stickerItem {
-                if stickerItem.file.isAnimatedSticker {
+                if stickerItem.file.isAnimatedSticker || stickerItem.file.isVideoSticker {
                     let dimensions = stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    if stickerItem.file.isVideoSticker {
+                        self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
+                    } else {
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    }
                     
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
                         self.animationNode = animationNode
-                        self.addSubnode(animationNode)
+                        self.insertSubnode(animationNode, aboveSubnode: self.imageNode)
                         animationNode.started = { [weak self] in
                             self?.imageNode.isHidden = true
                             self?.removePlaceholder(animated: false)
                         }
                     }
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
@@ -189,25 +196,29 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         let bounds = self.bounds
         let boundsSide = min(bounds.size.width - 14.0, bounds.size.height - 14.0)
         let boundingSize = CGSize(width: boundsSide, height: boundsSide)
-        
-        if let placeholderNode = self.placeholderNode {
-            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
-            placeholderNode.frame = bounds
-            
-            if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
-                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
-            }
-        }
-        
+                
         if let (_, item) = self.currentState {
             if let item = item, let dimensions = item.file.dimensions?.cgSize {
                 let imageSize = dimensions.aspectFitted(boundingSize)
+                let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-                self.imageNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+                self.imageNode.frame = imageFrame
                 if let animationNode = self.animationNode {
-                    animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
+                    animationNode.frame = imageFrame
                     animationNode.updateLayout(size: imageSize)
                 }
+            }
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            let imageFrame = self.imageNode.frame
+            
+//            let placeholderFrame = CGRect(origin: CGPoint(x: floor((bounds.width - boundingSize.width) / 2.0), y: floor((bounds.height - boundingSize.height) / 2.0)), size: boundingSize)
+            let placeholderFrame = imageFrame
+            placeholderNode.frame = imageFrame
+            
+            if let theme = self.theme, let (_, stickerItem) = self.currentState, let item = stickerItem {
+                placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
             }
         }
     }

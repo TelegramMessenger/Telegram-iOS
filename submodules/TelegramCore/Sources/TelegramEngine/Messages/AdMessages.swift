@@ -10,16 +10,58 @@ private class AdMessagesHistoryContextImpl {
             case text
             case textEntities
             case media
-            case authorId
+            case target
             case messageId
             case startParam
+        }
+        
+        enum Target: Equatable, Codable {
+            enum DecodingError: Error {
+                case generic
+            }
+            
+            enum CodingKeys: String, CodingKey {
+                case peer
+                case invite
+            }
+            
+            struct Invite: Equatable, Codable {
+                var title: String
+                var joinHash: String
+            }
+            
+            case peer(PeerId)
+            case invite(Invite)
+            
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                
+                if let peer = try container.decodeIfPresent(Int64.self, forKey: .peer) {
+                    self = .peer(PeerId(peer))
+                } else if let invite = try container.decodeIfPresent(Invite.self, forKey: .invite) {
+                    self = .invite(invite)
+                } else {
+                    throw DecodingError.generic
+                }
+            }
+            
+            func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                
+                switch self {
+                case let .peer(peerId):
+                    try container.encode(peerId.toInt64(), forKey: .peer)
+                case let .invite(invite):
+                    try container.encode(invite, forKey: .invite)
+                }
+            }
         }
 
         public let opaqueId: Data
         public let text: String
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
-        public let authorId: PeerId
+        public let target: Target
         public let messageId: MessageId?
         public let startParam: String?
 
@@ -28,7 +70,7 @@ private class AdMessagesHistoryContextImpl {
             text: String,
             textEntities: [MessageTextEntity],
             media: [Media],
-            authorId: PeerId,
+            target: Target,
             messageId: MessageId?,
             startParam: String?
         ) {
@@ -36,7 +78,7 @@ private class AdMessagesHistoryContextImpl {
             self.text = text
             self.textEntities = textEntities
             self.media = media
-            self.authorId = authorId
+            self.target = target
             self.messageId = messageId
             self.startParam = startParam
         }
@@ -54,7 +96,7 @@ private class AdMessagesHistoryContextImpl {
                 return PostboxDecoder(buffer: MemoryBuffer(data: data)).decodeRootObject() as? Media
             }
 
-            self.authorId = try container.decode(PeerId.self, forKey: .authorId)
+            self.target = try container.decode(Target.self, forKey: .target)
             self.messageId = try container.decodeIfPresent(MessageId.self, forKey: .messageId)
             self.startParam = try container.decodeIfPresent(String.self, forKey: .startParam)
         }
@@ -73,7 +115,7 @@ private class AdMessagesHistoryContextImpl {
             }
             try container.encode(mediaData, forKey: .media)
 
-            try container.encode(self.authorId, forKey: .authorId)
+            try container.encode(self.target, forKey: .target)
             try container.encodeIfPresent(self.messageId, forKey: .messageId)
             try container.encodeIfPresent(self.startParam, forKey: .startParam)
         }
@@ -96,7 +138,7 @@ private class AdMessagesHistoryContextImpl {
                     return false
                 }
             }
-            if lhs.authorId != rhs.authorId {
+            if lhs.target != rhs.target {
                 return false
             }
             if lhs.messageId != rhs.messageId {
@@ -108,10 +150,17 @@ private class AdMessagesHistoryContextImpl {
             return true
         }
 
-        func toMessage(peerId: PeerId, transaction: Transaction) -> Message {
+        func toMessage(peerId: PeerId, transaction: Transaction) -> Message? {
             var attributes: [MessageAttribute] = []
 
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, startParam: self.startParam, messageId: self.messageId))
+            let target: AdMessageAttribute.MessageTarget
+            switch self.target {
+            case let .peer(peerId):
+                target = .peer(id: peerId, message: self.messageId, startParam: self.startParam)
+            case let .invite(invite):
+                target = .join(title: invite.title, joinHash: invite.joinHash)
+            }
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, target: target))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -122,9 +171,35 @@ private class AdMessagesHistoryContextImpl {
             if let peer = transaction.getPeer(peerId) {
                 messagePeers[peer.id] = peer
             }
-            if let peer = transaction.getPeer(self.authorId) {
-                messagePeers[peer.id] = peer
+            
+            let author: Peer
+            switch self.target {
+            case let .peer(peerId):
+                if let peer = transaction.getPeer(peerId) {
+                    author = peer
+                } else {
+                    return nil
+                }
+            case let .invite(invite):
+                author = TelegramChannel(
+                    id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1)),
+                    accessHash: nil,
+                    title: invite.title,
+                    username: nil,
+                    photo: [],
+                    creationDate: 0,
+                    version: 0,
+                    participationStatus: .left,
+                    info: .broadcast(TelegramChannelBroadcastInfo(flags: [])),
+                    flags: [],
+                    restrictionInfo: nil,
+                    adminRights: nil,
+                    bannedRights: nil,
+                    defaultBannedRights: nil
+                )
             }
+            
+            messagePeers[author.id] = author
 
             return Message(
                 stableId: 0,
@@ -140,7 +215,7 @@ private class AdMessagesHistoryContextImpl {
                 globalTags: [],
                 localTags: [],
                 forwardInfo: nil,
-                author: transaction.getPeer(self.authorId),
+                author: author,
                 text: self.text,
                 attributes: attributes,
                 media: self.media,
@@ -270,7 +345,7 @@ private class AdMessagesHistoryContextImpl {
         |> mapToSignal { cachedState -> Signal<State, NoError> in
             if let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
                 return account.postbox.transaction { transaction -> State in
-                    return State(messages: cachedState.messages.map { message in
+                    return State(messages: cachedState.messages.compactMap { message -> Message? in
                         return message.toMessage(peerId: peerId, transaction: transaction)
                     })
                 }
@@ -325,35 +400,72 @@ private class AdMessagesHistoryContextImpl {
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(_, randomId, fromId, channelPost, startParam, message, entities):
+                            case let .sponsoredMessage(_, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, message, entities):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
                                 }
-
-                                let parsedMedia: [Media] = []
-                                /*if let media = media {
-                                    let (mediaValue, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
-                                    if let mediaValue = mediaValue {
-                                        parsedMedia.append(mediaValue)
+                                
+                                let _ = chatInvite
+                                let _ = chatInviteHash
+                                
+                                var target: CachedMessage.Target?
+                                if let fromId = fromId {
+                                    target = .peer(fromId.peerId)
+                                } else if let chatInvite = chatInvite, let chatInviteHash = chatInviteHash {
+                                    switch chatInvite {
+                                    case let .chatInvite(flags, title, _, photo, participantsCount, participants):
+                                        let photo = telegramMediaImageFromApiPhoto(photo).flatMap({ smallestImageRepresentation($0.representations) })
+                                        let flags: ExternalJoiningChatState.Invite.Flags = .init(isChannel: (flags & (1 << 0)) != 0, isBroadcast: (flags & (1 << 1)) != 0, isPublic: (flags & (1 << 2)) != 0, isMegagroup: (flags & (1 << 3)) != 0, requestNeeded: (flags & (1 << 6)) != 0)
+                                        
+                                        let _ = photo
+                                        let _ = flags
+                                        let _ = participantsCount
+                                        let _ = participants
+                                        
+                                        target = .invite(CachedMessage.Target.Invite(
+                                            title: title,
+                                            joinHash: chatInviteHash
+                                        ))
+                                    case let .chatInvitePeek(chat, _):
+                                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                            target = .invite(CachedMessage.Target.Invite(
+                                                title: peer.debugDisplayTitle,
+                                                joinHash: chatInviteHash
+                                            ))
+                                        }
+                                    case let .chatInviteAlready(chat):
+                                        if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                            target = .invite(CachedMessage.Target.Invite(
+                                                title: peer.debugDisplayTitle,
+                                                joinHash: chatInviteHash
+                                            ))
+                                        }
                                     }
-                                }*/
+                                }
+                                
+                                var messageId: MessageId?
+                                if let fromId = fromId, let channelPost = channelPost {
+                                    messageId = MessageId(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: channelPost)
+                                }
 
-                                parsedMessages.append(CachedMessage(
-                                    opaqueId: randomId.makeData(),
-                                    text: message,
-                                    textEntities: parsedEntities,
-                                    media: parsedMedia,
-                                    authorId: fromId.peerId,
-                                    messageId: channelPost.flatMap { MessageId(peerId: fromId.peerId, namespace: Namespaces.Message.Cloud, id: $0) },
-                                    startParam: startParam
-                                ))
+                                if let target = target {
+                                    parsedMessages.append(CachedMessage(
+                                        opaqueId: randomId.makeData(),
+                                        text: message,
+                                        textEntities: parsedEntities,
+                                        media: [],
+                                        target: target,
+                                        messageId: messageId,
+                                        startParam: startParam
+                                    ))
+                                }
                             }
                         }
 
                         CachedState.setCached(transaction: transaction, peerId: peerId, state: CachedState(timestamp: Int32(Date().timeIntervalSince1970), messages: parsedMessages))
 
-                        return parsedMessages.map { message in
+                        return parsedMessages.compactMap { message -> Message? in
                             return message.toMessage(peerId: peerId, transaction: transaction)
                         }
                     }

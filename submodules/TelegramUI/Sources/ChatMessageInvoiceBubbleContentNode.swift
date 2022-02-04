@@ -136,9 +136,9 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
         return self.contentNode.transitionNode(media: media)
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func reactionTargetView(value: String) -> UIView? {
         if !self.contentNode.statusNode.isHidden {
-            return self.contentNode.statusNode.reactionNode(value: value)
+            return self.contentNode.statusNode.reactionView(value: value)
         }
         return nil
     }

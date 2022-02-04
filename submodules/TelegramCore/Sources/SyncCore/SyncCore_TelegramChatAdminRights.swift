@@ -26,6 +26,11 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
         return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canBeAnonymous, .canManageCalls]
     }
     
+    public static var allChannel: TelegramChatAdminRightsFlags {
+        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canManageCalls]
+    }
+
+    
     public static var groupSpecific: TelegramChatAdminRightsFlags = [
         .canChangeInfo,
         .canDeleteMessages,

@@ -13,6 +13,8 @@ import LocalizedPeerData
 import StickerResources
 import PhotoResources
 import TelegramStringFormatting
+import TextFormat
+import InvisibleInkDustNode
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext
@@ -68,6 +70,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private let titleIconNode: ASImageNode
     private let titleNode: TextNode
     private let textNode: TextNode
+    private var dustNode: InvisibleInkDustNode?
     private let imageNode: TransformImageNode
     
     private var titleAttributedText: NSAttributedString?
@@ -157,6 +160,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var imageDimensions: CGSize?
         var isRound = false
         var messageText: String
+        var messageEntities: [MessageTextEntity]?
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
             messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").string
         } else if item.messages.count == 1 {
@@ -180,7 +184,23 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            messageText = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId).0
+            let (textString, _, isText) = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId)
+            if isText {
+                messageText = message.text
+                messageEntities = message.textEntitiesAttribute?.entities.filter { entity in
+                    if case .Spoiler = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                if messageEntities?.count == 0 {
+                    messageEntities = nil
+                    messageText = textString
+                }
+            } else {
+                messageText = textString
+            }
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
             if let channel = peer as? TelegramChannel {
@@ -286,8 +306,15 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             title = "📅 \(currentTitle)"
         }
         
-        messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
-        
+        let textFont = compact ? Font.regular(15.0) : Font.regular(16.0)
+        let textColor = presentationData.theme.inAppNotification.primaryTextColor
+        var attributedMessageText: NSAttributedString
+        if let messageEntities = messageEntities {
+            attributedMessageText = stringWithAppliedEntities(messageText, entities: messageEntities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+        } else {
+            attributedMessageText = NSAttributedString(string: messageText.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: textColor)
+        }
+                
         self.titleAttributedText = NSAttributedString(string: title ?? "", font: compact ? Font.semibold(15.0) : Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         
         let imageNodeLayout = self.imageNode.asyncLayout()
@@ -325,7 +352,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             self.imageNode.setSignal(updateImageSignal)
         }
         
-        self.textAttributedText = NSAttributedString(string: messageText, font: compact ? Font.regular(15.0) : Font.regular(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+        self.textAttributedText = attributedMessageText
         
         if let width = self.validLayout {
             let _ = self.updateLayout(width: width, transition: .immediate)
@@ -361,7 +388,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: self.textAttributedText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let _ = titleApply()
         let _ = textApply()
-        
+                
         let textSpacing: CGFloat = 1.0
         
         let titleFrame = CGRect(origin: CGPoint(x: leftInset + titleInset, y: 1.0 + floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
@@ -371,9 +398,27 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             transition.updateFrame(node: self.titleIconNode, frame: CGRect(origin: CGPoint(x: leftInset + 1.0, y: titleFrame.minY + 3.0), size: image.size))
         }
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size))
+        let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size)
+        transition.updateFrame(node: self.textNode, frame: textFrame)
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 10.0 - imageSize.width, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
+        
+        if !textLayout.spoilers.isEmpty, let presentationData = self.item?.context.sharedContext.currentPresentationData.with({ $0 }) {
+            let dustNode: InvisibleInkDustNode
+            if let current = self.dustNode {
+                dustNode = current
+            } else {
+                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode.isUserInteractionEnabled = false
+                self.dustNode = dustNode
+                self.insertSubnode(dustNode, aboveSubnode: self.textNode)
+            }
+            dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            dustNode.update(size: dustNode.frame.size, color: presentationData.theme.inAppNotification.primaryTextColor, textColor: presentationData.theme.inAppNotification.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+        } else if let dustNode = self.dustNode {
+            dustNode.removeFromSupernode()
+            self.dustNode = nil
+        }
         
         return panelHeight
     }

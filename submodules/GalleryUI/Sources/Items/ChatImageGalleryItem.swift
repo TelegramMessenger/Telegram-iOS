@@ -16,6 +16,7 @@ import PresentationDataUtils
 import ImageContentAnalysis
 import TextSelectionNode
 import Speak
+import Translate
 import ShareController
 import UndoUI
 
@@ -315,7 +316,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             strongSelf.statusNodeContainer.isHidden = true
                             
                             Queue.concurrentDefaultQueue().async {
-                                if let message = strongSelf.message, !message.isCopyProtected() {
+                                if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
                                     strongSelf.recognitionDisposable.set((recognizedContent(postbox: strongSelf.context.account.postbox, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
                                     |> deliverOnMainQueue).start(next: { [weak self] results in
                                         if let strongSelf = self {
@@ -352,6 +353,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                         }
                                                     case .speak:
                                                         speakText(string)
+                                                    case .translate:
+                                                        translateText(context: strongSelf.context, text: string)
                                                     }
                                                 })
                                                 recognizedContentNode.barcodeAction = { [weak self] payload, rect in
@@ -434,12 +437,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             return
         }
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-            guard let strongSelf = self else {
-                return EmptyDisposable
-            }
+        let topController = (self.baseNavigationController()?.topViewController as? ViewController)
+        let progressSignal = Signal<Never, NoError> { subscriber in
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-            (strongSelf.baseNavigationController()?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
+            topController?.present(controller, in: .window(.root), with: nil)
             return ActionDisposable { [weak controller] in
                 Queue.mainQueue().async() {
                     controller?.dismiss()
@@ -463,7 +464,22 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
             }
             let baseNavigationController = strongSelf.baseNavigationController()
             baseNavigationController?.view.endEditing(true)
-            let controller = StickerPackScreen(context: context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil)
+            let controller = StickerPackScreen(context: context, mainStickerPack: packs[0], stickerPacks: packs, sendSticker: nil, actionPerformed: { info, items, action in
+                let animateInAsReplacement = false
+                switch action {
+                case .add:
+                    topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                        return true
+                    }), in: .window(.root))
+                case let .remove(positionInList):
+                    topController?.present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_RemovedTitle, text: presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
+                        if case .undo = action {
+                            let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                        }
+                        return true
+                    }), in: .window(.root))
+                }
+            })
             (baseNavigationController?.topViewController as? ViewController)?.present(controller, in: .window(.root), with: nil)
         })
     }
@@ -763,6 +779,12 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
             }
         }
+    }
+    
+    override func adjustForPreviewing() {
+        super.adjustForPreviewing()
+        
+        self.recognitionOverlayContentNode.isHidden = true
     }
 }
 
@@ -1175,7 +1197,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
     }
     
     private var interfaceIsHidden: Bool = false
-    override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
         self.interfaceIsHidden = isHidden
         
         let buttonSize = CGSize(width: 32.0, height: 32.0)
@@ -1192,7 +1214,7 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
             }
         }
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - rightInset - buttonSize.width - 24.0, y: 41.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - insets.right - buttonSize.width - 24.0, y: insets.top - 50.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {

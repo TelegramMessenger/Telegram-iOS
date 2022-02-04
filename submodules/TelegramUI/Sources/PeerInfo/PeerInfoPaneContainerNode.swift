@@ -468,6 +468,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     private(set) var currentPaneKey: PeerInfoPaneKey?
     var pendingSwitchToPaneKey: PeerInfoPaneKey?
+    var expandOnSwitch = false
     
     var currentPane: PeerInfoPaneWrapper? {
         if let currentPaneKey = self.currentPaneKey {
@@ -484,6 +485,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     
     private var currentPanes: [PeerInfoPaneKey: PeerInfoPaneWrapper] = [:]
     private var pendingPanes: [PeerInfoPaneKey: PeerInfoPendingPane] = [:]
+    private var shouldFadeIn = false
     
     private var transitionFraction: CGFloat = 0.0
     
@@ -550,6 +552,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 }
             } else if strongSelf.pendingSwitchToPaneKey != key {
                 strongSelf.pendingSwitchToPaneKey = key
+                strongSelf.expandOnSwitch = true
                 
                 if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = strongSelf.currentParams {
                     strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .animated(duration: 0.4, curve: .spring))
@@ -688,16 +691,18 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     }
     
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, expansionFraction: CGFloat, presentationData: PresentationData, data: PeerInfoScreenData?, transition: ContainedViewLayoutTransition) {
-        let previousAvailablePanes = self.currentAvailablePanes ?? []
+        let previousAvailablePanes = self.currentAvailablePanes
         let availablePanes = data?.availablePanes ?? []
-        self.currentAvailablePanes = availablePanes
+        self.currentAvailablePanes = data?.availablePanes
+        
+        let previousPaneKeys = Set<PeerInfoPaneKey>(self.currentPanes.keys)
         
         let previousCurrentPaneKey = self.currentPaneKey
         var updateCurrentPaneStatus = false
         
         if let currentPaneKey = self.currentPaneKey, !availablePanes.contains(currentPaneKey) {
             var nextCandidatePaneKey: PeerInfoPaneKey?
-            if let index = previousAvailablePanes.firstIndex(of: currentPaneKey), index != 0 {
+            if let previousAvailablePanes = previousAvailablePanes, let index = previousAvailablePanes.firstIndex(of: currentPaneKey), index != 0 {
                 for i in (0 ... index - 1).reversed() {
                     if availablePanes.contains(previousAvailablePanes[i]) {
                         nextCandidatePaneKey = previousAvailablePanes[i]
@@ -857,6 +862,18 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             
             paneDefaultTransition = .immediate
         }
+                
+        if let _ = data {
+            if let previousAvailablePanes = previousAvailablePanes, previousAvailablePanes.isEmpty, !availablePanes.isEmpty {
+                self.shouldFadeIn = true
+            }
+            
+            let currentPaneKeys = Set<PeerInfoPaneKey>(self.currentPanes.keys)
+            if previousPaneKeys.isEmpty && !currentPaneKeys.isEmpty && self.shouldFadeIn {
+                self.shouldFadeIn = false
+                self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
+        }
         
         for (key, pane) in self.currentPanes {
             if let index = availablePanes.firstIndex(of: key), let updatedCurrentIndex = updatedCurrentIndex {
@@ -967,7 +984,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             }
         }
         if let previousCurrentPaneKey = previousCurrentPaneKey, self.currentPaneKey != previousCurrentPaneKey {
-            self.currentPaneUpdated?(true)
+            self.currentPaneUpdated?(self.expandOnSwitch)
+            self.expandOnSwitch = false
         }
         if updateCurrentPaneStatus {
             self.currentPaneStatusPromise.set(self.currentPane?.node.status ?? .single(nil))

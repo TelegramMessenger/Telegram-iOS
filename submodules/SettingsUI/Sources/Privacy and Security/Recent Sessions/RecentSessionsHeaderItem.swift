@@ -150,7 +150,7 @@ class RecentSessionsHeaderItemNode: ListViewItemNode {
                     
                     strongSelf.buttonNode.title = item.context.sharedContext.currentPresentationData.with { $0 }.strings.AuthSessions_LinkDesktopDevice
                     if let _ = updatedTheme {
-                        strongSelf.buttonNode.icon = generateTintedImage(image: UIImage(bundleImageName: "Settings/QrButtonIcon"), color: .white)
+                        strongSelf.buttonNode.icon = UIImage(bundleImageName: "Settings/QrButtonIcon")
                         strongSelf.buttonNode.updateTheme(SolidRoundedButtonTheme(theme: item.theme))
                     }
                     

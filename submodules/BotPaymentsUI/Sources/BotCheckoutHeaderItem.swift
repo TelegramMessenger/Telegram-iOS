@@ -237,7 +237,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
                     }
                     switch neighbors.bottom {
                         case .sameSection(false):
-                            break
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             hasBottomCorners = true
                             strongSelf.bottomStripeNode.isHidden = hasCorners

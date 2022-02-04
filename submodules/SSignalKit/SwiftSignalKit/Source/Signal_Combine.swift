@@ -172,6 +172,18 @@ public func combineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     }, initialValues: [:], queue: queue)
 }
 
+public func combineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, E>(queue: Queue? = nil, _ s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, _ s4: Signal<T4, E>, _ s5: Signal<T5, E>, _ s6: Signal<T6, E>, _ s7: Signal<T7, E>, _ s8: Signal<T8, E>, _ s9: Signal<T9, E>, _ s10: Signal<T10, E>, _ s11: Signal<T11, E>, _ s12: Signal<T12, E>, _ s13: Signal<T13, E>, _ s14: Signal<T14, E>, _ s15: Signal<T15, E>) -> Signal<(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4), signalOfAny(s5), signalOfAny(s6), signalOfAny(s7), signalOfAny(s8), signalOfAny(s9), signalOfAny(s10), signalOfAny(s11), signalOfAny(s12), signalOfAny(s13), signalOfAny(s14), signalOfAny(s15)], combine: { values in
+        return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4, values[4] as! T5, values[5] as! T6, values[6] as! T7, values[7] as! T8, values[8] as! T9, values[9] as! T10, values[10] as! T11, values[11] as! T12, values[12] as! T13, values[13] as! T14, values[14] as! T15)
+    }, initialValues: [:], queue: queue)
+}
+
+public func combineLatest<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, E>(queue: Queue? = nil, _ s1: Signal<T1, E>, _ s2: Signal<T2, E>, _ s3: Signal<T3, E>, _ s4: Signal<T4, E>, _ s5: Signal<T5, E>, _ s6: Signal<T6, E>, _ s7: Signal<T7, E>, _ s8: Signal<T8, E>, _ s9: Signal<T9, E>, _ s10: Signal<T10, E>, _ s11: Signal<T11, E>, _ s12: Signal<T12, E>, _ s13: Signal<T13, E>, _ s14: Signal<T14, E>, _ s15: Signal<T15, E>, _ s16: Signal<T16, E>) -> Signal<(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16), E> {
+    return combineLatestAny([signalOfAny(s1), signalOfAny(s2), signalOfAny(s3), signalOfAny(s4), signalOfAny(s5), signalOfAny(s6), signalOfAny(s7), signalOfAny(s8), signalOfAny(s9), signalOfAny(s10), signalOfAny(s11), signalOfAny(s12), signalOfAny(s13), signalOfAny(s14), signalOfAny(s15), signalOfAny(s16)], combine: { values in
+        return (values[0] as! T1, values[1] as! T2, values[2] as! T3, values[3] as! T4, values[4] as! T5, values[5] as! T6, values[6] as! T7, values[7] as! T8, values[8] as! T9, values[9] as! T10, values[10] as! T11, values[11] as! T12, values[12] as! T13, values[13] as! T14, values[14] as! T15, values[15] as! T16)
+    }, initialValues: [:], queue: queue)
+}
+
 public func combineLatest<T, E>(queue: Queue? = nil, _ signals: [Signal<T, E>]) -> Signal<[T], E> {
     if signals.count == 0 {
         return single([T](), E.self)

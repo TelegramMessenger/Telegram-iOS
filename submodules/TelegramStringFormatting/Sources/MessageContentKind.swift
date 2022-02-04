@@ -117,6 +117,8 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         return .image
     case let .file(file):
         var fileName: String = ""
+        
+        var result: MessageContentKind?
         for attribute in file.attributes {
             switch attribute {
             case let .Sticker(text, _, _):
@@ -137,19 +139,22 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
                 }
             case let .Video(_, _, flags):
                 if file.isAnimated {
-                    return .animation
+                    result = .animation
                 } else {
                     if flags.contains(.instantRoundVideo) {
-                        return .videoMessage
+                        result = .videoMessage
                     } else {
-                        return .video
+                        result = .video
                     }
                 }
             default:
                 break
             }
         }
-        if file.isAnimatedSticker {
+        if let result = result {
+            return result
+        }
+        if file.isVideoSticker || file.isAnimatedSticker {
             return .sticker("")
         }
         return .file(fileName)
@@ -165,7 +170,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         }
     case .action:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
-            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false) ?? "")
+            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false)?.0 ?? "")
         } else {
             return nil
         }
@@ -229,12 +234,13 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
     }
 }
 
-public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (String, Bool) {
+public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (String, Bool, Bool) {
     let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
     if !message.text.isEmpty && ![.expiredImage, .expiredVideo].contains(contentKind.key) {
-        return (foldLineBreaks(message.text), false)
+        return (foldLineBreaks(message.text), false, true)
     }
-    return stringForMediaKind(contentKind, strings: strings)
+    let result = stringForMediaKind(contentKind, strings: strings)
+    return (result.0, result.1, false)
 }
 
 public func foldLineBreaks(_ text: String) -> String {
@@ -250,5 +256,28 @@ public func foldLineBreaks(_ text: String) -> String {
             result += " " + line
         }
     }
+    return result
+}
+
+
+public func trimToLineCount(_ text: String, lineCount: Int) -> String {
+    if lineCount < 1 {
+        return ""
+    }
+
+    var result = ""
+    
+    var i = 0
+    text.enumerateLines { line, stop in
+        if !result.isEmpty {
+            result += "\n"
+        }
+        result += line
+        i += 1
+        if i == lineCount {
+            stop = true
+        }
+    }
+    
     return result
 }

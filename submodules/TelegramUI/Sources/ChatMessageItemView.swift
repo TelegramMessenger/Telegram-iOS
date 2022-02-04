@@ -206,7 +206,7 @@ final class ChatMessageAccessibilityData {
             if let chatPeer = message.peers[item.message.id.peerId] {
                 let authorName = message.author.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
-                let (_, _, messageText) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
+                let (_, _, messageText, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
                 
                 var text = messageText
                 
@@ -675,7 +675,7 @@ final class ChatMessageAccessibilityData {
     }
 }
 
-public class ChatMessageItemView: ListViewItemNode {
+public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     let layoutConstants = (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular)
     
     var item: ChatMessageItem?
@@ -855,7 +855,7 @@ public class ChatMessageItemView: ListViewItemNode {
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
-                    item.controllerInteraction.openPeer(peerId, .info, nil)
+                    item.controllerInteraction.openPeer(peerId, .info, nil, nil)
             }
         }
     }
@@ -871,7 +871,10 @@ public class ChatMessageItemView: ListViewItemNode {
         }
     }
     
-    func targetReactionNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    func openMessageContextMenu() {
+    }
+    
+    public func targetReactionView(value: String) -> UIView? {
         return nil
     }
     

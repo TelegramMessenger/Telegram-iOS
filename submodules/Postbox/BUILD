@@ -15,6 +15,7 @@ swift_library(
     	"//submodules/sqlcipher:sqlcipher",
         "//submodules/MurMurHash32:MurMurHash32",
         "//submodules/StringTransliteration:StringTransliteration",
+        "//submodules/ManagedFile:ManagedFile",
     ],
     visibility = [
         "//visibility:public",

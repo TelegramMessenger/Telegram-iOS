@@ -215,6 +215,14 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
     func setIsHighlighted(_ value: Bool) {
     }
     
+    func canBeHighlighted() -> Bool {
+        return self.isActionEnabled
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+    
     func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
         for actionNode in self.actionNodes {
             let frame = actionNode.convert(actionNode.bounds, to: self)

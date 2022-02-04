@@ -114,7 +114,28 @@
 }
 
 - (void)setContentSize:(CGSize)contentSize {
-  [super setContentSize:contentSize];
+    if (_shouldBlockPanGesture) {
+        return;
+    }
+    [super setContentSize:contentSize];
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset {
+    if (_shouldBlockPanGesture) {
+        return;
+    }
+    [super setContentOffset:contentOffset];
+}
+
+- (void)setContentOffset:(CGPoint)contentOffset animated:(BOOL)animated {
+    if (_shouldBlockPanGesture) {
+        return;
+    }
+    [super setContentOffset:contentOffset animated:animated];
+}
+
+- (void)setBounds:(CGRect)bounds {
+    [super setBounds:bounds];
 }
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender

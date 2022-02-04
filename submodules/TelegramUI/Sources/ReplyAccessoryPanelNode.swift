@@ -11,6 +11,8 @@ import AccountContext
 import LocalizedPeerData
 import PhotoResources
 import TelegramStringFormatting
+import InvisibleInkDustNode
+import TextFormat
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -23,6 +25,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     let iconNode: ASImageNode
     let titleNode: ImmediateTextNode
     let textNode: ImmediateTextNode
+    var dustNode: InvisibleInkDustNode?
     let imageNode: TransformImageNode
     
     private let actionArea: AccessibilityAreaNode
@@ -96,6 +99,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
 
                 var authorName = ""
                 var text = ""
+                var isText = true
                 if let forwardInfo = message?.forwardInfo, forwardInfo.flags.contains(.isImported) {
                     if let author = forwardInfo.author {
                         authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
@@ -105,8 +109,38 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 } else if let author = message?.effectiveAuthor {
                     authorName = EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                 }
+                
+                let isMedia: Bool
                 if let message = message {
-                    (text, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
+                        case .text:
+                            isMedia = false
+                        default:
+                            isMedia = true
+                    }
+                    (text, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+                } else {
+                    isMedia = false
+                }
+
+                let textFont = Font.regular(14.0)
+                let messageText: NSAttributedString
+                if isText, let message = message {
+                    let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                        if case .Spoiler = entity.type {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
+                    if entities.count > 0 {
+                        messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
+                    } else {
+                        messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
+                    }
+                } else {
+                    messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                 }
                 
                 var updatedMediaReference: AnyMediaReference?
@@ -169,22 +203,10 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         updateImageSignal = .single({ _ in return nil })
                     }
                 }
-                
-                let isMedia: Bool
-                if let message = message {
-                    switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
-                        case .text:
-                            isMedia = false
-                        default:
-                            isMedia = true
-                    }
-                } else {
-                    isMedia = false
-                }
-                
+                                
                 strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
-                
+                strongSelf.textNode.attributedText = messageText
+                                
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
                     headerString = "Reply to message. From: \(EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
@@ -295,8 +317,25 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
+        let textFrame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.textNode.insets.left, y: 25.0 - self.textNode.insets.top), size: textSize)
         if self.textNode.supernode == self {
-            self.textNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.textNode.insets.left, y: 25.0 - self.textNode.insets.top), size: textSize)
+            self.textNode.frame = textFrame
+        }
+        
+        if let textLayout = self.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
+            if self.dustNode == nil {
+                let dustNode = InvisibleInkDustNode(textNode: nil)
+                self.dustNode = dustNode
+                self.textNode.supernode?.insertSubnode(dustNode, aboveSubnode: self.textNode)
+                
+            }
+            if let dustNode = self.dustNode {
+                dustNode.update(size: textFrame.size, color: self.theme.chat.inputPanel.secondaryTextColor, textColor: self.theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            }
+        } else if let dustNode = self.dustNode {
+            self.dustNode = nil
+            dustNode.removeFromSupernode()
         }
     }
     

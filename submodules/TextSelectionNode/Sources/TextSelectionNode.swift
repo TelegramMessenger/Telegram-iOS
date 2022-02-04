@@ -188,6 +188,7 @@ public enum TextSelectionAction {
     case share
     case lookup
     case speak
+    case translate
 }
 
 public final class TextSelectionNode: ASDisplayNode {
@@ -195,6 +196,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private let strings: PresentationStrings
     private let textNode: TextNode
     private let updateIsActive: (Bool) -> Void
+    public var updateRange: ((NSRange?) -> Void)?
     private let present: (ViewController, Any?) -> Void
     private weak var rootNode: ASDisplayNode?
     private let performAction: (NSAttributedString, TextSelectionAction) -> Void
@@ -395,6 +397,8 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     private func updateSelection(range: NSRange?, animateIn: Bool) {
+        self.updateRange?(range)
+        
         var rects: (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)?
         
         if let range = range {
@@ -501,12 +505,18 @@ public final class TextSelectionNode: ASDisplayNode {
             self?.performAction(attributedText, .lookup)
             self?.dismissSelection()
         }))
-        if isSpeakSelectionEnabled() {
-            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
-                self?.performAction(attributedText, .speak)
+        if #available(iOS 15.0, *) {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+                self?.performAction(attributedText, .translate)
                 self?.dismissSelection()
             }))
         }
+//        if isSpeakSelectionEnabled() {
+//            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
+//                self?.performAction(attributedText, .speak)
+//                self?.dismissSelection()
+//            }))
+//        }
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             self?.performAction(attributedText, .share)
             self?.dismissSelection()

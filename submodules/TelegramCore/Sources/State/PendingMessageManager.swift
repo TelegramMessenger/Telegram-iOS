@@ -75,7 +75,7 @@ private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
 }
 
 private final class PeerPendingMessagesSummaryContext {
-    var messageDeliveredSubscribers = Bag<(MessageId.Namespace) -> Void>()
+    var messageDeliveredSubscribers = Bag<((MessageId.Namespace, Bool)) -> Void>()
     var messageFailedSubscribers = Bag<(PendingMessageFailureReason) -> Void>()
 }
 
@@ -231,25 +231,29 @@ public final class PendingMessageManager {
             }
             
             if !removedSecretMessageIds.isEmpty {
-                let _ = (self.postbox.transaction { transaction -> Set<PeerId> in
+                let _ = (self.postbox.transaction { transaction -> (Set<PeerId>, Bool) in
+                    var silent = false
                     var peerIdsWithDeliveredMessages = Set<PeerId>()
                     for id in removedSecretMessageIds {
                         if let message = transaction.getMessage(id) {
                             if message.isSentOrAcknowledged {
                                 peerIdsWithDeliveredMessages.insert(id.peerId)
+                                if message.muted {
+                                    silent = true
+                                }
                             }
                         }
                     }
-                    return peerIdsWithDeliveredMessages
+                    return (peerIdsWithDeliveredMessages, silent)
                 }
-                |> deliverOn(self.queue)).start(next: { [weak self] peerIdsWithDeliveredMessages in
+                |> deliverOn(self.queue)).start(next: { [weak self] peerIdsWithDeliveredMessages, silent in
                     guard let strongSelf = self else {
                         return
                     }
                     for peerId in peerIdsWithDeliveredMessages {
                         if let context = strongSelf.peerSummaryContexts[peerId] {
                             for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                                subscriber(Namespaces.Message.Cloud)
+                                subscriber((Namespaces.Message.Cloud, silent))
                             }
                         }
                     }
@@ -1179,6 +1183,7 @@ public final class PendingMessageManager {
             }
         }
         
+        let silent = message.muted
         var namespace = Namespaces.Message.Cloud
         if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
             namespace = id.namespace
@@ -1190,7 +1195,7 @@ public final class PendingMessageManager {
                 strongSelf.queue.async {
                     if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                         for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                            subscriber(namespace)
+                            subscriber((namespace, silent))
                         }
                     }
                 }
@@ -1199,9 +1204,13 @@ public final class PendingMessageManager {
     }
     
     private func applySentGroupMessages(postbox: Postbox, stateManager: AccountStateManager, messages: [Message], result: Api.Updates) -> Signal<Void, NoError> {
+        var silent = false
         var namespace = Namespaces.Message.Cloud
         if let message = messages.first, let apiMessage = result.messages.first, message.scheduleTime != nil && message.scheduleTime == apiMessage.timestamp {
             namespace = Namespaces.Message.ScheduledCloud
+            if message.muted {
+                silent = true
+            }
         }
         
         return applyUpdateGroupMessages(postbox: postbox, stateManager: stateManager, messages: messages, result: result)
@@ -1210,7 +1219,7 @@ public final class PendingMessageManager {
                 strongSelf.queue.async {
                     if let message = messages.first, let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                         for subscriber in context.messageDeliveredSubscribers.copyItems() {
-                            subscriber(namespace)
+                            subscriber((namespace, silent))
                         }
                     }
                 }
@@ -1218,7 +1227,7 @@ public final class PendingMessageManager {
         }
     }
     
-    public func deliveredMessageEvents(peerId: PeerId) -> Signal<MessageId.Namespace, NoError> {
+    public func deliveredMessageEvents(peerId: PeerId) -> Signal<(namespace: MessageId.Namespace, silent: Bool), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -1231,8 +1240,8 @@ public final class PendingMessageManager {
                     self.peerSummaryContexts[peerId] = summaryContext
                 }
                 
-                let index = summaryContext.messageDeliveredSubscribers.add({ namespace in
-                    subscriber.putNext(namespace)
+                let index = summaryContext.messageDeliveredSubscribers.add({ namespace, silent in
+                    subscriber.putNext((namespace, silent))
                 })
                 
                 disposable.set(ActionDisposable {

@@ -15,6 +15,10 @@ public enum PostboxUpdateMessage {
     case skip
 }
 
+public protocol StoreOrUpdateMessageAction: AnyObject {
+    func addOrUpdate(messages: [StoreMessage], transaction: Transaction)
+}
+
 public final class Transaction {
     private let queue: Queue
     private weak var postbox: PostboxImpl?
@@ -507,7 +511,7 @@ public final class Transaction {
     
     public func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
         assert(!self.disposed)
-        self.postbox?.updateMessage(id, update: update)
+        self.postbox?.updateMessage(transaction: self, id: id, update: update)
     }
     
     public func offsetPendingMessagesTimestamps(lowerBound: MessageId, excludeIds: Set<MessageId>, timestamp: Int32) {
@@ -1170,7 +1174,7 @@ func debugRestoreState(basePath:String, name: String) {
 
 private let sharedQueue = Queue(name: "org.telegram.postbox.Postbox")
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool, useCaches: Bool) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool, useCaches: Bool, removeDatabaseOnError: Bool) -> Signal<PostboxResult, NoError> {
     let queue = sharedQueue
     return Signal { subscriber in
         queue.async {
@@ -1214,7 +1218,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
 
             postboxLog("openPostbox, initialize SqliteValueBox")
             
-            guard var valueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+            guard var valueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                 postboxLog("openPostbox, SqliteValueBox upgrading progress \(progress)")
                 subscriber.putNext(.upgrading(progress))
             }) else {
@@ -1242,7 +1246,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                 postboxLog("Version \(userVersion) is newer than supported")
                                 assertionFailure("Version \(userVersion) is newer than supported")
                                 valueBox.drop()
-                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                     subscriber.putNext(.upgrading(progress))
                                 }) else {
                                     subscriber.putNext(.error)
@@ -1266,7 +1270,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                                 valueBox.internalClose()
                                                 let _ = try? FileManager.default.removeItem(atPath: dbBasePath)
                                                 let _ = try? FileManager.default.moveItem(atPath: updatedPath, toPath: dbBasePath)
-                                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                                guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                                     subscriber.putNext(.upgrading(progress))
                                                 }) else {
                                                     subscriber.putNext(.error)
@@ -1280,7 +1284,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                                     assertionFailure("Couldn't find any upgrade for \(userVersion)")
                                     postboxLog("Couldn't find any upgrade for \(userVersion)")
                                     valueBox.drop()
-                                    guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
+                                    guard let updatedValueBox = SqliteValueBox(basePath: dbBasePath, queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: encryptionParameters, upgradeProgress: { progress in
                                         subscriber.putNext(.upgrading(progress))
                                     }) else {
                                         subscriber.putNext(.error)
@@ -1452,6 +1456,7 @@ final class PostboxImpl {
     let peerRatingTable: RatingTable<PeerId>
     
     var installedMessageActionsByPeerId: [PeerId: Bag<([StoreMessage], Transaction) -> Void>] = [:]
+    var installedStoreOrUpdateMessageActionsByPeerId: [PeerId: Bag<StoreOrUpdateMessageAction>] = [:]
     
     init(queue: Queue, basePath: String, seedConfiguration: SeedConfiguration, valueBox: SqliteValueBox, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, tempDir: TempBoxDirectory?, useCaches: Bool) {
         assert(queue.isCurrent())
@@ -1639,7 +1644,7 @@ final class PostboxImpl {
                                 }
                             }
 
-                            if message.timestamp + 60 * 10 > timestampForAbsoluteTimeBasedOperations {
+                            if Int64(message.timestamp) + 60 * 10 > Int64(timestampForAbsoluteTimeBasedOperations) {
                                 return .skip
                             }
                             var flags = StoreMessageFlags(message.flags)
@@ -1748,6 +1753,12 @@ final class PostboxImpl {
             if let bag = self.installedMessageActionsByPeerId[peerId] {
                 for f in bag.copyItems() {
                     f(peerMessages, transaction)
+                }
+            }
+            
+            if let bag = self.installedStoreOrUpdateMessageActionsByPeerId[peerId] {
+                for f in bag.copyItems() {
+                    f.addOrUpdate(messages: peerMessages, transaction: transaction)
                 }
             }
         }
@@ -2255,11 +2266,17 @@ final class PostboxImpl {
         self.peerRatingTable.replace(items: peerIds)
     }
     
-    fileprivate func updateMessage(_ id: MessageId, update: (Message) -> PostboxUpdateMessage) {
+    fileprivate func updateMessage(transaction: Transaction, id: MessageId, update: (Message) -> PostboxUpdateMessage) {
         if let index = self.messageHistoryIndexTable.getIndex(id), let intermediateMessage = self.messageHistoryTable.getMessage(index) {
             let message = self.renderIntermediateMessage(intermediateMessage)
             if case let .update(updatedMessage) = update(message) {
                 self.messageHistoryTable.updateMessage(id, message: updatedMessage, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &self.currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations, timestampBasedMessageAttributesOperations: &self.currentTimestampBasedMessageAttributesOperations)
+                
+                if let bag = self.installedStoreOrUpdateMessageActionsByPeerId[id.peerId] {
+                    for f in bag.copyItems() {
+                        f.addOrUpdate(messages: [updatedMessage], transaction: transaction)
+                    }
+                }
             }
         }
     }
@@ -3397,6 +3414,24 @@ final class PostboxImpl {
         return disposable
     }
     
+    public func installStoreOrUpdateMessageAction(peerId: PeerId, action: StoreOrUpdateMessageAction) -> Disposable {
+        let disposable = MetaDisposable()
+        self.queue.async {
+            if self.installedStoreOrUpdateMessageActionsByPeerId[peerId] == nil {
+                self.installedStoreOrUpdateMessageActionsByPeerId[peerId] = Bag()
+            }
+            let index = self.installedStoreOrUpdateMessageActionsByPeerId[peerId]!.add(action)
+            disposable.set(ActionDisposable {
+                self.queue.async {
+                    if let bag = self.installedStoreOrUpdateMessageActionsByPeerId[peerId] {
+                        bag.remove(index)
+                    }
+                }
+            })
+        }
+        return disposable
+    }
+    
     fileprivate func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, tag: MessageTags, _ f: (Message) -> Bool) {
         var index = MessageIndex.lowerBound(peerId: peerId, namespace: namespace)
         while true {
@@ -4135,6 +4170,16 @@ public class Postbox {
 
         self.impl.with { impl in
             disposable.set(impl.installStoreMessageAction(peerId: peerId, f))
+        }
+
+        return disposable
+    }
+    
+    public func installStoreOrUpdateMessageAction(peerId: PeerId, action: StoreOrUpdateMessageAction) -> Disposable {
+        let disposable = MetaDisposable()
+
+        self.impl.with { impl in
+            disposable.set(impl.installStoreOrUpdateMessageAction(peerId: peerId, action: action))
         }
 
         return disposable

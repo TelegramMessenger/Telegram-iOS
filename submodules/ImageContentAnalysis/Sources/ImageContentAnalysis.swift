@@ -276,9 +276,9 @@ public struct RecognizedContent: Codable {
     }
 }
 
-private func recognizeContent(in image: UIImage) -> Signal<[RecognizedContent], NoError> {
+private func recognizeContent(in image: UIImage?) -> Signal<[RecognizedContent], NoError> {
     if #available(iOS 11.0, *) {
-        guard let cgImage = image.cgImage else {
+        guard let cgImage = image?.cgImage else {
             return .complete()
         }
         return Signal { subscriber in
@@ -339,13 +339,45 @@ public func recognizedContent(postbox: Postbox, image: @escaping () -> UIImage?,
     |> mapToSignal { cachedContent -> Signal<[RecognizedContent], NoError> in
         if let cachedContent = cachedContent {
             return .single(cachedContent.results)
-        } else if let image = image() {
-            return recognizeContent(in: image)
-            |> beforeNext { results in
-                let _ = updateCachedImageRecognizedContent(postbox: postbox, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
-            }
         } else {
-            return .single([])
+            return (.complete()
+            |> delay(0.3, queue: Queue.concurrentDefaultQueue()))
+            |> then(
+                recognizeContent(in: image())
+                |> beforeNext { results in
+                    let _ = updateCachedImageRecognizedContent(postbox: postbox, messageId: messageId, content: CachedImageRecognizedContent(results: results)).start()
+                }
+            )
         }
+    }
+}
+
+public func recognizeQRCode(in image: UIImage?) -> Signal<String?, NoError> {
+    if #available(iOS 11.0, *) {
+        guard let cgImage = image?.cgImage else {
+            return .complete()
+        }
+        return Signal { subscriber in
+            let barcodeRequest = VNDetectBarcodesRequest { request, error in
+                if let result = request.results?.first as? VNBarcodeObservation {
+                    subscriber.putNext(result.payloadStringValue)
+                } else {
+                    subscriber.putNext(nil)
+                }
+                subscriber.putCompletion()
+            }
+            barcodeRequest.preferBackgroundProcessing = true
+            
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            try? handler.perform([barcodeRequest])
+            
+            return ActionDisposable {
+                if #available(iOS 13.0, *) {
+                    barcodeRequest.cancel()
+                }
+            }
+        }
+    } else {
+        return .single(nil)
     }
 }

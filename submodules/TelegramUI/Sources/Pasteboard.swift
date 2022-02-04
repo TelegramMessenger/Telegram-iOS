@@ -49,6 +49,9 @@ private func chatInputStateString(attributedString: NSAttributedString) -> NSAtt
                 string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
             }
         }
+        if let value = attributes[.backgroundColor] as? UIColor, value.rgb == UIColor.gray.rgb  {
+            string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
+        }
         if let _ = attributes[.strikethroughStyle] {
             string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
         }

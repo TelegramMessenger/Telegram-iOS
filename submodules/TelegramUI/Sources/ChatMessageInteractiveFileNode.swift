@@ -24,6 +24,67 @@ private struct FetchControls {
 }
 
 final class ChatMessageInteractiveFileNode: ASDisplayNode {
+    final class Arguments {
+        let context: AccountContext
+        let presentationData: ChatPresentationData
+        let message: Message
+        let topMessage: Message
+        let associatedData: ChatMessageItemAssociatedData
+        let chatLocation: ChatLocation
+        let attributes: ChatMessageEntryAttributes
+        let isPinned: Bool
+        let forcedIsEdited: Bool
+        let file: TelegramMediaFile
+        let automaticDownload: Bool
+        let incoming: Bool
+        let isRecentActions: Bool
+        let forcedResourceStatus: FileMediaResourceStatus?
+        let dateAndStatusType: ChatMessageDateAndStatusType?
+        let displayReactions: Bool
+        let messageSelection: Bool?
+        let constrainedSize: CGSize
+        
+        init(
+            context: AccountContext,
+            presentationData: ChatPresentationData,
+            message: Message,
+            topMessage: Message,
+            associatedData: ChatMessageItemAssociatedData,
+            chatLocation: ChatLocation,
+            attributes: ChatMessageEntryAttributes,
+            isPinned: Bool,
+            forcedIsEdited: Bool,
+            file: TelegramMediaFile,
+            automaticDownload: Bool,
+            incoming: Bool,
+            isRecentActions: Bool,
+            forcedResourceStatus: FileMediaResourceStatus?,
+            dateAndStatusType: ChatMessageDateAndStatusType?,
+            displayReactions: Bool,
+            messageSelection: Bool?,
+            constrainedSize: CGSize
+        ) {
+            self.context = context
+            self.presentationData = presentationData
+            self.message = message
+            self.topMessage = topMessage
+            self.associatedData = associatedData
+            self.chatLocation = chatLocation
+            self.attributes = attributes
+            self.isPinned = isPinned
+            self.forcedIsEdited = forcedIsEdited
+            self.file = file
+            self.automaticDownload = automaticDownload
+            self.incoming = incoming
+            self.isRecentActions = isRecentActions
+            self.forcedResourceStatus = forcedResourceStatus
+            self.dateAndStatusType = dateAndStatusType
+            self.displayReactions = displayReactions
+            self.messageSelection = messageSelection
+            self.constrainedSize = constrainedSize
+        }
+    }
+    
     private var selectionNode: FileMessageSelectionNode?
     
     private let titleNode: TextNode
@@ -213,7 +274,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?,  _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void))) {
+    func asyncLayout() -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -223,11 +284,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let currentMessage = self.message
         
-        return { context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
+        return { arguments in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
-                let titleFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
-                let descriptionFont = Font.with(size: floor(presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
-                let durationFont = Font.regular(floor(presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
+                let titleFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 16.0 / 17.0))
+                let descriptionFont = Font.with(size: floor(arguments.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
+                let durationFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 11.0 / 17.0))
                 
                 var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
                 var updatedStatusSignal: Signal<(FileMediaResourceStatus, MediaResourceStatus?), NoError>?
@@ -237,95 +298,62 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 var mediaUpdated = false
                 if let currentFile = currentFile {
-                    mediaUpdated = file != currentFile
+                    mediaUpdated = arguments.file != currentFile
                 } else {
                     mediaUpdated = true
                 }
                 
                 var statusUpdated = mediaUpdated
-                if currentMessage?.id != message.id || currentMessage?.flags != message.flags {
+                if currentMessage?.id != arguments.message.id || currentMessage?.flags != arguments.message.flags {
                     statusUpdated = true
                 }
                 
-                let hasThumbnail = (!file.previewRepresentations.isEmpty || file.immediateThumbnailData != nil) && !file.isMusic && !file.isVoice
+                let hasThumbnail = (!arguments.file.previewRepresentations.isEmpty || arguments.file.immediateThumbnailData != nil) && !arguments.file.isMusic && !arguments.file.isVoice
                 
                 if mediaUpdated {
-                    if largestImageRepresentation(file.previewRepresentations) != nil || file.immediateThumbnailData != nil {
-                        updateImageSignal = chatMessageImageFile(account: context.account, fileReference: .message(message: MessageReference(message), media: file), thumbnail: true)
+                    if largestImageRepresentation(arguments.file.previewRepresentations) != nil || arguments.file.immediateThumbnailData != nil {
+                        updateImageSignal = chatMessageImageFile(account: arguments.context.account, fileReference: .message(message: MessageReference(arguments.message), media: arguments.file), thumbnail: true)
                     }
                     
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: arguments.context, message: arguments.message, file: arguments.file, userInitiated: true).start())
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                        messageMediaFileCancelInteractiveFetch(context: arguments.context, messageId: arguments.message.id, file: arguments.file)
                     })
                 }
                 
                 if statusUpdated {
-                    if message.flags.isSending {
-                        updatedStatusSignal = combineLatest(messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions), messageMediaFileStatus(context: context, messageId: message.id, file: file))
+                    if arguments.message.flags.isSending {
+                        updatedStatusSignal = combineLatest(messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions), messageMediaFileStatus(context: arguments.context, messageId: arguments.message.id, file: arguments.file))
                         |> map { resourceStatus, actualFetchStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, actualFetchStatus)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false)
                     } else {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: context, file: file, message: message, isRecentActions: isRecentActions)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions)
                         |> map { resourceStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, nil)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false)
                     }
-                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: context, file: file, message: message, isRecentActions: isRecentActions, isGlobalSearch: false)
+                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false)
                 }
                 
-                var statusSize: CGSize?
-                var statusApply: ((Bool) -> Void)?
-                
                 var consumableContentIcon: UIImage?
-                for attribute in message.attributes {
+                for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
                         let isConsumed = attribute.consumed
                         if !isConsumed {
-                            if incoming {
-                                consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentIncomingIcon(presentationData.theme.theme)
+                            if arguments.incoming {
+                                consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentIncomingIcon(arguments.presentationData.theme.theme)
                             } else {
-                                consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(presentationData.theme.theme)
+                                consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
                         break
                     }
-                }
-                
-                if let statusType = dateAndStatusType {
-                    var edited = false
-                    if attributes.updatingMedia != nil {
-                        edited = true
-                    }
-                    var viewCount: Int?
-                    var dateReplies = 0
-                    let dateReactions: [MessageReaction] = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? EditedMessageAttribute {
-                            edited = !attribute.isHidden
-                        } else if let attribute = attribute as? ViewCountMessageAttribute {
-                            viewCount = attribute.count
-                        } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = chatLocation {
-                            if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .group = channel.info {
-                                dateReplies = Int(attribute.count)
-                            }
-                        }
-                    }
-                    if forcedIsEdited {
-                        edited = true
-                    }
-                    
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
-                    
-                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions, dateReplies, isPinned && !associatedData.isInPinnedListMode, message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
                 }
                 
                 var candidateTitleString: NSAttributedString?
@@ -336,20 +364,20 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
-                let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
+                let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
-                for attribute in file.attributes {
+                for attribute in arguments.file.attributes {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                         isAudio = true
                         
-                        if let forcedResourceStatus = forcedResourceStatus, statusUpdated {
+                        if let forcedResourceStatus = arguments.forcedResourceStatus, statusUpdated {
                             updatedStatusSignal = .single((forcedResourceStatus, nil))
                         } else if let currentUpdatedStatusSignal = updatedStatusSignal {
                             updatedStatusSignal = currentUpdatedStatusSignal
                             |> map { status, _ in
                                 switch status.mediaStatus {
                                     case let .fetchStatus(fetchStatus):
-                                        if !voice && !message.flags.isSending {
+                                        if !voice && !arguments.message.flags.isSending {
                                             return (FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus), nil)
                                         } else {
                                             return (FileMediaResourceStatus(mediaStatus: .fetchStatus(fetchStatus), fetchStatus: status.fetchStatus), nil)
@@ -369,12 +397,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 audioWaveform = AudioWaveform(bitstream: waveform, bitsPerSample: 5)
                             }
                         } else {
-                            candidateTitleString = NSAttributedString(string: title ?? (file.fileName ?? "Unknown Track"), font: titleFont, textColor: messageTheme.fileTitleColor)
+                            candidateTitleString = NSAttributedString(string: title ?? (arguments.file.fileName ?? "Unknown Track"), font: titleFont, textColor: messageTheme.fileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
                                 descriptionText = performer
-                            } else if let size = file.size {
-                                descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: presentationData))
+                            } else if let size = arguments.file.size {
+                                descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: arguments.presentationData))
                             } else {
                                 descriptionText = ""
                             }
@@ -390,15 +418,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if let candidateTitleString = candidateTitleString {
                     titleString = candidateTitleString
                 } else if !isVoice {
-                    titleString = NSAttributedString(string: file.fileName ?? "File", font: titleFont, textColor: messageTheme.fileTitleColor)
+                    titleString = NSAttributedString(string: arguments.file.fileName ?? "File", font: titleFont, textColor: messageTheme.fileTitleColor)
                 }
                 
                 if let candidateDescriptionString = candidateDescriptionString {
                     descriptionString = candidateDescriptionString
                 } else if !isVoice {
                     let descriptionText: String
-                    if let size = file.size {
-                        descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: presentationData))
+                    if let size = arguments.file.size {
+                        descriptionText = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: arguments.presentationData))
                     } else {
                         descriptionText = ""
                     }
@@ -416,7 +444,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let (descriptionLayout, descriptionApply) = descriptionAsyncLayout(TextNodeLayoutArguments(attributedString: descriptionString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let fileSizeString: String
-                if let _ = file.size {
+                if let _ = arguments.file.size {
                     fileSizeString = "000.0 MB"
                 } else {
                     fileSizeString = ""
@@ -430,14 +458,89 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let maxVoiceLength: CGFloat = 30.0
                 let minVoiceLength: CGFloat = 2.0
                 
+                let progressDiameter: CGFloat = 44.0
+                
+                var iconFrame: CGRect?
+                let progressFrame: CGRect
+                let controlAreaWidth: CGFloat
+                
+                if hasThumbnail {
+                    let currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
+                    iconFrame = currentIconFrame
+                    progressFrame = CGRect(
+                        origin: CGPoint(
+                            x: currentIconFrame.minX + floor((currentIconFrame.size.width - progressDiameter) / 2.0),
+                            y: currentIconFrame.minY + floor((currentIconFrame.size.height - progressDiameter) / 2.0)
+                        ),
+                        size: CGSize(width: progressDiameter, height: progressDiameter)
+                    )
+                    controlAreaWidth = 86.0
+                } else {
+                    progressFrame = CGRect(
+                        origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
+                        size: CGSize(width: progressDiameter, height: progressDiameter)
+                    )
+                    controlAreaWidth = progressFrame.maxX + 8.0
+                }
+                
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
+                if let statusType = arguments.dateAndStatusType {
+                    var edited = false
+                    if arguments.attributes.updatingMedia != nil {
+                        edited = true
+                    }
+                    var viewCount: Int?
+                    var dateReplies = 0
+                    let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: arguments.topMessage)
+                    for attribute in arguments.message.attributes {
+                        if let attribute = attribute as? EditedMessageAttribute {
+                            edited = !attribute.isHidden
+                        } else if let attribute = attribute as? ViewCountMessageAttribute {
+                            viewCount = attribute.count
+                        } else if let attribute = attribute as? ReplyThreadMessageAttribute, case .peer = arguments.chatLocation {
+                            if let channel = arguments.message.peers[arguments.message.id.peerId] as? TelegramChannel, case .group = channel.info {
+                                dateReplies = Int(attribute.count)
+                            }
+                        }
+                    }
+                    if arguments.forcedIsEdited {
+                        edited = true
+                    }
+                    
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: arguments.context.account.peerId, message: arguments.message, dateTimeFormat: arguments.presentationData.dateTimeFormat, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, strings: arguments.presentationData.strings)
+                    
+                    let displayReactionsInline = shouldDisplayInlineDateReactions(message: arguments.message)
+                    var reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings?
+                    
+                    if displayReactionsInline || arguments.displayReactions {
+                        reactionSettings = ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: displayReactionsInline, preferAdditionalInset: !displayReactionsInline)
+                    }
+                    
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: arguments.context,
+                        presentationData: arguments.presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: .trailingContent(contentWidth: iconFrame == nil ? 1000.0 : controlAreaWidth, reactionSettings: reactionSettings),
+                        constrainedSize: constrainedSize,
+                        availableReactions: arguments.associatedData.availableReactions,
+                        reactions: dateReactionsAndPeers.reactions,
+                        reactionPeers: dateReactionsAndPeers.peers,
+                        replyCount: dateReplies,
+                        isPinned: arguments.isPinned && !arguments.associatedData.isInPinnedListMode,
+                        hasAutoremove: arguments.message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: arguments.message)
+                    ))
+                }
+                
                 var minLayoutWidth: CGFloat
                 if hasThumbnail {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 86.0
                 } else if isVoice {
-                    var descriptionAndStatusWidth = descriptionLayout.size.width
-                    if let statusSize = statusSize {
-                        descriptionAndStatusWidth += 6 + statusSize.width
-                    }
+                    let descriptionAndStatusWidth = descriptionLayout.size.width
+                    
                     let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
                     minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
                     minLayoutWidth = max(descriptionAndStatusWidth + 56, minLayoutWidth)
@@ -445,46 +548,20 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
                 }
                 
-                if let statusSize = statusSize {
-                    minLayoutWidth = max(minLayoutWidth, statusSize.width)
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    minLayoutWidth = max(minLayoutWidth, statusSuggestedWidthAndContinue.0)
                 }
                                 
                 let fileIconImage: UIImage?
                 if hasThumbnail {
                     fileIconImage = nil
                 } else {
-                    let principalGraphics = PresentationResourcesChat.principalGraphics(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
+                    let principalGraphics = PresentationResourcesChat.principalGraphics(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, bubbleCorners: arguments.presentationData.chatBubbleCorners)
                     
-                    fileIconImage = incoming ? principalGraphics.radialIndicatorFileIconIncoming : principalGraphics.radialIndicatorFileIconOutgoing
+                    fileIconImage = arguments.incoming ? principalGraphics.radialIndicatorFileIconIncoming : principalGraphics.radialIndicatorFileIconOutgoing
                 }
                 
                 return (minLayoutWidth, { boundingWidth in
-                    let progressDiameter: CGFloat = 44.0
-                    
-                    var iconFrame: CGRect?
-                    let progressFrame: CGRect
-                    let streamingCacheStatusFrame: CGRect
-                    let controlAreaWidth: CGFloat
-                    
-                    if hasThumbnail {
-                        let currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
-                        iconFrame = currentIconFrame
-                        progressFrame = CGRect(
-                            origin: CGPoint(
-                                x: currentIconFrame.minX + floor((currentIconFrame.size.width - progressDiameter) / 2.0),
-                                y: currentIconFrame.minY + floor((currentIconFrame.size.height - progressDiameter) / 2.0)
-                            ),
-                            size: CGSize(width: progressDiameter, height: progressDiameter)
-                        )
-                        controlAreaWidth = 86.0
-                    } else {
-                        progressFrame = CGRect(
-                            origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
-                            size: CGSize(width: progressDiameter, height: progressDiameter)
-                        )
-                        controlAreaWidth = progressFrame.maxX + 8.0
-                    }
-                    
                     let titleAndDescriptionHeight = titleLayout.size.height - 1.0 + descriptionLayout.size.height
                     
                     let normHeight: CGFloat
@@ -513,41 +590,33 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         fittedLayoutSize = CGSize(width: unionSize.width, height: unionSize.height)
                     }
                     
-                    var statusFrame: CGRect?
-                    if let statusSize = statusSize {
-                        fittedLayoutSize.width = max(fittedLayoutSize.width, statusSize.width)
-                        statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width, y: fittedLayoutSize.height - statusSize.height + 10.0), size: statusSize)
+                    var statusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> Void)?
+                    if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                        statusSizeAndApply = statusSuggestedWidthAndContinue.1(boundingWidth)
                     }
-                    
-                    if let statusFrameValue = statusFrame, descriptionFrame.intersects(statusFrameValue)  {
-                        let intersection = descriptionFrame.intersection(statusFrameValue)
-                        let addedWidth = intersection.width + 20
-                        fittedLayoutSize.width += addedWidth
-                    }
-                    if let statusFrameValue = statusFrame, let iconFrame = iconFrame {
-                        if iconFrame.intersects(statusFrameValue) {
-                            fittedLayoutSize.height += 15.0
-                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 15.0)
-                        }
-                    } else if let statusFrameValue = statusFrame {
-                        if progressFrame.intersects(statusFrameValue) {
-                            fittedLayoutSize.height += 10.0
-                            statusFrame = statusFrameValue.offsetBy(dx: 0.0, dy: 10.0)
+                    var statusOffset: CGFloat = 0.0
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        fittedLayoutSize.width = max(fittedLayoutSize.width, statusSizeAndApply.0.width)
+                        fittedLayoutSize.height += statusSizeAndApply.0.height
+                        if !statusSizeAndApply.0.height.isZero && iconFrame == nil {
+                            statusOffset = -10.0
+                            fittedLayoutSize.height += statusOffset
                         }
                     }
                     
-                    if (isAudio && !isVoice) || file.previewRepresentations.isEmpty {
+                    let streamingCacheStatusFrame: CGRect
+                    if (isAudio && !isVoice) || arguments.file.previewRepresentations.isEmpty {
                         streamingCacheStatusFrame = CGRect(origin: CGPoint(x: progressFrame.maxX - streamingProgressDiameter + 2.0, y: progressFrame.maxY - streamingProgressDiameter + 2.0), size: CGSize(width: streamingProgressDiameter, height: streamingProgressDiameter))
                     } else {
                         streamingCacheStatusFrame = CGRect()
                     }
                     
-                    return (fittedLayoutSize, { [weak self] synchronousLoads in
+                    return (fittedLayoutSize, { [weak self] synchronousLoads, animation in
                         if let strongSelf = self {
-                            strongSelf.context = context
-                            strongSelf.presentationData = presentationData
-                            strongSelf.message = message
-                            strongSelf.file = file
+                            strongSelf.context = arguments.context
+                            strongSelf.presentationData = arguments.presentationData
+                            strongSelf.message = arguments.message
+                            strongSelf.file = arguments.file
                             
                             let _ = titleApply()
                             let _ = descriptionApply()
@@ -569,13 +638,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.consumableContentNode.removeFromSupernode()
                             }
                             
-                            if let statusApply = statusApply, let statusFrame = statusFrame {
+                            let statusReferenceFrame: CGRect
+                            if let iconFrame = iconFrame {
+                                statusReferenceFrame = iconFrame
+                            } else {
+                                statusReferenceFrame = progressFrame.offsetBy(dx: 0.0, dy: 8.0)
+                            }
+                            if let statusSizeAndApply = statusSizeAndApply {
+                                let statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
                                 if strongSelf.dateAndStatusNode.supernode == nil {
-                                   strongSelf.addSubnode(strongSelf.dateAndStatusNode)
+                                    strongSelf.dateAndStatusNode.frame = statusFrame
+                                    strongSelf.addSubnode(strongSelf.dateAndStatusNode)
+                                } else {
+                                    animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: statusFrame, completion: nil)
                                 }
-                                
-                                strongSelf.dateAndStatusNode.frame = statusFrame
-                                statusApply(false)
+                                statusSizeAndApply.1(animation)
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -595,7 +672,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }
                                 strongSelf.waveformScrubbingNode?.frame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 15.0))
                                 let waveformColor: UIColor
-                                if incoming {
+                                if arguments.incoming {
                                     if consumableContentIcon != nil {
                                         waveformColor = messageTheme.mediaActiveControlColor
                                     } else {
@@ -671,8 +748,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }))
                             }
                                                         
-                            strongSelf.waveformNode.displaysAsynchronously = !presentationData.isPreview
-                            strongSelf.statusNode?.displaysAsynchronously = !presentationData.isPreview
+                            strongSelf.waveformNode.displaysAsynchronously = !arguments.presentationData.isPreview
+                            strongSelf.statusNode?.displaysAsynchronously = !arguments.presentationData.isPreview
                             strongSelf.statusNode?.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
 
                             strongSelf.statusContainerNode.frame = progressFrame
@@ -686,14 +763,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
 
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
-                                if automaticDownload {
+                                if arguments.automaticDownload {
                                     updatedFetchControls.fetch()
                                 }
                             }
                             
                             let isAnimated = !synchronousLoads
                             let transition: ContainedViewLayoutTransition = isAnimated ? .animated(duration: 0.2, curve: .spring) : .immediate
-                            if let selection = messageSelection {
+                            if let selection = arguments.messageSelection {
                                 if let streamingStatusNode = strongSelf.streamingStatusNode {
                                     transition.updateAlpha(node: streamingStatusNode, alpha: 0.0)
                                     transition.updateTransformScale(node: streamingStatusNode, scale: 0.2)
@@ -704,14 +781,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     selectionNode.updateSelected(selection, animated: isAnimated)
                                 } else {
                                     let type: FileMessageSelectionNode.NodeType
-                                    if file.isVoice {
+                                    if arguments.file.isVoice {
                                         type = .voice
-                                    } else if file.isMusic || file.previewRepresentations.isEmpty {
+                                    } else if arguments.file.isMusic || arguments.file.previewRepresentations.isEmpty {
                                         type = .file
                                     } else {
                                         type = .media
                                     }
-                                    let selectionNode = FileMessageSelectionNode(theme: presentationData.theme.theme, incoming: incoming, type: type, toggle: { [weak self] value in
+                                    let selectionNode = FileMessageSelectionNode(theme: arguments.presentationData.theme.theme, incoming: arguments.incoming, type: type, toggle: { [weak self] value in
                                         self?.toggleSelection(value)
                                     })
                                     strongSelf.selectionNode = selectionNode
@@ -741,7 +818,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             strongSelf.updateStatus(animated: isAnimated)
                             
-                            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
+                            if let forwardInfo = arguments.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                                 strongSelf.dateAndStatusNode.pressed = {
                                     guard let strongSelf = self else {
                                         return
@@ -1053,12 +1130,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> ChatMessageInteractiveFileNode))) {
+    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
-        return { context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize in
+        return { arguments in
             var fileNode: ChatMessageInteractiveFileNode
-            var fileLayout: (_ context: AccountContext, _ presentationData: ChatPresentationData, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ chatLocation: ChatLocation, _ attributes: ChatMessageEntryAttributes, _ isPinned: Bool, _ forcedIsEdited: Bool, _ file: TelegramMediaFile, _ automaticDownload: Bool, _ incoming: Bool, _ isRecentActions: Bool, _ forcedResourceStatus: FileMediaResourceStatus?, _ dateAndStatusType: ChatMessageDateAndStatusType?, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool) -> Void)))
+            var fileLayout: (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation) -> Void)))
             
             if let node = node, let currentAsyncLayout = currentAsyncLayout {
                 fileNode = node
@@ -1068,7 +1145,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 fileLayout = fileNode.asyncLayout()
             }
             
-            let (initialWidth, continueLayout) = fileLayout(context, presentationData, message, associatedData, chatLocation, attributes, isPinned, forcedIsEdited, file, automaticDownload, incoming, isRecentActions, forcedResourceStatus, dateAndStatusType, messageSelection, constrainedSize)
+            let (initialWidth, continueLayout) = fileLayout(arguments)
             
             return (initialWidth, { constrainedSize in
                 let (finalWidth, finalLayout) = continueLayout(constrainedSize)
@@ -1076,8 +1153,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 return (finalWidth, { boundingWidth in
                     let (finalSize, apply) = finalLayout(boundingWidth)
                     
-                    return (finalSize, { synchronousLoads in
-                        apply(synchronousLoads)
+                    return (finalSize, { synchronousLoads, animation in
+                        apply(synchronousLoads, animation)
                         return fileNode
                     })
                 })
@@ -1122,6 +1199,27 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private func stopTimer() {
         self.playerUpdateTimer?.invalidate()
         self.playerUpdateTimer = nil
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.dateAndStatusNode.supernode != nil {
+            if let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
+                return result
+            }
+            if !self.dateAndStatusNode.frame.height.isZero {
+                if self.dateAndStatusNode.frame.contains(point) {
+                    return nil
+                }
+            }
+        }
+        return super.hitTest(point, with: event)
+    }
+    
+    func hasTapAction(at point: CGPoint) -> Bool {
+        if let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
+            return true
+        }
+        return false
     }
 }
 

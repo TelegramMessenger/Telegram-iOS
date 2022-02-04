@@ -56,6 +56,8 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
     func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
+    
+    func makeDimmedNode() -> ASDisplayNode?
 }
 
 final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
@@ -430,7 +432,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
     }
-    
+        
     init(context: AccountContext, useSharedAnimationPhase: Bool) {
         self.context = context
         self.useSharedAnimationPhase = useSharedAnimationPhase
@@ -450,7 +452,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
         self.addSubnode(self.patternImageNode)
-
+        
         //self.view.addSubview(self.bakedBackgroundView)
     }
 
@@ -793,7 +795,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
 
         self.loadPatternForSizeIfNeeded(size: size, transition: transition)
-        
+                
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
         }
@@ -885,6 +887,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+    
+    func makeDimmedNode() -> ASDisplayNode? {
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            return GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -1683,6 +1693,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         let node = WallpaperBackgroundNodeMergedImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
+    }
+
+    func makeDimmedNode() -> ASDisplayNode? {
+        return nil
     }
 }
 

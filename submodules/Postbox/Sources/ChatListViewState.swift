@@ -843,26 +843,36 @@ private final class ChatListViewSpaceState {
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
                 case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, presence, tagSummaryInfo, hasFailedMessages, isContact):
-                    var updatedTagSummaryCount: Int32?
-                    var updatedActionsSummaryCount: Int32?
+                    var updatedChatListMessageTagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo] = tagSummaryInfo
+                    var didUpdateSummaryInfo = false
                     
-                    if let tagSummary = self.summaryComponents.tagSummary {
-                        let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
-                        if let summary = transaction.currentUpdatedMessageTagSummaries[key] {
-                            updatedTagSummaryCount = summary.count
+                    for (key, component) in self.summaryComponents.components {
+                        var updatedTagSummaryCount: Int32?
+                        if let tagSummary = component.tagSummary {
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            if let summary = transaction.currentUpdatedMessageTagSummaries[key] {
+                                updatedTagSummaryCount = summary.count
+                            }
                         }
-                    }
-                    
-                    if let actionsSummary = self.summaryComponents.actionsSummary {
-                        let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
-                        if let count = transaction.currentUpdatedMessageActionsSummaries[key] {
-                            updatedActionsSummaryCount = count
-                        }
-                    }
-                    
-                    if updatedTagSummaryCount != nil || updatedActionsSummaryCount != nil {
-                        let summaryInfo = ChatListMessageTagSummaryInfo(tagSummaryCount: updatedTagSummaryCount ?? tagSummaryInfo.tagSummaryCount, actionsSummaryCount: updatedActionsSummaryCount ?? tagSummaryInfo.actionsSummaryCount)
                         
+                        var updatedActionsSummaryCount: Int32?
+                        if let actionsSummary = component.actionsSummary {
+                            let key = PendingMessageActionsSummaryKey(type: key.actionType, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
+                            if let count = transaction.currentUpdatedMessageActionsSummaries[key] {
+                                updatedActionsSummaryCount = count
+                            }
+                        }
+                        
+                        if updatedTagSummaryCount != nil || updatedActionsSummaryCount != nil {
+                            updatedChatListMessageTagSummaryInfo[key] = ChatListMessageTagSummaryInfo(
+                                tagSummaryCount: updatedTagSummaryCount ?? updatedChatListMessageTagSummaryInfo[key]?.tagSummaryCount,
+                                actionsSummaryCount: updatedActionsSummaryCount ?? updatedChatListMessageTagSummaryInfo[key]?.actionsSummaryCount
+                            )
+                            didUpdateSummaryInfo = true
+                        }
+                    }
+                    
+                    if didUpdateSummaryInfo {
                         return .MessageEntry(
                             index: index,
                             messages: messages,
@@ -872,7 +882,7 @@ private final class ChatListViewSpaceState {
                             embeddedInterfaceState: embeddedInterfaceState,
                             renderedPeer: entryRenderedPeer,
                             presence: presence,
-                            tagSummaryInfo: summaryInfo,
+                            tagSummaryInfo: updatedChatListMessageTagSummaryInfo,
                             hasFailedMessages: hasFailedMessages,
                             isContact: isContact
                         )
@@ -1408,22 +1418,28 @@ struct ChatListViewState {
                     }
                     let renderedPeer = RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers)
                     
-                    var tagSummaryCount: Int32?
-                    var actionsSummaryCount: Int32?
-                    
-                    if let tagSummary = self.summaryComponents.tagSummary {
-                        let key = MessageHistoryTagsSummaryKey(tag: tagSummary.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
-                        if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
-                            tagSummaryCount = summary.count
+                    var tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo] = [:]
+                    for (key, component) in self.summaryComponents.components {
+                        var tagSummaryCount: Int32?
+                        var actionsSummaryCount: Int32?
+                        
+                        if let tagSummary = component.tagSummary {
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
+                                tagSummaryCount = summary.count
+                            }
                         }
+                        
+                        if let actionsSummary = component.actionsSummary {
+                            let key = PendingMessageActionsSummaryKey(type: key.actionType, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
+                            actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
+                        }
+                        
+                        tagSummaryInfo[key] = ChatListMessageTagSummaryInfo(
+                            tagSummaryCount: tagSummaryCount,
+                            actionsSummaryCount: actionsSummaryCount
+                        )
                     }
-                    
-                    if let actionsSummary = self.summaryComponents.actionsSummary {
-                        let key = PendingMessageActionsSummaryKey(type: actionsSummary.type, peerId: index.messageIndex.id.peerId, namespace: actionsSummary.namespace)
-                        actionsSummaryCount = postbox.pendingMessageActionsMetadataTable.getCount(.peerNamespaceAction(key.peerId, key.namespace, key.type))
-                    }
-                    
-                    let tagSummaryInfo = ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount)
                     
                     let notificationSettings = postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId)
                     

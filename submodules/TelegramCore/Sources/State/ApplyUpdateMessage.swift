@@ -64,7 +64,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _):
+                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _):
                     updatedTimestamp = date
                 case .messageEmpty:
                     break
@@ -184,7 +184,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                                     sentStickers.append(file)
                                 }
                             case .Animated:
-                                sentGifs.append(file)
+                                if !file.isAnimatedSticker && !file.isVideoSticker {
+                                    sentGifs.append(file)
+                                }
                             default:
                                 break
                             }
@@ -364,7 +366,9 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                                         sentStickers.append(file)
                                     }
                                 case .Animated:
-                                    sentGifs.append(file)
+                                    if !file.isAnimatedSticker && !file.isVideoSticker {
+                                        sentGifs.append(file)
+                                    }
                                 default:
                                     break
                                 }

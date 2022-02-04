@@ -501,7 +501,7 @@ open class ItemListControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: toolbarFrame)
                 toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: transition)
             } else if let theme = self.theme {
-                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: theme), displaySeparator: true)
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(rootControllerTheme: theme), displaySeparator: true)
                 toolbarNode.frame = toolbarFrame
                 toolbarNode.updateLayout(size: toolbarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: layout.intrinsicInsets.bottom, toolbar: toolbarItem.toolbar, transition: .immediate)
                 self.addSubnode(toolbarNode)

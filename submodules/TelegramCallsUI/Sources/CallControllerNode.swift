@@ -200,17 +200,17 @@ private final class CallVideoNode: ASDisplayNode, PreviewVideoNode {
             case .rotation90:
                 rotationAngle = CGFloat.pi / 2.0
             case .rotation180:
-                if isCompactLayout {
+//                if isCompactLayout {
                     rotationAngle = CGFloat.pi
-                } else {
-                    rotationAngle = 0.0
-                }
+//                } else {
+//                    rotationAngle = 0.0
+//                }
             case .rotation270:
-                if isCompactLayout {
+//                if isCompactLayout {
                     rotationAngle = -CGFloat.pi / 2.0
-                } else {
-                    rotationAngle = CGFloat.pi / 2.0
-                }
+//                } else {
+//                    rotationAngle = CGFloat.pi / 2.0
+//                }
             }
             
             var additionalAngle: CGFloat = 0.0

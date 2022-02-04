@@ -84,8 +84,7 @@ public final class HashtagSearchController: TelegramBaseController {
                 
                 let listInteraction = ListMessageItemInteraction(openMessage: { message, mode -> Bool in
                     return true
-                }, openMessageContextMenu: { message, bool, node, rect, gesture in
-                    
+                }, openMessageContextMenu: { message, bool, node, rect, gesture in 
                 }, toggleMessagesSelection: { messageId, selected in
                 }, openUrl: { url, _, _, message in
                 }, openInstantPage: { message, data in

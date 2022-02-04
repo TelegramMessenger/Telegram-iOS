@@ -22,6 +22,11 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     public var isPolling: Signal<Bool, NoError> {
         return self.pollingOnce.get()
     }
+    
+    public var hasBackgroundTasks: Signal<Bool, NoError> {
+        return self.hasActiveMessagesToBroadcast.get()
+    }
+    
     private let pollingOnce = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var pollingOnceValue = false {
         didSet {
@@ -92,6 +97,8 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         |> map { inForeground, hasActiveMessagesToBroadcast, pollingOnce -> Bool in
             if (inForeground || pollingOnce) && hasActiveMessagesToBroadcast {
                 return true
+            } else if hasActiveMessagesToBroadcast {
+                return true
             } else {
                 return false
             }
@@ -100,7 +107,7 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
         |> deliverOn(self.queue)).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .precise, updated: { [weak self] location, heading in
+                    strongSelf.deviceLocationDisposable.set(strongSelf.locationManager.push(mode: .preciseAlways, updated: { [weak self] location, heading in
                         self?.deviceLocationPromise.set(.single((location, heading)))
                     }))
                 } else {
@@ -249,9 +256,9 @@ public final class LiveLocationManagerImpl: LiveLocationManager {
     }
     
     public func pollOnce() {
-        if !self.broadcastToMessageIds.isEmpty {
+        /*if !self.broadcastToMessageIds.isEmpty {
             self.pollingOnceValue = true
-        }
+        }*/
     }
     
     public func internalMessageForPeerId(_ peerId: EnginePeer.Id) -> EngineMessage.Id? {

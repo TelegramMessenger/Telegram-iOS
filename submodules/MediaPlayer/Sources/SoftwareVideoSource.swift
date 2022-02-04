@@ -1,5 +1,9 @@
 import Foundation
+#if !os(macOS)
 import UIKit
+#else
+import AppKit
+#endif
 import CoreMedia
 import SwiftSignalKit
 import FFMpegBinding
@@ -57,7 +61,7 @@ public final class SoftwareVideoSource {
     private var enqueuedFrames: [(MediaTrackFrame, CGFloat, CGFloat, Bool)] = []
     private var hasReadToEnd: Bool = false
     
-    public init(path: String) {
+    public init(path: String, hintVP9: Bool) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
         
         var s = stat()
@@ -74,7 +78,9 @@ public final class SoftwareVideoSource {
         self.path = path
         
         let avFormatContext = FFMpegAVFormatContext()
-        
+        if hintVP9 {
+            avFormatContext.forceVideoCodecId(FFMpegCodecIdVP9)
+        }
         let ioBufferSize = 64 * 1024
         
         let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback)
@@ -191,6 +197,14 @@ public final class SoftwareVideoSource {
         }
         
         return (frames.first, endOfStream)
+    }
+    
+    public func getFramerate() -> Int {
+        if let videoStream = self.videoStream {
+            return Int(videoStream.fps.seconds)
+        } else {
+            return 0
+        }
     }
     
     public func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {

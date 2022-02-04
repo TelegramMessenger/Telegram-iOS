@@ -219,7 +219,11 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.itemGroupsContainerNode.setGroups(groups)
     }
     
-    public func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
+    func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
         self.itemGroupsContainerNode.updateItem(groupIndex: groupIndex, itemIndex: itemIndex, f)
+    }
+    
+    func setItemGroupOverlayNode(groupIndex: Int, node: ActionSheetGroupOverlayNode) {
+        self.itemGroupsContainerNode.setItemGroupOverlayNode(groupIndex: groupIndex, node: node)
     }
 }

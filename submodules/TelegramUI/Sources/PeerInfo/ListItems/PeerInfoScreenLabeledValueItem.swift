@@ -3,6 +3,9 @@ import Display
 import TelegramPresentationData
 import AccountContext
 import TextFormat
+import UIKit
+import AppBundle
+import TelegramStringFormatting
 
 enum PeerInfoScreenLabeledValueTextColor {
     case primary
@@ -14,15 +17,21 @@ enum PeerInfoScreenLabeledValueTextBehavior: Equatable {
     case multiLine(maxLines: Int, enabledEntities: EnabledEntityTypes)
 }
 
+enum PeerInfoScreenLabeledValueIcon {
+    case qrCode
+}
+
 final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let id: AnyHashable
     let label: String
     let text: String
     let textColor: PeerInfoScreenLabeledValueTextColor
     let textBehavior: PeerInfoScreenLabeledValueTextBehavior
+    let icon: PeerInfoScreenLabeledValueIcon?
     let action: (() -> Void)?
     let longTapAction: ((ASDisplayNode) -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
+    let iconAction: (() -> Void)?
     let requestLayout: () -> Void
     
     init(
@@ -31,9 +40,11 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         text: String,
         textColor: PeerInfoScreenLabeledValueTextColor = .primary,
         textBehavior: PeerInfoScreenLabeledValueTextBehavior = .singleLine,
+        icon: PeerInfoScreenLabeledValueIcon? = nil,
         action: (() -> Void)?,
         longTapAction: ((ASDisplayNode) -> Void)? = nil,
         linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil,
+        iconAction: (() -> Void)? = nil,
         requestLayout: @escaping () -> Void
     ) {
         self.id = id
@@ -41,9 +52,11 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         self.text = text
         self.textColor = textColor
         self.textBehavior = textBehavior
+        self.icon = icon
         self.action = action
         self.longTapAction = longTapAction
         self.linkItemAction = linkItemAction
+        self.iconAction = iconAction
         self.requestLayout = requestLayout
     }
     
@@ -78,6 +91,9 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let expandBackgroundNode: ASImageNode
     private let expandNode: ImmediateTextNode
     private let expandButonNode: HighlightTrackingButtonNode
+    
+    private let iconNode: ASImageNode
+    private let iconButtonNode: HighlightTrackingButtonNode
     
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -116,6 +132,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         self.expandButonNode = HighlightTrackingButtonNode()
         
+        self.iconNode = ASImageNode()
+        self.iconNode.contentMode = .center
+        self.iconNode.displaysAsynchronously = false
+        
+        self.iconButtonNode = HighlightTrackingButtonNode()
+        
         self.activateArea = AccessibilityAreaNode()
         
         super.init()
@@ -134,6 +156,9 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.expandNode)
         self.addSubnode(self.expandButonNode)
         
+        self.addSubnode(self.iconNode)
+        self.addSubnode(self.iconButtonNode)
+        
         self.addSubnode(self.activateArea)
         
         self.expandButonNode.addTarget(self, action: #selector(self.expandPressed), forControlEvents: .touchUpInside)
@@ -148,11 +173,28 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 }
             }
         }
+        
+        self.iconButtonNode.addTarget(self, action: #selector(self.iconPressed), forControlEvents: .touchUpInside)
+        self.iconButtonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.iconNode.alpha = 0.4
+                } else {
+                    strongSelf.iconNode.alpha = 1.0
+                    strongSelf.iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
     }
     
     @objc private func expandPressed() {
         self.isExpanded = true
         self.item?.requestLayout()
+    }
+    
+    @objc private func iconPressed() {
+        self.item?.iconAction?()
     }
     
     override func didLoad() {
@@ -162,6 +204,9 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         recognizer.tapActionAtPoint = { [weak self] point in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return .keepWithSingleTap
+            }
+            if !strongSelf.iconButtonNode.isHidden, strongSelf.iconButtonNode.view.hitTest(strongSelf.view.convert(point, to: strongSelf.iconButtonNode.view), with: nil) != nil {
+                return .fail
             }
             if !strongSelf.expandButonNode.isHidden, strongSelf.expandButonNode.view.hitTest(strongSelf.view.convert(point, to: strongSelf.expandButonNode.view), with: nil) != nil {
                 return .fail
@@ -181,7 +226,10 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.updateTouchesAtPoint(point)
+            if !strongSelf.iconButtonNode.isHidden, let point = point, strongSelf.iconButtonNode.frame.contains(point) {
+            } else {
+                strongSelf.updateTouchesAtPoint(point)
+            }
         }
         self.view.addGestureRecognizer(recognizer)
     }
@@ -232,21 +280,28 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             textColorValue = presentationData.theme.list.itemAccentColor
         }
         
-        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand.uppercased(), font: Font.medium(16.0), textColor: presentationData.theme.list.itemAccentColor)
+        self.expandNode.attributedText = NSAttributedString(string: presentationData.strings.PeerInfo_BioExpand, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
         let expandSize = self.expandNode.updateLayout(CGSize(width: width, height: 100.0))
         
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: Font.regular(14.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
         
+        var text = item.text
+        let maxNumberOfLines: Int
         switch item.textBehavior {
         case .singleLine:
+            maxNumberOfLines = 1
+            self.textNode.maximumNumberOfLines = maxNumberOfLines
             self.textNode.cutout = nil
-            self.textNode.maximumNumberOfLines = 1
             self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
         case let .multiLine(maxLines, enabledEntities):
-            self.textNode.maximumNumberOfLines = self.isExpanded ? maxLines : 3
-//            self.textNode.cutout = self.isExpanded ? nil : TextNodeCutout(bottomRight: CGSize(width: expandSize.width + 4.0, height: expandSize.height))
+            if !self.isExpanded {
+                text = trimToLineCount(text, lineCount: 3)
+            }
+            
+            maxNumberOfLines = self.isExpanded ? maxLines : 3
+            self.textNode.maximumNumberOfLines = maxNumberOfLines
             if enabledEntities.isEmpty {
-                self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: textColorValue)
             } else {
                 let fontSize: CGFloat = 17.0
                 
@@ -257,16 +312,38 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 let boldItalicFont = Font.semiboldItalic(fontSize)
                 let titleFixedFont = Font.monospace(fontSize)
                 
-                let entities = generateTextEntities(item.text, enabledTypes: enabledEntities)
-                self.textNode.attributedText = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColorValue, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont)
+                let entities = generateTextEntities(text, enabledTypes: enabledEntities)
+                self.textNode.attributedText = stringWithAppliedEntities(text, entities: entities, baseColor: textColorValue, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont)
             }
         }
         
+        if let icon = item.icon {
+            let iconImage: UIImage?
+            switch icon {
+            case .qrCode:
+                iconImage = UIImage(bundleImageName: "Settings/QrIcon")
+            }
+            self.iconNode.image = generateTintedImage(image: iconImage, color: presentationData.theme.list.itemAccentColor)
+            self.iconNode.isHidden = false
+            self.iconButtonNode.isHidden = false
+        } else {
+            self.iconNode.isHidden = true
+            self.iconButtonNode.isHidden = true
+        }
+        
+        let additionalSideInset: CGFloat = !self.iconNode.isHidden ? 32.0 : 0.0
         let labelSize = self.labelNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
-        let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0 - additionalSideInset, height: .greatestFiniteMagnitude))
         let textSize = textLayout.size
         
-        if case .multiLine = item.textBehavior, textLayout.truncated, !self.isExpanded {
+        var displayMore = false
+        if !self.isExpanded {
+            if textLayout.truncated || text.count < item.text.count {
+                displayMore = true
+            }
+        }
+        
+        if case .multiLine = item.textBehavior, displayMore {
             self.expandBackgroundNode.isHidden = false
             self.expandNode.isHidden = false
             self.expandButonNode.isHidden = false
@@ -279,7 +356,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: labelSize)
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: labelFrame.maxY + 3.0), size: textSize)
         
-        let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height - 1.0), size: expandSize)
+        let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height), size: expandSize)
         self.expandNode.frame = expandFrame
         self.expandButonNode.frame = expandFrame.insetBy(dx: -8.0, dy: -8.0)
         
@@ -293,6 +370,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
         let height = labelSize.height + 3.0 + textSize.height + 22.0
+        
+        let iconButtonFrame = CGRect(x: width - safeInsets.right - height, y: 0.0, width: height, height: height)
+        transition.updateFrame(node: self.iconButtonNode, frame: iconButtonFrame)
+        if let iconSize = self.iconNode.image?.size {
+            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: width - safeInsets.right - sideInset - iconSize.width + 5.0, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize))
+        }
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)

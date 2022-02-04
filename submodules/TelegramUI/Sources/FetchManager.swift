@@ -395,7 +395,7 @@ private final class FetchManagerCategoryContext {
         }
     }
     
-    func cancelEntry(_ entryId: FetchManagerLocationEntryId) {
+    func cancelEntry(_ entryId: FetchManagerLocationEntryId, isCompleted: Bool) {
         var id: FetchManagerLocationEntryId = entryId
         if self.entries[id] == nil {
             for (key, _) in self.entries {
@@ -411,6 +411,9 @@ private final class FetchManagerCategoryContext {
             
             if let statusContext = self.statusContexts[id] {
                 if statusContext.hasEntry {
+                    if isCompleted {
+                        statusContext.originalStatus = .Local
+                    }
                     let previousStatus = statusContext.combinedStatus
                     statusContext.hasEntry = false
                     if let combinedStatus = statusContext.combinedStatus, combinedStatus != previousStatus {
@@ -513,7 +516,7 @@ public final class FetchManagerImpl: FetchManager {
                         return
                     }
                     strongSelf.withCategoryContext(key, { context in
-                        context.cancelEntry(id)
+                        context.cancelEntry(id, isCompleted: true)
                     })
                 }
             }, activeEntriesUpdated: { [weak self] in
@@ -619,7 +622,7 @@ public final class FetchManagerImpl: FetchManager {
     public func cancelInteractiveFetches(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource) {
         self.queue.async {
             self.withCategoryContext(category, { context in
-                context.cancelEntry(FetchManagerLocationEntryId(location: location, resourceId: resource.id, locationKey: locationKey))
+                context.cancelEntry(FetchManagerLocationEntryId(location: location, resourceId: resource.id, locationKey: locationKey), isCompleted: false)
             })
             
             self.postbox.mediaBox.cancelInteractiveResourceFetch(resource)

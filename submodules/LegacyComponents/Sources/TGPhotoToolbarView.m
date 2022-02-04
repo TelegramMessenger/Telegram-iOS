@@ -12,6 +12,8 @@
 
 @interface TGPhotoToolbarView ()
 {
+    id<LegacyComponentsContext> _context;
+    
     UIView *_backgroundView;
     
     UIView *_buttonsWrapperView;
@@ -28,11 +30,13 @@
 
 @implementation TGPhotoToolbarView
 
-- (instancetype)initWithBackButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context backButton:(TGPhotoEditorBackButton)backButton doneButton:(TGPhotoEditorDoneButton)doneButton solidBackground:(bool)solidBackground
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
     {
+        _context = context;
+        
         _interfaceOrientation = [[LegacyComponentsGlobals provider] applicationStatusBarOrientation];
         
         _backgroundView = [[UIView alloc] initWithFrame:CGRectZero];
@@ -85,6 +89,10 @@
 - (void)setDoneButtonType:(TGPhotoEditorDoneButton)doneButtonType {
     _doneButtonType = doneButtonType;
     
+    TGMediaAssetsPallete *pallete = nil;
+    if ([_context respondsToSelector:@selector(mediaAssetsPallete)])
+        pallete = [_context mediaAssetsPallete];
+    
     UIImage *doneImage;
     switch (doneButtonType)
     {
@@ -94,19 +102,11 @@
             
         case TGPhotoEditorDoneButtonDone:
         {
-            TGMediaAssetsPallete *pallete = nil;
-            if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
-                pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
-            
             doneImage = pallete != nil ? pallete.doneIconImage : TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
             break;
         }
         default:
         {
-            TGMediaAssetsPallete *pallete = nil;
-            if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
-                pallete = [[LegacyComponentsGlobals provider] mediaAssetsPallete];
-            
             doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
         }
             break;

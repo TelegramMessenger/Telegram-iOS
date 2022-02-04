@@ -132,7 +132,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     func setup(account: Account, item: HorizontalStickerGridItem) {
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1.file.id != item.file.id {
             if let dimensions = item.file.dimensions {
-                if item.file.isAnimatedSticker {
+                if item.file.isAnimatedSticker || item.file.isVideoSticker {
                     let animationNode: AnimatedStickerNode
                     if let currentAnimationNode = self.animationNode {
                         animationNode = currentAnimationNode
@@ -152,11 +152,15 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     let dimensions = item.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
                     
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: item.file, small: true, size: fittedDimensions, synchronousLoad: false))
+                    if item.file.isVideoSticker {
+                        self.imageNode.setSignal(chatMessageSticker(postbox: account.postbox, file: item.file, small: true, synchronousLoad: false))
+                    } else {
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: item.file, small: true, size: fittedDimensions, synchronousLoad: false))
+                    }
                     animationNode.started = { [weak self] in
                         self?.imageNode.alpha = 0.0
                     }
-                    animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
                 } else {

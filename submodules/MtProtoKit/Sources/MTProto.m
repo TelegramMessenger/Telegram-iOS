@@ -875,7 +875,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 } else {
                     [_context performBatchUpdates:^{
                         [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:selector];
-                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn selector:selector];
+                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:_cdn selector:selector allowUnboundEphemeralKeys:_allowUnboundEphemeralKeys];
                     }];
                     _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
                     _awaitingAuthInfoForSelector = @(selector);
@@ -2064,7 +2064,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
         
         [_context performBatchUpdates:^{
             [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:authInfoSelector];
-            [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true selector:authInfoSelector];
+            [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:true selector:authInfoSelector  allowUnboundEphemeralKeys:_allowUnboundEphemeralKeys];
         }];
         _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
         _awaitingAuthInfoForSelector = @(authInfoSelector);
@@ -2078,7 +2078,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             [_context removeTokenForDatacenterWithId:_datacenterId];
             [_context performBatchUpdates:^{
                 [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:authInfoSelector];
-                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector];
+                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector  allowUnboundEphemeralKeys:_allowUnboundEphemeralKeys];
             }];
             _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
             _awaitingAuthInfoForSelector = @(authInfoSelector);
@@ -2087,7 +2087,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             
             [_context performBatchUpdates:^{
                 [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:authInfoSelector];
-                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector];
+                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector  allowUnboundEphemeralKeys:_allowUnboundEphemeralKeys];
             }];
             _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
             _awaitingAuthInfoForSelector = @(authInfoSelector);
@@ -2099,7 +2099,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                     
                     [_context performBatchUpdates:^{
                         [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil selector:authInfoSelector];
-                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector];
+                        [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false selector:authInfoSelector  allowUnboundEphemeralKeys:_allowUnboundEphemeralKeys];
                     }];
                     _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
                     _awaitingAuthInfoForSelector = @(authInfoSelector);

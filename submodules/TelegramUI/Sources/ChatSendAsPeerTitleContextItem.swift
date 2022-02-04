@@ -75,4 +75,14 @@ private final class ChatSendAsPeerTitleContextItemNode: ASDisplayNode, ContextMe
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 12.0 / 17.0)
         self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
     }
+    
+    func canBeHighlighted() -> Bool {
+        return false
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+    }
+    
+    func performAction() {
+    }
 }

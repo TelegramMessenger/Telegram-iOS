@@ -46,6 +46,8 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 apiEntities.append(.messageEntityUnderline(offset: offset, length: length))
             case .BankCard:
                 apiEntities.append(.messageEntityBankCard(offset: offset, length: length))
+            case .Spoiler:
+                apiEntities.append(.messageEntitySpoiler(offset: offset, length: length))
             case .Custom:
                 break
         }

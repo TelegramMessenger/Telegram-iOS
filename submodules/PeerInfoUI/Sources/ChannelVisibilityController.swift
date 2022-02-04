@@ -21,6 +21,7 @@ import AccountContext
 import InviteLinksUI
 import ContextUI
 import UndoUI
+import QrCodeUI
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -1048,7 +1049,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         })))
         
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
         }, action: { _, f in
             f(.dismissWithoutContent)
             
@@ -1071,8 +1072,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                         } else {
                             isGroup = true
                         }
-                        let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
-                        presentControllerImpl?(controller, nil)
+                        presentControllerImpl?(QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup)), nil)
                     })
                 }
             })
@@ -1139,7 +1139,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             })
         })))
 
-        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), gesture: gesture)
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         presentInGlobalOverlayImpl?(contextController)
     }, manageInviteLinks: {
         let controller = inviteLinkListController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, admin: nil)

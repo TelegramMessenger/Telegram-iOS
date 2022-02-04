@@ -10,6 +10,7 @@ public protocol LiveLocationSummaryManager {
 public protocol LiveLocationManager {
     var summaryManager: LiveLocationSummaryManager { get }
     var isPolling: Signal<Bool, NoError> { get }
+    var hasBackgroundTasks: Signal<Bool, NoError> { get }
     
     func cancelLiveLocation(peerId: EnginePeer.Id)
     func pollOnce()

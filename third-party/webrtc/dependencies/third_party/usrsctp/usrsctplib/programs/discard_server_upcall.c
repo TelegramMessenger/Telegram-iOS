@@ -128,7 +128,7 @@ handle_upcall(struct socket *sock, void *data, int flgs)
 				       rn.recvv_rcvinfo.rcv_sid,
 				       rn.recvv_rcvinfo.rcv_ssn,
 				       rn.recvv_rcvinfo.rcv_tsn,
-				       ntohl(rn.recvv_rcvinfo.rcv_ppid),
+				       (uint32_t)ntohl(rn.recvv_rcvinfo.rcv_ppid),
 				       rn.recvv_rcvinfo.rcv_context);
 			}
 		}
@@ -220,14 +220,6 @@ main(int argc, char *argv[])
 			Sleep(1*1000);
 #else
 			sleep(1);
-#endif
-	}
-	usrsctp_close(sock);
-	while (usrsctp_finish() != 0) {
-#ifdef _WIN32
-		Sleep(1000);
-#else
-		sleep(1);
 #endif
 	}
 	return (0);

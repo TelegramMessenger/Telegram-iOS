@@ -83,6 +83,16 @@ public struct ListViewItemLayoutParams {
     }
 }
 
+private final class ControlledTransitionContext {
+    let transition: ControlledTransition
+    let beginAt: Double
+    
+    init(transition: ControlledTransition, beginAt: Double) {
+        self.transition = transition
+        self.beginAt = beginAt
+    }
+}
+
 open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     public struct HeaderId: Hashable {
         public var space: AnyHashable
@@ -126,6 +136,8 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
     
     private final var spring: ListViewItemSpring?
     private final var animations: [(String, ListViewAnimation)] = []
+    private final var pendingControlledTransitions: [ControlledTransition] = []
+    private final var controlledTransitions: [ControlledTransitionContext] = []
 
     final var tempHeaderSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
     final var headerSpaceAffinities: [ListViewItemNode.HeaderId: Int] = [:]
@@ -394,6 +406,26 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
             i += 1
         }
         
+        i = 0
+        var transitionCount = self.controlledTransitions.count
+        while i < transitionCount {
+            let transition = self.controlledTransitions[i]
+            var fraction = (timestamp - transition.beginAt) / transition.transition.animator.duration
+            fraction = max(0.0, min(1.0, fraction))
+            transition.transition.animator.setAnimationProgress(CGFloat(fraction))
+            
+            if timestamp >= transition.beginAt + transition.transition.animator.duration {
+                transition.transition.animator.finishAnimation()
+                self.controlledTransitions.remove(at: i)
+                transitionCount -= 1
+                i -= 1
+            } else {
+                continueAnimations = true
+            }
+            
+            i += 1
+        }
+        
         if let accessoryItemNode = self.accessoryItemNode {
             if (accessoryItemNode.animate(timestamp)) {
                 continueAnimations = true
@@ -438,6 +470,29 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         }
         
         self.accessoryItemNode?.removeAllAnimations()
+        
+        for transition in self.controlledTransitions {
+            transition.transition.animator.finishAnimation()
+        }
+        self.controlledTransitions.removeAll()
+    }
+    
+    func addPendingControlledTransition(transition: ControlledTransition) {
+        self.pendingControlledTransitions.append(transition)
+    }
+    
+    func beginPendingControlledTransitions(beginAt: Double, forceRestart: Bool) {
+        for transition in self.pendingControlledTransitions {
+            self.addControlledTransition(transition: transition, beginAt: beginAt, forceRestart: forceRestart)
+        }
+        self.pendingControlledTransitions.removeAll()
+    }
+    
+    func addControlledTransition(transition: ControlledTransition, beginAt: Double, forceRestart: Bool) {
+        for controlledTransition in self.controlledTransitions {
+            transition.merge(with: controlledTransition.transition, forceRestart: forceRestart)
+        }
+        self.controlledTransitions.append(ControlledTransitionContext(transition: transition, beginAt: beginAt))
     }
     
     public func addInsetsAnimationToValue(_ value: UIEdgeInsets, duration: Double, beginAt: Double) {

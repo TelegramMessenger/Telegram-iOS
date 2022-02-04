@@ -905,6 +905,10 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
         super.init()
         
         self.contentsGravity = .resize
+        if #available(iOS 13.0, *) {
+            self.preventsCapture = true
+            self.preventsDisplaySleepDuringVideoPlayback = false
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -1079,7 +1083,7 @@ private final class ItemView: UIView, SparseItemGridView {
         let messageItemNode: ListViewItemNode
         if let current = self.messageItemNode {
             messageItemNode = current
-            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return current }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
                 current.contentSize = layout.contentSize
                 current.insets = layout.insets
 
@@ -1110,7 +1114,7 @@ private final class ItemView: UIView, SparseItemGridView {
 
     func update(size: CGSize, insets: UIEdgeInsets) {
         if let messageItem = self.messageItem, let messageItemNode = self.messageItemNode {
-            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2), completion: { layout, apply in
+            messageItem.updateNode(async: { f in f() }, node: { return messageItemNode }, params: ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: 0.0), previousItem: nil, nextItem: nil, animation: .System(duration: 0.2, transition: ControlledTransition(duration: 0.2, curve: .spring, interactive: false)), completion: { layout, apply in
                 messageItemNode.contentSize = layout.contentSize
                 messageItemNode.insets = layout.insets
 
@@ -1201,7 +1205,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         self.listItemInteraction = listItemInteraction
         self.chatControllerInteraction = chatControllerInteraction
         self.directMediaImageCache = directMediaImageCache
-        self.captureProtected = captureProtected
+        self.captureProtected = false //captureProtected
 
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         self.strings = presentationData.strings

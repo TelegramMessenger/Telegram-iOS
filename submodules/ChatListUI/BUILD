@@ -64,7 +64,5 @@ swift_library(
         "//submodules/TelegramCallsUI:TelegramCallsUI",
         "//submodules/StickerResources:StickerResources",
     ] + NGDEPS,
-    visibility = [
         "//visibility:public",
     ],
-)

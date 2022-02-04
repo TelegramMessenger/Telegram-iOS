@@ -409,8 +409,15 @@ open class NavigationController: UINavigationController, ContainableController, 
         let overlayContainerLayout = layout
         
         if let inCallStatusBar = self.inCallStatusBar {
-            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(40.0, layout.safeInsets.top))))
-            if layout.deviceMetrics.hasTopNotch {
+            let isLandscape = layout.size.width > layout.size.height
+            var minHeight: CGFloat
+            if case .compact = layout.metrics.widthClass, isLandscape {
+                minHeight = 22.0
+            } else {
+                minHeight = 40.0
+            }
+            var inCallStatusBarFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(layout.statusBarHeight ?? 0.0, max(minHeight, layout.safeInsets.top))))
+            if layout.deviceMetrics.hasTopNotch && !isLandscape {
                 inCallStatusBarFrame.size.height += 12.0
             }
             if inCallStatusBar.frame.isEmpty {
@@ -1316,6 +1323,30 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     open override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        for i in 0 ..< viewControllers.count {
+            guard let controller = viewControllers[i] as? ViewController else {
+                continue
+            }
+            if self.viewControllers.contains(where: { $0 === controller }) {
+                continue
+            }
+            if let customNavigationData = controller.customNavigationData {
+                var found = false
+                for previousIndex in (0 ..< self.viewControllers.count).reversed() {
+                    let previousController = self.viewControllers[previousIndex]
+                    
+                    if let previousController = previousController as? ViewController, let previousCustomNavigationDataSummary = previousController.customNavigationDataSummary {
+                        controller.customNavigationDataSummary = customNavigationData.combine(summary: previousCustomNavigationDataSummary)
+                        found = true
+                        break
+                    }
+                }
+                if !found {
+                    controller.customNavigationDataSummary = customNavigationData.combine(summary: nil)
+                }
+            }
+        }
+        
         self._viewControllers = viewControllers.map { controller in
             let controller = controller as! ViewController
             controller.navigation_setNavigationController(self)

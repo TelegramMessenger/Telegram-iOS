@@ -394,6 +394,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             var updatedTheme = false
             var updatedWallpaper = false
             var updatedSelected = false
+            var updatedNightMode = false
             
             if currentItem?.emoticon != item.emoticon {
                 updatedEmoticon = true
@@ -410,6 +411,9 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
             if currentItem?.selected != item.selected {
                 updatedSelected = true
             }
+            if currentItem?.nightMode != item.nightMode {
+                updatedNightMode = true
+            }
             
             let text = NSAttributedString(string: item.strings.Conversation_Theme_NoTheme, font: Font.semibold(15.0), textColor: item.theme.actionSheet.controlAccentColor)
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
@@ -423,7 +427,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                         
-                    if updatedThemeReference || updatedWallpaper {
+                    if updatedThemeReference || updatedWallpaper || updatedNightMode {
                         if let themeReference = item.themeReference {
                             strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true))
                             strongSelf.imageNode.backgroundColor = nil

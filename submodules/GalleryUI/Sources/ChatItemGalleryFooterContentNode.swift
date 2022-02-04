@@ -21,6 +21,7 @@ import UrlEscaping
 import UndoUI
 import ManagedAnimationNode
 import TelegramUniversalVideoContent
+import InvisibleInkDustNode
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -98,8 +99,11 @@ class CaptionScrollWrapperNode: ASDisplayNode {
         if result == self.view, let subnode = self.subnodes?.first {
             let convertedPoint = self.view.convert(point, to: subnode.view)
             if let subnodes = subnode.subnodes {
-                for node in subnodes {
-                    if node.frame.contains(convertedPoint) {
+                for node in subnodes.reversed() {
+                    if node.frame.contains(convertedPoint) && node.isUserInteractionEnabled {
+                        if let dustNode = node as? InvisibleInkDustNode, dustNode.isRevealed {
+                            continue
+                        }
                         return node.view
                     }
                 }
@@ -130,6 +134,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let scrollNode: ASScrollNode
 
     private let textNode: ImmediateTextNode
+    private var spoilerTextNode: ImmediateTextNode?
+    private var dustNode: InvisibleInkDustNode?
+    
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
     private let backwardButton: PlaybackButtonNode
@@ -278,6 +285,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.visibilityAlpha = alpha
         self.contentNode.alpha = alpha
         self.scrubberView?.setCollapsed(alpha < 1.0, animated: animated)
+    }
+    
+    private var hasExpandedCaptionPromise = ValuePromise<Bool>(false)
+    var hasExpandedCaption: Signal<Bool, NoError> {
+        return hasExpandedCaptionPromise.get()
     }
     
     init(context: AccountContext, presentationData: PresentationData, present: @escaping (ViewController, Any?) -> Void = { _, _ in }) {
@@ -708,12 +720,62 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
+    private func updateSpoilers(textFrame: CGRect) {
+        if let textLayout = self.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
+            if self.spoilerTextNode == nil {
+                let spoilerTextNode = ImmediateTextNode()
+                spoilerTextNode.attributedText = textNode.attributedText
+                spoilerTextNode.maximumNumberOfLines = 0
+                spoilerTextNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
+                spoilerTextNode.displaySpoilers = true
+                spoilerTextNode.isHidden = false
+                spoilerTextNode.alpha = 0.0
+                spoilerTextNode.isUserInteractionEnabled = false
+                
+                self.spoilerTextNode = spoilerTextNode
+                self.textNode.supernode?.insertSubnode(spoilerTextNode, aboveSubnode: self.textNode)
+                
+                let dustNode = InvisibleInkDustNode(textNode: spoilerTextNode)
+                self.dustNode = dustNode
+                spoilerTextNode.supernode?.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
+                
+            }
+            if let dustNode = self.dustNode {
+                dustNode.update(size: textFrame.size, color: .white, textColor: .white, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
+                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            }
+        } else {
+            if let spoilerTextNode = self.spoilerTextNode {
+                self.spoilerTextNode = nil
+                spoilerTextNode.removeFromSupernode()
+            }
+            if let dustNode = self.dustNode {
+                self.dustNode = nil
+                dustNode.removeFromSupernode()
+            }
+        }
+    }
+    
     func setWebPage(_ webPage: TelegramMediaWebpage, media: Media) {
         self.currentWebPageAndMedia = (webPage, media)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.requestLayout?(.immediate)
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.hasExpandedCaptionPromise.set(true)
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            self.hasExpandedCaptionPromise.set(scrollView.contentOffset.y > 1.0)
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.hasExpandedCaptionPromise.set(scrollView.contentOffset.y > 1.0)
     }
     
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, contentInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -744,7 +806,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0
-            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            
+            let constrainSize = CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude)
+            let textSize = self.textNode.updateLayout(constrainSize)
             
             var textOffset: CGFloat = 0.0
             if displayCaption {
@@ -790,8 +854,14 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 }
             }
             textFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset + textOffset), size: textSize)
+            
+            self.updateSpoilers(textFrame: textFrame)
+            
+            let _ = self.spoilerTextNode?.updateLayout(constrainSize)
+            
             if self.textNode.frame != textFrame {
                 self.textNode.frame = textFrame
+                self.spoilerTextNode?.frame = textFrame
             }
         }
         
@@ -818,7 +888,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             transition.updateBounds(layer: scrubberView.layer, bounds: CGRect(origin: CGPoint(), size: scrubberFrame.size))
             transition.updatePosition(layer: scrubberView.layer, position: CGPoint(x: scrubberFrame.midX, y: scrubberFrame.midY))
         }
-        transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)
+        transition.updateAlpha(node: self.scrollWrapperNode, alpha: displayCaption ? 1.0 : 0.0)
         
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         

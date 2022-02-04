@@ -69,7 +69,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var icon: UIImage? {
         didSet {
-            self.iconNode.image = icon
+            self.iconNode.image = generateTintedImage(image: self.icon, color: self.theme.foregroundColor)
         }
     }
     
@@ -111,7 +111,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = icon
+        self.iconNode.image = generateTintedImage(image: icon, color: self.theme.foregroundColor)
         
         super.init()
         
@@ -214,6 +214,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonGlossNode?.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
+        
+        self.iconNode.image = generateTintedImage(image: self.iconNode.image, color: theme.foregroundColor)
         
         if let width = self.validLayout {
             _ = self.updateLayout(width: width, transition: .immediate)

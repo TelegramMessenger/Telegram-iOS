@@ -96,7 +96,6 @@ private enum ContactListNodeEntryId: Hashable {
 
 private final class ContactListNodeInteraction {
     fileprivate let activateSearch: () -> Void
-    fileprivate let openSortMenu: () -> Void
     fileprivate let authorize: () -> Void
     fileprivate let suppressWarning: () -> Void
     fileprivate let openPeer: (ContactListPeer, ContactListAction) -> Void
@@ -104,9 +103,8 @@ private final class ContactListNodeInteraction {
     
     let itemHighlighting = ContactItemHighlighting()
     
-    init(activateSearch: @escaping () -> Void, openSortMenu: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) {
+    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.activateSearch = activateSearch
-        self.openSortMenu = openSortMenu
         self.authorize = authorize
         self.suppressWarning = suppressWarning
         self.openPeer = openPeer
@@ -162,7 +160,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     text = strings.Contacts_SortedByPresence
                 }
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, accessible: false, header: nil, action: {
-                    interaction.openSortMenu()
             })
             case let .permissionInfo(_, title, text, suppressed):
                 return InfoListItem(presentationData: ItemListPresentationData(presentationData), title: title, text: .plain(text), style: .plain, closeAction: suppressed ? nil : {
@@ -442,11 +439,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     var commonHeader: ListViewItemHeader?
     var orderedPeers: [ContactListPeer]
     var headers: [ContactListPeerId: ContactListNameIndexHeader] = [:]
-    
-    if displaySortOptions, let sortOrder = presentation.sortOrder {
-        entries.append(.sort(theme, strings, sortOrder))
-    }
-    
+        
     var addHeader = false
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         let (suppressed, syncDisabled) = warningSuppressed
@@ -867,7 +860,6 @@ public final class ContactListNode: ASDisplayNode {
     public var contentScrollingEnded: ((ListView) -> Bool)?
     
     public var activateSearch: (() -> Void)?
-    public var openSortMenu: (() -> Void)?
     public var openPeer: ((ContactListPeer, ContactListAction) -> Void)?
     public var openPrivacyPolicy: (() -> Void)?
     public var suppressPermissionWarning: (() -> Void)?
@@ -955,8 +947,6 @@ public final class ContactListNode: ASDisplayNode {
         
         let interaction = ContactListNodeInteraction(activateSearch: { [weak self] in
             self?.activateSearch?()
-        }, openSortMenu: { [weak self] in
-            self?.openSortMenu?()
         }, authorize: {
             authorizeImpl?()
         }, suppressWarning: { [weak self] in
@@ -1574,6 +1564,6 @@ public final class ContactListNode: ASDisplayNode {
     }
     
     public func scrollToTop() {
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(-50.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

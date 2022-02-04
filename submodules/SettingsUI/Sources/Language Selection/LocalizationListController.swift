@@ -92,7 +92,6 @@ public class LocalizationListController: ViewController {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)
         
-        
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.editPressed))
         let doneItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
         if self.navigationItem.rightBarButtonItem === self.editItem {
@@ -124,6 +123,8 @@ public class LocalizationListController: ViewController {
             }
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, push: { [weak self] c in
+            self?.push(c)
         })
         
         self.controllerNode.listNode.visibleContentOffsetChanged = { [weak self] offset in

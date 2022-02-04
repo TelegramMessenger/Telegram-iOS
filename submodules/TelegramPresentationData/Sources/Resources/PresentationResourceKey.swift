@@ -25,6 +25,7 @@ public enum PresentationResourceKey: Int32 {
     case navigationMoreCircledIcon
     case navigationAddIcon
     case navigationPlayerCloseButton
+    case navigationQrCodeIcon
     
     case navigationLiveLocationIcon
     
@@ -209,6 +210,7 @@ public enum PresentationResourceKey: Int32 {
     
     case chatHistoryNavigationButtonImage
     case chatHistoryMentionsButtonImage
+    case chatHistoryReactionsButtonImage
     case chatHistoryNavigationButtonBadgeImage
     
     case chatMessageAttachedContentButtonIncoming
@@ -273,6 +275,8 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatListBadgeBackgroundActive(CGFloat)
     case chatListBadgeBackgroundInactive(CGFloat)
     case chatListBadgeBackgroundMention(CGFloat)
+    case badgeBackgroundReactions(CGFloat)
+    case badgeBackgroundInactiveReactions(CGFloat)
     case chatListBadgeBackgroundInactiveMention(CGFloat)
     case chatListBadgeBackgroundPinned(CGFloat)
     

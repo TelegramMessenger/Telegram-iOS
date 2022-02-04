@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import AudioToolbox
+import CoreHaptics
 
 public enum ImpactHapticFeedbackStyle: Hashable {
     case light
@@ -193,3 +194,38 @@ public final class HapticFeedback {
     }
 }
 
+@available(iOS 13.0, *)
+public final class ContinuousHaptic {
+    private let engine: CHHapticEngine
+    private let player: CHHapticPatternPlayer
+    
+    public init(duration: Double) throws {
+        self.engine = try CHHapticEngine()
+        
+        var events: [CHHapticEvent] = []
+        for i in 0 ... 10 {
+            let t = CGFloat(i) / 10.0
+            
+            let intensity = CHHapticEventParameter(parameterID: .hapticIntensity, value: Float((1.0 - t) * 0.1 + t * 1.0))
+            let sharpness = CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.3)
+            let eventDuration: Double
+            if i == 10 {
+                eventDuration = 100.0
+            } else {
+                eventDuration = duration
+            }
+            let event = CHHapticEvent(eventType: .hapticContinuous, parameters: [intensity, sharpness], relativeTime: Double(i) / 10.0 * duration, duration: eventDuration)
+            events.append(event)
+        }
+
+        let pattern = try CHHapticPattern(events: events, parameters: [])
+        self.player = try self.engine.makePlayer(with: pattern)
+
+        try self.engine.start()
+        try self.player.start(atTime: 0)
+    }
+    
+    deinit {
+        self.engine.stop(completionHandler: nil)
+    }
+}

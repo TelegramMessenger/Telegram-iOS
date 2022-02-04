@@ -725,7 +725,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             UINavigationController.attemptRotationToDeviceOrientation()
         })
 
-        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true)
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true)
         self.accountManager = accountManager
 
         telegramUIDeclareEncodables()
@@ -847,7 +847,13 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
                 if let context = context, let liveLocationManager = context.context.liveLocationManager {
                     let accountId = context.context.account.id
-                    return liveLocationManager.isPolling
+                    return combineLatest(queue: .mainQueue(),
+                        liveLocationManager.isPolling,
+                        liveLocationManager.hasBackgroundTasks
+                    )
+                    |> map { isPolling, hasBackgroundTasks -> Bool in
+                        return isPolling || hasBackgroundTasks
+                    }
                     |> distinctUntilChanged
                     |> map { value -> AccountRecordId? in
                         if value {
@@ -1307,6 +1313,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     private func resetBadge() {
+        var resetOnce = true
         self.badgeDisposable.set((self.context.get()
         |> mapToSignal { context -> Signal<Int32, NoError> in
             if let context = context {
@@ -1316,6 +1323,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }
         |> deliverOnMainQueue).start(next: { count in
+            if resetOnce {
+                resetOnce = false
+                if count == 0 {
+                    UIApplication.shared.applicationIconBadgeNumber = 1
+                }
+            }
             UIApplication.shared.applicationIconBadgeNumber = Int(count)
         }))
     }
@@ -2087,7 +2100,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                             if result {
                                 Queue.mainQueue().async {
                                     let reply = UNTextInputNotificationAction(identifier: "reply", title: replyString, options: [], textInputButtonTitle: replyString, textInputPlaceholder: messagePlaceholderString)
-                                    
+                                                                        
                                     let unknownMessageCategory: UNNotificationCategory
                                     let replyMessageCategory: UNNotificationCategory
                                     let replyLegacyMessageCategory: UNNotificationCategory

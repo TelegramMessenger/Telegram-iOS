@@ -13,22 +13,6 @@ import DirectMediaImageCache
 import TelegramStringFormatting
 import TooltipUI
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
-private class SimpleLayer: CALayer {
-    override func action(forKey event: String) -> CAAction? {
-        return nullAction
-    }
-
-    func update(size: CGSize) {
-    }
-}
-
 private enum SelectionTransition {
     case begin
     case change
@@ -1346,7 +1330,7 @@ public final class CalendarMessageScreen: ViewController {
                     selectionToolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: toolbarText, isEnabled: true, color: .custom(self.selectionState?.dayRange != nil ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemDisabledTextColor))), transition: transition)
                 } else {
                     selectionToolbarNode = ToolbarNode(
-                        theme: TabBarControllerTheme(
+                        theme: ToolbarTheme(
                         rootControllerTheme: self.presentationData.theme),
                         displaySeparator: true,
                         left: {

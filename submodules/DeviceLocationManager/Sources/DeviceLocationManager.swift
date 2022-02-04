@@ -3,7 +3,8 @@ import CoreLocation
 import SwiftSignalKit
 
 public enum DeviceLocationMode: Int32 {
-    case precise = 0
+    case preciseForeground = 0
+    case preciseAlways = 1
 }
 
 private final class DeviceLocationSubscriber {
@@ -51,15 +52,15 @@ public final class DeviceLocationManager: NSObject {
         
         super.init()
         
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            self.manager.allowsBackgroundLocationUpdates = true
-        }
         self.manager.delegate = self
         self.manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         self.manager.distanceFilter = 5.0
         self.manager.activityType = .other
         self.manager.pausesLocationUpdatesAutomatically = false
         self.manager.headingFilter = 2.0
+        if #available(iOS 11.0, *) {
+            self.manager.showsBackgroundLocationIndicator = true
+        }
     }
     
     public func push(mode: DeviceLocationMode, updated: @escaping (CLLocation, Double?) -> Void) -> Disposable {
@@ -108,6 +109,14 @@ public final class DeviceLocationManager: NSObject {
                         self.requestedAuthorization = true
                         self.manager.requestAlwaysAuthorization()
                     }
+                    
+                    switch topMode {
+                    case .preciseForeground:
+                        self.manager.allowsBackgroundLocationUpdates = false
+                    case .preciseAlways:
+                        self.manager.allowsBackgroundLocationUpdates = true
+                    }
+                    
                     self.manager.startUpdatingLocation()
                     self.manager.startUpdatingHeading()
                 }
@@ -164,7 +173,7 @@ extension DeviceLocationManager: CLLocationManagerDelegate {
 public func currentLocationManagerCoordinate(manager: DeviceLocationManager, timeout timeoutValue: Double) -> Signal<CLLocationCoordinate2D?, NoError> {
     return (
         Signal { subscriber in
-            let disposable = manager.push(mode: .precise, updated: { location, _ in
+            let disposable = manager.push(mode: .preciseForeground, updated: { location, _ in
                 subscriber.putNext(location.coordinate)
                 subscriber.putCompletion()
             })

@@ -337,7 +337,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
     }
 }
 
-private final class InnerTextSelectionTipContainerNode: ASDisplayNode {
+final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let presentationData: PresentationData
     private var effectView: UIVisualEffectView?
     private let textNode: TextNode
@@ -507,7 +507,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.shadowNode.isHidden = true
         
         var items = items
-        if let firstItem = items.items.first, case let .custom(_, additional) = firstItem, additional {
+        if case var .list(itemList) = items.content, let firstItem = itemList.first, case let .custom(_, additional) = firstItem, additional {
             let additionalShadowNode = ASImageNode()
             additionalShadowNode.displaysAsynchronously = false
             additionalShadowNode.displayWithoutProcessing = true
@@ -517,13 +517,19 @@ final class ContextActionsContainerNode: ASDisplayNode {
             self.additionalShadowNode = additionalShadowNode
             
             self.additionalActionsNode = InnerActionsContainerNode(presentationData: presentationData, items: [firstItem], getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
-            items.items.removeFirst()
+            itemList.removeFirst()
+            items.content = .list(itemList)
         } else {
             self.additionalShadowNode = nil
             self.additionalActionsNode = nil
         }
         
-        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: items.items, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
+        var itemList: [ContextMenuItem] = []
+        if case let .list(list) = items.content {
+            itemList = list
+        }
+        
+        self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: itemList, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if let tip = items.tip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
             textSelectionTipNode.isUserInteractionEnabled = false
