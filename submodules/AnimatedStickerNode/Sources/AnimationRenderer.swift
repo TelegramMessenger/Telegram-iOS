@@ -5,6 +5,7 @@ import AsyncDisplayKit
 public enum AnimationRendererFrameType {
     case argb
     case yuva
+    case dct
 }
 
 protocol AnimationRenderer {

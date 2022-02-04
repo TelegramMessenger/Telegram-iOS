@@ -5,23 +5,97 @@ import Display
 import SwiftSignalKit
 import YuvConversion
 import Accelerate
+import AnimationCompression
+import Metal
+import MetalKit
 
-final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
+@available(iOS 10.0, *)
+final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
+    private final class View: UIView {
+        static override var layerClass: AnyClass {
+#if targetEnvironment(simulator)
+            if #available(iOS 13.0, *) {
+                return CAMetalLayer.self
+            } else {
+                preconditionFailure()
+            }
+#else
+            return CAMetalLayer.self
+#endif
+        }
+
+        init(device: MTLDevice) {
+            super.init(frame: CGRect())
+            
+#if targetEnvironment(simulator)
+            if #available(iOS 13.0, *) {
+                let metalLayer = self.layer as! CAMetalLayer
+
+                metalLayer.device = MTLCreateSystemDefaultDevice()
+                metalLayer.pixelFormat = .bgra8Unorm
+                metalLayer.framebufferOnly = true
+                metalLayer.allowsNextDrawableTimeout = true
+            }
+#else
+            let metalLayer = self.layer as! CAMetalLayer
+            
+            metalLayer.device = MTLCreateSystemDefaultDevice()
+            metalLayer.pixelFormat = .bgra8Unorm
+            metalLayer.framebufferOnly = true
+            if #available(iOS 11.0, *) {
+                metalLayer.allowsNextDrawableTimeout = true
+            }
+#endif
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        deinit {
+        }
+    }
+    
     private var highlightedContentNode: ASDisplayNode?
     private var highlightedColor: UIColor?
     private var highlightReplacesContent = false
+    
+    private let renderer: CompressedImageRenderer
+    
+    override init() {
+        self.renderer = CompressedImageRenderer(sharedContext: AnimationCompressor.SharedContext.shared)!
+        
+        super.init()
+        
+        self.setViewBlock({
+            return View(device: AnimationCompressor.SharedContext.shared.device)
+        })
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.layer.isOpaque = false
+        self.layer.backgroundColor = nil
+    }
         
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, mulAlpha: Bool, completion: @escaping () -> Void) {
-        assert(bytesPerRow > 0)
+        switch type {
+        case .dct:
+            self.renderer.renderIdct(metalLayer: self.layer, compressedImage: AnimationCompressor.CompressedImageData(data: data), completion: completion)
+        case .argb:
+            self.renderer.renderRgb(metalLayer: self.layer, width: width, height: height, bytesPerRow: bytesPerRow, data: data, completion: completion)
+        case .yuva:
+            self.renderer.renderYuva(metalLayer: self.layer, width: width, height: height, data: data, completion: completion)
+        }
+        
+        /*assert(bytesPerRow > 0)
         queue.async { [weak self] in
             switch type {
-            case .argb:
-                let calculatedBytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(width))
-                assert(bytesPerRow == calculatedBytesPerRow)
-            case .yuva:
-                break
             case .dct:
                 break
+            default:
+                return
             }
             
             var image: UIImage?
@@ -58,8 +132,6 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                                 memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
                             }
                         }
-                    case .dct:
-                        break
                     }
                 })
             }
@@ -75,11 +147,11 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 }
                 completion()
             }
-        }
+        }*/
     }
     
     private func updateHighlightedContentNode() {
-        guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor else {
+        /*guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor else {
             return
         }
         if let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
@@ -88,11 +160,11 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
         highlightedContentNode.tintColor = highlightedColor
         if self.highlightReplacesContent {
             self.contents = nil
-        }
+        }*/
     }
             
     func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
-        self.highlightReplacesContent = replace
+        /*self.highlightReplacesContent = replace
         var updated = false
         if let current = self.highlightedColor, let color = color {
             updated = !current.isEqual(color)
@@ -129,6 +201,6 @@ final class SoftwareAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 strongSelf.highlightedContentNode?.removeFromSupernode()
                 strongSelf.highlightedContentNode = nil
             })
-        }
+        }*/
     }
 }
