@@ -1191,6 +1191,22 @@ bool TGIsKorean()
     return value;
 }
 
+static NSPredicate *koreanPredicate = [NSPredicate predicateWithFormat:@"SELF MATCHES %@", @"^[ㄱ-ㅎㅏ-ㅣ가-힣]{2,8}"];
+bool TGIsKoreanName(NSString *firstName, NSString *lastName)
+{
+    static bool value = false;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^
+    {
+        if (firstName.length < 4 || lastName.length < 4) {
+            value = [koreanPredicate evaluateWithObject:[NSString stringWithFormat:@"%@%@", lastName, firstName]];
+        } else {
+            value = false;
+        }
+    });
+    return value;
+}
+
 bool TGIsLocaleArabic()
 {
     static bool value = false;
