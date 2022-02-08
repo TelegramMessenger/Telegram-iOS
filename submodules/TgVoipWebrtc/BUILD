@@ -84,6 +84,7 @@ objc_library(
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/rnnoise:rnnoise",
         "//third-party/libyuv:libyuv",
+        "//third-party/libx264:libx264",
     ],
     sdk_frameworks = [
         "Foundation",
