@@ -461,6 +461,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         unreadBadgeActiveTextColor:  UIColor(rgb: 0x000000),
         unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0x666666),
         unreadBadgeInactiveTextColor:UIColor(rgb: 0x000000),
+        reactionBadgeActiveBackgroundColor: UIColor(rgb: 0xFF2D55),
         pinnedBadgeColor: UIColor(rgb: 0x767677),
         pinnedSearchBarColor: UIColor(rgb: 0x272728),
         regularSearchBarColor: UIColor(rgb: 0x272728),

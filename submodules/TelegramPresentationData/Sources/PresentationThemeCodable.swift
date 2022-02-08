@@ -977,6 +977,7 @@ extension PresentationThemeChatList: Codable {
         case unreadBadgeActiveText
         case unreadBadgeInactiveBg
         case unreadBadgeInactiveText
+        case reactionBadgeActiveBg
         case pinnedBadge
         case pinnedSearchBar
         case regularSearchBar
@@ -992,6 +993,7 @@ extension PresentationThemeChatList: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
         self.init(backgroundColor: try decodeColor(values, .bg),
                   itemSeparatorColor: try decodeColor(values, .itemSeparator),
                   itemBackgroundColor: try decodeColor(values, .itemBg),
@@ -1014,6 +1016,7 @@ extension PresentationThemeChatList: Codable {
                   unreadBadgeActiveTextColor: try decodeColor(values, .unreadBadgeActiveText),
                   unreadBadgeInactiveBackgroundColor: try decodeColor(values, .unreadBadgeInactiveBg),
                   unreadBadgeInactiveTextColor: try decodeColor(values, .unreadBadgeInactiveText),
+                  reactionBadgeActiveBackgroundColor: try decodeColor(values, .reactionBadgeActiveBg, fallbackKey: "\(codingPath).unreadBadgeActiveBg"),
                   pinnedBadgeColor: try decodeColor(values, .pinnedBadge),
                   pinnedSearchBarColor: try decodeColor(values, .pinnedSearchBar),
                   regularSearchBarColor: try decodeColor(values, .regularSearchBar),
@@ -1051,6 +1054,7 @@ extension PresentationThemeChatList: Codable {
         try encodeColor(&values, self.unreadBadgeActiveTextColor, .unreadBadgeActiveText)
         try encodeColor(&values, self.unreadBadgeInactiveBackgroundColor, .unreadBadgeInactiveBg)
         try encodeColor(&values, self.unreadBadgeInactiveTextColor, .unreadBadgeInactiveText)
+        try encodeColor(&values, self.reactionBadgeActiveBackgroundColor, .reactionBadgeActiveBg)
         try encodeColor(&values, self.pinnedBadgeColor, .pinnedBadge)
         try encodeColor(&values, self.pinnedSearchBarColor, .pinnedSearchBar)
         try encodeColor(&values, self.regularSearchBarColor, .regularSearchBar)
