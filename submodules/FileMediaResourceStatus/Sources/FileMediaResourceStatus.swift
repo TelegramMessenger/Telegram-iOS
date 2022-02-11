@@ -97,3 +97,26 @@ public func messageFileMediaResourceStatus(context: AccountContext, file: Telegr
         }
     }
 }
+
+public func messageImageMediaResourceStatus(context: AccountContext, image: TelegramMediaImage, message: Message, isRecentActions: Bool, isSharedMedia: Bool = false, isGlobalSearch: Bool = false) -> Signal<FileMediaResourceStatus, NoError> {
+    if message.flags.isSending {
+        return combineLatest(messageMediaImageStatus(context: context, messageId: message.id, image: image), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
+        |> map { resourceStatus, pendingStatus -> FileMediaResourceStatus in
+            let mediaStatus: FileMediaResourceMediaStatus
+            if let pendingStatus = pendingStatus {
+                mediaStatus = .fetchStatus(.Fetching(isActive: pendingStatus.isRunning, progress: pendingStatus.progress))
+            } else {
+                mediaStatus = .fetchStatus(resourceStatus)
+            }
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+        }
+    } else {
+        return messageMediaImageStatus(context: context, messageId: message.id, image: image)
+        |> map { resourceStatus -> FileMediaResourceStatus in
+            let mediaStatus: FileMediaResourceMediaStatus
+            mediaStatus = .fetchStatus(resourceStatus)
+            return FileMediaResourceStatus(mediaStatus: mediaStatus, fetchStatus: resourceStatus)
+        }
+    }
+}
+

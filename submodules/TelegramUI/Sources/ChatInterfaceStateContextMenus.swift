@@ -26,6 +26,7 @@ import TelegramNotices
 import ReactionListContextMenuContent
 import TelegramUIPreferences
 import Translate
+import DebugSettingsUI
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -565,7 +566,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         return transaction.getCombinedPeerReadState(messages[0].id.peerId)
     }
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
@@ -576,9 +577,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         readState,
         ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
         context.engine.stickers.availableReactions(),
-        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+        context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings, SharedDataKeys.loggingSettings])
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips, availableReactions, sharedData -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, cachedData, readState, messageViewsPrivacyTips, availableReactions, sharedData -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], CachedPeerData?, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -598,12 +599,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             translationSettings = TranslationSettings.defaultSettings
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings)
+        let loggingSettings: LoggingSettings
+        if let current = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) {
+            loggingSettings = current
+        } else {
+            loggingSettings = LoggingSettings.defaultSettings
+        }
+        
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings -> ContextController.Items in
+    |> map { data, updatingMessageMedia, cachedData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings -> ContextController.Items in
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -865,6 +873,32 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     })))
                 }
             }
+        }
+        
+        var downloadableMediaResourceInfos: [String] = []
+        for media in message.media {
+            if let file = media as? TelegramMediaFile {
+                if let info = extractMediaResourceDebugInfo(resource: file.resource) {
+                    downloadableMediaResourceInfos.append(info)
+                }
+            } else if let image = media as? TelegramMediaImage {
+                for representation in image.representations {
+                    if let info = extractMediaResourceDebugInfo(resource: representation.resource) {
+                        downloadableMediaResourceInfos.append(info)
+                    }
+                }
+            }
+        }
+        
+        if (loggingSettings.logToFile || loggingSettings.logToConsole) && !downloadableMediaResourceInfos.isEmpty {
+            actions.append(.action(ContextMenuActionItem(text: "Send Logs", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                triggerDebugSendLogsUI(context: context, additionalInfo: "User has requested download logs for \(downloadableMediaResourceInfos)", pushController: { c in
+                    controllerInteraction.navigationController()?.pushViewController(c)
+                })
+                f(.default)
+            })))
         }
         
         var threadId: Int64?

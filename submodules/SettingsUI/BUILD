@@ -97,6 +97,8 @@ swift_library(
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/FetchManagerImpl:FetchManagerImpl",
+        "//submodules/ListMessageItem:ListMessageItem",
     ],
     visibility = [
         "//visibility:public",

@@ -1768,7 +1768,7 @@ public func chatMessageWebFileCancelInteractiveFetch(account: Account, image: Te
     return account.postbox.mediaBox.cancelInteractiveResourceFetch(image.resource)
 }
 
-public func chatWebpageSnippetFileData(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<Data?, NoError> {
+public func chatWebpageSnippetFileData(account: Account, mediaReference: AnyMediaReference, resource: MediaResource) -> Signal<Data?, NoError> {
     let resourceData = account.postbox.mediaBox.resourceData(resource)
         |> map { next in
             return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
@@ -1782,7 +1782,7 @@ public func chatWebpageSnippetFileData(account: Account, fileReference: FileMedi
         }, completed: {
             subscriber.putCompletion()
         }))
-        disposable.add(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource)).start())
+        disposable.add(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: mediaReference.resourceReference(resource)).start())
         return disposable
     }
 }
@@ -1810,8 +1810,8 @@ public func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageM
     }
 }
 
-public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatWebpageSnippetFileData(account: account, fileReference: fileReference, resource: representation.resource)
+public func chatWebpageSnippetFile(account: Account, mediaReference: AnyMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatWebpageSnippetFileData(account: account, mediaReference: mediaReference, resource: representation.resource)
     
     return signal |> map { fullSizeData in
         return { arguments in

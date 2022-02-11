@@ -7,12 +7,12 @@ import TelegramUIPreferences
 import AccountContext
 import UniversalMediaPlayer
 
-private struct FetchManagerLocationEntryId: Hashable {
-    let location: FetchManagerLocation
-    let resourceId: MediaResourceId
-    let locationKey: FetchManagerLocationKey
+public struct FetchManagerLocationEntryId: Hashable {
+    public let location: FetchManagerLocation
+    public let resourceId: MediaResourceId
+    public let locationKey: FetchManagerLocationKey
     
-    static func ==(lhs: FetchManagerLocationEntryId, rhs: FetchManagerLocationEntryId) -> Bool {
+    public static func ==(lhs: FetchManagerLocationEntryId, rhs: FetchManagerLocationEntryId) -> Bool {
         if lhs.location != rhs.location {
             return false
         }
@@ -25,7 +25,7 @@ private struct FetchManagerLocationEntryId: Hashable {
         return true
     }
 
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(self.resourceId.hashValue)
         hasher.combine(self.locationKey)
     }
@@ -116,7 +116,7 @@ private final class FetchManagerCategoryContext {
     private let postbox: Postbox
     private let storeManager: DownloadedMediaStoreManager?
     private let entryCompleted: (FetchManagerLocationEntryId) -> Void
-    private let activeEntriesUpdated: () -> Void
+    private let activeEntriesUpdated: ([FetchManagerEntrySummary]) -> Void
     
     private var topEntryIdAndPriority: (FetchManagerLocationEntryId, FetchManagerPriorityKey)?
     private var entries: [FetchManagerLocationEntryId: FetchManagerLocationEntry] = [:]
@@ -133,7 +133,7 @@ private final class FetchManagerCategoryContext {
         return false
     }
     
-    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, entryCompleted: @escaping (FetchManagerLocationEntryId) -> Void, activeEntriesUpdated: @escaping () -> Void) {
+    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, entryCompleted: @escaping (FetchManagerLocationEntryId) -> Void, activeEntriesUpdated: @escaping ([FetchManagerEntrySummary]) -> Void) {
         self.postbox = postbox
         self.storeManager = storeManager
         self.entryCompleted = entryCompleted
@@ -182,6 +182,7 @@ private final class FetchManagerCategoryContext {
         }
         
         var activeContextsUpdated = false
+        let _ = activeContextsUpdated
         
         if self.maybeFindAndActivateNewTopEntry() {
             activeContextsUpdated = true
@@ -285,9 +286,7 @@ private final class FetchManagerCategoryContext {
             }
         }
         
-        if activeContextsUpdated {
-            self.activeEntriesUpdated()
-        }
+        self.activeEntriesUpdated(self.entries.values.compactMap(FetchManagerEntrySummary.init).sorted(by: { $0.priority < $1.priority }))
     }
     
     func maybeFindAndActivateNewTopEntry() -> Bool {
@@ -406,8 +405,12 @@ private final class FetchManagerCategoryContext {
             }
         }
         
+        var entriesRemoved = false
+        let _ = entriesRemoved
+        
         if let _ = self.entries[id] {
             self.entries.removeValue(forKey: id)
+            entriesRemoved = true
             
             if let statusContext = self.statusContexts[id] {
                 if statusContext.hasEntry {
@@ -426,6 +429,7 @@ private final class FetchManagerCategoryContext {
         }
         
         var activeContextsUpdated = false
+        let _ = activeContextsUpdated
         
         if let activeContext = self.activeContexts[id] {
             activeContext.disposable?.dispose()
@@ -442,9 +446,7 @@ private final class FetchManagerCategoryContext {
             activeContextsUpdated = true
         }
         
-        if activeContextsUpdated {
-            self.activeEntriesUpdated()
-        }
+        self.activeEntriesUpdated(self.entries.values.compactMap(FetchManagerEntrySummary.init).sorted(by: { $0.priority < $1.priority }))
     }
     
     func withFetchStatusContext(_ id: FetchManagerLocationEntryId, _ f: (FetchManagerStatusContext) -> Void) {
@@ -472,6 +474,25 @@ private final class FetchManagerCategoryContext {
     }
 }
 
+public struct FetchManagerEntrySummary: Equatable {
+    public let id: FetchManagerLocationEntryId
+    public let mediaReference: AnyMediaReference?
+    public let resourceReference: MediaResourceReference
+    public let priority: FetchManagerPriorityKey
+}
+
+private extension FetchManagerEntrySummary {
+    init?(entry: FetchManagerLocationEntry) {
+        guard let priority = entry.priorityKey else {
+            return nil
+        }
+        self.id = entry.id
+        self.mediaReference = entry.mediaReference
+        self.resourceReference = entry.resourceReference
+        self.priority = priority
+    }
+}
+
 public final class FetchManagerImpl: FetchManager {
     public let queue = Queue.mainQueue()
     private let postbox: Postbox
@@ -486,7 +507,12 @@ public final class FetchManagerImpl: FetchManager {
         return self.hasUserInitiatedEntriesValue.get()
     }
     
-    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?) {
+    private let entriesSummaryValue = ValuePromise<[FetchManagerEntrySummary]>([], ignoreRepeated: true)
+    public var entriesSummary: Signal<[FetchManagerEntrySummary], NoError> {
+        return self.entriesSummaryValue.get()
+    }
+    
+    public init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?) {
         self.postbox = postbox
         self.storeManager = storeManager
     }
@@ -519,7 +545,7 @@ public final class FetchManagerImpl: FetchManager {
                         context.cancelEntry(id, isCompleted: true)
                     })
                 }
-            }, activeEntriesUpdated: { [weak self] in
+            }, activeEntriesUpdated: { [weak self] entries in
                 queue.async {
                     guard let strongSelf = self else {
                         return
@@ -532,6 +558,8 @@ public final class FetchManagerImpl: FetchManager {
                         }
                     }
                     strongSelf.hasUserInitiatedEntriesValue.set(hasActiveUserInitiatedEntries)
+                    
+                    strongSelf.entriesSummaryValue.set(entries)
                 }
             })
             self.categoryContexts[key] = context

@@ -528,7 +528,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     if let imageReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaImage.self) {
                         updateIconImageSignal = chatWebpageSnippetPhoto(account: item.context.account, photoReference: imageReference)
                     } else if let fileReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaFile.self) {
-                        updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, fileReference: fileReference, representation: iconImageReferenceAndRepresentation.1)
+                        updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, mediaReference: fileReference.abstract, representation: iconImageReferenceAndRepresentation.1)
                     }
                 } else {
                     updateIconImageSignal = .complete()

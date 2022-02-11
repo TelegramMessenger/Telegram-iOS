@@ -403,6 +403,7 @@ private enum PeerInfoSettingsSection {
     case avatar
     case edit
     case proxy
+    case downloads
     case savedMessages
     case recentCalls
     case devices
@@ -662,10 +663,14 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
+    //TODO:localize
+    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "Downloads", icon: PresentationResourcesSettings.savedMessages, action: {
+        interaction.openSettings(.downloads)
+    }))
+    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
     }))
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
+    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, text: presentationData.strings.CallSettings_RecentCalls, icon: PresentationResourcesSettings.recentCalls, action: {
         interaction.openSettings(.recentCalls)
     }))
     
@@ -680,10 +685,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         devicesLabel = ""
     }
     
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 2, label: .text(devicesLabel), text: presentationData.strings.Settings_Devices, icon: PresentationResourcesSettings.devices, action: {
+    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 3, label: .text(devicesLabel), text: presentationData.strings.Settings_Devices, icon: PresentationResourcesSettings.devices, action: {
         interaction.openSettings(.devices)
     }))
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 3, text: presentationData.strings.Settings_ChatFolders, icon: PresentationResourcesSettings.chatFolders, action: {
+    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 4, text: presentationData.strings.Settings_ChatFolders, icon: PresentationResourcesSettings.chatFolders, action: {
         interaction.openSettings(.chatFolders)
     }))
     
@@ -5527,6 +5532,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             case .proxy:
                 self.controller?.push(proxySettingsController(context: self.context))
+            case .downloads:
+                self.controller?.push(downloadsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData))
             case .savedMessages:
                 if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.context.account.peerId)))

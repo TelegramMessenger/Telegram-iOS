@@ -556,7 +556,7 @@ final class WatchMediaHandler: WatchRequestHandler {
                                             imageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                                             roundVideo = fileReference.media.isInstantVideo
                                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                            imageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                                            imageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                                         }
                                     }
                                 }

@@ -226,7 +226,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
                     if fileReference.media.isVideo {
                         updateImageSignal = chatMessageVideoThumbnail(account: self.context.account, fileReference: fileReference)
                     } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                        updateImageSignal = chatWebpageSnippetFile(account: self.context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                        updateImageSignal = chatWebpageSnippetFile(account: self.context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                     }
                 }
             } else {

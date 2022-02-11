@@ -95,30 +95,30 @@ private struct FetchControls {
 }
 
 private enum FileIconImage: Equatable {
-    case imageRepresentation(TelegramMediaFile, TelegramMediaImageRepresentation)
+    case imageRepresentation(Media, TelegramMediaImageRepresentation)
     case albumArt(TelegramMediaFile, SharedMediaPlaybackAlbumArt)
     case roundVideo(TelegramMediaFile)
     
     static func ==(lhs: FileIconImage, rhs: FileIconImage) -> Bool {
         switch lhs {
-            case let .imageRepresentation(file, value):
-                if case .imageRepresentation(file, value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .albumArt(file, value):
-                if case .albumArt(file, value) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .roundVideo(file):
-                if case .roundVideo(file) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case let .imageRepresentation(lhsMedia, lhsValue):
+            if case let .imageRepresentation(rhsMedia, rhsValue) = rhs, lhsMedia.isEqual(to: rhsMedia), lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .albumArt(file, value):
+            if case .albumArt(file, value) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .roundVideo(file):
+            if case .roundVideo(file) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -155,6 +155,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     private let offsetContainerNode: ASDisplayNode
     
+    private var backgroundNode: ASDisplayNode?
     private let highlightedBackgroundNode: ASDisplayNode
     public let separatorNode: ASDisplayNode
     
@@ -402,7 +403,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let message = item.message
             
-            var selectedMedia: TelegramMediaFile?
+            var selectedMedia: Media?
             for media in message.media {
                 if let file = media as? TelegramMediaFile {
                     selectedMedia = file
@@ -539,6 +540,34 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     
                     break
+                } else if let image = media as? TelegramMediaImage {
+                    selectedMedia = image
+                    
+                    //TODO:localize
+                    let fileName: String = "Photo"
+                    titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
+                    
+                    if let representation = smallestImageRepresentation(image.representations) {
+                        iconImage = .imageRepresentation(image, representation)
+                    }
+                    
+                    let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
+                    
+                    var descriptionString: String = ""
+                    if !item.isGlobalSearchResult {
+                        descriptionString = "\(dateString)"
+                    }
+                    
+                    if item.isGlobalSearchResult {
+                        let authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                        if descriptionString.isEmpty {
+                            descriptionString = authorString
+                        } else {
+                            descriptionString = "\(descriptionString) • \(authorString)"
+                        }
+                    }
+                
+                    descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                 }
             }
     
@@ -570,38 +599,57 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     let context = item.context
                     updatedFetchControls = FetchControls(fetch: { [weak self] in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: selectedMedia, userInitiated: true).start())
+                            if let file = selectedMedia as? TelegramMediaFile {
+                                strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
+                            } else if let image = selectedMedia as? TelegramMediaImage, let representation = image.representations.last {
+                                strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, userInitiated: true, storeToDownloadsPeerType: nil).start())
+                            }
                         }
                     }, cancel: {
-                        messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: selectedMedia)
+                        if let file = selectedMedia as? TelegramMediaFile {
+                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                        } else if let image = selectedMedia as? TelegramMediaImage, let representation = image.representations.last {
+                            messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: representation.resource)
+                        }
                     })
                 }
                 
                 if statusUpdated {
-                    updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
-                    |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
-                        if case .Fetching = value.fetchStatus {
-                            return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
-                        } else {
-                            return .single(value)
+                    if let file = selectedMedia as? TelegramMediaFile {
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                        |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
+                            if case .Fetching = value.fetchStatus {
+                                return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
+                            } else {
+                                return .single(value)
+                            }
                         }
-                    }
-                    
-                    if isAudio || isInstantVideo {
-                        if let currentUpdatedStatusSignal = updatedStatusSignal {
-                            updatedStatusSignal = currentUpdatedStatusSignal
-                            |> map { status in
-                                switch status.mediaStatus {
-                                    case .fetchStatus:
-                                        return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
-                                    case .playbackStatus:
-                                        return status
+                        
+                        if isAudio || isInstantVideo {
+                            if let currentUpdatedStatusSignal = updatedStatusSignal {
+                                updatedStatusSignal = currentUpdatedStatusSignal
+                                |> map { status in
+                                    switch status.mediaStatus {
+                                        case .fetchStatus:
+                                            return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
+                                        case .playbackStatus:
+                                            return status
+                                    }
                                 }
                             }
                         }
-                    }
-                    if isVoice {
-                        updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: selectedMedia, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult)
+                        if isVoice {
+                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult)
+                        }
+                    } else if let image = selectedMedia as? TelegramMediaImage {
+                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                        |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
+                            if case .Fetching = value.fetchStatus {
+                                return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
+                            } else {
+                                return .single(value)
+                            }
+                        }
                     }
                 }
             }
@@ -684,8 +732,14 @@ public final class ListMessageFileItemNode: ListMessageNode {
             if currentIconImage != iconImage {
                 if let iconImage = iconImage {
                     switch iconImage {
-                        case let .imageRepresentation(file, representation):
-                            updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, fileReference: .message(message: MessageReference(message), media: file), representation: representation)
+                        case let .imageRepresentation(media, representation):
+                            if let file = media as? TelegramMediaFile {
+                                updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, mediaReference: FileMediaReference.message(message: MessageReference(message), media: file).abstract, representation: representation)
+                            } else if let image = media as? TelegramMediaImage {
+                                updateIconImageSignal = mediaGridMessagePhoto(account: item.context.account, photoReference: ImageMediaReference.message(message: MessageReference(message), media: image))
+                            } else {
+                                updateIconImageSignal = .complete()
+                            }
                         case let .albumArt(file, albumArt):
                             updateIconImageSignal = playerAlbumArt(postbox: item.context.account.postbox, engine: item.context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: albumArt, thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), emptyColor: item.presentationData.theme.theme.list.itemAccentColor)
                         case let .roundVideo(file):
@@ -746,6 +800,18 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     strongSelf.currentLeftOffset = leftOffset
                     
                     if let _ = updatedTheme {
+                        if item.displayBackground {
+                            let backgroundNode: ASDisplayNode
+                            if let current = strongSelf.backgroundNode {
+                                backgroundNode = current
+                            } else {
+                                backgroundNode = ASDisplayNode()
+                                strongSelf.backgroundNode = backgroundNode
+                                strongSelf.insertSubnode(backgroundNode, at: 0)
+                            }
+                            backgroundNode.backgroundColor = item.presentationData.theme.theme.list.itemBlocksBackgroundColor
+                        }
+                        
                         strongSelf.separatorNode.backgroundColor = item.presentationData.theme.theme.list.itemPlainSeparatorColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.theme.list.itemHighlightedBackgroundColor
                         strongSelf.linearProgressNode?.updateTheme(theme: item.presentationData.theme.theme)
@@ -777,6 +843,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset + leftOffset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - leftOffset, height: UIScreenPixel)))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
+                    
+                    if let backgroundNode = strongSelf.backgroundNode {
+                        backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.size.height))
+                    }
                     
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 9.0), size: titleNodeLayout.size))
                     let _ = titleNodeApply()

@@ -92,7 +92,7 @@ final class ChatMediaGalleryThumbnailItem: GalleryThumbnailItem {
                 }
             case let .file(fileReference):
                 if let representation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                    return (chatWebpageSnippetFile(account: self.account, fileReference: fileReference, representation: representation), representation.dimensions.cgSize)
+                    return (chatWebpageSnippetFile(account: self.account, mediaReference: fileReference.abstract, representation: representation), representation.dimensions.cgSize)
                 } else {
                     return (.single({ _ in return nil }), CGSize(width: 128.0, height: 128.0))
                 }
