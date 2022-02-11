@@ -131,17 +131,12 @@ final class Texture {
         }
     }
     
-    func readDirect(width: Int, height: Int, bytesPerRow: Int, read: (UnsafeMutableRawPointer, Int) -> Void) {
+    func readDirect(width: Int, height: Int, bytesPerRow: Int, read: (UnsafeMutableRawPointer?) -> UnsafeRawPointer) {
         if let directBuffer = self.directBuffer, width == self.width, height == self.height, bytesPerRow == directBuffer.bytesPerRow {
-            read(directBuffer.buffer.contents(), directBuffer.buffer.length)
+            let _ = read(directBuffer.buffer.contents())
         } else {
-            var tempData = Data(count: height * bytesPerRow)
-            tempData.withUnsafeMutableBytes { bytes in
-                read(bytes.baseAddress!, height * bytesPerRow)
-                
-                let region = MTLRegion(origin: MTLOrigin(x: 0, y: 0, z: 0), size: MTLSize(width: width, height: height, depth: 1))
-                self.texture.replace(region: region, mipmapLevel: 0, withBytes: bytes.baseAddress!, bytesPerRow: bytesPerRow)
-            }
+            let region = MTLRegion(origin: MTLOrigin(x: 0, y: 0, z: 0), size: MTLSize(width: width, height: height, depth: 1))
+            self.texture.replace(region: region, mipmapLevel: 0, withBytes: read(nil), bytesPerRow: bytesPerRow)
         }
     }
 }

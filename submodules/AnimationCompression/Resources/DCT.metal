@@ -75,7 +75,9 @@ fragment float4 samplingIdctShader(
     
     const half4 yuva = half4(color0, color1, color2, color3);
     
-    return float4(rgb(yuva));
+    const half4 color = rgb(yuva);
+    
+    return float4(color.r * color.a, color.g * color.a, color.b * color.a, color.a);
 }
 
 fragment float4 samplingRgbShader(
@@ -84,7 +86,11 @@ fragment float4 samplingRgbShader(
 ) {
     constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
 
-    const half4 color = colorTexture.sample(textureSampler, in.textureCoordinate);
+    half4 color = colorTexture.sample(textureSampler, in.textureCoordinate);
+    
+    color.r *= color.a;
+    color.g *= color.a;
+    color.b *= color.a;
     
     return float4(color.r, color.g, color.b, color.a);
 }
@@ -104,27 +110,33 @@ fragment float4 samplingYuvaShader(
     RasterizerData in [[stage_in]],
     texture2d<half, access::sample> yTexture [[texture(0)]],
     texture2d<half, access::sample> cbcrTexture [[texture(1)]],
-    texture2d<uint, access::sample> alphaTexture [[texture(2)]],
-    constant int &alphaWidth [[buffer(3)]]
+    texture2d<uint, access::read> alphaTexture [[texture(2)]],
+    constant uint2 &alphaSize [[buffer(3)]]
 ) {
     constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
-    constexpr sampler nearestSampler(mag_filter::nearest, min_filter::nearest);
     
     half4 color = samplePoint(yTexture, cbcrTexture, textureSampler, in.textureCoordinate);
     
-    int horizontalPixel = (int)(in.textureCoordinate.x * alphaWidth);
-    uint8_t alpha2 = (uint8_t)alphaTexture.sample(nearestSampler, in.textureCoordinate.x, in.textureCoordinate.y).r;
+    int alphaX = (int)(in.textureCoordinate.x * alphaSize.x);
+    int alphaY = (int)(in.textureCoordinate.y * alphaSize.y);
     
-    uint8_t a1 = (alpha2 & (0xf0U));
-    uint8_t a2 = ((alpha2 & (0x0fU)) << 4);
+    uint32_t packedAlpha = alphaTexture.read(uint2(alphaX / 2, alphaY)).r;
+    uint32_t a1 = (packedAlpha & (0xf0U));
+    uint32_t a2 = (packedAlpha & (0x0fU)) << 4;
     
-    uint8_t alphas[2];
-    alphas[0] = a1 | (a1 >> 4);
-    alphas[1] = a2 | (a2 >> 4);
-    int alphaIndex = horizontalPixel % 2;
-    uint8_t resolvedAlpha = alphas[alphaIndex];
+    uint32_t left = (a1 >> 4) | a1;
+    uint32_t right = (a2 >> 4) | a2;
     
-    color.a = ((half)resolvedAlpha) / 255.0f;
+    uint32_t chooseLeft = alphaX % 2 == 0;
+    uint32_t resolvedAlpha = chooseLeft * left + (1 - chooseLeft) * right;
+    
+    float alpha = resolvedAlpha / 255.0f;
+    
+    color.r *= alpha;
+    color.g *= alpha;
+    color.b *= alpha;
+    
+    color.a = alpha;
     
     return float4(color);
 }

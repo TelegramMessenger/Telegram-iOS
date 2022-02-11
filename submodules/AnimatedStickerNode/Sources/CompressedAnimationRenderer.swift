@@ -88,66 +88,6 @@ final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
         case .yuva:
             self.renderer.renderYuva(metalLayer: self.layer, width: width, height: height, data: data, completion: completion)
         }
-        
-        /*assert(bytesPerRow > 0)
-        queue.async { [weak self] in
-            switch type {
-            case .dct:
-                break
-            default:
-                return
-            }
-            
-            var image: UIImage?
-            
-            autoreleasepool {
-                image = generateImagePixel(CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
-                    switch type {
-                    case .yuva:
-                        data.withUnsafeBytes { bytes -> Void in
-                            guard let baseAddress = bytes.baseAddress else {
-                                return
-                            }
-                            if bytesPerRow <= 0 || height <= 0 || width <= 0 || bytesPerRow * height > bytes.count {
-                                assert(false)
-                                return
-                            }
-                            decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(width), Int32(height), Int32(contextBytesPerRow))
-                        }
-                    case .argb:
-                        var data = data
-                        data.withUnsafeMutableBytes { bytes -> Void in
-                            guard let baseAddress = bytes.baseAddress else {
-                                return
-                            }
-                            if mulAlpha {
-                                var srcData = vImage_Buffer(data: baseAddress.assumingMemoryBound(to: UInt8.self), height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: bytesPerRow)
-                                var destData = vImage_Buffer(data: pixelData, height: vImagePixelCount(height), width: vImagePixelCount(width), rowBytes: bytesPerRow)
-                                
-                                let permuteMap: [UInt8] = [3, 2, 1, 0]
-                                vImagePermuteChannels_ARGB8888(&srcData, &destData, permuteMap, vImage_Flags(kvImageDoNotTile))
-                                vImagePremultiplyData_ARGB8888(&destData, &destData, vImage_Flags(kvImageDoNotTile))
-                                vImagePermuteChannels_ARGB8888(&destData, &destData, permuteMap, vImage_Flags(kvImageDoNotTile))
-                            } else {
-                                memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
-                            }
-                        }
-                    }
-                })
-            }
-            
-            Queue.mainQueue().async {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.contents = image?.cgImage
-                strongSelf.updateHighlightedContentNode()
-                if strongSelf.highlightedContentNode?.frame != strongSelf.bounds {
-                    strongSelf.highlightedContentNode?.frame = strongSelf.bounds
-                }
-                completion()
-            }
-        }*/
     }
     
     private func updateHighlightedContentNode() {

@@ -172,7 +172,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var cachedData: (Data, Bool, EmojiFitzModifier?)?
     
     private let useMetalCache: Bool
-    private var renderer: (AnimationRenderer & ASDisplayNode)?
+    private var renderer: AnimationRendererPool.Holder?
     
     public var isPlaying: Bool = false
     private var currentLoopCount: Int = 0
@@ -232,30 +232,42 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.timer.swap(nil)?.invalidate()
     }
     
+    private static let hardwareRendererPool = AnimationRendererPool(generate: {
+        if #available(iOS 10.0, *) {
+            return CompressedAnimationRenderer()
+        } else {
+            return SoftwareAnimationRenderer()
+        }
+    })
+    
+    private static let softwareRendererPool = AnimationRendererPool(generate: {
+        return SoftwareAnimationRenderer()
+    })
+    
     private weak var nodeToCopyFrameFrom: AnimatedStickerNode?
     override public func didLoad() {
         super.didLoad()
         
         if #available(iOS 10.0, *), self.useMetalCache {
-            self.renderer = CompressedAnimationRenderer()
+            self.renderer = AnimatedStickerNode.hardwareRendererPool.take()
         } else {
-            self.renderer = SoftwareAnimationRenderer()
+            self.renderer = AnimatedStickerNode.softwareRendererPool.take()
+            if let contents = self.nodeToCopyFrameFrom?.renderer?.renderer.contents {
+                self.renderer?.renderer.contents = contents
+            }
         }
         
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.size ?? self.bounds.size)
-        if let contents = self.nodeToCopyFrameFrom?.renderer?.contents {
-            self.renderer?.contents = contents
-        }
+        self.renderer?.renderer.frame = CGRect(origin: CGPoint(), size: self.size ?? self.bounds.size)
         if let (overlayColor, replace) = self.overlayColor {
-            self.renderer?.setOverlayColor(overlayColor, replace: replace, animated: false)
+            self.renderer?.renderer.setOverlayColor(overlayColor, replace: replace, animated: false)
         }
         self.nodeToCopyFrameFrom = nil
-        self.addSubnode(self.renderer!)
+        self.addSubnode(self.renderer!.renderer)
     }
     
     public func cloneCurrentFrame(from otherNode: AnimatedStickerNode?) {
-        if let renderer = self.renderer {
-            if let contents = otherNode?.renderer?.contents {
+        if let renderer = self.renderer?.renderer as? SoftwareAnimationRenderer, let otherRenderer = otherNode?.renderer?.renderer as? SoftwareAnimationRenderer {
+            if let contents = otherRenderer.contents {
                 renderer.contents = contents
             }
         } else {
@@ -428,7 +440,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 return
                             }
                             
-                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
+                            strongSelf.renderer?.renderer.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -532,7 +544,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 return
                             }
                             
-                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
+                            strongSelf.renderer?.renderer.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -685,7 +697,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         return
                     }
                     
-                    strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
+                    strongSelf.renderer?.renderer.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                         guard let strongSelf = self else {
                             return
                         }
@@ -715,11 +727,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     public func updateLayout(size: CGSize) {
         self.size = size
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
+        self.renderer?.renderer.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
         self.overlayColor = (color, replace)
-        self.renderer?.setOverlayColor(color, replace: replace, animated: animated)
+        self.renderer?.renderer.setOverlayColor(color, replace: replace, animated: animated)
     }
 }

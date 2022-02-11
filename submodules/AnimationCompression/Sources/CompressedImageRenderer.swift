@@ -22,7 +22,6 @@ public final class CompressedImageRenderer {
         let renderIdctPipelineState: MTLRenderPipelineState
         let renderRgbPipelineState: MTLRenderPipelineState
         let renderYuvaPipelineState: MTLRenderPipelineState
-        let commandQueue: MTLCommandQueue
         
         init?(sharedContext: AnimationCompressor.SharedContext) {
             self.sharedContext = sharedContext
@@ -81,11 +80,6 @@ public final class CompressedImageRenderer {
                 return nil
             }
             self.renderYuvaPipelineState = renderYuvaPipelineState
-            
-            guard let commandQueue = self.sharedContext.device.makeCommandQueue() else {
-                return nil
-            }
-            self.commandQueue = commandQueue
         }
     }
     
@@ -98,10 +92,61 @@ public final class CompressedImageRenderer {
     private var rgbTexture: Texture?
     
     private var yuvaTextures: TextureSet?
+    
+    private let commandQueue: MTLCommandQueue
 
     public init?(sharedContext: AnimationCompressor.SharedContext) {
         self.sharedContext = sharedContext
         self.shared = Shared.shared
+        
+        guard let commandQueue = self.sharedContext.device.makeCommandQueue() else {
+            return nil
+        }
+        self.commandQueue = commandQueue
+    }
+    
+    private var drawableRequestTimestamp: Double?
+    
+    private func getNextDrawable(metalLayer: CALayer, drawableSize: CGSize) -> CAMetalDrawable? {
+#if targetEnvironment(simulator)
+        if #available(iOS 13.0, *) {
+            if let metalLayer = metalLayer as? CAMetalLayer {
+                if metalLayer.drawableSize != drawableSize {
+                    metalLayer.drawableSize = drawableSize
+                }
+                return metalLayer.nextDrawable()
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+#else
+        if let metalLayer = metalLayer as? CAMetalLayer {
+            if metalLayer.drawableSize != drawableSize {
+                metalLayer.drawableSize = drawableSize
+            }
+            let beginTime = CFAbsoluteTimeGetCurrent()
+            let drawableRequestDuration: Double
+            if let drawableRequestTimestamp = self.drawableRequestTimestamp {
+                drawableRequestDuration = beginTime - drawableRequestTimestamp
+                if drawableRequestDuration < 1.0 / 60.0 {
+                    return nil
+                }
+            } else {
+                drawableRequestDuration = 0.0
+            }
+            self.drawableRequestTimestamp = beginTime
+            let result = metalLayer.nextDrawable()
+            let duration = CFAbsoluteTimeGetCurrent() - beginTime
+            if duration > 1.0 / 200.0 {
+                print("lag \(duration * 1000.0) ms (\(drawableRequestDuration * 1000.0) ms)")
+            }
+            return result
+        } else {
+            return nil
+        }
+#endif
     }
     
     private func updateIdctTextures(compressedImage: AnimationCompressor.CompressedImageData) {
@@ -162,8 +207,18 @@ public final class CompressedImageRenderer {
             let planeSize = Int(readBuffer.readInt32())
             let planeData = readBuffer.readDataNoCopy(length: planeSize)
             
-            compressedTextures.textures[i].readDirect(width: planeWidth, height: planeHeight, bytesPerRow: bytesPerRow, read: { destination, maxLength in
-                readDCTBlocks(Int32(planeWidth), Int32(planeHeight), planeData, destination.assumingMemoryBound(to: Float32.self), Int32(bytesPerRow / 4))
+            var tempData: Data?
+            compressedTextures.textures[i].readDirect(width: planeWidth, height: planeHeight, bytesPerRow: bytesPerRow, read: { destinationBytes in
+                if let destinationBytes = destinationBytes {
+                    readDCTBlocks(Int32(planeWidth), Int32(planeHeight), planeData, destinationBytes.assumingMemoryBound(to: Float32.self), Int32(bytesPerRow / 4))
+                    return UnsafeRawPointer(destinationBytes)
+                } else {
+                    tempData = Data(count: bytesPerRow * planeHeight)
+                    return tempData!.withUnsafeMutableBytes { bytes -> UnsafeRawPointer in
+                        readDCTBlocks(Int32(planeWidth), Int32(planeHeight), planeData, bytes.baseAddress!.assumingMemoryBound(to: Float32.self), Int32(bytesPerRow / 4))
+                        return UnsafeRawPointer(bytes.baseAddress!)
+                    }
+                }
             })
         }
     }
@@ -177,7 +232,7 @@ public final class CompressedImageRenderer {
                     return
                 }
                 
-                guard let commandBuffer = self.shared.commandQueue.makeCommandBuffer() else {
+                guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
                     return
                 }
                 commandBuffer.label = "MyCommand"
@@ -240,28 +295,7 @@ public final class CompressedImageRenderer {
                 
                 let drawableSize = CGSize(width: CGFloat(outputTextures.textures[0].width), height: CGFloat(outputTextures.textures[0].height))
                 
-                var maybeDrawable: CAMetalDrawable?
-        #if targetEnvironment(simulator)
-                if #available(iOS 13.0, *) {
-                    if let metalLayer = metalLayer as? CAMetalLayer {
-                        if metalLayer.drawableSize != drawableSize {
-                            metalLayer.drawableSize = drawableSize
-                        }
-                        maybeDrawable = metalLayer.nextDrawable()
-                    }
-                } else {
-                    preconditionFailure()
-                }
-        #else
-                if let metalLayer = metalLayer as? CAMetalLayer {
-                    if metalLayer.drawableSize != drawableSize {
-                        metalLayer.drawableSize = drawableSize
-                    }
-                    maybeDrawable = metalLayer.nextDrawable()
-                }
-        #endif
-                
-                guard let drawable = maybeDrawable else {
+                guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
                     commandBuffer.commit()
                     completion()
                     return
@@ -287,13 +321,34 @@ public final class CompressedImageRenderer {
                 
                 renderEncoder.endEncoding()
                 
-                commandBuffer.present(drawable)
+                var storedDrawable: MTLDrawable? = drawable
+                commandBuffer.addScheduledHandler { _ in
+                    storedDrawable?.present()
+                    storedDrawable = nil
+                }
                 
+                
+#if targetEnvironment(simulator)
                 commandBuffer.addCompletedHandler { _ in
                     DispatchQueue.main.async {
                         completion()
                     }
                 }
+#else
+                if #available(iOS 10.3, *) {
+                    drawable.addPresentedHandler { _ in
+                        DispatchQueue.main.async {
+                            completion()
+                        }
+                    }
+                } else {
+                    commandBuffer.addCompletedHandler { _ in
+                        DispatchQueue.main.async {
+                            completion()
+                        }
+                    }
+                }
+#endif
                 
                 commandBuffer.commit()
             }
@@ -316,8 +371,15 @@ public final class CompressedImageRenderer {
             rgbTexture = texture
         }
         
-        rgbTexture.readDirect(width: width, height: height, bytesPerRow: bytesPerRow, read: { destination, maxLength in
-            data.copyBytes(to: destination.assumingMemoryBound(to: UInt8.self), from: 0 ..< min(maxLength, data.count))
+        rgbTexture.readDirect(width: width, height: height, bytesPerRow: bytesPerRow, read: { destinationBytes in
+            return data.withUnsafeBytes { bytes -> UnsafeRawPointer in
+                if let destinationBytes = destinationBytes {
+                    memcpy(destinationBytes, bytes.baseAddress!, bytes.count)
+                    return UnsafeRawPointer(destinationBytes)
+                } else {
+                    return bytes.baseAddress!
+                }
+            }
         })
     }
     
@@ -328,35 +390,14 @@ public final class CompressedImageRenderer {
             return
         }
         
-        guard let commandBuffer = self.shared.commandQueue.makeCommandBuffer() else {
+        guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             return
         }
         commandBuffer.label = "MyCommand"
         
         let drawableSize = CGSize(width: CGFloat(rgbTexture.width), height: CGFloat(rgbTexture.height))
         
-        var maybeDrawable: CAMetalDrawable?
-#if targetEnvironment(simulator)
-        if #available(iOS 13.0, *) {
-            if let metalLayer = metalLayer as? CAMetalLayer {
-                if metalLayer.drawableSize != drawableSize {
-                    metalLayer.drawableSize = drawableSize
-                }
-                maybeDrawable = metalLayer.nextDrawable()
-            }
-        } else {
-            preconditionFailure()
-        }
-#else
-        if let metalLayer = metalLayer as? CAMetalLayer {
-            if metalLayer.drawableSize != drawableSize {
-                metalLayer.drawableSize = drawableSize
-            }
-            maybeDrawable = metalLayer.nextDrawable()
-        }
-#endif
-        
-        guard let drawable = maybeDrawable else {
+        guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
             commandBuffer.commit()
             completion()
             return
@@ -413,7 +454,7 @@ public final class CompressedImageRenderer {
                         pixelFormat: .rg8Unorm
                     ),
                     TextureSet.Description(
-                        fractionWidth: 1, fractionHeight: 1,
+                        fractionWidth: 2, fractionHeight: 1,
                         pixelFormat: .r8Uint
                     )
                 ],
@@ -431,40 +472,32 @@ public final class CompressedImageRenderer {
                 return
             }
             
-            yuvaTextures.textures[0].readDirect(width: width, height: height, bytesPerRow: width, read: { destination, maxLength in
-                memcpy(destination, yuva.advanced(by: 0), min(width * height, maxLength))
-            })
-            
-            yuvaTextures.textures[1].readDirect(width: width / 2, height: height / 2, bytesPerRow: width, read: { destination, maxLength in
-                memcpy(destination, yuva.advanced(by: width * height), min(width * height, maxLength))
-            })
-            
-            var unpackedAlpha = Data(count: width * height)
-            unpackedAlpha.withUnsafeMutableBytes { alphaBuffer in
-                let alphaBytes = alphaBuffer.baseAddress!.assumingMemoryBound(to: UInt8.self)
-                let alpha = yuva.advanced(by: width * height * 2)
-                
-                var i = 0
-                for y in 0 ..< height {
-                    let alphaRow = alphaBytes.advanced(by: y * width)
-                    
-                    var x = 0
-                    while x < width {
-                        let a = alpha[i / 2]
-                        let a1 = (a & (0xf0))
-                        let a2 = ((a & (0x0f)) << 4)
-                        alphaRow[x + 0] = a1 | (a1 >> 4);
-                        alphaRow[x + 1] = a2 | (a2 >> 4);
-                        
-                        x += 2
-                        i += 2
-                    }
+            yuvaTextures.textures[0].readDirect(width: width, height: height, bytesPerRow: width, read: { destinationBytes in
+                if let destinationBytes = destinationBytes {
+                    memcpy(destinationBytes, yuva.advanced(by: 0), width * height)
+                    return UnsafeRawPointer(destinationBytes)
+                } else {
+                    return UnsafeRawPointer(yuva.advanced(by: 0))
                 }
-                
-                yuvaTextures.textures[2].readDirect(width: width, height: height, bytesPerRow: width, read: { destination, maxLength in
-                    memcpy(destination, alphaBytes, min(maxLength, width * height))
-                })
-            }
+            })
+            
+            yuvaTextures.textures[1].readDirect(width: width / 2, height: height / 2, bytesPerRow: width, read: { destinationBytes in
+                if let destinationBytes = destinationBytes {
+                    memcpy(destinationBytes, yuva.advanced(by: width * height), width * height / 2)
+                    return UnsafeRawPointer(destinationBytes)
+                } else {
+                    return UnsafeRawPointer(yuva.advanced(by: width * height))
+                }
+            })
+            
+            yuvaTextures.textures[2].readDirect(width: width / 2, height: height, bytesPerRow: width / 2, read: { destinationBytes in
+                if let destinationBytes = destinationBytes {
+                    memcpy(destinationBytes, yuva.advanced(by: width * height * 2), width / 2 * height)
+                    return UnsafeRawPointer(destinationBytes)
+                } else {
+                    return UnsafeRawPointer(yuva.advanced(by: width * height * 2))
+                }
+            })
         }
     }
     
@@ -475,35 +508,14 @@ public final class CompressedImageRenderer {
             return
         }
         
-        guard let commandBuffer = self.shared.commandQueue.makeCommandBuffer() else {
+        guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
             return
         }
         commandBuffer.label = "MyCommand"
         
         let drawableSize = CGSize(width: CGFloat(yuvaTextures.width), height: CGFloat(yuvaTextures.height))
         
-        var maybeDrawable: CAMetalDrawable?
-#if targetEnvironment(simulator)
-        if #available(iOS 13.0, *) {
-            if let metalLayer = metalLayer as? CAMetalLayer {
-                if metalLayer.drawableSize != drawableSize {
-                    metalLayer.drawableSize = drawableSize
-                }
-                maybeDrawable = metalLayer.nextDrawable()
-            }
-        } else {
-            preconditionFailure()
-        }
-#else
-        if let metalLayer = metalLayer as? CAMetalLayer {
-            if metalLayer.drawableSize != drawableSize {
-                metalLayer.drawableSize = drawableSize
-            }
-            maybeDrawable = metalLayer.nextDrawable()
-        }
-#endif
-        
-        guard let drawable = maybeDrawable else {
+        guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
             commandBuffer.commit()
             completion()
             return
@@ -524,8 +536,8 @@ public final class CompressedImageRenderer {
         renderEncoder.setFragmentTexture(yuvaTextures.textures[1].texture, index: 1)
         renderEncoder.setFragmentTexture(yuvaTextures.textures[2].texture, index: 2)
         
-        var alphaWidth: Int32 = Int32(yuvaTextures.textures[2].texture.width)
-        renderEncoder.setFragmentBytes(&alphaWidth, length: 4, index: 3)
+        var alphaSize = simd_uint2(UInt32(yuvaTextures.textures[0].texture.width), UInt32(yuvaTextures.textures[0].texture.height))
+        renderEncoder.setFragmentBytes(&alphaSize, length: 8, index: 3)
         
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
         
