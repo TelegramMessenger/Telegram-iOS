@@ -831,7 +831,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             }
         }
         
-        let topInset: CGFloat = floor((layout.size.height - navigationHeight) / 2.0 + navigationHeight)
+//        let topInset: CGFloat = floor((layout.size.height - navigationHeight) / 2.0 + navigationHeight)
+        let topInset: CGFloat = 240.0
         let overlap: CGFloat = 6.0
         let headerHeight: CGFloat
         if isPickingLocation, let actionHeight = actionHeight {

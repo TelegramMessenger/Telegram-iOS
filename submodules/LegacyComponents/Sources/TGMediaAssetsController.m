@@ -211,6 +211,9 @@
         if (strongController == nil)
             return;
         
+        if (strongController->_toolbarView.superview == nil)
+            return;
+        
         UIView *toolbarView = strongController->_toolbarView;
         if (enabled)
         {
@@ -271,7 +274,8 @@
     [groupsController setIsFirstInStack:true];
     [pickerController setIsFirstInStack:false];
     
-    [assetsController setViewControllers:@[ groupsController, pickerController ]];
+//    [assetsController setViewControllers:@[ groupsController, pickerController ]];
+    [assetsController setViewControllers:@[ pickerController ]];
     ((TGNavigationBar *)assetsController.navigationBar).navigationController = assetsController;
     
     assetsController.recipientName = recipientName;
@@ -611,7 +615,8 @@
                 [strongSelf groupPhotosPressed];
         };
     }
-    [self.view addSubview:_toolbarView];
+    if (_intent != TGMediaAssetsControllerSendMediaIntent)
+        [self.view addSubview:_toolbarView];
 
     if (@available(iOS 14.0, *)) {
         if ([PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelReadWrite] == PHAuthorizationStatusLimited) {

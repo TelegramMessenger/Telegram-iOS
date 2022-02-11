@@ -7256,3 +7256,13 @@ Sorry for the inconvenience.";
 
 "SharedMedia.CommonGroupCount_1" = "%@ group in common";
 "SharedMedia.CommonGroupCount_any" = "%@ groups in common";
+
+"Attachment.Camera" = "Camera";
+"Attachment.Gallery" = "Gallery";
+"Attachment.File" = "File";
+"Attachment.Location" = "Location";
+"Attachment.Contact" = "Contact";
+"Attachment.Poll" = "Poll";
+
+"Attachment.SelectFromGallery" = "Select from Gallery";
+"Attachment.SelectFromFiles" = "Select from Files";

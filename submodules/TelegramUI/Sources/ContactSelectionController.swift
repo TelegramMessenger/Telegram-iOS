@@ -91,6 +91,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.title = self.titleProducer(self.presentationData.strings)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -115,10 +116,12 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         })
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
-            self?.activateSearch()
-        })
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        if !params.multipleSelection {
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+                self?.activateSearch()
+            })
+            self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        }
         
         if params.multipleSelection {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.beginSelection))

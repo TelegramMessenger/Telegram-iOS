@@ -67,8 +67,14 @@ public extension Transition.DisappearWithGuide {
 public extension Transition.Update {
     static let `default` = Transition.Update { component, view, transition in
         let frame = component.size.centered(around: component._position ?? CGPoint())
-        if view.frame != frame {
-            transition.setFrame(view: view, frame: frame)
+        if let scale = component._scale {
+            transition.setBounds(view: view, bounds: CGRect(origin: CGPoint(), size: frame.size))
+            transition.setPosition(view: view, position: frame.center)
+            transition.setScale(view: view, scale: scale)
+        } else {
+            if view.frame != frame {
+                transition.setFrame(view: view, frame: frame)
+            }
         }
         let opacity = component._opacity ?? 1.0
         if view.alpha != opacity {

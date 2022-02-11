@@ -453,6 +453,10 @@ open class LegacyController: ViewController, PresentableController {
         }
         
         if self.controllerNode.controllerView == nil {
+            if self.controllerNode.frame.width == 0.0, let layout = self.validLayout {
+                self.controllerNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+            }
+            
             self.controllerNode.controllerView = self.legacyController.view
             if let legacyController = self.legacyController as? TGViewController {
                 legacyController.ignoreAppearEvents = true

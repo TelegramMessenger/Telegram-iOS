@@ -89,7 +89,8 @@
         _assetGroup = assetGroup;
         _intent = intent;
         
-        [self setTitle:_assetGroup.title];
+        [self setTitle:@"Gallery"];
+//        [self setTitle:_assetGroup.title];
         
         _assetsDisposable = [[SMetaDisposable alloc] init];
     }
@@ -167,7 +168,8 @@
         if (strongSelf->_assetGroup == nil)
             strongSelf->_assetGroup = assetGroup;
         
-        [strongSelf setTitle:assetGroup.title];
+        [self setTitle:@"Gallery"];
+//        [strongSelf setTitle:assetGroup.title];
         
         return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:false];
     }] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
@@ -198,7 +200,7 @@
             if (scrollToBottom)
             {
                 [strongSelf->_collectionView layoutSubviews];
-                [strongSelf _adjustContentOffsetToBottom];
+//                [strongSelf _adjustContentOffsetToBottom];
             }
         }
         else if ([next isKindOfClass:[TGMediaAssetFetchResultChange class]])

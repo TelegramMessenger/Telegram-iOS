@@ -25,7 +25,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: photoOnly ? TGCameraControllerGenericPhotoOnlyIntent : TGCameraControllerGenericIntent)
         controller.inhibitMultipleCapture = editingMedia
     } else {
-        controller = TGCameraController()
+        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat)
     }
     
     controller.presentScheduleController = { done in

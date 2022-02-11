@@ -534,7 +534,6 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             navigationController.filterController(self, animated: animated)
         } else {
             self.presentingViewController?.dismiss(animated: false, completion: nil)
-            assertionFailure()
         }
     }
     
@@ -612,7 +611,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.filterController(self, animated: true)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.presentingViewController?.dismiss(animated: true, completion: nil)
         }
     }
     
