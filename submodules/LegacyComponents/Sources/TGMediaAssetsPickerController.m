@@ -179,7 +179,7 @@
         } else {
             [strongSelf setTitle:assetGroup.title];
         }
-        return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:false];
+        return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:reversed];
     }] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
     {
         __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
