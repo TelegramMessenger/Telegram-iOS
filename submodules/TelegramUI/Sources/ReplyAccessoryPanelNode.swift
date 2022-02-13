@@ -13,6 +13,7 @@ import PhotoResources
 import TelegramStringFormatting
 import InvisibleInkDustNode
 import TextFormat
+import ChatPresentationInterfaceState
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()

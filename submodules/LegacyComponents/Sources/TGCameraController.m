@@ -2293,6 +2293,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             if (strongSelf == nil)
                 return;
             
+            if (strongSelf.finishedTransitionOut != nil)
+                strongSelf.finishedTransitionOut();
+            
             [strongSelf dismiss];
         }];
         return;
@@ -2371,13 +2374,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 {
     self.view.userInteractionEnabled = false;
     
-    const CGFloat minVelocity = 2000.0f;
+    const CGFloat minVelocity = 4000.0f;
     if (ABS(velocity) < minVelocity)
         velocity = (velocity < 0.0f ? -1.0f : 1.0f) * minVelocity;
     CGFloat distance = (velocity < FLT_EPSILON ? -1.0f : 1.0f) * self.view.frame.size.height;
     CGRect targetFrame = (CGRect){{_previewView.frame.origin.x, distance}, _previewView.frame.size};
     
-    [UIView animateWithDuration:ABS(distance / velocity) animations:^
+    [UIView animateWithDuration:ABS(distance / velocity) delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:^
     {
         _previewView.frame = targetFrame;
         _cornersView.frame = targetFrame;

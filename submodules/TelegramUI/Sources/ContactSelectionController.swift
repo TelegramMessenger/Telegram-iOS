@@ -10,8 +10,9 @@ import ProgressNavigationButtonNode
 import AccountContext
 import ContactListUI
 import SearchUI
+import AttachmentUI
 
-class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController {
+class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController, AttachmentContainable {
     private let context: AccountContext
     private let autoDismiss: Bool
     
@@ -68,6 +69,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         }
     }
+    
+    var requestAttachmentMenuExpansion: () -> Void = {}
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context

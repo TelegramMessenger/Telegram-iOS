@@ -980,8 +980,8 @@ public final class ContactListNode: ASDisplayNode {
             }
             
             var insets = layout.0.insets(options: [.input])
-            insets.left += layout.0.safeInsets.left
-            insets.right += layout.0.safeInsets.right
+            insets.left = layout.0.safeInsets.left
+            insets.right = layout.0.safeInsets.right
             
             var headerInsets = layout.1
             if headerInsets.top == insets.top {
@@ -1469,8 +1469,8 @@ public final class ContactListNode: ASDisplayNode {
         self.validLayout = (layout, headerInsets)
         
         var insets = layout.insets(options: [.input])
-        insets.left += layout.safeInsets.left
-        insets.right += layout.safeInsets.right
+        insets.left = layout.safeInsets.left
+        insets.right = layout.safeInsets.right
         
         var headerInsets = headerInsets
         if !hadValidLayout {
@@ -1488,8 +1488,8 @@ public final class ContactListNode: ASDisplayNode {
             if let inputHeight = layout.inputHeight {
                 insets.bottom -= inputHeight
             }
-            insets.left += layout.safeInsets.left
-            insets.right += layout.safeInsets.right
+            insets.left = layout.safeInsets.left
+            insets.right = layout.safeInsets.right
             
             let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
             transition.updateFrame(node: indexNode, frame: indexNodeFrame)
@@ -1534,8 +1534,8 @@ public final class ContactListNode: ASDisplayNode {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])
-                    insets.left += layout.safeInsets.left
-                    insets.right += layout.safeInsets.right
+                    insets.left = layout.safeInsets.left
+                    insets.right = layout.safeInsets.right
                     
                     if let inputHeight = layout.inputHeight {
                         insets.bottom -= inputHeight

@@ -19,6 +19,7 @@ import ChatInterfaceState
 import ChatListUI
 import ComponentFlow
 import ReactionSelectionNode
+import ChatPresentationInterfaceState
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {

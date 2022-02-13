@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import ChatPresentationInterfaceState
 
 enum ChatNavigationButtonAction: Equatable {
     case openChatInfo(expandAvatar: Bool)

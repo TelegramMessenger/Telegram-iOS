@@ -5,9 +5,11 @@ import SwiftSignalKit
 import UIKitRuntimeUtils
 import Display
 import DirectionalPanGesture
+import TelegramPresentationData
 
 final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
-    let scrollNode: ASDisplayNode
+    let wrappingNode: ASDisplayNode
+    let clipNode: ASDisplayNode
     let container: NavigationContainer
         
     private(set) var isReady: Bool = false
@@ -22,7 +24,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private var isDismissed = false
     private var isInteractiveDimissEnabled = true
     
-    private var validLayout: (layout: ContainerViewLayout, controllers: [ViewController], coveredByModalTransition: CGFloat)?
+    public private(set) var isExpanded = false
+    
+    private var validLayout: (layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat)?
     
     var keyboardViewManager: KeyboardViewManager? {
         didSet {
@@ -40,16 +44,19 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     
     private var panGestureRecognizer: UIPanGestureRecognizer?
     
-    init(controllerRemoved: @escaping (ViewController) -> Void) {
-        self.scrollNode = ASDisplayNode()
+    init(presentationData: PresentationData) {
+        self.wrappingNode = ASDisplayNode()
+        self.clipNode = ASDisplayNode()
+        self.clipNode.backgroundColor = presentationData.theme.list.plainBackgroundColor
         
-        self.container = NavigationContainer(controllerRemoved: controllerRemoved)
+        self.container = NavigationContainer(controllerRemoved: { _ in })
         self.container.clipsToBounds = true
         
         super.init()
         
-        self.addSubnode(self.scrollNode)
-        self.scrollNode.addSubnode(self.container)
+        self.addSubnode(self.wrappingNode)
+        self.wrappingNode.addSubnode(self.clipNode)
+        self.clipNode.addSubnode(self.container)
         
         self.isReady = self.container.isReady
         self.container.isReadyUpdated = { [weak self] in
@@ -75,7 +82,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.panGestureRecognizer = panRecognizer
-        self.scrollNode.view.addGestureRecognizer(panRecognizer)
+        self.wrappingNode.view.addGestureRecognizer(panRecognizer)
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -98,18 +105,18 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     
         switch recognizer.state {
             case .began:
+                let point = recognizer.location(in: self.view)
+                let currentHitView = self.hitTest(point, with: nil)
+                let scrollViewAndListNode = self.findScrollView(view: currentHitView)
+                let scrollView = scrollViewAndListNode?.0
+                let listNode = scrollViewAndListNode?.1
+            
                 let topInset: CGFloat
                 if self.isExpanded {
                     topInset = 0.0
                 } else {
                     topInset = edgeTopInset
                 }
-            
-                let point = recognizer.location(in: self.view)
-                let currentHitView = self.hitTest(point, with: nil)
-                let scrollViewAndListNode = self.findScrollView(view: currentHitView)
-                let scrollView = scrollViewAndListNode?.0
-                let listNode = scrollViewAndListNode?.1
             
                 self.panGestureArguments = (topInset, 0.0, scrollView, listNode)
             case .changed:
@@ -121,18 +128,30 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             
                 var translation = recognizer.translation(in: self.view).y
 
-                if case let .known(value) = visibleContentOffset, value <= 0.5 {
-                } else if contentOffset <= 0.5 {
-                } else {
+                var currentOffset = topInset + translation
+            
+                let epsilon = 1.0
+                if case let .known(value) = visibleContentOffset, value <= epsilon {
+                    if let scrollView = scrollView {
+                        scrollView.bounces = false
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: false)
+                    }
+                } else if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
+                    scrollView.bounces = false
+                    scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                } else if let scrollView = scrollView {
                     translation = panOffset
+                    currentOffset = topInset + translation
                     if self.isExpanded {
                         recognizer.setTranslation(CGPoint(), in: self.view)
+                    } else if currentOffset > 0.0 {
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                     }
                 }
                 
                 self.panGestureArguments = (topInset, translation, scrollView, listNode)
                 
-                let currentOffset = topInset + translation
+               
                 if !self.isExpanded {
                     if currentOffset > 0.0, let scrollView = scrollView {
                         scrollView.panGestureRecognizer.setTranslation(CGPoint(), in: scrollView)
@@ -166,7 +185,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 var bounds = self.bounds
                 bounds.origin.y = -translation
                 bounds.origin.y = min(0.0, bounds.origin.y)
-                
+            
+                scrollView?.bounces = true
+            
                 let offset = currentTopInset + panOffset
                 let topInset: CGFloat = edgeTopInset
                 if self.isExpanded {
@@ -243,9 +264,20 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         return true
     }
+    
+    func update(isExpanded: Bool, transition: ContainedViewLayoutTransition) {
+        guard isExpanded != self.isExpanded else {
+            return
+        }
+        self.isExpanded = isExpanded
+        
+        guard let (layout, controllers, coveredByModalTransition) = self.validLayout else {
+            return
+        }
+        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
+    }
                 
-    var isExpanded = false
-    func update(layout: ContainerViewLayout, controllers: [ViewController], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition) {
+    func update(layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isDismissed {
             return
         }
@@ -269,28 +301,29 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         } else {
             topInset = self.isExpanded ? 0.0 : edgeTopInset
         }
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size))
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size))
         
         let modalProgress = isLandscape ? 0.0 :  (1.0 - topInset / defaultTopInset)
         self.updateModalProgress?(modalProgress, transition)
                 
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
+        let clipFrame: CGRect
         let containerScale: CGFloat
         if layout.metrics.widthClass == .compact {
-            self.container.clipsToBounds = true
+            self.clipNode.clipsToBounds = true
             
             if isLandscape {
-                self.container.cornerRadius = 0.0
+                self.clipNode.cornerRadius = 0.0
             } else {
-                self.container.cornerRadius = 10.0
+                self.clipNode.cornerRadius = 10.0
             }
             
             if #available(iOS 11.0, *) {
                 if layout.safeInsets.bottom.isZero {
-                    self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+                    self.wrappingNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
                 } else {
-                    self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                    self.wrappingNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
                 }
             }
             
@@ -302,6 +335,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let unscaledFrame = CGRect(origin: CGPoint(), size: containerLayout.size)
                 containerScale = 1.0
                 containerFrame = unscaledFrame
+                clipFrame = unscaledFrame
             } else {
                 containerTopInset = 10.0
                 if let statusBarHeight = layout.statusBarHeight {
@@ -310,19 +344,30 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 
                 let effectiveStatusBarHeight: CGFloat? = nil
                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                let inset: CGFloat = 70.0
+                var safeInsets = layout.safeInsets
+                safeInsets.left += inset
+                safeInsets.right += inset
+                
+                var intrinsicInsets = layout.intrinsicInsets
+                intrinsicInsets.left += inset
+                intrinsicInsets.right += inset
+                
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + inset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom + 49.0, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
                 let maxScaledTopInset: CGFloat = containerTopInset - 10.0
                 let scaledTopInset: CGFloat = containerTopInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
-                containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
+                containerFrame = unscaledFrame.offsetBy(dx: -inset, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
+                
+                clipFrame = CGRect(x: containerFrame.minX + inset, y: containerFrame.minY, width: containerFrame.width - inset * 2.0, height: containerFrame.height)
             }
         } else {
-            self.container.clipsToBounds = true
-            self.container.cornerRadius = 10.0
+            self.clipNode.clipsToBounds = true
+            self.clipNode.cornerRadius = 10.0
             if #available(iOS 11.0, *) {
-                self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                self.clipNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
             }
             
             let verticalInset: CGFloat = 44.0
@@ -332,6 +377,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
             containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
             containerScale = 1.0
+            clipFrame = containerFrame
             
             var inputHeight: CGFloat?
             if let inputHeightValue = layout.inputHeight {
@@ -342,7 +388,8 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             
             containerLayout = ContainerViewLayout(size: containerSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: effectiveStatusBarHeight, inputHeight: inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
         }
-        transition.updateFrameAsPositionAndBounds(node: self.container, frame: containerFrame)
+        transition.updateFrameAsPositionAndBounds(node: self.clipNode, frame: clipFrame)
+        transition.updateFrameAsPositionAndBounds(node: self.container, frame: CGRect(origin: CGPoint(x: containerFrame.minX, y: 0.0), size: containerFrame.size))
         transition.updateTransformScale(node: self.container, scale: containerScale)
         self.container.update(layout: containerLayout, canBeClosed: true, controllers: controllers, transition: transition)
         
@@ -404,7 +451,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if !self.scrollNode.frame.contains(point) {
+        if !self.wrappingNode.frame.contains(point) {
             return false
         }
         return super.point(inside: point, with: event)

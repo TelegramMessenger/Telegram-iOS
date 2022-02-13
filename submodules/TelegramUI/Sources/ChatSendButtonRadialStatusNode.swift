@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import LegacyComponents
+import ChatPresentationInterfaceState
 
 private final class ChatSendButtonRadialStatusNodeParameters: NSObject {
     let color: UIColor

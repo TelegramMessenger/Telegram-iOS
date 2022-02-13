@@ -90,7 +90,11 @@ typedef enum
 
 @property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 
+- (UIBarButtonItem *)leftBarButtonItem;
 - (UIBarButtonItem *)rightBarButtonItem;
+
+- (void)send:(bool)silently;
+- (void)schedule;
 
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator;
 

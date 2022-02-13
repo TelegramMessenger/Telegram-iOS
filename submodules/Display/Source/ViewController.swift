@@ -533,7 +533,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             }
             navigationController.filterController(self, animated: animated)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.presentingViewController?.dismiss(animated: flag, completion: nil)
         }
     }
     

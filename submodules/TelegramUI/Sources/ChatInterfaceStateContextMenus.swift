@@ -26,6 +26,8 @@ import TelegramNotices
 import ReactionListContextMenuContent
 import TelegramUIPreferences
 import Translate
+import ChatPresentationInterfaceState
+import Pasteboard
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -288,17 +290,6 @@ struct ChatMessageContextMenuSheetAction {
 enum ChatMessageContextMenuAction {
     case context(ContextMenuAction)
     case sheet(ChatMessageContextMenuSheetAction)
-}
-
-struct MessageMediaEditingOptions: OptionSet {
-    var rawValue: Int32
-    
-    init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    static let imageOrVideo = MessageMediaEditingOptions(rawValue: 1 << 0)
-    static let file = MessageMediaEditingOptions(rawValue: 1 << 1)
 }
 
 func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions {

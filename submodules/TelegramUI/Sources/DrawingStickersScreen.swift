@@ -16,6 +16,7 @@ import SearchBarNode
 import UndoUI
 import SegmentedControlNode
 import LegacyComponents
+import ChatPresentationInterfaceState
 
 private enum DrawingPaneType {
     case stickers

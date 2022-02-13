@@ -24,6 +24,9 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/UIKitRuntimeUtils:UIKitRuntimeUtils",
         "//submodules/DirectionalPanGesture:DirectionalPanGesture",
+        "//submodules/AttachmentTextInputPanelNode:AttachmentTextInputPanelNode",
+        "//submodules/ChatSendMessageActionUI:ChatSendMessageActionUI",
+        "//submodules/ChatTextLinkEditUI:ChatTextLinkEditUI",
     ],
     visibility = [
         "//visibility:public",

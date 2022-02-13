@@ -3,47 +3,25 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ComponentFlow
+import Postbox
+import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import AttachmentTextInputPanelNode
+import ChatPresentationInterfaceState
+import ChatSendMessageActionUI
+import ChatTextLinkEditUI
 
 let panelButtonSize = CGSize(width: 80.0, height: 72.0)
-let smallPanelButtonSize = CGSize(width: 54.0, height: 46.0)
+let smallPanelButtonSize = CGSize(width: 60.0, height: 49.0)
 
 private let iconSize = CGSize(width: 54.0, height: 42.0)
-private let sideInset: CGFloat = 3.0
+private let normalSideInset: CGFloat = 3.0
 private let smallSideInset: CGFloat = 0.0
 
 private enum AttachmentButtonTransition {
     case transitionIn
     case selection
-}
-
-private func generateShadowImage() -> UIImage? {
-    return generateImage(CGSize(width: 90.0, height: 90.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-//        let rect = bounds.insetBy(dx: 12.0, dy: 24.0)
-//        let path = UIBezierPath(roundedRect: CGRect(origin: rect.origin, size: CGSize(width: rect.width, height: rect.height + 33.0)), cornerRadius: 24.0).cgPath
-//        context.addRect(bounds)
-//        context.addPath(path)
-//        context.clip(using: .evenOdd)
-//
-//        context.addPath(path)
-//        context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 40.0, color: UIColor(rgb: 0x000000, alpha: 0.06).cgColor)
-//        context.setFillColor(UIColor.white.cgColor)
-//        context.setBlendMode(.multiply)
-//        context.fillPath()
-//
-//        context.resetClip()
-//        context.setBlendMode(.normal)
-        
-        var locations: [CGFloat] = [0.0, 1.0]
-        let colors: [CGColor] = [UIColor(rgb: 0x000000, alpha: 0.0).cgColor, UIColor(rgb: 0x000000, alpha: 0.2).cgColor]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: [])
-    })?.stretchableImage(withLeftCapWidth: 45, topCapHeight: 70)
 }
 
 private func generateBackgroundImage(colors: [UIColor]) -> UIImage? {
@@ -98,10 +76,6 @@ private let buttonSelectionMaskImage: UIImage? = {
         context.setFillColor(UIColor(rgb: 0xffffff).cgColor)
         context.fillPath()
     })?.withRenderingMode(.alwaysTemplate)
-}()
-
-private let ringImage: UIImage? = {
-    return generateFilledCircleImage(diameter: iconSize.width, color: nil, strokeColor: .white, strokeWidth: 2.0, backgroundColor: nil)
 }()
 
 private final class AttachButtonComponent: CombinedComponent {
@@ -177,7 +151,7 @@ private final class AttachButtonComponent: CombinedComponent {
                 name = context.component.strings.Attachment_Camera
                 animationName = "anim_camera"
                 imageName = "Chat/Attach Menu/Camera"
-                backgroundColors = [UIColor(rgb: 0xba4aae), UIColor(rgb: 0xdd4e6f), UIColor(rgb: 0xf3b76c)]
+                backgroundColors = [UIColor(rgb: 0xba4aae), UIColor(rgb: 0xdd4e6f), UIColor(rgb: 0xf4b76c)]
             case .gallery:
                 name = context.component.strings.Attachment_Gallery
                 animationName = "anim_gallery"
@@ -243,10 +217,10 @@ private final class AttachButtonComponent: CombinedComponent {
             
             let iconScale = normalIconScale - (normalIconScale - smallIconScale) * abs(context.component.transitionFraction)
             let iconOffset: CGFloat = (isCollapsed ? 10.0 : 20.0) * context.component.transitionFraction
-            let iconFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - icon.size.width) / 2.0) + iconOffset, y: isCollapsed ? 3.0 : topInset), size: icon.size)
-            var titleFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - title.size.width) / 2.0) + iconOffset, y: iconFrame.midY + (iconFrame.height * 0.5 * iconScale) + spacing), size: title.size)
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0) + iconOffset, y: isCollapsed ? 3.0 : topInset), size: icon.size)
+            var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - title.size.width) / 2.0) + iconOffset, y: iconFrame.midY + (iconFrame.height * 0.5 * iconScale) + spacing), size: title.size)
             if isCollapsed {
-                titleFrame.origin.y = floor(iconFrame.midY - title.size.height / 2.0)
+                titleFrame.origin.y = floorToScreenPixels(iconFrame.midY - title.size.height / 2.0)
             }
             
             context.add(title
@@ -321,18 +295,25 @@ private final class AttachButtonIconComponent: Component {
     }
 
     final class View: HighlightTrackingButton {
+        private let containerView: UIView
         private let glowView: UIImageView
         private let selectionView: UIImageView
         private let backgroundView: UIView
         private let iconView: UIImageView
+        private let highlightView: UIView
     
         private var action: (() -> Void)?
         
         private var currentColors: [UIColor] = []
         private var currentImageName: String?
         private var currentIsSelected: Bool?
+        
+        private let hapticFeedback = HapticFeedback()
             
         init() {
+            self.containerView = UIView()
+            self.containerView.isUserInteractionEnabled = false
+            
             self.glowView = UIImageView()
             self.glowView.image = buttonGlowImage
             self.glowView.isUserInteractionEnabled = false
@@ -348,16 +329,41 @@ private final class AttachButtonIconComponent: Component {
             
             self.iconView = UIImageView()
             
+            self.highlightView = UIView()
+            self.highlightView.alpha = 0.0
+            self.highlightView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.1)
+            self.highlightView.isUserInteractionEnabled = false
+    
             super.init(frame: CGRect())
             
-            self.addSubview(self.glowView)
-            self.addSubview(self.selectionView)
-            self.addSubview(self.backgroundView)
-            self.addSubview(self.iconView)
+            self.addSubview(self.containerView)
+            self.containerView.addSubview(self.glowView)
+            self.containerView.addSubview(self.selectionView)
+            self.containerView.addSubview(self.backgroundView)
+            self.backgroundView.addSubview(self.iconView)
+            self.backgroundView.addSubview(self.highlightView)
             
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-            self.highligthedChanged = { _ in
-
+            self.highligthedChanged = { [weak self] highlighted in
+                if let strongSelf = self {
+                    if highlighted {
+                        strongSelf.containerView.layer.animateScale(from: 1.0, to: 0.9, duration: 0.3, removeOnCompletion: false)
+                        
+                        strongSelf.highlightView.layer.removeAnimation(forKey: "opacity")
+                        strongSelf.highlightView.alpha = 1.0
+                        
+                        strongSelf.hapticFeedback.impact(.click05)
+                    } else {
+                        if let presentationLayer = strongSelf.containerView.layer.presentation() {
+                            strongSelf.containerView.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.2, removeOnCompletion: false)
+                        }
+                        
+                        strongSelf.highlightView.alpha = 0.0
+                        strongSelf.highlightView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                        
+                        strongSelf.hapticFeedback.impact(.click06)
+                    }
+                }
             }
         }
 
@@ -400,7 +406,9 @@ private final class AttachButtonIconComponent: Component {
             }
             
             let contentFrame = CGRect(origin: CGPoint(), size: availableSize)
+            self.containerView.frame = contentFrame
             self.backgroundView.frame = contentFrame
+            self.highlightView.frame = contentFrame
             
             self.glowView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: contentFrame.width + 12.0, height: contentFrame.height + 12.0))
             self.glowView.center = CGPoint(x: contentFrame.midX, y: contentFrame.midY)
@@ -425,30 +433,39 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     
-    private let shadowNode: ASImageNode
+    private var presentationInterfaceState: ChatPresentationInterfaceState
+    private var interfaceInteraction: ChatPanelInterfaceInteraction?
+    
     private let containerNode: ASDisplayNode
     private var effectView: UIVisualEffectView?
     private let scrollNode: ASScrollNode
     private let backgroundNode: ASDisplayNode
+    private let separatorNode: ASDisplayNode
     private var buttonViews: [Int: ComponentHostView<Empty>] = [:]
+    
+    private var textInputPanelNode: AttachmentTextInputPanelNode?
     
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 1
-    private var isCollapsed: Bool = false
+    private(set) var isCollapsed: Bool = false
+    private(set) var isSelecting: Bool = false
     
-    private var validLayout: CGSize?
+    private var validLayout: ContainerViewLayout?
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
     var selectionChanged: (AttachmentButtonType, Bool) -> Void = { _, _ in }
+    var beganTextEditing: () -> Void = {}
+    var textUpdated: (NSAttributedString) -> Void = { _ in }
+    var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
+    var requestLayout: () -> Void = {}
+    var present: (ViewController) -> Void = { _ in }
+    var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     
     init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
-        self.shadowNode = ASImageNode()
-        self.shadowNode.contentMode = .scaleToFill
-        self.shadowNode.displaysAsynchronously = false
-        self.shadowNode.image = generateShadowImage()
+                
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         
         self.containerNode = ASDisplayNode()
         self.containerNode.clipsToBounds = true
@@ -457,12 +474,182 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
         
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        
         super.init()
                         
-        self.addSubnode(self.shadowNode)
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
+        self.containerNode.addSubnode(self.separatorNode)
         self.containerNode.addSubnode(self.scrollNode)
+        
+        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
+        }, setupEditMessage: { _, _ in
+        }, beginMessageSelection: { _, _ in
+        }, deleteSelectedMessages: {
+        }, reportSelectedMessages: {
+        }, reportMessages: { _, _ in
+        }, blockMessageAuthor: { _, _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
+        }, forwardSelectedMessages: {
+        }, forwardCurrentForwardMessages: {
+        }, forwardMessages: { _ in
+        }, updateForwardOptionsState: { [weak self] value in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState($0.forwardOptionsState) }) })
+            }
+        }, presentForwardOptions: { _ in
+        }, shareSelectedMessages: {
+        }, updateTextInputStateAndMode: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
+                    let (updatedState, updatedMode) = f(state.interfaceState.effectiveInputState, state.inputMode)
+                    return state.updatedInterfaceState { interfaceState in
+                        return interfaceState.withUpdatedEffectiveInputState(updatedState)
+                    }.updatedInputMode({ _ in updatedMode })
+                })
+            }
+        }, updateInputModeAndDismissedButtonKeyboardMessageId: { [weak self] f in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(animated: true, {
+                    let (updatedInputMode, updatedClosedButtonKeyboardMessageId) = f($0)
+                    return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({
+                        $0.withUpdatedMessageActionsState({ value in
+                            var value = value
+                            value.closedButtonKeyboardMessageId = updatedClosedButtonKeyboardMessageId
+                            return value
+                        })
+                    })
+                })
+            }
+        }, openStickers: {
+        }, editMessage: {
+        }, beginMessageSearch: { _, _ in
+        }, dismissMessageSearch: {
+        }, updateMessageSearch: { _ in
+        }, openSearchResults: {
+        }, navigateMessageSearch: { _ in
+        }, openCalendarSearch: {
+        }, toggleMembersSearch: { _ in
+        }, navigateToMessage: { _, _, _, _ in
+        }, navigateToChat: { _ in
+        }, navigateToProfile: { _ in
+        }, openPeerInfo: {
+        }, togglePeerNotifications: {
+        }, sendContextResult: { _, _, _, _ in
+            return false
+        }, sendBotCommand: { _, _ in
+        }, sendBotStart: { _ in
+        }, botSwitchChatWithPayload: { _, _ in
+        }, beginMediaRecording: { _ in
+        }, finishMediaRecording: { _ in
+        }, stopMediaRecording: {
+        }, lockMediaRecording: {
+        }, deleteRecordedMedia: {
+        }, sendRecordedMedia: { _ in
+        }, displayRestrictedInfo: { _, _ in
+        }, displayVideoUnmuteTip: { _ in
+        }, switchMediaRecordingMode: {
+        }, setupMessageAutoremoveTimeout: {
+        }, sendSticker: { _, _, _, _ in
+            return false
+        }, unblockPeer: {
+        }, pinMessage: { _, _ in
+        }, unpinMessage: { _, _, _ in
+        }, unpinAllMessages: {
+        }, openPinnedList: { _ in
+        }, shareAccountContact: {
+        }, reportPeer: {
+        }, presentPeerContact: {
+        }, dismissReportPeer: {
+        }, deleteChat: {
+        }, beginCall: { _ in
+        }, toggleMessageStickerStarred: { _ in
+        }, presentController: { _, _ in
+        }, getNavigationController: {
+            return nil
+        }, presentGlobalOverlayController: { _, _ in
+        }, navigateFeed: {
+        }, openGrouping: {
+        }, toggleSilentPost: {
+        }, requestUnvoteInMessage: { _ in
+        }, requestStopPollInMessage: { _ in
+        }, updateInputLanguage: { _ in
+        }, unarchiveChat: {
+        }, openLinkEditing: { [weak self] in
+            if let strongSelf = self {
+                var selectionRange: Range<Int>?
+                var text: String?
+                var inputMode: ChatInputMode?
+
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
+                    selectionRange = state.interfaceState.effectiveInputState.selectionRange
+                    if let selectionRange = selectionRange {
+                        text = state.interfaceState.effectiveInputState.inputText.attributedSubstring(from: NSRange(location: selectionRange.startIndex, length: selectionRange.count)).string
+                    }
+                    inputMode = state.inputMode
+                    return state
+                })
+
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                let controller = chatTextLinkEditController(sharedContext: strongSelf.context.sharedContext, updatedPresentationData: (presentationData, .never()), account: strongSelf.context.account, text: text ?? "", link: nil, apply: { [weak self] link in
+                    if let strongSelf = self, let inputMode = inputMode, let selectionRange = selectionRange {
+                        if let link = link {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
+                                return state.updatedInterfaceState({
+                                    $0.withUpdatedEffectiveInputState(chatTextInputAddLinkAttribute($0.effectiveInputState, selectionRange: selectionRange, url: link))
+                                })
+                            })
+                        }
+                        if let textInputPanelNode = strongSelf.textInputPanelNode {
+                            textInputPanelNode.ensureFocused()
+                        }
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
+                            return state.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
+                                $0.withUpdatedEffectiveInputState(ChatTextInputState(inputText: $0.effectiveInputState.inputText, selectionRange: selectionRange.endIndex ..< selectionRange.endIndex))
+                            })
+                        })
+                    }
+                })
+                strongSelf.present(controller)
+            }
+        }, reportPeerIrrelevantGeoLocation: {
+        }, displaySlowmodeTooltip: { _, _ in
+        }, displaySendMessageOptions: { [weak self] node, gesture in
+            guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
+                return
+            }
+            textInputPanelNode.loadTextInputNodeIfNeeded()
+            guard let textInputNode = textInputPanelNode.textInputNode else {
+                return
+            }
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
+            }, sendMessage: { [weak textInputPanelNode] silently in
+                textInputPanelNode?.sendMessage(silently ? .silent : .generic)
+            }, schedule: { [weak textInputPanelNode] in
+                textInputPanelNode?.sendMessage(.schedule)
+            })
+            strongSelf.presentInGlobalOverlay(controller)
+        }, openScheduledMessages: {
+        }, openPeersNearby: {
+        }, displaySearchResultsTooltip: { _, _ in
+        }, unarchivePeer: {
+        }, scrollToTop: {
+        }, viewReplies: { _, _ in
+        }, activatePinnedListPreview: { _, _ in
+        }, joinGroupCall: { _ in
+        }, presentInviteMembers: {
+        }, presentGigagroupHelp: {
+        }, editMessageMedia: { _, _ in
+        }, updateShowCommands: { _ in
+        }, updateShowSendAsPeers: { _ in
+        }, openInviteRequests: {
+        }, openSendAsPeer: { _, _ in
+        }, presentChatRequestAdminInfo: {
+        }, displayCopyProtectionTip: { _, _ in
+        }, statuses: nil)
     }
     
     override func didLoad() {
@@ -470,8 +657,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         if #available(iOS 13.0, *) {
             self.containerNode.layer.cornerCurve = .continuous
         }
-        self.containerNode.layer.cornerRadius = 23.0
-        
+    
         self.scrollNode.view.delegate = self
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
@@ -488,8 +674,32 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.containerNode.view.insertSubview(effectView, at: 0)
     }
     
+    func updateCaption(_ caption: NSAttributedString) {
+        if !caption.string.isEmpty {
+            self.loadTextNodeIfNeeded()
+        }
+        self.updateChatPresentationInterfaceState(animated: false, { $0.updatedInterfaceState { $0.withUpdatedComposeInputState(ChatTextInputState(inputText: caption))} })
+    }
+    
+    private func updateChatPresentationInterfaceState(animated: Bool = true, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
+        self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, f, completion: completion)
+    }
+    
+    private func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
+        let presentationInterfaceState = f(self.presentationInterfaceState)
+        let updateInputTextState = self.presentationInterfaceState.interfaceState.effectiveInputState != presentationInterfaceState.interfaceState.effectiveInputState
+        
+        self.presentationInterfaceState = presentationInterfaceState
+        
+        if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
+            textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
+
+            self.textUpdated(presentationInterfaceState.interfaceState.effectiveInputState.inputText)
+        }
+    }
+    
     func updateViews(transition: Transition) {
-        guard let _ = self.validLayout else {
+        guard let layout = self.validLayout else {
             return
         }
         
@@ -498,9 +708,15 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         var validButtons = Set<Int>()
         
         let buttonSize = self.isCollapsed ? smallPanelButtonSize : panelButtonSize
+        var sideInset = self.isCollapsed ? smallSideInset : normalSideInset
+        
+        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
+        if buttonsWidth < layout.size.width {
+            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
+        }
         
         for i in 0 ..< self.buttons.count {
-            let buttonFrame = CGRect(origin: CGPoint(x: (self.isCollapsed ? smallSideInset : sideInset) + buttonSize.width * CGFloat(i), y: 0.0), size: buttonSize)
+            let buttonFrame = CGRect(origin: CGPoint(x: sideInset + buttonSize.width * CGFloat(i), y: 0.0), size: buttonSize)
             if !visibleRect.intersects(buttonFrame) {
                 continue
             }
@@ -556,64 +772,152 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateScrollLayoutIfNeeded(force: Bool, transition: ContainedViewLayoutTransition) -> Bool {
-        guard let size = self.validLayout else {
+        guard let layout = self.validLayout else {
             return false
         }
-        if self.scrollLayout?.width == size.width && !force {
+        if self.scrollLayout?.width == layout.size.width && !force {
             return false
         }
 
         let buttonSize = self.isCollapsed ? smallPanelButtonSize : panelButtonSize
-        let contentSize = CGSize(width: (self.isCollapsed ? smallSideInset : sideInset) * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
-        self.scrollLayout = (size.width, contentSize)
+        let contentSize = CGSize(width: (self.isCollapsed ? smallSideInset : normalSideInset) * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
+        self.scrollLayout = (layout.size.width, contentSize)
 
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: size))
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting ? -panelButtonSize.height : 0.0), size: CGSize(width: layout.size.width, height: panelButtonSize.height)))
         self.scrollNode.view.contentSize = contentSize
 
         return true
     }
     
-    func update(buttons: [AttachmentButtonType], isCollapsed: Bool, size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.validLayout = size
+    private func loadTextNodeIfNeeded() {
+        if let _ = self.textInputPanelNode {
+        } else {
+            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, isAttachment: true, presentController: { [weak self] c in
+                if let strongSelf = self {
+                    strongSelf.present(c)
+                }
+            })
+            textInputPanelNode.interfaceInteraction = self.interfaceInteraction
+            textInputPanelNode.sendMessage = { [weak self] mode in
+                if let strongSelf = self {
+                    strongSelf.sendMessagePressed(mode)
+                }
+            }
+            textInputPanelNode.focusUpdated = { [weak self] focus in
+                if let strongSelf = self, focus {
+                    strongSelf.beganTextEditing()
+                }
+            }
+            textInputPanelNode.updateHeight = { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.requestLayout()
+                }
+            }
+            self.addSubnode(textInputPanelNode)
+            self.textInputPanelNode = textInputPanelNode
+            
+            textInputPanelNode.alpha = self.isSelecting ? 1.0 : 0.0
+            textInputPanelNode.isUserInteractionEnabled = self.isSelecting
+        }
+    }
+    
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isCollapsed: Bool, isSelecting: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+        self.validLayout = layout
         self.buttons = buttons
         
         let isCollapsedUpdated = self.isCollapsed != isCollapsed
         self.isCollapsed = isCollapsed
+                
+        let isSelectingUpdated = self.isSelecting != isSelecting
+        self.isSelecting = isSelecting
         
-        let bounds = CGRect(origin: CGPoint(), size: size)
+        self.scrollNode.isUserInteractionEnabled = !isSelecting
         
+        var insets = layout.insets(options: [])
+        if let inputHeight = layout.inputHeight, inputHeight > 0.0 && isSelecting {
+            insets.bottom = inputHeight
+        } else if layout.intrinsicInsets.bottom > 0.0 {
+            insets.bottom = layout.intrinsicInsets.bottom
+        }
+        
+        if isSelecting {
+            self.loadTextNodeIfNeeded()
+        } else {
+            self.textInputPanelNode?.ensureUnfocused()
+        }
+        var textPanelHeight: CGFloat = 0.0
+        if let textInputPanelNode = self.textInputPanelNode {
+            textInputPanelNode.isUserInteractionEnabled = isSelecting
+            
+            var panelTransition = transition
+            if textInputPanelNode.frame.width.isZero {
+                panelTransition = .immediate
+            }
+            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left, rightInset: insets.right, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics)
+            let panelFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: panelHeight)
+            if textInputPanelNode.frame.width.isZero {
+                textInputPanelNode.frame = panelFrame
+            }
+            transition.updateFrame(node: textInputPanelNode, frame: panelFrame)
+            if panelFrame.height > 0.0 {
+                textPanelHeight = panelFrame.height
+            } else {
+                textPanelHeight = 45.0
+            }
+        }
+        
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelButtonSize.height + insets.bottom))
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
-        if isCollapsed {
-            containerFrame = CGRect(origin: CGPoint(x: 0.0, y: bounds.height - smallPanelButtonSize.height), size: CGSize(width: bounds.width, height: smallPanelButtonSize.height))
+        if isSelecting {
+            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: textPanelHeight + insets.bottom))
+        } else if isCollapsed {
+            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: smallPanelButtonSize.height + insets.bottom))
         } else {
             containerFrame = bounds
         }
         let containerBounds = CGRect(origin: CGPoint(), size: containerFrame.size)
-        if isCollapsedUpdated {
+        if isCollapsedUpdated || isSelectingUpdated {
             containerTransition = .animated(duration: 0.25, curve: .easeInOut)
         } else {
             containerTransition = transition
         }
+        containerTransition.updateAlpha(node: self.scrollNode, alpha: isSelecting ? 0.0 : 1.0)
+        
+        if isSelectingUpdated {
+            if isSelecting {
+                self.loadTextNodeIfNeeded()
+                if let textInputPanelNode = self.textInputPanelNode {
+                    textInputPanelNode.alpha = 1.0
+                    textInputPanelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                    textInputPanelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: CGPoint(), duration: 0.25, additive: true)
+                }
+            } else {
+                if let textInputPanelNode = self.textInputPanelNode {
+                    textInputPanelNode.alpha = 0.0
+                    textInputPanelNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
+                    textInputPanelNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 44.0), duration: 0.25, additive: true)
+                }
+            }
+        }
+
         
         containerTransition.updateFrame(node: self.containerNode, frame: containerFrame)
+        containerTransition.updateFrame(node: self.backgroundNode, frame: containerBounds)
+        containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
         if let effectView = self.effectView {
             containerTransition.updateFrame(view: effectView, frame: bounds)
         }
-        containerTransition.updateFrame(node: self.backgroundNode, frame: containerBounds)
-        
-        var shadowFrame = bounds.insetBy(dx: -16.0, dy: -24.0)
-        shadowFrame.size.height += 44.0
-        transition.updateFrame(node: self.shadowNode, frame: shadowFrame)
-        
-        let _ = self.updateScrollLayoutIfNeeded(force: isCollapsedUpdated, transition: containerTransition)
-        
+                
+        let _ = self.updateScrollLayoutIfNeeded(force: isCollapsedUpdated || isSelectingUpdated, transition: containerTransition)
+
         var buttonTransition: Transition = .immediate
         if isCollapsedUpdated {
             buttonTransition = .easeInOut(duration: 0.25)
         }
-        
         self.updateViews(transition: buttonTransition)
+        
+        return containerFrame.height
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

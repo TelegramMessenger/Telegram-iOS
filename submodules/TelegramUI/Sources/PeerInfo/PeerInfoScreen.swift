@@ -64,6 +64,7 @@ import CalendarMessageScreen
 import TooltipUI
 import QrCodeUI
 import Translate
+import ChatPresentationInterfaceState
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }

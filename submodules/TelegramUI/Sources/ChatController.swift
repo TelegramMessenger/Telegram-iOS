@@ -69,21 +69,15 @@ import ReactionSelectionNode
 import LottieMeshSwift
 import ReactionListContextMenuContent
 import AttachmentUI
+import AttachmentTextInputPanelNode
+import ChatPresentationInterfaceState
+import Pasteboard
+import ChatSendMessageActionUI
+import ChatTextLinkEditUI
 
 #if DEBUG
 import os.signpost
 #endif
-
-extension ChatLocation {
-    var peerId: PeerId {
-        switch self {
-        case let .peer(peerId):
-            return peerId
-        case let .replyThread(replyThreadMessage):
-            return replyThreadMessage.messageId.peerId
-        }
-    }
-}
 
 public enum ChatControllerPeekActions {
     case standard
@@ -175,11 +169,6 @@ private struct ScrolledToMessageId: Equatable {
     
     var id: MessageId
     var allowedReplacementDirection: AllowedReplacementDirections
-}
-
-enum ChatLoadingMessageSubject {
-    case generic
-    case pinnedMessage
 }
 
 #if DEBUG
@@ -3177,7 +3166,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             } else {
-                strongSelf.presentMediaPicker(fileMode: false, editingMedia: true, present: { [weak self] c in
+                strongSelf.presentMediaPicker(fileMode: false, editingMedia: true, present: { [weak self] c, _ in
                     self?.effectiveNavigationController?.pushViewController(c)
                 }, completion: { signals, _, _ in
                     self?.interfaceInteraction?.setupEditMessage(messageId, { _ in })
@@ -5790,7 +5779,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     }
-                    strongSelf.presentAttachmentMenu(editMediaOptions: options, editMediaReference: originalMediaReference)
+                    strongSelf.oldPresentAttachmentMenu(editMediaOptions: options, editMediaReference: originalMediaReference)
                 })
             } else {
                 strongSelf.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil)
@@ -10215,8 +10204,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        let inputPanelNode = PeerSelectionTextInputPanelNode(presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { _ in })
-        inputPanelNode.context = self.context
+        let inputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: presentationInterfaceState, isCaption: true, presentController: { _ in })
         inputPanelNode.interfaceInteraction = interfaceInteraction
         inputPanelNode.effectivePresentationInterfaceState = {
             return presentationInterfaceState
@@ -10251,18 +10239,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let storeEditedPhotos = false
-        let initialCaption: String = ""
+        let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
         
-        presentedLegacyCamera(context: self.context, peer: peer, chatLocation: self.chatLocation, cameraView: nil, menuController: nil, parentController: self, editingMedia: false, saveCapturedPhotos: storeEditedPhotos, mediaGrouping: true, initialCaption: initialCaption, hasSchedule: self.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, photoOnly: photoOnly, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
+        presentedLegacyCamera(context: self.context, peer: peer, chatLocation: self.chatLocation, cameraView: nil, menuController: nil, parentController: self, editingMedia: false, saveCapturedPhotos: storeEditedPhotos, mediaGrouping: true, initialCaption: inputText.string, hasSchedule: self.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, photoOnly: photoOnly, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
             if let strongSelf = self {
 //                if editMediaOptions != nil {
 //                    strongSelf.editMessageMediaWithLegacySignals(signals!)
 //                } else {
                     strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
 //                }
-//                if !inputText.string.isEmpty {
-//                    strongSelf.clearInputText()
-//                }
+                if !inputText.string.isEmpty {
+                    strongSelf.clearInputText()
+                }
             }
         }, recognizedQRCode: { [weak self] code in
             if let strongSelf = self {
@@ -10311,21 +10299,44 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let currentLocationController = Atomic<LocationPickerController?>(value: nil)
         
-        let attachmentController = AttachmentController(context: self.context)
+        var canSendPolls = true
+        if let _ = peer as? TelegramUser {
+            canSendPolls = false
+        } else if let channel = peer as? TelegramChannel {
+            if channel.hasBannedPermission(.banSendPolls) != nil {
+                canSendPolls = false
+            }
+        } else if let group = peer as? TelegramGroup {
+            if group.hasBannedPermission(.banSendPolls) {
+                canSendPolls = false
+            }
+        }
+        
+        var buttons: [AttachmentButtonType] = [.camera, .gallery, .file, .location, .contact]
+        if canSendPolls {
+            buttons.append(.poll)
+        }
+        
+        let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
+        
+        let attachmentController = AttachmentController(context: self.context, buttons: buttons)
         attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
             guard let strongSelf = self else {
                 return
             }
             switch type {
             case .camera:
-                completion(nil)
+                completion(nil, nil)
                 attachmentController?.dismiss(animated: true)
                 strongSelf.openCamera()
                 strongSelf.controllerNavigationDisposable.set(nil)
             case .gallery:
-                strongSelf.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, present: { c in
-                    completion(c)
+                strongSelf.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, present: { controller, mediaPickerContext in
+                    completion(controller, mediaPickerContext)
                 }, completion: { [weak self] signals, silentPosting, scheduleTime in
+                    if !inputText.string.isEmpty {
+                        self?.clearInputText()
+                    }
                     self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                 })
                 strongSelf.controllerNavigationDisposable.set(nil)
@@ -10337,13 +10348,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     attachmentController?.dismiss(animated: true)
                     self?.presentICloudFileGallery()
                 })
-                completion(controller)
+                completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             case .location:
                 strongSelf.controllerNavigationDisposable.set(nil)
                 let existingController = currentLocationController.with { $0 }
                 if let controller = existingController {
-                    completion(controller)
+                    completion(controller, nil)
                     return
                 }
                 let selfPeerId: PeerId
@@ -10377,14 +10388,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }, nil)
                         strongSelf.sendMessages([message])
                     })
-                    completion(controller)
+                    completion(controller, nil)
                     
                     let _ = currentLocationController.swap(controller)
                 })
             case .contact:
                 let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true))
                 contactsController.navigationPresentation = .modal
-                completion(contactsController)
+                completion(contactsController, nil)
                 strongSelf.controllerNavigationDisposable.set((contactsController.result
                 |> deliverOnMainQueue).start(next: { [weak self] peers in
                     if let strongSelf = self, let (peers, _) = peers {
@@ -10510,12 +10521,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }))
             case .poll:
                 let controller = strongSelf.configurePollCreation()
-                completion(controller)
+                completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             case .app:
-                let controller = GameController(context: strongSelf.context, url: "https://wallet.ton.org", message: nil)
-                completion(controller)
-                strongSelf.controllerNavigationDisposable.set(nil)
+                return
             }
         }
         self.present(attachmentController, in: .window(.root))
@@ -10619,7 +10628,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, updatedPresentationData: strongSelf.updatedPresentationData, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText, openGallery: {
-                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, present: { [weak self] c in
+                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, present: { [weak self] c, _ in
                     self?.effectiveNavigationController?.pushViewController(c)
                 }, completion: { signals, silentPosting, scheduleTime in
                     if !inputText.string.isEmpty {
@@ -10805,7 +10814,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentFileGallery(editingMessage: Bool = false) {
-        self.presentMediaPicker(fileMode: true, editingMedia: editingMessage, present: { [weak self] c in
+        self.presentMediaPicker(fileMode: true, editingMedia: editingMessage, present: { [weak self] c, _ in
             self?.effectiveNavigationController?.pushViewController(c)
         }, completion: { [weak self] signals, silentPosting, scheduleTime in
             if editingMessage {
@@ -10921,7 +10930,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, present: @escaping (ViewController) -> Void, completion: @escaping ([Any], Bool, Int32) -> Void) {
+    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, present: @escaping (AttachmentContainable, AttachmentMediaPickerContext) -> Void, completion: @escaping ([Any], Bool, Int32) -> Void) {
         let postbox = self.context.account.postbox
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Signal<(GeneratedMediaStoreSettings, SearchBotsConfiguration), NoError> in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
@@ -10945,7 +10954,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).start(next: { generator in
                 if let strongSelf = self {
-                    let legacyController = LegacyController(presentation: .navigation, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
+                    let legacyController = LegacyController(presentation: fileMode ? .navigation : .custom, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
                     legacyController.navigationPresentation = .modal
                     legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
                     legacyController.controllerLoaded = { [weak legacyController] in
@@ -10953,9 +10962,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         legacyController?.view.disablesInteractiveModalDismiss = true
                     }
                     let controller = generator(legacyController.context)
+                    
                     legacyController.bind(controller: controller)
                     legacyController.deferScreenEdgeGestures = [.top]
-                    
+                                        
                     configureLegacyAssetPicker(controller, context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, initialCaption: inputText, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, presentWebSearch: editingMedia ? nil : { [weak self, weak legacyController] in
                         if let strongSelf = self {
                             let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: EnginePeer(peer), chatLocation: strongSelf.chatLocation, configuration: searchBotsConfiguration, mode: .media(completion: { results, selectionState, editingState, silentPosting in
@@ -11040,17 +11050,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
                     controller.completionBlock = { [weak legacyController] signals, silentPosting, scheduleTime in
                         if let legacyController = legacyController {
-                            legacyController.dismiss()
+                            legacyController.dismiss(animated: true)
                             completion(signals!, silentPosting, scheduleTime)
                         }
                     }
                     controller.dismissalBlock = { [weak legacyController] in
                         if let legacyController = legacyController {
-                            legacyController.dismiss()
+                            legacyController.dismiss(animated: true)
                         }
                     }
                     strongSelf.chatDisplayNode.dismissInput()
-                    present(legacyController)
+                    present(legacyController, LegacyAssetPickerContext(controller: controller))
                 }
             })
         })
@@ -11568,7 +11578,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(tooltipScreen, in: .current)
     }
         
-    private func configurePollCreation(isQuiz: Bool? = nil) -> ViewController? {
+    private func configurePollCreation(isQuiz: Bool? = nil) -> AttachmentContainable? {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return nil
         }

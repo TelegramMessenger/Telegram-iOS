@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import Emoji
+import ChatPresentationInterfaceState
 
 private struct EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     let symbol: String

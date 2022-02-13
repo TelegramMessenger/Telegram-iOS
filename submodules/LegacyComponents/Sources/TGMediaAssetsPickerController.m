@@ -89,8 +89,11 @@
         _assetGroup = assetGroup;
         _intent = intent;
         
-        [self setTitle:@"Gallery"];
-//        [self setTitle:_assetGroup.title];
+        if (_intent == TGMediaAssetsControllerSendMediaIntent) {
+            [self setTitle:TGLocalized(@"Attachment.Gallery")];
+        } else {
+            [self setTitle:assetGroup.title];
+        }
         
         _assetsDisposable = [[SMetaDisposable alloc] init];
     }
@@ -153,10 +156,13 @@
     [super viewDidLoad];
     
     SSignal *groupSignal = nil;
-    if (_assetGroup != nil)
+    bool reversed = false;
+    if (_assetGroup != nil) {
         groupSignal = [SSignal single:_assetGroup];
-    else
+    } else {
         groupSignal = [_assetsLibrary cameraRollGroup];
+        reversed = true;
+    }
     
     __weak TGMediaAssetsPickerController *weakSelf = self;
     [_assetsDisposable setDisposable:[[[[groupSignal deliverOn:[SQueue mainQueue]] mapToSignal:^SSignal *(TGMediaAssetGroup *assetGroup)
@@ -168,9 +174,11 @@
         if (strongSelf->_assetGroup == nil)
             strongSelf->_assetGroup = assetGroup;
         
-        [self setTitle:@"Gallery"];
-//        [strongSelf setTitle:assetGroup.title];
-        
+        if (strongSelf->_intent == TGMediaAssetsControllerSendMediaIntent) {
+            [strongSelf setTitle:TGLocalized(@"Attachment.Gallery")];
+        } else {
+            [strongSelf setTitle:assetGroup.title];
+        }
         return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:false];
     }] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
     {
@@ -192,15 +200,18 @@
         {
             TGMediaAssetFetchResult *fetchResult = (TGMediaAssetFetchResult *)next;
             
-            bool scrollToBottom = (strongSelf->_fetchResult == nil);
+            bool scrollToTop = (strongSelf->_fetchResult == nil && strongSelf->_intent == TGMediaAssetsControllerSendMediaIntent);
+            bool scrollToBottom = (strongSelf->_fetchResult == nil && strongSelf->_intent != TGMediaAssetsControllerSendMediaIntent);
             
             strongSelf->_fetchResult = fetchResult;
             [strongSelf->_collectionView reloadData];
-            
-            if (scrollToBottom)
-            {
+
+            if (scrollToTop) {
                 [strongSelf->_collectionView layoutSubviews];
-//                [strongSelf _adjustContentOffsetToBottom];
+                [strongSelf->_collectionView setContentOffset:CGPointMake(0.0, -strongSelf->_collectionView.contentInset.top) animated:false];
+            } else if (scrollToBottom) {
+                [strongSelf->_collectionView layoutSubviews];
+                [strongSelf _adjustContentOffsetToBottom];
             }
         }
         else if ([next isKindOfClass:[TGMediaAssetFetchResultChange class]])
@@ -221,6 +232,7 @@
     [super viewWillAppear:animated];
     
     [self setup3DTouch];
+    [self setLeftBarButtonItem:[(TGMediaAssetsController *)self.navigationController leftBarButtonItem]];
     [self setRightBarButtonItem:[(TGMediaAssetsController *)self.navigationController rightBarButtonItem]];
 }
 
@@ -371,6 +383,8 @@
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
+    [self.view.window endEditing:true];
+    
     TGMediaAsset *asset = [self _itemAtIndexPath:indexPath];
 
     TGMediaSelectionContext *selectionContext = ((TGMediaAssetsController *)self.navigationController).selectionContext;

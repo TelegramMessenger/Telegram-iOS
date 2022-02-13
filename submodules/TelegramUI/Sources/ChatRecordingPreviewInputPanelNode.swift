@@ -11,6 +11,7 @@ import AppBundle
 import ContextUI
 import AnimationUI
 import ManagedAnimationNode
+import ChatPresentationInterfaceState
 
 extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
     

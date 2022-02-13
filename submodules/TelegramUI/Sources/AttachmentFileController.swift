@@ -11,6 +11,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import ItemListPeerActionItem
+import AttachmentUI
 
 private final class AttachmentFileControllerArguments {
     let openGallery: () -> Void
@@ -103,12 +104,16 @@ private func attachmentFileControllerEntries(presentationData: PresentationData)
     entries.append(.selectFromGallery(presentationData.theme, presentationData.strings.Attachment_SelectFromGallery))
     entries.append(.selectFromFiles(presentationData.theme, presentationData.strings.Attachment_SelectFromFiles))
     
-    entries.append(.recentHeader(presentationData.theme, "RECENTLY SENT FILES".uppercased()))
+//    entries.append(.recentHeader(presentationData.theme, "RECENTLY SENT FILES".uppercased()))
 
     return entries
 }
 
-public func attachmentFileController(context: AccountContext, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void) -> ViewController {
+private class AttachmentFileControllerImpl: ItemListController, AttachmentContainable {
+    public var requestAttachmentMenuExpansion: () -> Void = {}
+}
+
+public func attachmentFileController(context: AccountContext, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void) -> AttachmentContainable {
     let actionsDisposable = DisposableSet()
     
     var dismissImpl: (() -> Void)?
@@ -131,7 +136,7 @@ public func attachmentFileController(context: AccountContext, presentGallery: @e
         actionsDisposable.dispose()
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = AttachmentFileControllerImpl(context: context, state: signal)
     dismissImpl = { [weak controller] in
         controller?.dismiss(animated: true)
     }

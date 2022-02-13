@@ -61,7 +61,7 @@ public final class PeerSelectionControllerParams {
     }
 }
 
-public enum PeerSelectionControllerSendMode {
+public enum AttachmentTextInputPanelSendMode {
     case generic
     case silent
     case schedule
@@ -69,7 +69,7 @@ public enum PeerSelectionControllerSendMode {
 
 public protocol PeerSelectionController: ViewController {
     var peerSelected: ((Peer) -> Void)? { get set }
-    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, ChatInterfaceForwardOptionsState?) -> Void)? { get set }
+    var multiplePeersSelected: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)? { get set }
     var inProgress: Bool { get set }
     var customDismiss: (() -> Void)? { get set }
 }

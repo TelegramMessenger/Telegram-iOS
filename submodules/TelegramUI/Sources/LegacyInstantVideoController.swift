@@ -14,16 +14,7 @@ import ImageCompression
 import LocalMediaResources
 import AppBundle
 import LegacyMediaPickerUI
-
-final class InstantVideoControllerRecordingStatus {
-    let micLevel: Signal<Float, NoError>
-    let duration: Signal<TimeInterval, NoError>
-    
-    init(micLevel: Signal<Float, NoError>, duration: Signal<TimeInterval, NoError>) {
-        self.micLevel = micLevel
-        self.duration = duration
-    }
-}
+import ChatPresentationInterfaceState
 
 final class InstantVideoController: LegacyController, StandalonePresentableController {
     private var captureController: TGVideoMessageCaptureController?

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 private enum ChatInfoTitleButton {
     case search

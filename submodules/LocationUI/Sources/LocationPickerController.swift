@@ -11,6 +11,7 @@ import AppBundle
 import CoreLocation
 import PresentationDataUtils
 import DeviceAccess
+import AttachmentUI
 
 public enum LocationPickerMode {
     case share(peer: Peer?, selfPeer: Peer?, hasLiveLocation: Bool)
@@ -51,7 +52,7 @@ class LocationPickerInteraction {
     }
 }
 
-public final class LocationPickerController: ViewController {
+public final class LocationPickerController: ViewController, AttachmentContainable {
     private var controllerNode: LocationPickerControllerNode {
         return self.displayNode as! LocationPickerControllerNode
     }
@@ -69,6 +70,8 @@ public final class LocationPickerController: ViewController {
     private var permissionDisposable: Disposable?
     
     private var interaction: LocationPickerInteraction?
+    
+    public var requestAttachmentMenuExpansion: () -> Void = {}
         
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, completion: @escaping (TelegramMediaMap, String?) -> Void) {
         self.context = context
@@ -326,6 +329,8 @@ public final class LocationPickerController: ViewController {
     }
     
     @objc private func searchPressed() {
+        self.requestAttachmentMenuExpansion()
+        
         self.interaction?.openSearch()
     }
 }

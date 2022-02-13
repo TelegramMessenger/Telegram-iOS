@@ -17,6 +17,7 @@ import CheckNode
 import MusicAlbumArtResources
 import AudioBlob
 import ContextUI
+import ChatPresentationInterfaceState
 
 private struct FetchControls {
     let fetch: () -> Void
