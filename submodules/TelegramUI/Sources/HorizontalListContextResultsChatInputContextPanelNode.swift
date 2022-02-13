@@ -11,6 +11,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult

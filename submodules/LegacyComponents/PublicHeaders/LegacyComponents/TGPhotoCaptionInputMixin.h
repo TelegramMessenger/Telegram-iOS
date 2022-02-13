@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-#import <LegacyComponents/TGMediaPickerCaptionInputPanel.h>
+#import <UIKit/UIKit.h>
 
 @class TGSuggestionContext;
 @protocol TGPhotoPaintStickersContext;

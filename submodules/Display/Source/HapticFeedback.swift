@@ -10,6 +10,8 @@ public enum ImpactHapticFeedbackStyle: Hashable {
     case soft
     case rigid
     case veryLight
+    case click05
+    case click06
 }
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
@@ -21,7 +23,9 @@ private final class HapticFeedbackImpl {
                     .heavy: UIImpactFeedbackGenerator(style: .heavy),
                     .soft: UIImpactFeedbackGenerator(style: .soft),
                     .rigid: UIImpactFeedbackGenerator(style: .rigid),
-                    .veryLight: UIImpactFeedbackGenerator()]
+                    .veryLight: UIImpactFeedbackGenerator(),
+                    .click05: UIImpactFeedbackGenerator(),
+                    .click06: UIImpactFeedbackGenerator()]
         } else {
             return [.light: UIImpactFeedbackGenerator(style: .light),
                     .medium: UIImpactFeedbackGenerator(style: .medium),
@@ -78,8 +82,17 @@ private final class HapticFeedbackImpl {
     
     func impact(_ style: ImpactHapticFeedbackStyle) {
         if let impactGenerator = self.impactGenerator[style] {
-            if #available(iOSApplicationExtension 13.0, iOS 13.0, *), case .veryLight = style {
-                impactGenerator.impactOccurred(intensity: 0.3)
+            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                switch style {
+                    case .click05:
+                        impactGenerator.impactOccurred(intensity: 0.3)
+                    case .click06:
+                        impactGenerator.impactOccurred(intensity: 0.4)
+                    case .veryLight:
+                        impactGenerator.impactOccurred(intensity: 0.3)
+                    default:
+                        impactGenerator.impactOccurred()
+                }
             } else {
                 impactGenerator.impactOccurred()
             }

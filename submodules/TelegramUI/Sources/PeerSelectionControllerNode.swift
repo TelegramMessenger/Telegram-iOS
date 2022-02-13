@@ -12,6 +12,10 @@ import SearchUI
 import ContactListUI
 import ChatListUI
 import SegmentedControlNode
+import AttachmentTextInputPanelNode
+import ChatPresentationInterfaceState
+import ChatSendMessageActionUI
+import ChatTextLinkEditUI
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -37,7 +41,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let toolbarSeparatorNode: ASDisplayNode?
     private let segmentedControlNode: SegmentedControlNode?
     
-    private var textInputPanelNode: PeerSelectionTextInputPanelNode?
+    private var textInputPanelNode: AttachmentTextInputPanelNode?
     private var forwardAccessoryPanelNode: ForwardAccessoryPanelNode?
     
     var contactListNode: ContactListNode?
@@ -58,7 +62,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
-    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
+    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     
     private var presentationData: PresentationData {
         didSet {
@@ -378,7 +382,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.addSubnode(forwardAccessoryPanelNode)
             self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
             
-            let textInputPanelNode = PeerSelectionTextInputPanelNode(presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) })
+            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) })
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode in
                 guard let strongSelf = self else {

@@ -9,8 +9,6 @@
 #import <LegacyComponents/ActionStage.h>
 #import <LegacyComponents/Freedom.h>
 #import <LegacyComponents/FreedomUIKit.h>
-#import <LegacyComponents/HPGrowingTextView.h>
-#import <LegacyComponents/HPTextViewInternal.h>
 #import <LegacyComponents/JNWSpringAnimation.h>
 #import <LegacyComponents/LegacyComponents.h>
 #import <LegacyComponents/LegacyComponentsAccessChecker.h>
@@ -187,11 +185,7 @@
 #import <LegacyComponents/TGModernBackToolbarButton.h>
 #import <LegacyComponents/TGModernButton.h>
 #import <LegacyComponents/TGModernCache.h>
-#import <LegacyComponents/TGModernConversationAlphacodeAssociatedPanel.h>
-#import <LegacyComponents/TGModernConversationAssociatedInputPanel.h>
-#import <LegacyComponents/TGModernConversationHashtagsAssociatedPanel.h>
 #import <LegacyComponents/TGModernConversationInputMicButton.h>
-#import <LegacyComponents/TGModernConversationMentionsAssociatedPanel.h>
 #import <LegacyComponents/TGModernConversationTitleActivityIndicator.h>
 #import <LegacyComponents/TGModernGalleryContainerView.h>
 #import <LegacyComponents/TGModernGalleryController.h>

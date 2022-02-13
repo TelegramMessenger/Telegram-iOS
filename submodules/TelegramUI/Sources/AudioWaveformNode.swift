@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import ChatPresentationInterfaceState
 
 private final class AudioWaveformNodeParameters: NSObject {
     let waveform: AudioWaveform?

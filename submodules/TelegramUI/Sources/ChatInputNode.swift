@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
+import ChatPresentationInterfaceState
 
 class ChatInputNode: ASDisplayNode {
     var interfaceInteraction: ChatPanelInterfaceInteraction?

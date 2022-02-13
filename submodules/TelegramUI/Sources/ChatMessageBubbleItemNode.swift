@@ -22,6 +22,7 @@ import AppBundle
 import Markdown
 import WallpaperBackgroundNode
 import SwiftSignalKit
+import ChatPresentationInterfaceState
 
 enum InternalBubbleTapAction {
     case action(() -> Void)

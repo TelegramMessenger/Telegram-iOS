@@ -17,6 +17,7 @@ import ContextUI
 import RadialStatusNode
 import InvisibleInkDustNode
 import TextFormat
+import ChatPresentationInterfaceState
 
 private enum PinnedMessageAnimation {
     case slideToTop

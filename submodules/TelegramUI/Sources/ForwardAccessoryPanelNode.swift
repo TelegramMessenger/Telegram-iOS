@@ -14,6 +14,7 @@ import PresentationDataUtils
 import TextFormat
 import Markdown
 import TelegramNotices
+import ChatPresentationInterfaceState
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
