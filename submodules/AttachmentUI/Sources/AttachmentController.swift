@@ -245,9 +245,9 @@ public class AttachmentController: ViewController {
                                 }
                                 
                                 if ascending {
-                                    strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: 70.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                    strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: 70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                                 } else {
-                                    strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: -70.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                    strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: -70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                                 }
                                 
                                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -258,7 +258,7 @@ public class AttachmentController: ViewController {
                         
                         if let layout = strongSelf.validLayout {
                             strongSelf.switchingController = true
-                            strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                            strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
                             strongSelf.switchingController = false
                         }
                     }

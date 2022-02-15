@@ -3,7 +3,6 @@
 
 #import "LegacyComponentsInternal.h"
 #import "TGStringUtils.h"
-#import "TGUser.h"
 #import "TGLocalization.h"
 
 static bool value_dateHas12hFormat = false;
@@ -453,61 +452,6 @@ static inline NSString *dialogTimeFormat()
     NSString *timeString = [self stringForShortTimeWithHours:hours minutes:minutes];
     
     return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.YesterdayAt"), timeString];
-}
-
-+ (NSString *)stringForRelativeLastSeen:(int)date
-{
-    if (date == -1)
-        return TGLocalized(@"Presence.invisible");
-    else if (date == TGUserPresenceValueLately)
-        return TGLocalized(@"LastSeen.Lately");
-    else if (date == TGUserPresenceValueWithinAWeek)
-        return TGLocalized(@"LastSeen.WithinAWeek");
-    else if (date == TGUserPresenceValueWithinAMonth)
-        return TGLocalized(@"LastSeen.WithinAMonth");
-    else if (date == TGUserPresenceValueALongTimeAgo)
-        return TGLocalized(@"LastSeen.ALongTimeAgo");
-    else if (date <= 0)
-        return TGLocalized(@"Presence.offline");
-    
-    time_t t = date;
-    struct tm timeinfo;
-    localtime_r(&t, &timeinfo);
-    
-    time_t t_now;
-    time(&t_now);
-    struct tm timeinfo_now;
-    localtime_r(&t_now, &timeinfo_now);
-    
-    if (timeinfo.tm_year != timeinfo_now.tm_year)
-        return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.AtDate"), [self stringForFullDateWithDay:timeinfo.tm_mday month:timeinfo.tm_mon + 1 year:timeinfo.tm_year]];
-    else
-    {
-        int dayDiff = timeinfo.tm_yday - timeinfo_now.tm_yday;
-        
-        int minutesDiff = (int)((t_now - date) / 60);
-        int hoursDiff = (int)((t_now - date) / (60 * 60));
-        
-        if (dayDiff == 0 && hoursDiff <= 23)
-        {
-            if (minutesDiff < 1)
-                return TGLocalized(@"LastSeen.JustNow");
-            else if (minutesDiff < 60)
-            {
-                return [legacyEffectiveLocalization() getPluralized:@"LastSeen.MinutesAgo" count:(int32_t)minutesDiff];
-            }
-            else
-            {
-                return [legacyEffectiveLocalization() getPluralized:@"LastSeen.HoursAgo" count:(int32_t)hoursDiff];
-            }
-        }
-        else if (dayDiff == -1)
-            return [self stringForLastSeenYesterday:dayDiff == 0 hours:timeinfo.tm_hour minutes:timeinfo.tm_min];
-        else
-            return [[NSString alloc] initWithFormat:TGLocalized(@"LastSeen.AtDate"), [self stringForFullDateWithDay:timeinfo.tm_mday month:timeinfo.tm_mon + 1 year:timeinfo.tm_year]];
-    }
-    
-    return nil;
 }
 
 + (NSString *)stringForRelativeUpdate:(int)date

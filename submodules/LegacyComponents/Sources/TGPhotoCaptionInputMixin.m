@@ -4,7 +4,6 @@
 
 #import <LegacyComponents/TGObserverProxy.h>
 
-#import "TGSuggestionContext.h"
 #import "TGPhotoPaintStickersContext.h"
 
 @interface TGPhotoCaptionInputMixin ()

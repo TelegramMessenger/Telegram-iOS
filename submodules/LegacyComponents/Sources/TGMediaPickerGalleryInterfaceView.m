@@ -427,11 +427,6 @@
     _captionMixin.allowEntities = allowCaptionEntities;
 }
 
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext
-{
-    _captionMixin.suggestionContext = suggestionContext;
-}
-
 - (void)setClosePressed:(void (^)())closePressed
 {
     _closePressed = [closePressed copy];

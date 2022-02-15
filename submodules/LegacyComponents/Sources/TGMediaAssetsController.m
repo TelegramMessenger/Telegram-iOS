@@ -246,7 +246,6 @@
             pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:inhibitSelection ? nil : strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
             pickerController.pallete = strongController.pallete;
         }
-        pickerController.suggestionContext = strongController.suggestionContext;
         pickerController.stickersContext = strongController.stickersContext;
         pickerController.localMediaCacheEnabled = strongController.localMediaCacheEnabled;
         pickerController.captionsEnabled = strongController.captionsEnabled;
@@ -284,12 +283,6 @@
     assetsController.recipientName = recipientName;
     
     return assetsController;
-}
-
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext
-{
-    _suggestionContext = suggestionContext;
-    self.pickerController.suggestionContext = suggestionContext;
 }
 
 - (void)setStickersContext:(id<TGPhotoPaintStickersContext>)stickersContext

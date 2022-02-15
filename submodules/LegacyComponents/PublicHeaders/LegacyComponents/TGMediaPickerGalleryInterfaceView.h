@@ -8,7 +8,6 @@
 @protocol TGPhotoPaintStickersContext;
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
-@class TGSuggestionContext;
 @class TGMediaPickerGallerySelectedItemsModel;
 
 @interface TGMediaPickerGalleryInterfaceView : UIView <TGModernGalleryInterfaceView>
@@ -42,7 +41,6 @@
 
 - (void)setSelectedItemsModel:(TGMediaPickerGallerySelectedItemsModel *)selectedItemsModel;
 - (void)setEditorTabPressed:(void (^)(TGPhotoEditorTab tab))editorTabPressed;
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext;
 
 - (void)setThumbnailSignalForItem:(SSignal *(^)(id))thumbnailSignalForItem;
 

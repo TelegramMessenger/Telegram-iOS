@@ -187,7 +187,6 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false, selectionLimit: selectionLimit)!
         carouselItemView = carouselItem
         carouselItem.stickersContext = paintStickersContext
-        carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
         carouselItem.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         var openedCamera = false
         controller.willDismiss = { [weak carouselItem] _ in
@@ -474,8 +473,6 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
     let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     
     legacyController.enableSizeClassSignal = true
-
-    let suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.captionPanelView = {
@@ -489,7 +486,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
         })
     }
 
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, allowGrouping: allowGrouping, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, suggestionContext: suggestionContext, stickersContext: paintStickersContext, presentScheduleController: { done in
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, allowGrouping: allowGrouping, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, stickersContext: paintStickersContext, presentScheduleController: { done in
         presentSchedulePicker { time in
             done?(time)
         }

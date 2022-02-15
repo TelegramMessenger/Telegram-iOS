@@ -7266,3 +7266,10 @@ Sorry for the inconvenience.";
 
 "Attachment.SelectFromGallery" = "Select from Gallery";
 "Attachment.SelectFromFiles" = "Select from Files";
+
+"Attachment.SelectedMedia_1" = "%@ Selected";
+"Attachment.SelectedMedia_2" = "%@ Selected";
+"Attachment.SelectedMedia_3_10" = "%@ Selected";
+"Attachment.SelectedMedia_any" = "%@ Selected";
+"Attachment.SelectedMedia_many" = "%@ Selected";
+"Attachment.SelectedMedia_0" = "%@ Selected";

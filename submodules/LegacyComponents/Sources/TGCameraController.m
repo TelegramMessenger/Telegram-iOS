@@ -1531,7 +1531,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
         model.inhibitMute = self.inhibitMute;
         model.controller = galleryController;
-        model.suggestionContext = self.suggestionContext;
         model.stickersContext = self.stickersContext;
         
         __weak TGModernGalleryController *weakGalleryController = galleryController;

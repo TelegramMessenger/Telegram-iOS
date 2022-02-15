@@ -8,7 +8,6 @@
 @class TGCameraPreviewView;
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
-@class TGSuggestionContext;
 @class TGVideoEditAdjustments;
 
 @protocol TGPhotoPaintStickersContext;
@@ -42,7 +41,6 @@ typedef enum {
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool shortcut;
 

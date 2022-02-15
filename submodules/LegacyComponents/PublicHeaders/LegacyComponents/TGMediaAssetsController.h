@@ -2,7 +2,6 @@
 #import <LegacyComponents/LegacyComponentsContext.h>
 
 #import <LegacyComponents/TGMediaAssetsLibrary.h>
-#import <LegacyComponents/TGSuggestionContext.h>
 
 #import <LegacyComponents/TGMediaAssetsUtils.h>
 
@@ -53,7 +52,6 @@ typedef enum
 
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;

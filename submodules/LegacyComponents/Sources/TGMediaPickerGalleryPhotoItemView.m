@@ -16,6 +16,8 @@
 #import <LegacyComponents/TGMediaSelectionContext.h>
 #import <LegacyComponents/PGPhotoEditorValues.h>
 
+#import <LegacyComponents/TGMediaPickerGalleryVideoItem.h>
+
 #import "TGMediaPickerGalleryPhotoItem.h"
 
 #import "TGPhotoEntitiesContainerView.h"
@@ -27,6 +29,7 @@
 
 @interface TGMediaPickerGalleryPhotoItemView ()
 {
+    TGMediaPickerGalleryFetchResultItem *_fetchItem;
     SMetaDisposable *_facesDisposable;
     
     UILabel *_fileInfoLabel;
@@ -123,8 +126,21 @@
     [self setProgressVisible:false value:0.0f animated:false];
 }
 
+- (id<TGModernGalleryItem>)item {
+    if (_fetchItem != nil) {
+        return _fetchItem;
+    } else {
+        return _item;
+    }
+}
+
 - (void)setItem:(TGMediaPickerGalleryPhotoItem *)item synchronously:(bool)synchronously
 {
+    if ([item isKindOfClass:[TGMediaPickerGalleryFetchResultItem class]]) {
+        _fetchItem = (TGMediaPickerGalleryFetchResultItem *)item;
+        item = (TGMediaPickerGalleryPhotoItem *)[_fetchItem backingItem];
+    }
+    
     [super setItem:item synchronously:synchronously];
     
     _entitiesContainerView.stickersContext = item.stickersContext;

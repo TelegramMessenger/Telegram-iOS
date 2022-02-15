@@ -36,7 +36,6 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
     controller.stickersContext = paintStickersContext
-    controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule
