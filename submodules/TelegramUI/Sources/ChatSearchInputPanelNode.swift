@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramNotices
 import TelegramPresentationData
 import ActivityIndicator
+import ChatPresentationInterfaceState
 
 private let labelFont = Font.regular(15.0)
 

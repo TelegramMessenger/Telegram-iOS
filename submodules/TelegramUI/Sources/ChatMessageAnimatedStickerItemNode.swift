@@ -26,6 +26,7 @@ import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
 import LottieMeshSwift
+import ChatPresentationInterfaceState
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)

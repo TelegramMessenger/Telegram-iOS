@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import ChatPresentationInterfaceState
 
 private final class ChatTextInputAudioRecordingTimeNodeParameters: NSObject {
     let timestamp: Double

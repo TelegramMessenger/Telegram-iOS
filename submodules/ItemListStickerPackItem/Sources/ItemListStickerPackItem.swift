@@ -761,6 +761,9 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     animationNode = current
                                 } else {
                                     animationNode = AnimatedStickerNode()
+                                    animationNode.started = { [weak self] in
+                                        self?.removePlaceholder(animated: false)
+                                    }
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
                                     

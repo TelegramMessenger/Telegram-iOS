@@ -257,6 +257,12 @@ swift_library(
         "//submodules/SoftwareVideo:SoftwareVideo",
         "//submodules/ManagedFile:ManagedFile",
         "//submodules/FetchManagerImpl:FetchManagerImpl",
+        "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/AttachmentTextInputPanelNode:AttachmentTextInputPanelNode",
+        "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
+        "//submodules/Pasteboard:Pasteboard",
+        "//submodules/ChatSendMessageActionUI:ChatSendMessageActionUI",
+        "//submodules/ChatTextLinkEditUI:ChatTextLinkEditUI",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

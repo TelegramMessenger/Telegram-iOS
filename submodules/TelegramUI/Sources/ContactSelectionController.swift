@@ -10,8 +10,9 @@ import ProgressNavigationButtonNode
 import AccountContext
 import ContactListUI
 import SearchUI
+import AttachmentUI
 
-class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController {
+class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController, AttachmentContainable {
     private let context: AccountContext
     private let autoDismiss: Bool
     
@@ -69,6 +70,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
     }
     
+    var requestAttachmentMenuExpansion: () -> Void = {}
+    
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context
         self.autoDismiss = params.autoDismiss
@@ -91,6 +94,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.title = self.titleProducer(self.presentationData.strings)
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -115,10 +119,12 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         })
         
-        self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
-            self?.activateSearch()
-        })
-        self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        if !params.multipleSelection {
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search, activate: { [weak self] in
+                self?.activateSearch()
+            })
+            self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        }
         
         if params.multipleSelection {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Select, style: .plain, target: self, action: #selector(self.beginSelection))

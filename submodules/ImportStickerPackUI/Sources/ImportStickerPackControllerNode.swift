@@ -32,8 +32,6 @@ private struct StickerPackPreviewGridEntry: Comparable, Equatable, Identifiable 
     func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
         return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isVerified: self.isVerified)
     }
-    
-    
 }
 
 private struct StickerPackPreviewGridTransaction {

@@ -68,7 +68,9 @@
 - (void)setCaption:(NSAttributedString *)caption forItem:(NSObject<TGMediaEditableItem> *)item;
 
 - (bool)isForcedCaption;
+- (SSignal *)forcedCaption;
 - (void)setForcedCaption:(NSAttributedString *)caption;
+- (void)setForcedCaption:(NSAttributedString *)caption skipUpdate:(bool)skipUpdate;
 
 - (NSObject<TGMediaEditAdjustments> *)adjustmentsForItem:(NSObject<TGMediaEditableItem> *)item;
 - (SSignal *)adjustmentsSignalForItem:(NSObject<TGMediaEditableItem> *)item;

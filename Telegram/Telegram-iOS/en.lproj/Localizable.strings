@@ -7256,3 +7256,20 @@ Sorry for the inconvenience.";
 
 "SharedMedia.CommonGroupCount_1" = "%@ group in common";
 "SharedMedia.CommonGroupCount_any" = "%@ groups in common";
+
+"Attachment.Camera" = "Camera";
+"Attachment.Gallery" = "Gallery";
+"Attachment.File" = "File";
+"Attachment.Location" = "Location";
+"Attachment.Contact" = "Contact";
+"Attachment.Poll" = "Poll";
+
+"Attachment.SelectFromGallery" = "Select from Gallery";
+"Attachment.SelectFromFiles" = "Select from Files";
+
+"Attachment.SelectedMedia_1" = "%@ Selected";
+"Attachment.SelectedMedia_2" = "%@ Selected";
+"Attachment.SelectedMedia_3_10" = "%@ Selected";
+"Attachment.SelectedMedia_any" = "%@ Selected";
+"Attachment.SelectedMedia_many" = "%@ Selected";
+"Attachment.SelectedMedia_0" = "%@ Selected";

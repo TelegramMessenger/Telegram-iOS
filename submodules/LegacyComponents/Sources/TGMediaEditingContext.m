@@ -406,9 +406,34 @@
     return _forcedCaption.string.length > 0;
 }
 
+- (SSignal *)forcedCaption
+{
+    __weak TGMediaEditingContext *weakSelf = self;
+    SSignal *updateSignal = [_captionPipe.signalProducer() map:^NSAttributedString *(TGMediaCaptionUpdate *update)
+    {
+        __strong TGMediaEditingContext *strongSelf = weakSelf;
+        if (strongSelf.isForcedCaption) {
+            return strongSelf->_forcedCaption;
+        } else {
+            return nil;
+        }
+    }];
+    
+    return [[SSignal single:_forcedCaption] then:updateSignal];
+}
+
 - (void)setForcedCaption:(NSAttributedString *)caption
 {
+    [self setForcedCaption:caption skipUpdate:false];
+}
+
+- (void)setForcedCaption:(NSAttributedString *)caption skipUpdate:(bool)skipUpdate
+{
     _forcedCaption = caption;
+    
+    if (!skipUpdate) {
+        _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:nil caption:caption]);
+    }
 }
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item

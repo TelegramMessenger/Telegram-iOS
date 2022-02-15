@@ -11,6 +11,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]

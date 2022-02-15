@@ -301,7 +301,7 @@ public class ItemListVenueItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.topStripeNode.removeFromSupernode()
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 1)
                             }
                             if strongSelf.maskNode.supernode != nil {
                                 strongSelf.maskNode.removeFromSupernode()

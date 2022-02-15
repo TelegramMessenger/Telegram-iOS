@@ -9,7 +9,7 @@
 
 @implementation TGClipboardMenu
 
-+ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images allowGrouping:(bool)allowGrouping hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName suggestionContext:(TGSuggestionContext *)suggestionContext stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext presentScheduleController:(void (^)(void(^)(int32_t)))presentScheduleController presentTimerController:(void (^)(void(^)(int32_t)))presentTimerController completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
++ (TGMenuSheetController *)presentInParentController:(TGViewController *)parentController context:(id<LegacyComponentsContext>)context images:(NSArray *)images allowGrouping:(bool)allowGrouping hasCaption:(bool)hasCaption hasTimer:(bool)hasTimer hasSilentPosting:(bool)hasSilentPosting hasSchedule:(bool)hasSchedule reminder:(bool)reminder recipientName:(NSString *)recipientName stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext presentScheduleController:(void (^)(void(^)(int32_t)))presentScheduleController presentTimerController:(void (^)(void(^)(int32_t)))presentTimerController completed:(void (^)(TGMediaSelectionContext *selectionContext, TGMediaEditingContext *editingContext, id<TGMediaSelectableItem> currentItem, bool silentPosting, int32_t scheduleTime))completed dismissed:(void (^)(void))dismissed sourceView:(UIView *)sourceView sourceRect:(CGRect (^)(void))sourceRect
 {
     bool centered = false;
     if (sourceRect == nil)
@@ -42,7 +42,6 @@
     TGClipboardPreviewItemView *previewItem = [[TGClipboardPreviewItemView alloc] initWithContext:context images:images allowGrouping:allowGrouping];
     __weak TGClipboardPreviewItemView *weakPreviewItem = previewItem;
     previewItem.stickersContext = stickersContext;
-    previewItem.suggestionContext = suggestionContext;
     previewItem.parentController = parentController;
     previewItem.allowCaptions = hasCaption;
     previewItem.hasTimer = hasTimer;

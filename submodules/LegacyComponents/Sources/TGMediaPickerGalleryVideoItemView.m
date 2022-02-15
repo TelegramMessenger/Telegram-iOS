@@ -45,6 +45,8 @@
 
 @interface TGMediaPickerGalleryVideoItemView() <TGMediaPickerGalleryVideoScrubberDataSource, TGMediaPickerGalleryVideoScrubberDelegate>
 {
+    TGMediaPickerGalleryFetchResultItem *_fetchItem;
+    
     UIView *_containerView;
     TGModernGalleryVideoContentView *_videoContentView;
     UIView *_playerWrapperView;
@@ -385,6 +387,11 @@
 
 - (void)setItem:(TGMediaPickerGalleryVideoItem *)item synchronously:(bool)synchronously
 {
+    if ([item isKindOfClass:[TGMediaPickerGalleryFetchResultItem class]]) {
+        _fetchItem = (TGMediaPickerGalleryFetchResultItem *)item;
+        item = (TGMediaPickerGalleryVideoItem *)[_fetchItem backingItem];
+    }
+    
     bool itemChanged = ![item isEqual:self.item];
     bool itemIdChanged = item.uniqueId != self.item.uniqueId;
     

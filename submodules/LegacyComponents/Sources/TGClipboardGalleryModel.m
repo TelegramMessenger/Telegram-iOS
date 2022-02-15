@@ -171,12 +171,6 @@
     return self;
 }
 
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext
-{
-    _suggestionContext = suggestionContext;
-    [_interfaceView setSuggestionContext:suggestionContext];
-}
-
 - (NSInteger)selectionCount
 {
     return _selectedItemsModel.selectedCount;
@@ -326,7 +320,6 @@
     controller.editingContext = _editingContext;
     controller.stickersContext = _stickersContext;
     self.editorController = controller;
-    controller.suggestionContext = self.suggestionContext;
     controller.willFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges)
     {
         __strong TGClipboardGalleryModel *strongSelf = weakSelf;

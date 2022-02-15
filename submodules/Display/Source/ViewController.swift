@@ -215,7 +215,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var defaultNavigationBarHeight: CGFloat
-        if self._presentedInModal {
+        if self._presentedInModal && layout.orientation == .portrait {
             defaultNavigationBarHeight = 56.0
         } else {
             defaultNavigationBarHeight = 44.0
@@ -533,8 +533,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             }
             navigationController.filterController(self, animated: animated)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
-            assertionFailure()
+            self.presentingViewController?.dismiss(animated: flag, completion: nil)
         }
     }
     
@@ -612,7 +611,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         if let navigationController = self.navigationController as? NavigationController {
             navigationController.filterController(self, animated: true)
         } else {
-            self.presentingViewController?.dismiss(animated: false, completion: nil)
+            self.presentingViewController?.dismiss(animated: true, completion: nil)
         }
     }
     

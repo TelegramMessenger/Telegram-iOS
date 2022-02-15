@@ -97,38 +97,22 @@
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
         PHFetchOptions *options = [PHFetchOptions new];
+        PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeSmartAlbum subtype:PHAssetCollectionSubtypeSmartAlbumUserLibrary options:nil];
+        PHAssetCollection *assetCollection = fetchResult.firstObject;
         
-        if (iosMajorVersion() == 8 && iosMinorVersion() < 1)
+        if (assetCollection != nil)
         {
-            PHFetchResult *fetchResult = nil;
+            if (assetType != TGMediaAssetAnyType)
+                options.predicate = [NSPredicate predicateWithFormat:@"mediaType = %i", [TGMediaAsset assetMediaTypeForAssetType:assetType]];
             
-            if (assetType == TGMediaAssetAnyType)
-                fetchResult = [PHAsset fetchAssetsWithOptions:options];
-            else
-                fetchResult = [PHAsset fetchAssetsWithMediaType:[TGMediaAsset assetMediaTypeForAssetType:assetType] options:options];
+            PHFetchResult *assetsFetchResult = [PHAsset fetchAssetsInAssetCollection:assetCollection options:options];
             
-            [subscriber putNext:[[TGMediaAssetGroup alloc] initWithPHFetchResult:fetchResult]];
+            [subscriber putNext:[[TGMediaAssetGroup alloc] initWithPHAssetCollection:assetCollection fetchResult:assetsFetchResult]];
             [subscriber putCompletion];
         }
         else
         {
-            PHFetchResult *fetchResult = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeSmartAlbum subtype:PHAssetCollectionSubtypeSmartAlbumUserLibrary options:nil];
-            PHAssetCollection *assetCollection = fetchResult.firstObject;
-            
-            if (assetCollection != nil)
-            {
-                if (assetType != TGMediaAssetAnyType)
-                    options.predicate = [NSPredicate predicateWithFormat:@"mediaType = %i", [TGMediaAsset assetMediaTypeForAssetType:assetType]];
-                
-                PHFetchResult *assetsFetchResult = [PHAsset fetchAssetsInAssetCollection:assetCollection options:options];
-                
-                [subscriber putNext:[[TGMediaAssetGroup alloc] initWithPHAssetCollection:assetCollection fetchResult:assetsFetchResult]];
-                [subscriber putCompletion];
-            }
-            else
-            {
-                [subscriber putError:nil];
-            }
+            [subscriber putError:nil];
         }
         
         return nil;

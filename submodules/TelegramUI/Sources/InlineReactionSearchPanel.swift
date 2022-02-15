@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
 
 private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
     private final class DisplayItem {

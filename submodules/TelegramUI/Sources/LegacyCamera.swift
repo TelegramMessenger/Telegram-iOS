@@ -10,7 +10,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -23,15 +23,15 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     let controller: TGCameraController
     if let cameraView = cameraView, let previewView = cameraView.previewView() {
         controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat, camera: previewView.camera, previewView: previewView, intent: photoOnly ? TGCameraControllerGenericPhotoOnlyIntent : TGCameraControllerGenericIntent)
-        controller.inhibitMultipleCapture = editingMedia
     } else {
-        controller = TGCameraController()
+        controller = TGCameraController(context: legacyController.context, saveEditedPhotos: saveCapturedPhotos && !isSecretChat, saveCapturedMedia: saveCapturedPhotos && !isSecretChat)
     }
+    controller.inhibitMultipleCapture = editingMedia
     
-    controller.presentScheduleController = { done in
-        presentSchedulePicker { time in
+    controller.presentScheduleController = { _, done in
+        presentSchedulePicker(true, { time in
             done?(time)
-        }
+        })
     }
     controller.presentTimerController = { done in
         presentTimerPicker { time in
@@ -81,7 +81,6 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     controller.allowCaptionEntities = true
     controller.allowGrouping = mediaGrouping
     controller.inhibitDocumentCaptions = false
-    controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
     controller.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {

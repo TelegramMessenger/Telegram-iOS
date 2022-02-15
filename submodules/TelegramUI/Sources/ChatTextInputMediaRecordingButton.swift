@@ -9,6 +9,7 @@ import LegacyComponents
 import AccountContext
 import ChatInterfaceState
 import AudioBlob
+import ChatPresentationInterfaceState
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0

@@ -12,6 +12,7 @@ import ContextUI
 import ChatInterfaceState
 import UndoUI
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
