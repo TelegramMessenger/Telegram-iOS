@@ -94,6 +94,8 @@ public final class CompressedImageRenderer {
     private var yuvaTextures: TextureSet?
     
     private let commandQueue: MTLCommandQueue
+    
+    private var isRendering: Bool = false
 
     public init?(sharedContext: AnimationCompressor.SharedContext) {
         self.sharedContext = sharedContext
@@ -114,7 +116,23 @@ public final class CompressedImageRenderer {
                 if metalLayer.drawableSize != drawableSize {
                     metalLayer.drawableSize = drawableSize
                 }
-                return metalLayer.nextDrawable()
+                let beginTime = CFAbsoluteTimeGetCurrent()
+                let drawableRequestDuration: Double
+                if let drawableRequestTimestamp = self.drawableRequestTimestamp {
+                    drawableRequestDuration = beginTime - drawableRequestTimestamp
+                    if drawableRequestDuration < 1.0 / 60.0 {
+                        return nil
+                    }
+                } else {
+                    drawableRequestDuration = 0.0
+                }
+                self.drawableRequestTimestamp = beginTime
+                let result = metalLayer.nextDrawable()
+                let duration = CFAbsoluteTimeGetCurrent() - beginTime
+                if duration > 1.0 / 60.0 {
+                    print("lag \(duration * 1000.0) ms (\(drawableRequestDuration * 1000.0) ms)")
+                }
+                return result
             } else {
                 return nil
             }
@@ -323,10 +341,11 @@ public final class CompressedImageRenderer {
                 
                 var storedDrawable: MTLDrawable? = drawable
                 commandBuffer.addScheduledHandler { _ in
-                    storedDrawable?.present()
-                    storedDrawable = nil
+                    autoreleasepool {
+                        storedDrawable?.present()
+                        storedDrawable = nil
+                    }
                 }
-                
                 
 #if targetEnvironment(simulator)
                 commandBuffer.addCompletedHandler { _ in
@@ -384,6 +403,13 @@ public final class CompressedImageRenderer {
     }
     
     public func renderRgb(metalLayer: CALayer, width: Int, height: Int, bytesPerRow: Int, data: Data, completion: @escaping () -> Void) {
+        if "".isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0 / 60.0, execute: {
+                completion()
+            })
+            return
+        }
+        
         self.updateRgbTexture(width: width, height: height, bytesPerRow: bytesPerRow, data: data)
         
         guard let rgbTexture = self.rgbTexture else {
@@ -420,18 +446,44 @@ public final class CompressedImageRenderer {
         
         renderEncoder.endEncoding()
         
-        commandBuffer.present(drawable)
+        var storedDrawable: MTLDrawable? = drawable
+        commandBuffer.addScheduledHandler { _ in
+            autoreleasepool {
+                storedDrawable?.present()
+                storedDrawable = nil
+            }
+        }
         
+#if targetEnvironment(simulator)
         commandBuffer.addCompletedHandler { _ in
             DispatchQueue.main.async {
                 completion()
             }
         }
+#else
+        if #available(iOS 10.3, *) {
+            drawable.addPresentedHandler { _ in
+                DispatchQueue.main.async {
+                    completion()
+                }
+            }
+        } else {
+            commandBuffer.addCompletedHandler { _ in
+                DispatchQueue.main.async {
+                    completion()
+                }
+            }
+        }
+#endif
         
         commandBuffer.commit()
     }
     
     private func updateYuvaTextures(width: Int, height: Int, data: Data) {
+        if width % 2 != 0 || height % 2 != 0 {
+            return
+        }
+        
         self.compressedTextures = nil
         self.outputTextures = nil
         self.rgbTexture = nil
@@ -502,55 +554,131 @@ public final class CompressedImageRenderer {
     }
     
     public func renderYuva(metalLayer: CALayer, width: Int, height: Int, data: Data, completion: @escaping () -> Void) {
-        self.updateYuvaTextures(width: width, height: height, data: data)
-        
-        guard let yuvaTextures = self.yuvaTextures else {
-            return
-        }
-        
-        guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
-            return
-        }
-        commandBuffer.label = "MyCommand"
-        
-        let drawableSize = CGSize(width: CGFloat(yuvaTextures.width), height: CGFloat(yuvaTextures.height))
-        
-        guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
-            commandBuffer.commit()
-            completion()
-            return
-        }
-
-        let renderPassDescriptor = MTLRenderPassDescriptor()
-        renderPassDescriptor.colorAttachments[0].texture = drawable.texture
-        renderPassDescriptor.colorAttachments[0].loadAction = .clear
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
-        
-        guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
-            return
-        }
-        renderEncoder.label = "MyRenderEncoder"
-        
-        renderEncoder.setRenderPipelineState(self.shared.renderYuvaPipelineState)
-        renderEncoder.setFragmentTexture(yuvaTextures.textures[0].texture, index: 0)
-        renderEncoder.setFragmentTexture(yuvaTextures.textures[1].texture, index: 1)
-        renderEncoder.setFragmentTexture(yuvaTextures.textures[2].texture, index: 2)
-        
-        var alphaSize = simd_uint2(UInt32(yuvaTextures.textures[0].texture.width), UInt32(yuvaTextures.textures[0].texture.height))
-        renderEncoder.setFragmentBytes(&alphaSize, length: 8, index: 3)
-        
-        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        
-        renderEncoder.endEncoding()
-        
-        commandBuffer.present(drawable)
-        
-        commandBuffer.addCompletedHandler { _ in
+        if self.isRendering {
             DispatchQueue.main.async {
                 completion()
             }
+            return
         }
-        
-        commandBuffer.commit()
+        self.isRendering = true
+        DispatchQueue.global().async {
+            autoreleasepool {
+                let renderStartTime = CFAbsoluteTimeGetCurrent()
+                
+                var beginTime: Double = 0.0
+                var duration: Double = 0.0
+                beginTime = CFAbsoluteTimeGetCurrent()
+                
+                self.updateYuvaTextures(width: width, height: height, data: data)
+                
+                duration = CFAbsoluteTimeGetCurrent() - beginTime
+                if duration > 1.0 / 60.0 {
+                    print("update textures lag \(duration * 1000.0)")
+                }
+                
+                guard let yuvaTextures = self.yuvaTextures else {
+                    DispatchQueue.main.async {
+                        self.isRendering = false
+                        completion()
+                    }
+                    return
+                }
+                
+                beginTime = CFAbsoluteTimeGetCurrent()
+                
+                guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
+                    DispatchQueue.main.async {
+                        self.isRendering = false
+                        completion()
+                    }
+                    return
+                }
+                
+                commandBuffer.label = "MyCommand"
+                
+                let drawableSize = CGSize(width: CGFloat(yuvaTextures.width), height: CGFloat(yuvaTextures.height))
+                
+                guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
+                    commandBuffer.commit()
+                    DispatchQueue.main.async {
+                        self.isRendering = false
+                        completion()
+                    }
+                    return
+                }
+                
+                let renderPassDescriptor = MTLRenderPassDescriptor()
+                renderPassDescriptor.colorAttachments[0].texture = drawable.texture
+                renderPassDescriptor.colorAttachments[0].loadAction = .clear
+                renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+                
+                guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
+                    DispatchQueue.main.async {
+                        self.isRendering = false
+                        completion()
+                    }
+                    return
+                }
+                renderEncoder.label = "MyRenderEncoder"
+                
+                renderEncoder.setRenderPipelineState(self.shared.renderYuvaPipelineState)
+                renderEncoder.setFragmentTexture(yuvaTextures.textures[0].texture, index: 0)
+                renderEncoder.setFragmentTexture(yuvaTextures.textures[1].texture, index: 1)
+                renderEncoder.setFragmentTexture(yuvaTextures.textures[2].texture, index: 2)
+                
+                var alphaSize = simd_uint2(UInt32(yuvaTextures.textures[0].texture.width), UInt32(yuvaTextures.textures[0].texture.height))
+                renderEncoder.setFragmentBytes(&alphaSize, length: 8, index: 3)
+                
+                renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+                
+                renderEncoder.endEncoding()
+                
+                var storedDrawable: MTLDrawable? = drawable
+                commandBuffer.addScheduledHandler { _ in
+                    autoreleasepool {
+                        storedDrawable?.present()
+                        storedDrawable = nil
+                    }
+                }
+                
+#if targetEnvironment(simulator)
+                commandBuffer.addCompletedHandler { _ in
+                    DispatchQueue.main.async {
+                        self.isRendering = false
+                        completion()
+                    }
+                }
+#else
+                if #available(iOS 10.3, *) {
+                    commandBuffer.addCompletedHandler { _ in
+                        DispatchQueue.main.async {
+                            self.isRendering = false
+                        }
+                        let renderDuration = CFAbsoluteTimeGetCurrent() - renderStartTime
+                        print("render duration \(renderDuration * 1000.0) ms")
+                    }
+                    drawable.addPresentedHandler { _ in
+                        DispatchQueue.main.async {
+                            completion()
+                        }
+                    }
+                } else {
+                    commandBuffer.addCompletedHandler { _ in
+                        DispatchQueue.main.async {
+                            self.isRendering = false
+                            completion()
+                        }
+                    }
+                }
+#endif
+                
+                commandBuffer.commit()
+                
+                duration = CFAbsoluteTimeGetCurrent() - beginTime
+                if duration > 1.0 / 60.0 {
+                    print("commit lag \(duration * 1000.0)")
+                }
+            }
+        }
     }
 }
