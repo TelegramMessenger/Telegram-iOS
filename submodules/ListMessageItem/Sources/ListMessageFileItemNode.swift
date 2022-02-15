@@ -419,7 +419,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             var descriptionString: String
                             if let performer = performer {
-                                if item.isGlobalSearchResult {
+                                if item.isGlobalSearchResult || item.isDownloadList {
                                     descriptionString = performer
                                 } else {
                                     descriptionString = "\(stringForDuration(Int32(duration))) • \(performer)"
@@ -430,7 +430,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 descriptionString = ""
                             }
                             
-                            if item.isGlobalSearchResult {
+                            if item.isGlobalSearchResult || item.isDownloadList {
                                 let authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                                 if descriptionString.isEmpty {
                                     descriptionString = authorString
@@ -474,7 +474,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             authorName = " "
                         }
                         
-                        if item.isGlobalSearchResult {
+                        if item.isGlobalSearchResult || item.isDownloadList {
                             authorName = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                         }
                         
@@ -482,13 +482,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                         var descriptionString: String = ""
                         if let duration = file.duration {
-                            if item.isGlobalSearchResult {
+                            if item.isGlobalSearchResult || item.isDownloadList {
                                 descriptionString = stringForDuration(Int32(duration))
                             } else {
                                 descriptionString = "\(stringForDuration(Int32(duration))) • \(dateString)"
                             }
                         } else {
-                            if !item.isGlobalSearchResult {
+                            if !(item.isGlobalSearchResult || item.isDownloadList) {
                                 descriptionString = dateString
                             }
                         }
@@ -496,7 +496,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                         iconImage = .roundVideo(file)
                     } else if !isAudio {
-                        let fileName: String = file.fileName ?? ""
+                        let fileName: String = file.fileName ?? "File"
                         titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                         
                         var fileExtension: String?
@@ -516,18 +516,18 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         
                         var descriptionString: String = ""
                         if let size = file.size {
-                            if item.isGlobalSearchResult {
+                            if item.isGlobalSearchResult || item.isDownloadList {
                                 descriptionString = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                             } else {
                                 descriptionString = "\(dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) • \(dateString)"
                             }
                         } else {
-                            if !item.isGlobalSearchResult {
+                            if !(item.isGlobalSearchResult || item.isDownloadList) {
                                 descriptionString = "\(dateString)"
                             }
                         }
                         
-                        if item.isGlobalSearchResult {
+                        if item.isGlobalSearchResult || item.isDownloadList {
                             let authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                             if descriptionString.isEmpty {
                                 descriptionString = authorString
@@ -554,11 +554,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     let dateString = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                     
                     var descriptionString: String = ""
-                    if !item.isGlobalSearchResult {
+                    if !(item.isGlobalSearchResult || item.isDownloadList) {
                         descriptionString = "\(dateString)"
                     }
                     
-                    if item.isGlobalSearchResult {
+                    if item.isGlobalSearchResult || item.isDownloadList {
                         let authorString = stringForFullAuthorName(message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                         if descriptionString.isEmpty {
                             descriptionString = authorString
@@ -616,7 +616,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 
                 if statusUpdated {
                     if let file = selectedMedia as? TelegramMediaFile {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -639,10 +639,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                         }
                         if isVoice {
-                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult)
+                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         }
                     } else if let image = selectedMedia as? TelegramMediaImage {
-                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())

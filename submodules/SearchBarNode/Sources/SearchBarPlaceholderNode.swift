@@ -4,6 +4,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import AppBundle
+import ComponentFlow
 
 private let templateLoupeIcon = UIImage(bundleImageName: "Components/Search Bar/Loupe")
 
@@ -34,6 +35,8 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     var pointerInteraction: PointerInteraction?
     
     public private(set) var placeholderString: NSAttributedString?
+    
+    var accessoryComponentView: ComponentHostView<Empty>?
     
     convenience public override init() {
         self.init(fieldStyle: .legacy)
@@ -103,6 +106,29 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
             }
             strongSelf.backgroundNode.backgroundColor = strongSelf.foregroundColor
         })
+    }
+    
+    public func setAccessoryComponent(component: AnyComponent<Empty>?) {
+        if let component = component {
+            let accessoryComponentView: ComponentHostView<Empty>
+            if let current = self.accessoryComponentView {
+                accessoryComponentView = current
+            } else {
+                accessoryComponentView = ComponentHostView()
+                self.accessoryComponentView = accessoryComponentView
+                self.view.addSubview(accessoryComponentView)
+            }
+            let accessorySize = accessoryComponentView.update(
+                transition: .immediate,
+                component: component,
+                environment: {},
+                containerSize: CGSize(width: 32.0, height: 32.0)
+            )
+            accessoryComponentView.frame = CGRect(origin: CGPoint(x: self.bounds.width - accessorySize.width - 4.0, y: floor((self.bounds.height - accessorySize.height) / 2.0)), size: accessorySize)
+        } else if let accessoryComponentView = self.accessoryComponentView {
+            self.accessoryComponentView = nil
+            accessoryComponentView.removeFromSuperview()
+        }
     }
     
     public func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {
@@ -183,6 +209,10 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     transition.updateCornerRadius(node: strongSelf.backgroundNode, cornerRadius: cornerRadius)
                     transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
+                    
+                    if let accessoryComponentView = strongSelf.accessoryComponentView {
+                        accessoryComponentView.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentView.bounds.width - 4.0, y: floor((constrainedSize.height - accessoryComponentView.bounds.height) / 2.0)), size: accessoryComponentView.bounds.size)
+                    }
                 }
             })
         }

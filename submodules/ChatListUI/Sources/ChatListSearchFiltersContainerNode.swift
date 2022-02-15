@@ -84,6 +84,10 @@ private final class ItemNode: ASDisplayNode {
             case .media:
                 title = presentationData.strings.ChatList_Search_FilterMedia
                 icon = nil
+            case .downloads:
+                //TODO:localize
+                title = "Downloads"
+                icon = nil
             case .links:
                 title = presentationData.strings.ChatList_Search_FilterLinks
                 icon = nil

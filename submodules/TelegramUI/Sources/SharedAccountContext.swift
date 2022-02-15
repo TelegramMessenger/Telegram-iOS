@@ -1128,6 +1128,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         navigateToChatControllerImpl(params)
     }
     
+    public func openStorageUsage(context: AccountContext) {
+        guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
+            return
+        }
+        
+        let controller = storageUsageController(context: context, isModal: true)
+        navigationController.pushViewController(controller)
+    }
+    
     public func openLocationScreen(context: AccountContext, messageId: MessageId, navigationController: NavigationController) {
         var found = false
         for controller in navigationController.viewControllers.reversed() {

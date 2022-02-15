@@ -25,6 +25,9 @@ import TooltipUI
 import TelegramCallsUI
 import StickerResources
 import PasswordSetupUI
+import FetchManagerImpl
+import ComponentFlow
+import LottieAnimationComponent
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -150,6 +153,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private let tabContainerNode: ChatListFilterTabContainerNode
     private var tabContainerData: ([ChatListFilterTabEntry], Bool)?
+    
+    private var activeDownloadsDisposable: Disposable?
     
     private var didSetupTabs = false
     
@@ -467,6 +472,95 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
             self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+            
+            enum State {
+                case empty
+                case downloading
+                case hasUnseen
+            }
+            
+            var stateSignal: Signal<State, NoError> = (combineLatest(queue: .mainQueue(), (context.fetchManager as! FetchManagerImpl).entriesSummary, recentDownloadItems(postbox: context.account.postbox))
+            |> map { entries, recentDownloadItems -> State in
+                if !entries.isEmpty {
+                    return .downloading
+                } else {
+                    for item in recentDownloadItems {
+                        if !item.isSeen {
+                            return .hasUnseen
+                        }
+                    }
+                    return .empty
+                }
+            }
+            |> mapToSignal { value -> Signal<State, NoError> in
+                return .single(value) |> delay(0.1, queue: .mainQueue())
+            }
+            |> distinctUntilChanged
+            |> deliverOnMainQueue)
+            
+            if !"".isEmpty {
+                stateSignal = Signal<State, NoError>.single(.downloading)
+                |> then(Signal<State, NoError>.single(.hasUnseen) |> delay(3.0, queue: .mainQueue()))
+            }
+            
+            self.activeDownloadsDisposable = stateSignal.start(next: { [weak self] state in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch state {
+                case .downloading:
+                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
+                        content: AnyComponent(LottieAnimationComponent(
+                            animation: LottieAnimationComponent.Animation(
+                                name: "anim_search_downloading",
+                                colors: [
+                                    "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                ],
+                                loop: true
+                            ),
+                            size: CGSize(width: 24.0, height: 24.0)
+                        )),
+                        insets: UIEdgeInsets(),
+                        action: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.activateSearch(filter: .downloads, query: nil)
+                        }
+                    )))
+                case .hasUnseen:
+                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
+                        content: AnyComponent(LottieAnimationComponent(
+                            animation: LottieAnimationComponent.Animation(
+                                name: "anim_search_downloaded",
+                                colors: [
+                                    "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                                    "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
+                                ],
+                                loop: false
+                            ),
+                            size: CGSize(width: 24.0, height: 24.0)
+                        )),
+                        insets: UIEdgeInsets(),
+                        action: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.activateSearch(filter: .downloads, query: nil)
+                        }
+                    )))
+                case .empty:
+                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: nil)
+                }
+            })
         }
         
         if enableDebugActions {
@@ -514,6 +608,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.stateDisposable.dispose()
         self.filterDisposable.dispose()
         self.featuredFiltersDisposable.dispose()
+        self.activeDownloadsDisposable?.dispose()
     }
     
     private func updateThemeAndStrings() {

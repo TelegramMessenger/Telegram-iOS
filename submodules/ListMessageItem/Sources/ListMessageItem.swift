@@ -51,13 +51,14 @@ public final class ListMessageItem: ListViewItem {
     public let selection: ChatHistoryMessageSelection
     let hintIsLink: Bool
     let isGlobalSearchResult: Bool
+    let isDownloadList: Bool
     let displayBackground: Bool
     
     let header: ListViewItemHeader?
     
     public let selectable: Bool = true
     
-    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false, displayBackground: Bool = false) {
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false, isDownloadList: Bool = false, displayBackground: Bool = false) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation
@@ -73,6 +74,7 @@ public final class ListMessageItem: ListViewItem {
         self.selection = selection
         self.hintIsLink = hintIsLink
         self.isGlobalSearchResult = isGlobalSearchResult
+        self.isDownloadList = isDownloadList
         self.displayBackground = displayBackground
     }
     

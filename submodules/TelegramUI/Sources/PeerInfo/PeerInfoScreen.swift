@@ -403,7 +403,6 @@ private enum PeerInfoSettingsSection {
     case avatar
     case edit
     case proxy
-    case downloads
     case savedMessages
     case recentCalls
     case devices
@@ -663,10 +662,6 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    //TODO:localize
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "Downloads", icon: PresentationResourcesSettings.savedMessages, action: {
-        interaction.openSettings(.downloads)
-    }))
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
     }))
@@ -5532,8 +5527,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             case .proxy:
                 self.controller?.push(proxySettingsController(context: self.context))
-            case .downloads:
-                self.controller?.push(downloadsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData))
             case .savedMessages:
                 if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.context.account.peerId)))

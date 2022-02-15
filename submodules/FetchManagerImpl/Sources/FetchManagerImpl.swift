@@ -44,6 +44,7 @@ private final class FetchManagerLocationEntry {
     let ranges = Bag<IndexSet>()
     var elevatedPriorityReferenceCount: Int32 = 0
     var userInitiatedPriorityIndices: [Int32] = []
+    var isPaused: Bool = false
     
     var combinedRanges: IndexSet {
         var result = IndexSet()
@@ -116,7 +117,7 @@ private final class FetchManagerCategoryContext {
     private let postbox: Postbox
     private let storeManager: DownloadedMediaStoreManager?
     private let entryCompleted: (FetchManagerLocationEntryId) -> Void
-    private let activeEntriesUpdated: ([FetchManagerEntrySummary]) -> Void
+    private let activeEntriesUpdated: () -> Void
     
     private var topEntryIdAndPriority: (FetchManagerLocationEntryId, FetchManagerPriorityKey)?
     private var entries: [FetchManagerLocationEntryId: FetchManagerLocationEntry] = [:]
@@ -133,11 +134,15 @@ private final class FetchManagerCategoryContext {
         return false
     }
     
-    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, entryCompleted: @escaping (FetchManagerLocationEntryId) -> Void, activeEntriesUpdated: @escaping ([FetchManagerEntrySummary]) -> Void) {
+    init(postbox: Postbox, storeManager: DownloadedMediaStoreManager?, entryCompleted: @escaping (FetchManagerLocationEntryId) -> Void, activeEntriesUpdated: @escaping () -> Void) {
         self.postbox = postbox
         self.storeManager = storeManager
         self.entryCompleted = entryCompleted
         self.activeEntriesUpdated = activeEntriesUpdated
+    }
+    
+    func getActiveEntries() -> [FetchManagerLocationEntry] {
+        return Array(self.entries.values)
     }
     
     func withEntry(id: FetchManagerLocationEntryId, takeNew: (() -> (AnyMediaReference?, MediaResourceReference, MediaResourceStatsCategory, Int32))?, _ f: (FetchManagerLocationEntry) -> Void) {
@@ -221,8 +226,13 @@ private final class FetchManagerCategoryContext {
                         parsedRanges = resultRanges
                     }
                     activeContext.disposable?.dispose()
-                    activeContext.disposable = (fetchedMediaResource(mediaBox: self.postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
+                    let postbox = self.postbox
+                    activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                     |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
+                        if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
+                            let _ = addRecentDownloadItem(postbox: postbox, item: RecentDownloadItem(messageId: messageId, resourceId: entry.resourceReference.resource.id.stringRepresentation, timestamp: Int32(Date().timeIntervalSince1970), isSeen: false)).start()
+                        }
+                        
                         if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                             return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                             |> castError(FetchResourceError.self)
@@ -286,7 +296,7 @@ private final class FetchManagerCategoryContext {
             }
         }
         
-        self.activeEntriesUpdated(self.entries.values.compactMap(FetchManagerEntrySummary.init).sorted(by: { $0.priority < $1.priority }))
+        self.activeEntriesUpdated()
     }
     
     func maybeFindAndActivateNewTopEntry() -> Bool {
@@ -366,8 +376,13 @@ private final class FetchManagerCategoryContext {
                         })
                     } else if ranges.isEmpty {
                     } else {
-                        activeContext.disposable = (fetchedMediaResource(mediaBox: self.postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
+                        let postbox = self.postbox
+                        activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
+                            if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
+                                let _ = addRecentDownloadItem(postbox: postbox, item: RecentDownloadItem(messageId: messageId, resourceId: entry.resourceReference.resource.id.stringRepresentation, timestamp: Int32(Date().timeIntervalSince1970), isSeen: false)).start()
+                            }
+                            
                             if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                                 return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                                 |> castError(FetchResourceError.self)
@@ -446,7 +461,7 @@ private final class FetchManagerCategoryContext {
             activeContextsUpdated = true
         }
         
-        self.activeEntriesUpdated(self.entries.values.compactMap(FetchManagerEntrySummary.init).sorted(by: { $0.priority < $1.priority }))
+        self.activeEntriesUpdated()
     }
     
     func withFetchStatusContext(_ id: FetchManagerLocationEntryId, _ f: (FetchManagerStatusContext) -> Void) {
@@ -490,6 +505,37 @@ private extension FetchManagerEntrySummary {
         self.mediaReference = entry.mediaReference
         self.resourceReference = entry.resourceReference
         self.priority = priority
+    }
+}
+
+private func filterDownloadStatsEntry(entry: FetchManagerLocationEntry) -> Bool {
+    guard let mediaReference = entry.mediaReference else {
+        return false
+    }
+    if !entry.userInitiated {
+        return false
+    }
+    switch mediaReference {
+    case let .message(_, media):
+        switch media {
+        case let file as TelegramMediaFile:
+            if file.isVideo {
+                if file.isAnimated {
+                    return false
+                }
+            }
+            if file.isSticker {
+                return false
+            }
+            if file.isVoice {
+                return false
+            }
+            return true
+        default:
+            return false
+        }
+    default:
+        return false
     }
 }
 
@@ -545,21 +591,26 @@ public final class FetchManagerImpl: FetchManager {
                         context.cancelEntry(id, isCompleted: true)
                     })
                 }
-            }, activeEntriesUpdated: { [weak self] entries in
+            }, activeEntriesUpdated: { [weak self] in
                 queue.async {
                     guard let strongSelf = self else {
                         return
                     }
                     var hasActiveUserInitiatedEntries = false
+                    var activeEntries: [FetchManagerEntrySummary] = []
                     for (_, context) in strongSelf.categoryContexts {
                         if context.hasActiveUserInitiatedEntries {
                             hasActiveUserInitiatedEntries = true
-                            break
                         }
+                        activeEntries.append(contentsOf: context.getActiveEntries().filter { entry in
+                            return filterDownloadStatsEntry(entry: entry)
+                        }.compactMap { entry -> FetchManagerEntrySummary? in
+                            return FetchManagerEntrySummary(entry: entry)
+                        })
                     }
                     strongSelf.hasUserInitiatedEntriesValue.set(hasActiveUserInitiatedEntries)
                     
-                    strongSelf.entriesSummaryValue.set(entries)
+                    strongSelf.entriesSummaryValue.set(activeEntries.sorted(by: { $0.priority < $1.priority }))
                 }
             })
             self.categoryContexts[key] = context
