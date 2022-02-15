@@ -191,7 +191,7 @@
                 if (strongSelf == nil)
                     return;
                 
-                strongSelf.presentScheduleController(^(int32_t time) {
+                strongSelf.presentScheduleController(true, ^(int32_t time) {
                     __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
                     if (strongSelf == nil)
                         return;

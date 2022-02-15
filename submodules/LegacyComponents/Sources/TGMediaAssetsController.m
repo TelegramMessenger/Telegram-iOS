@@ -363,7 +363,7 @@
     self.pickerController.reminder = reminder;
 }
 
-- (void)setPresentScheduleController:(void (^)(void (^)(int32_t)))presentScheduleController {
+- (void)setPresentScheduleController:(void (^)(bool, void (^)(int32_t)))presentScheduleController {
     _presentScheduleController = [presentScheduleController copy];
     self.pickerController.presentScheduleController = presentScheduleController;
 }
@@ -1432,9 +1432,9 @@
     [self completeWithCurrentItem:nil silentPosting:silently scheduleTime:0];
 }
 
-- (void)schedule {
+- (void)schedule:(bool)media {
     __weak TGMediaAssetsController *weakSelf = self;
-    self.presentScheduleController(^(int32_t scheduleTime) {
+    self.presentScheduleController(media, ^(int32_t scheduleTime) {
         [weakSelf completeWithCurrentItem:nil silentPosting:false scheduleTime:scheduleTime];
     });
 }

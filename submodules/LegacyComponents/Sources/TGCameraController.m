@@ -1618,7 +1618,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 if (strongSelf == nil)
                     return;
                 
-                strongSelf.presentScheduleController(^(int32_t time) {
+                strongSelf.presentScheduleController(true, ^(int32_t time) {
                     __strong TGCameraController *strongSelf = weakSelf;
                     __strong TGMediaPickerGalleryModel *strongModel = weakModel;
                     

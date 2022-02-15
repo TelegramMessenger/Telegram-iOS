@@ -55,7 +55,7 @@ final class LocationOptionsNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.separatorNode, frame: CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel))
         
-        let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: size.width - 16.0), transition: .immediate)
+        let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: size.width - 16.0 - leftInset - rightInset), transition: .immediate)
         self.segmentedControlNode.frame = CGRect(origin: CGPoint(x: floor((size.width - controlSize.width) / 2.0), y: 0.0), size: controlSize)
     }
 }

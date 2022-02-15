@@ -12,71 +12,15 @@ import ChatPresentationInterfaceState
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
 
-let panelButtonSize = CGSize(width: 80.0, height: 72.0)
-let smallPanelButtonSize = CGSize(width: 60.0, height: 49.0)
-
-private let iconSize = CGSize(width: 54.0, height: 42.0)
-private let normalSideInset: CGFloat = 3.0
-private let smallSideInset: CGFloat = 0.0
+private let buttonSize = CGSize(width: 75.0, height: 49.0)
+private let iconSize = CGSize(width: 30.0, height: 30.0)
+private let sideInset: CGFloat = 0.0
 
 private enum AttachmentButtonTransition {
     case transitionIn
     case selection
 }
 
-private func generateBackgroundImage(colors: [UIColor]) -> UIImage? {
-    return generateImage(iconSize, rotatedContext: { size, context in
-        var locations: [CGFloat]
-        if colors.count == 3 {
-            locations = [1.0, 0.5, 0.0]
-        } else {
-            locations = [1.0, 0.0]
-        }
-        let colors: [CGColor] = colors.map { $0.cgColor }
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        
-        if colors.count == 2 {
-            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: .drawsAfterEndLocation)
-        } else if colors.count == 3 {
-            context.drawLinearGradient(gradient, start:  CGPoint(x: 0.0, y: size.height), end: CGPoint(x: size.width, y: 0.0), options: .drawsAfterEndLocation)
-        }
-//        let center = CGPoint(x: 10.0, y: 10.0)
-//        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: size.width, options: .drawsAfterEndLocation)
-    })
-}
-
-private let buttonGlowImage: UIImage? = {
-    let inset: CGFloat = 6.0
-    return generateImage(CGSize(width: iconSize.width + inset * 2.0, height: iconSize.height + inset * 2.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        let rect = bounds.insetBy(dx: inset, dy: inset)
-        let path = UIBezierPath(roundedRect: rect, cornerRadius: 21.0).cgPath
-        context.addRect(bounds)
-        context.addPath(path)
-        context.clip(using: .evenOdd)
-        
-        context.addPath(path)
-        context.setShadow(offset: CGSize(), blur: 14.0, color: UIColor(rgb: 0xffffff, alpha: 0.8).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillPath()
-    })?.withRenderingMode(.alwaysTemplate)
-}()
-
-private let buttonSelectionMaskImage: UIImage? = {
-    let inset: CGFloat = 3.0
-    return generateImage(CGSize(width: iconSize.width + inset * 2.0, height: iconSize.height + inset * 2.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.clear(bounds)
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 23.0).cgPath
-        context.addPath(path)
-        context.setFillColor(UIColor(rgb: 0xffffff).cgColor)
-        context.fillPath()
-    })?.withRenderingMode(.alwaysTemplate)
-}()
 
 private final class AttachButtonComponent: CombinedComponent {
     let context: AccountContext
@@ -134,298 +78,91 @@ private final class AttachButtonComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let icon = Child(AttachButtonIconComponent.self)
+        let icon = Child(Image.self)
         let title = Child(Text.self)
 
         return { context in
             let name: String
             let animationName: String?
             let imageName: String?
-            let backgroundColors: [UIColor]
-            let foregroundColor: UIColor = .white
             
-            let isCollapsed = context.component.isCollapsed
+            let component = context.component
+            let strings = component.strings
             
-            switch context.component.type {
+            switch component.type {
             case .camera:
-                name = context.component.strings.Attachment_Camera
+                name = strings.Attachment_Camera
                 animationName = "anim_camera"
                 imageName = "Chat/Attach Menu/Camera"
-                backgroundColors = [UIColor(rgb: 0xba4aae), UIColor(rgb: 0xdd4e6f), UIColor(rgb: 0xf4b76c)]
             case .gallery:
-                name = context.component.strings.Attachment_Gallery
+                name = strings.Attachment_Gallery
                 animationName = "anim_gallery"
                 imageName = "Chat/Attach Menu/Gallery"
-                backgroundColors = [UIColor(rgb: 0x2071f1), UIColor(rgb: 0x1bc9fa)]
             case .file:
-                name = context.component.strings.Attachment_File
+                name = strings.Attachment_File
                 animationName = "anim_file"
                 imageName = "Chat/Attach Menu/File"
-                backgroundColors = [UIColor(rgb: 0xed705d), UIColor(rgb: 0xffa14c)]
             case .location:
-                name = context.component.strings.Attachment_Location
+                name = strings.Attachment_Location
                 animationName = "anim_location"
                 imageName = "Chat/Attach Menu/Location"
-                backgroundColors = [UIColor(rgb: 0x5fb84f), UIColor(rgb: 0x99de6f)]
             case .contact:
-                name = context.component.strings.Attachment_Contact
+                name = strings.Attachment_Contact
                 animationName = "anim_contact"
                 imageName = "Chat/Attach Menu/Contact"
-                backgroundColors = [UIColor(rgb: 0xaa47d6), UIColor(rgb: 0xd67cf4)]
             case .poll:
-                name = context.component.strings.Attachment_Poll
+                name = strings.Attachment_Poll
                 animationName = "anim_poll"
                 imageName = "Chat/Attach Menu/Poll"
-                backgroundColors = [UIColor(rgb: 0xe9484f), UIColor(rgb: 0xee707e)]
             case let .app(appName):
                 name = appName
                 animationName = nil
                 imageName = nil
-                backgroundColors = [UIColor(rgb: 0x000000), UIColor(rgb: 0x000000)]
             }
             
+            let image = imageName.flatMap { UIImage(bundleImageName: $0)?.withRenderingMode(.alwaysTemplate) }
+            let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
+            
             let icon = icon.update(
-                component: AttachButtonIconComponent(
-                    animationName: animationName,
-                    imageName: imageName,
-                    isSelected: context.component.isSelected,
-                    backgroundColors: backgroundColors,
-                    foregroundColor: foregroundColor,
-                    theme: context.component.theme,
-                    context: context.component.context,
-                    action: context.component.action
-                ),
-                availableSize: iconSize,
+                component: Image(image: image, tintColor: tintColor),
+                availableSize: CGSize(width: 30.0, height: 30.0),
                 transition: context.transition
             )
+            
+            print(animationName ?? "")
 
             let title = title.update(
                 component: Text(
                     text: name,
-                    font: Font.regular(11.0),
-                    color: context.component.theme.actionSheet.primaryTextColor
+                    font: Font.regular(10.0),
+                    color: context.component.isSelected ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor
                 ),
                 availableSize: context.availableSize,
                 transition: .immediate
             )
 
-            let topInset: CGFloat = 8.0
-            let spacing: CGFloat = 3.0 + UIScreenPixel
-
-            let normalIconScale = isCollapsed ? 0.7 : 1.0
-            let smallIconScale = isCollapsed ? 0.5 : 0.6
+            let topInset: CGFloat = 5.0 + UIScreenPixel
+            let spacing: CGFloat = 15.0 + UIScreenPixel
             
-            let iconScale = normalIconScale - (normalIconScale - smallIconScale) * abs(context.component.transitionFraction)
-            let iconOffset: CGFloat = (isCollapsed ? 10.0 : 20.0) * context.component.transitionFraction
-            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0) + iconOffset, y: isCollapsed ? 3.0 : topInset), size: icon.size)
-            var titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - title.size.width) / 2.0) + iconOffset, y: iconFrame.midY + (iconFrame.height * 0.5 * iconScale) + spacing), size: title.size)
-            if isCollapsed {
-                titleFrame.origin.y = floorToScreenPixels(iconFrame.midY - title.size.height / 2.0)
-            }
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0), y: topInset), size: icon.size)
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - title.size.width) / 2.0), y: iconFrame.midY + spacing), size: title.size)
             
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
-                .opacity(isCollapsed ? 0.0 : 1.0 - abs(context.component.transitionFraction))
+                .gesture(.tap {
+                    component.action()
+                })
             )
 
             context.add(icon
                 .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
-                .scale(iconScale)
+                .gesture(.tap {
+                    component.action()
+                })
             )
             
             return context.availableSize
         }
-    }
-}
-
-private final class AttachButtonIconComponent: Component {
-    let animationName: String?
-    let imageName: String?
-    let isSelected: Bool
-    let backgroundColors: [UIColor]
-    let foregroundColor: UIColor
-    let theme: PresentationTheme
-    let context: AccountContext
-    
-    let action: () -> Void
-
-    init(
-        animationName: String?,
-        imageName: String?,
-        isSelected: Bool,
-        backgroundColors: [UIColor],
-        foregroundColor: UIColor,
-        theme: PresentationTheme,
-        context: AccountContext,
-        action: @escaping () -> Void
-    ) {
-        self.animationName = animationName
-        self.imageName = imageName
-        self.isSelected = isSelected
-        self.backgroundColors = backgroundColors
-        self.foregroundColor = foregroundColor
-        self.theme = theme
-        self.context = context
-        self.action = action
-    }
-
-    static func ==(lhs: AttachButtonIconComponent, rhs: AttachButtonIconComponent) -> Bool {
-        if lhs.animationName != rhs.animationName {
-            return false
-        }
-        if lhs.imageName != rhs.imageName {
-            return false
-        }
-        if lhs.isSelected != rhs.isSelected {
-            return false
-        }
-        if lhs.backgroundColors != rhs.backgroundColors {
-            return false
-        }
-        if lhs.foregroundColor != rhs.foregroundColor {
-            return false
-        }
-        if lhs.theme !== rhs.theme {
-            return false
-        }
-        if lhs.context !== rhs.context {
-            return false
-        }
-        return true
-    }
-
-    final class View: HighlightTrackingButton {
-        private let containerView: UIView
-        private let glowView: UIImageView
-        private let selectionView: UIImageView
-        private let backgroundView: UIView
-        private let iconView: UIImageView
-        private let highlightView: UIView
-    
-        private var action: (() -> Void)?
-        
-        private var currentColors: [UIColor] = []
-        private var currentImageName: String?
-        private var currentIsSelected: Bool?
-        
-        private let hapticFeedback = HapticFeedback()
-            
-        init() {
-            self.containerView = UIView()
-            self.containerView.isUserInteractionEnabled = false
-            
-            self.glowView = UIImageView()
-            self.glowView.image = buttonGlowImage
-            self.glowView.isUserInteractionEnabled = false
-            
-            self.selectionView = UIImageView()
-            self.selectionView.image = buttonSelectionMaskImage
-            self.selectionView.isUserInteractionEnabled = false
-            
-            self.backgroundView = UIView()
-            self.backgroundView.clipsToBounds = true
-            self.backgroundView.isUserInteractionEnabled = false
-            self.backgroundView.layer.cornerRadius = 21.0
-            
-            self.iconView = UIImageView()
-            
-            self.highlightView = UIView()
-            self.highlightView.alpha = 0.0
-            self.highlightView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.1)
-            self.highlightView.isUserInteractionEnabled = false
-    
-            super.init(frame: CGRect())
-            
-            self.addSubview(self.containerView)
-            self.containerView.addSubview(self.glowView)
-            self.containerView.addSubview(self.selectionView)
-            self.containerView.addSubview(self.backgroundView)
-            self.backgroundView.addSubview(self.iconView)
-            self.backgroundView.addSubview(self.highlightView)
-            
-            self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
-            self.highligthedChanged = { [weak self] highlighted in
-                if let strongSelf = self {
-                    if highlighted {
-                        strongSelf.containerView.layer.animateScale(from: 1.0, to: 0.9, duration: 0.3, removeOnCompletion: false)
-                        
-                        strongSelf.highlightView.layer.removeAnimation(forKey: "opacity")
-                        strongSelf.highlightView.alpha = 1.0
-                        
-                        strongSelf.hapticFeedback.impact(.click05)
-                    } else {
-                        if let presentationLayer = strongSelf.containerView.layer.presentation() {
-                            strongSelf.containerView.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.2, removeOnCompletion: false)
-                        }
-                        
-                        strongSelf.highlightView.alpha = 0.0
-                        strongSelf.highlightView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
-                        
-                        strongSelf.hapticFeedback.impact(.click06)
-                    }
-                }
-            }
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-
-        @objc private func pressed() {
-            self.action?()
-        }
-
-        func update(component: AttachButtonIconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            self.action = component.action
-            
-            if self.currentColors != component.backgroundColors {
-                self.currentColors = component.backgroundColors
-                self.backgroundView.layer.contents = generateBackgroundImage(colors: component.backgroundColors)?.cgImage
-                
-                if let color = component.backgroundColors.last {
-                    self.glowView.tintColor = color
-                    self.selectionView.tintColor = color.withAlphaComponent(0.2)
-                }
-            }
-            
-            if self.currentImageName != component.imageName {
-                self.currentImageName = component.imageName
-                if let imageName = component.imageName, let image = UIImage(bundleImageName: imageName) {
-                    self.iconView.image = image
-                    
-                    let scale: CGFloat = 0.875
-                    let iconSize = CGSize(width: floorToScreenPixels(image.size.width * scale), height: floorToScreenPixels(image.size.height * scale))
-                    self.iconView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - iconSize.width) / 2.0), y: floorToScreenPixels((availableSize.height - iconSize.height) / 2.0)), size: iconSize)
-                }
-            }
-            
-            if self.currentIsSelected != component.isSelected {
-                self.currentIsSelected = component.isSelected
-
-                transition.setScale(view: self.selectionView, scale: component.isSelected ? 1.0 : 0.8)
-            }
-            
-            let contentFrame = CGRect(origin: CGPoint(), size: availableSize)
-            self.containerView.frame = contentFrame
-            self.backgroundView.frame = contentFrame
-            self.highlightView.frame = contentFrame
-            
-            self.glowView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: contentFrame.width + 12.0, height: contentFrame.height + 12.0))
-            self.glowView.center = CGPoint(x: contentFrame.midX, y: contentFrame.midY)
-            
-            self.selectionView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: contentFrame.width + 6.0, height: contentFrame.height + 6.0))
-            self.selectionView.center = CGPoint(x: contentFrame.midX, y: contentFrame.midY)
-            
-            return availableSize
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
 
@@ -707,9 +444,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let actualVisibleRect = self.scrollNode.bounds
         var validButtons = Set<Int>()
         
-        let buttonSize = self.isCollapsed ? smallPanelButtonSize : panelButtonSize
-        var sideInset = self.isCollapsed ? smallSideInset : normalSideInset
-        
+        var sideInset = sideInset
         let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
         if buttonsWidth < layout.size.width {
             sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
@@ -778,12 +513,17 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         if self.scrollLayout?.width == layout.size.width && !force {
             return false
         }
+        
+        var sideInset = sideInset
+        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
+        if buttonsWidth < layout.size.width {
+            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
+        }
 
-        let buttonSize = self.isCollapsed ? smallPanelButtonSize : panelButtonSize
-        let contentSize = CGSize(width: (self.isCollapsed ? smallSideInset : normalSideInset) * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
+        let contentSize = CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
         self.scrollLayout = (layout.size.width, contentSize)
 
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting ? -panelButtonSize.height : 0.0), size: CGSize(width: layout.size.width, height: panelButtonSize.height)))
+        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
         self.scrollNode.view.contentSize = contentSize
 
         return true
@@ -866,13 +606,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelButtonSize.height + insets.bottom))
+        let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: buttonSize.height + insets.bottom))
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
         if isSelecting {
             containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: textPanelHeight + insets.bottom))
-        } else if isCollapsed {
-            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: smallPanelButtonSize.height + insets.bottom))
         } else {
             containerFrame = bounds
         }

@@ -215,7 +215,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
         var defaultNavigationBarHeight: CGFloat
-        if self._presentedInModal {
+        if self._presentedInModal && layout.orientation == .portrait {
             defaultNavigationBarHeight = 56.0
         } else {
             defaultNavigationBarHeight = 44.0

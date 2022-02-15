@@ -475,6 +475,7 @@ private class _AnyCombinedComponentContext {
                 } else {
                     let gestureInstance = gesture.create()
                     self.gestures[gesture.id.id] = gestureInstance
+                    self.view.isUserInteractionEnabled = true
                     self.view.addGestureRecognizer(gestureInstance)
                 }
             }
