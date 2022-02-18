@@ -103,7 +103,6 @@ genrule(
 
 empty_languages = [
     "ar",
-    "be",
     "ca",
     "de",
     "es",
@@ -116,7 +115,6 @@ empty_languages = [
     "nl",
     "pl",
     "pt",
-    "ru",
     "tr",
     "uk",
     "uz",
@@ -201,6 +199,8 @@ filegroup(
     name = "AppStringResources",
     srcs = [
         "Telegram-iOS/en.lproj/Localizable.strings",
+        "Telegram-iOS/be.lproj/Localizable.strings",
+        "Telegram-iOS/ru.lproj/Localizable.strings",
     ] + [
         "{}.lproj/Localizable.strings".format(language) for language in empty_languages
     ],
