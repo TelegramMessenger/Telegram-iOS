@@ -137,6 +137,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1278304028] = { return Api.storage.FileType.parse_fileMp4($0) }
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1338747336] = { return Api.messages.ArchivedStickers.parse_archivedStickers($0) }
+    dict[-2132064081] = { return Api.GroupCallStreamChannel.parse_groupCallStreamChannel($0) }
     dict[406307684] = { return Api.InputEncryptedFile.parse_inputEncryptedFileEmpty($0) }
     dict[1690108678] = { return Api.InputEncryptedFile.parse_inputEncryptedFileUploaded($0) }
     dict[1511503333] = { return Api.InputEncryptedFile.parse_inputEncryptedFile($0) }
@@ -146,6 +147,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-341428482] = { return Api.GroupCallParticipant.parse_groupCallParticipant($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
+    dict[-790330702] = { return Api.phone.GroupCallStreamChannels.parse_groupCallStreamChannels($0) }
     dict[289586518] = { return Api.SavedContact.parse_savedPhoneContact($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
     dict[872119224] = { return Api.auth.Authorization.parse_authorization($0) }
@@ -1098,6 +1100,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.ArchivedStickers:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.GroupCallStreamChannel:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputEncryptedFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.Takeout:
@@ -1107,6 +1111,8 @@ public struct Api {
             case let _1 as Api.GroupCallParticipant:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.SentEncryptedMessage:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.phone.GroupCallStreamChannels:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SavedContact:
                 _1.serialize(buffer, boxed)

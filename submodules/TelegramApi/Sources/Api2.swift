@@ -3569,6 +3569,48 @@ public extension Api {
         }
     
     }
+    public enum GroupCallStreamChannel: TypeConstructorDescription {
+        case groupCallStreamChannel(channel: Int32, scale: Int32, lastTimestampMs: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
+                    if boxed {
+                        buffer.appendInt32(-2132064081)
+                    }
+                    serializeInt32(channel, buffer: buffer, boxed: false)
+                    serializeInt32(scale, buffer: buffer, boxed: false)
+                    serializeInt64(lastTimestampMs, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
+                return ("groupCallStreamChannel", [("channel", channel), ("scale", scale), ("lastTimestampMs", lastTimestampMs)])
+    }
+    }
+    
+        public static func parse_groupCallStreamChannel(_ reader: BufferReader) -> GroupCallStreamChannel? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.GroupCallStreamChannel.groupCallStreamChannel(channel: _1!, scale: _2!, lastTimestampMs: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InputEncryptedFile: TypeConstructorDescription {
         case inputEncryptedFileEmpty
         case inputEncryptedFileUploaded(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32)
