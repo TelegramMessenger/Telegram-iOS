@@ -245,6 +245,12 @@ public final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource 
     }
 }
 
+private func alignUp(size: Int, align: Int) -> Int {
+    precondition(((align - 1) & align) == 0, "Align must be a power of two")
+
+    let alignmentMask = align - 1
+    return (size + alignmentMask) & ~alignmentMask
+}
 
 private final class AnimatedStickerDirectFrameSourceCache {
     private enum FrameRangeResult {
@@ -274,8 +280,8 @@ private final class AnimatedStickerDirectFrameSourceCache {
         self.storeQueue = sharedStoreQueue
         
         self.frameCount = frameCount
-        self.width = width
-        self.height = height
+        self.width = alignUp(size: width, align: 8)
+        self.height = alignUp(size: width, align: 8)
         self.useHardware = useHardware
         
         let suffix : String

@@ -8,44 +8,19 @@ import Accelerate
 import AnimationCompression
 import Metal
 import MetalKit
+import MetalImageView
 
 @available(iOS 10.0, *)
 final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
     private final class View: UIView {
         static override var layerClass: AnyClass {
-#if targetEnvironment(simulator)
-            if #available(iOS 13.0, *) {
-                return CAMetalLayer.self
-            } else {
-                preconditionFailure()
-            }
-#else
-            return CAMetalLayer.self
-#endif
+            return MetalImageLayer.self
         }
 
         init(device: MTLDevice) {
             super.init(frame: CGRect())
             
-#if targetEnvironment(simulator)
-            if #available(iOS 13.0, *) {
-                let metalLayer = self.layer as! CAMetalLayer
-
-                metalLayer.device = MTLCreateSystemDefaultDevice()
-                metalLayer.pixelFormat = .bgra8Unorm
-                metalLayer.framebufferOnly = true
-                metalLayer.allowsNextDrawableTimeout = true
-            }
-#else
-            let metalLayer = self.layer as! CAMetalLayer
-            
-            metalLayer.device = MTLCreateSystemDefaultDevice()
-            metalLayer.pixelFormat = .bgra8Unorm
-            metalLayer.framebufferOnly = true
-            if #available(iOS 11.0, *) {
-                metalLayer.allowsNextDrawableTimeout = true
-            }
-#endif
+            (self.layer as! MetalImageLayer).renderer.device = device
         }
 
         required init?(coder: NSCoder) {
@@ -82,16 +57,25 @@ final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
     func render(queue: Queue, width: Int, height: Int, bytesPerRow: Int, data: Data, type: AnimationRendererFrameType, mulAlpha: Bool, completion: @escaping () -> Void) {
         switch type {
         case .dct:
-            self.renderer.renderIdct(metalLayer: self.layer, compressedImage: AnimationCompressor.CompressedImageData(data: data), completion: completion)
+            self.renderer.renderIdct(layer: self.layer as! MetalImageLayer, compressedImage: AnimationCompressor.CompressedImageData(data: data), completion: { [weak self] in
+                self?.updateHighlightedContentNode()
+                completion()
+            })
         case .argb:
-            self.renderer.renderRgb(metalLayer: self.layer, width: width, height: height, bytesPerRow: bytesPerRow, data: data, completion: completion)
+            self.renderer.renderRgb(layer: self.layer as! MetalImageLayer, width: width, height: height, bytesPerRow: bytesPerRow, data: data, completion: { [weak self] in
+                self?.updateHighlightedContentNode()
+                completion()
+            })
         case .yuva:
-            self.renderer.renderYuva(metalLayer: self.layer, width: width, height: height, data: data, completion: completion)
+            self.renderer.renderYuva(layer: self.layer as! MetalImageLayer, width: width, height: height, data: data, completion: { [weak self] in
+                self?.updateHighlightedContentNode()
+                completion()
+            })
         }
     }
     
     private func updateHighlightedContentNode() {
-        /*guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor else {
+        guard let highlightedContentNode = self.highlightedContentNode, let highlightedColor = self.highlightedColor else {
             return
         }
         if let contents = self.contents, CFGetTypeID(contents as CFTypeRef) == CGImage.typeID {
@@ -100,11 +84,11 @@ final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
         highlightedContentNode.tintColor = highlightedColor
         if self.highlightReplacesContent {
             self.contents = nil
-        }*/
+        }
     }
             
     func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
-        /*self.highlightReplacesContent = replace
+        self.highlightReplacesContent = replace
         var updated = false
         if let current = self.highlightedColor, let color = color {
             updated = !current.isEqual(color)
@@ -141,6 +125,6 @@ final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
                 strongSelf.highlightedContentNode?.removeFromSupernode()
                 strongSelf.highlightedContentNode = nil
             })
-        }*/
+        }
     }
 }

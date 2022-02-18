@@ -4,6 +4,7 @@ import Metal
 import MetalKit
 import simd
 import DctHuffman
+import MetalImageView
 
 private struct Vertex {
     var position: vector_float2
@@ -109,62 +110,9 @@ public final class CompressedImageRenderer {
     
     private var drawableRequestTimestamp: Double?
     
-    private func getNextDrawable(metalLayer: CALayer, drawableSize: CGSize) -> CAMetalDrawable? {
-#if targetEnvironment(simulator)
-        if #available(iOS 13.0, *) {
-            if let metalLayer = metalLayer as? CAMetalLayer {
-                if metalLayer.drawableSize != drawableSize {
-                    metalLayer.drawableSize = drawableSize
-                }
-                let beginTime = CFAbsoluteTimeGetCurrent()
-                let drawableRequestDuration: Double
-                if let drawableRequestTimestamp = self.drawableRequestTimestamp {
-                    drawableRequestDuration = beginTime - drawableRequestTimestamp
-                    if drawableRequestDuration < 1.0 / 60.0 {
-                        return nil
-                    }
-                } else {
-                    drawableRequestDuration = 0.0
-                }
-                self.drawableRequestTimestamp = beginTime
-                let result = metalLayer.nextDrawable()
-                let duration = CFAbsoluteTimeGetCurrent() - beginTime
-                if duration > 1.0 / 60.0 {
-                    print("lag \(duration * 1000.0) ms (\(drawableRequestDuration * 1000.0) ms)")
-                }
-                return result
-            } else {
-                return nil
-            }
-        } else {
-            return nil
-        }
-#else
-        if let metalLayer = metalLayer as? CAMetalLayer {
-            if metalLayer.drawableSize != drawableSize {
-                metalLayer.drawableSize = drawableSize
-            }
-            let beginTime = CFAbsoluteTimeGetCurrent()
-            let drawableRequestDuration: Double
-            if let drawableRequestTimestamp = self.drawableRequestTimestamp {
-                drawableRequestDuration = beginTime - drawableRequestTimestamp
-                if drawableRequestDuration < 1.0 / 60.0 {
-                    return nil
-                }
-            } else {
-                drawableRequestDuration = 0.0
-            }
-            self.drawableRequestTimestamp = beginTime
-            let result = metalLayer.nextDrawable()
-            let duration = CFAbsoluteTimeGetCurrent() - beginTime
-            if duration > 1.0 / 200.0 {
-                print("lag \(duration * 1000.0) ms (\(drawableRequestDuration * 1000.0) ms)")
-            }
-            return result
-        } else {
-            return nil
-        }
-#endif
+    private func getNextDrawable(layer: MetalImageLayer, drawableSize: CGSize) -> MetalImageLayer.Drawable? {
+        layer.renderer.drawableSize = drawableSize
+        return layer.renderer.nextDrawable()
     }
     
     private func updateIdctTextures(compressedImage: AnimationCompressor.CompressedImageData) {
@@ -241,7 +189,7 @@ public final class CompressedImageRenderer {
         }
     }
     
-    public func renderIdct(metalLayer: CALayer, compressedImage: AnimationCompressor.CompressedImageData, completion: @escaping () -> Void) {
+    public func renderIdct(layer: MetalImageLayer, compressedImage: AnimationCompressor.CompressedImageData, completion: @escaping () -> Void) {
         DispatchQueue.global().async {
             self.updateIdctTextures(compressedImage: compressedImage)
             
@@ -313,7 +261,7 @@ public final class CompressedImageRenderer {
                 
                 let drawableSize = CGSize(width: CGFloat(outputTextures.textures[0].width), height: CGFloat(outputTextures.textures[0].height))
                 
-                guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
+                guard let drawable = self.getNextDrawable(layer: layer, drawableSize: drawableSize) else {
                     commandBuffer.commit()
                     completion()
                     return
@@ -339,35 +287,15 @@ public final class CompressedImageRenderer {
                 
                 renderEncoder.endEncoding()
                 
-                var storedDrawable: MTLDrawable? = drawable
-                commandBuffer.addScheduledHandler { _ in
-                    autoreleasepool {
-                        storedDrawable?.present()
-                        storedDrawable = nil
-                    }
-                }
-                
-#if targetEnvironment(simulator)
+                var storedDrawable: MetalImageLayer.Drawable? = drawable
                 commandBuffer.addCompletedHandler { _ in
                     DispatchQueue.main.async {
-                        completion()
-                    }
-                }
-#else
-                if #available(iOS 10.3, *) {
-                    drawable.addPresentedHandler { _ in
-                        DispatchQueue.main.async {
-                            completion()
-                        }
-                    }
-                } else {
-                    commandBuffer.addCompletedHandler { _ in
-                        DispatchQueue.main.async {
-                            completion()
+                        autoreleasepool {
+                            storedDrawable?.present(completion: completion)
+                            storedDrawable = nil
                         }
                     }
                 }
-#endif
                 
                 commandBuffer.commit()
             }
@@ -402,14 +330,7 @@ public final class CompressedImageRenderer {
         })
     }
     
-    public func renderRgb(metalLayer: CALayer, width: Int, height: Int, bytesPerRow: Int, data: Data, completion: @escaping () -> Void) {
-        if "".isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0 / 60.0, execute: {
-                completion()
-            })
-            return
-        }
-        
+    public func renderRgb(layer: MetalImageLayer, width: Int, height: Int, bytesPerRow: Int, data: Data, completion: @escaping () -> Void) {
         self.updateRgbTexture(width: width, height: height, bytesPerRow: bytesPerRow, data: data)
         
         guard let rgbTexture = self.rgbTexture else {
@@ -423,7 +344,7 @@ public final class CompressedImageRenderer {
         
         let drawableSize = CGSize(width: CGFloat(rgbTexture.width), height: CGFloat(rgbTexture.height))
         
-        guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
+        guard let drawable = self.getNextDrawable(layer: layer, drawableSize: drawableSize) else {
             commandBuffer.commit()
             completion()
             return
@@ -446,35 +367,15 @@ public final class CompressedImageRenderer {
         
         renderEncoder.endEncoding()
         
-        var storedDrawable: MTLDrawable? = drawable
-        commandBuffer.addScheduledHandler { _ in
-            autoreleasepool {
-                storedDrawable?.present()
-                storedDrawable = nil
-            }
-        }
-        
-#if targetEnvironment(simulator)
+        var storedDrawable: MetalImageLayer.Drawable? = drawable
         commandBuffer.addCompletedHandler { _ in
             DispatchQueue.main.async {
-                completion()
-            }
-        }
-#else
-        if #available(iOS 10.3, *) {
-            drawable.addPresentedHandler { _ in
-                DispatchQueue.main.async {
-                    completion()
-                }
-            }
-        } else {
-            commandBuffer.addCompletedHandler { _ in
-                DispatchQueue.main.async {
-                    completion()
+                autoreleasepool {
+                    storedDrawable?.present(completion: completion)
+                    storedDrawable = nil
                 }
             }
         }
-#endif
         
         commandBuffer.commit()
     }
@@ -553,17 +454,10 @@ public final class CompressedImageRenderer {
         }
     }
     
-    public func renderYuva(metalLayer: CALayer, width: Int, height: Int, data: Data, completion: @escaping () -> Void) {
-        if self.isRendering {
-            DispatchQueue.main.async {
-                completion()
-            }
-            return
-        }
-        self.isRendering = true
+    public func renderYuva(layer: MetalImageLayer, width: Int, height: Int, data: Data, completion: @escaping () -> Void) {
         DispatchQueue.global().async {
             autoreleasepool {
-                let renderStartTime = CFAbsoluteTimeGetCurrent()
+                //let renderStartTime = CFAbsoluteTimeGetCurrent()
                 
                 var beginTime: Double = 0.0
                 var duration: Double = 0.0
@@ -578,7 +472,6 @@ public final class CompressedImageRenderer {
                 
                 guard let yuvaTextures = self.yuvaTextures else {
                     DispatchQueue.main.async {
-                        self.isRendering = false
                         completion()
                     }
                     return
@@ -588,7 +481,6 @@ public final class CompressedImageRenderer {
                 
                 guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
                     DispatchQueue.main.async {
-                        self.isRendering = false
                         completion()
                     }
                     return
@@ -598,10 +490,9 @@ public final class CompressedImageRenderer {
                 
                 let drawableSize = CGSize(width: CGFloat(yuvaTextures.width), height: CGFloat(yuvaTextures.height))
                 
-                guard let drawable = self.getNextDrawable(metalLayer: metalLayer, drawableSize: drawableSize) else {
+                guard let drawable = self.getNextDrawable(layer: layer, drawableSize: drawableSize) else {
                     commandBuffer.commit()
                     DispatchQueue.main.async {
-                        self.isRendering = false
                         completion()
                     }
                     return
@@ -614,7 +505,6 @@ public final class CompressedImageRenderer {
                 
                 guard let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
                     DispatchQueue.main.async {
-                        self.isRendering = false
                         completion()
                     }
                     return
@@ -633,44 +523,15 @@ public final class CompressedImageRenderer {
                 
                 renderEncoder.endEncoding()
                 
-                var storedDrawable: MTLDrawable? = drawable
-                commandBuffer.addScheduledHandler { _ in
-                    autoreleasepool {
-                        storedDrawable?.present()
-                        storedDrawable = nil
-                    }
-                }
-                
-#if targetEnvironment(simulator)
+                var storedDrawable: MetalImageLayer.Drawable? = drawable
                 commandBuffer.addCompletedHandler { _ in
                     DispatchQueue.main.async {
-                        self.isRendering = false
-                        completion()
-                    }
-                }
-#else
-                if #available(iOS 10.3, *) {
-                    commandBuffer.addCompletedHandler { _ in
-                        DispatchQueue.main.async {
-                            self.isRendering = false
-                        }
-                        let renderDuration = CFAbsoluteTimeGetCurrent() - renderStartTime
-                        print("render duration \(renderDuration * 1000.0) ms")
-                    }
-                    drawable.addPresentedHandler { _ in
-                        DispatchQueue.main.async {
-                            completion()
-                        }
-                    }
-                } else {
-                    commandBuffer.addCompletedHandler { _ in
-                        DispatchQueue.main.async {
-                            self.isRendering = false
-                            completion()
+                        autoreleasepool {
+                            storedDrawable?.present(completion: completion)
+                            storedDrawable = nil
                         }
                     }
                 }
-#endif
                 
                 commandBuffer.commit()
                 
