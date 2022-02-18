@@ -678,13 +678,6 @@ private final class VisualMediaItem: SparseItemGrid.Item {
     }
 }
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 private struct Month: Equatable {
     var packedValue: Int32
 

@@ -4113,6 +4113,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
+                #if DEBUG
+                let isExternalStream: Bool = true
+                #else
+                let isExternalStream: Bool = false
+                #endif
+                
                 var cancelImpl: (() -> Void)?
                 let presentationData = strongSelf.presentationData
                 let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
@@ -4129,7 +4135,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 |> runOn(Queue.mainQueue())
                 |> delay(0.15, queue: Queue.mainQueue())
                 let progressDisposable = progressSignal.start()
-                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil)
+                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil, isExternalStream: isExternalStream)
                 |> afterDisposed {
                     Queue.mainQueue().async {
                         progressDisposable.dispose()

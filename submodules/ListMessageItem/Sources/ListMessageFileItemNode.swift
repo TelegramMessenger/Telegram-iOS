@@ -607,9 +607,17 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }, cancel: {
                         if let file = selectedMedia as? TelegramMediaFile {
-                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                            if item.isDownloadList {
+                                context.fetchManager.toggleInteractiveFetchPaused(resourceId: file.resource.id.stringRepresentation, isPaused: true)
+                            } else {
+                                messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                            }
                         } else if let image = selectedMedia as? TelegramMediaImage, let representation = image.representations.last {
-                            messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: representation.resource)
+                            if item.isDownloadList {
+                                context.fetchManager.toggleInteractiveFetchPaused(resourceId: representation.resource.id.stringRepresentation, isPaused: true)
+                            } else {
+                                messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: representation.resource)
+                            }
                         }
                     })
                 }
@@ -841,7 +849,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         })
                     }
                     
-                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset + leftOffset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - leftOffset, height: UIScreenPixel)))
+                    transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset + leftOffset, y: nodeLayout.contentSize.height), size: CGSize(width: params.width - leftInset - leftOffset, height: UIScreenPixel)))
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                     
                     if let backgroundNode = strongSelf.backgroundNode {
@@ -858,7 +866,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 break
                             case let .fetchStatus(fetchStatus):
                                 switch fetchStatus {
-                                    case .Remote, .Fetching:
+                                    case .Remote, .Fetching, .Paused:
                                         descriptionOffset = 14.0
                                     case .Local:
                                         break
@@ -997,7 +1005,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if isAudio || isInstantVideo {
                                 iconStatusState = .play
                             }
-                        case .Remote:
+                        case .Remote, .Paused:
                             if isAudio || isInstantVideo {
                                 iconStatusState = .play
                             }
@@ -1083,7 +1091,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 case let .fetchStatus(fetchStatus):
                     maybeFetchStatus = fetchStatus
                     switch fetchStatus {
-                        case let .Fetching(_, progress):
+                        case .Fetching(_, let progress), .Paused(let progress):
                             if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
                                 downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData)))"
                             }
@@ -1096,8 +1104,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             }
             
             switch maybeFetchStatus {
-                case let .Fetching(_, progress):
-                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 2.0, width: floor((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
+                case .Fetching(_, let progress), .Paused(let progress):
+                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 3.0, width: floor((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
                     let linearProgressNode: LinearProgressNode
                     if let current = self.linearProgressNode {
                         linearProgressNode = current
@@ -1116,7 +1124,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             animated = false
                             self.offsetContainerNode.addSubnode(downloadStatusIconNode)
                         }
-                        downloadStatusIconNode.enqueueState(.pause, animated: animated)
+                        if case .Paused = maybeFetchStatus {
+                            downloadStatusIconNode.enqueueState(.download, animated: animated)
+                        } else {
+                            downloadStatusIconNode.enqueueState(.pause, animated: animated)
+                        }
                     }
                 case .Local:
                     if let linearProgressNode = self.linearProgressNode {
@@ -1197,7 +1209,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                                 cancel()
                             }
-                        case .Remote:
+                        case .Remote, .Paused:
                             if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                                 fetch()
                             }
@@ -1237,7 +1249,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                     cancel()
                 }
-            case .Remote:
+            case .Remote, .Paused:
                 if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                     fetch()
                 }

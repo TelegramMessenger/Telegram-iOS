@@ -28,6 +28,7 @@ import PasswordSetupUI
 import FetchManagerImpl
 import ComponentFlow
 import LottieAnimationComponent
+import ProgressIndicatorComponent
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -155,6 +156,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private var tabContainerData: ([ChatListFilterTabEntry], Bool)?
     
     private var activeDownloadsDisposable: Disposable?
+    private var clearUnseenDownloadsTimer: SwiftSignalKit.Timer?
     
     private var didSetupTabs = false
     
@@ -473,16 +475,152 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.searchContentNode?.updateExpansionProgress(0.0)
             self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
             
-            enum State {
+            enum State: Equatable {
                 case empty
-                case downloading
+                case downloading(Double)
                 case hasUnseen
             }
             
-            var stateSignal: Signal<State, NoError> = (combineLatest(queue: .mainQueue(), (context.fetchManager as! FetchManagerImpl).entriesSummary, recentDownloadItems(postbox: context.account.postbox))
+            let entriesWithFetchStatuses = Signal<[(entry: FetchManagerEntrySummary, progress: Double)], NoError> { subscriber in
+                let queue = Queue()
+                final class StateHolder {
+                    final class EntryContext {
+                        var entry: FetchManagerEntrySummary
+                        var isRemoved: Bool = false
+                        var statusDisposable: Disposable?
+                        var status: MediaResourceStatus?
+                        
+                        init(entry: FetchManagerEntrySummary) {
+                            self.entry = entry
+                        }
+                        
+                        deinit {
+                            self.statusDisposable?.dispose()
+                        }
+                    }
+                    
+                    let queue: Queue
+                    
+                    var entryContexts: [FetchManagerLocationEntryId: EntryContext] = [:]
+                    
+                    let state = Promise<[(entry: FetchManagerEntrySummary, progress: Double)]>()
+                    
+                    init(queue: Queue) {
+                        self.queue = queue
+                    }
+                    
+                    func update(engine: TelegramEngine, entries: [FetchManagerEntrySummary]) {
+                        if entries.isEmpty {
+                            self.entryContexts.removeAll()
+                        } else {
+                            for entry in entries {
+                                let context: EntryContext
+                                if let current = self.entryContexts[entry.id] {
+                                    context = current
+                                } else {
+                                    context = EntryContext(entry: entry)
+                                    self.entryContexts[entry.id] = context
+                                }
+                                
+                                context.entry = entry
+                                
+                                if context.isRemoved {
+                                    context.isRemoved = false
+                                    context.status = nil
+                                    context.statusDisposable?.dispose()
+                                    context.statusDisposable = nil
+                                }
+                            }
+                            
+                            for (_, context) in self.entryContexts {
+                                if !entries.contains(where: { $0.id == context.entry.id }) {
+                                    context.isRemoved = true
+                                }
+                                
+                                if context.statusDisposable == nil {
+                                    context.statusDisposable = (engine.account.postbox.mediaBox.resourceStatus(context.entry.resourceReference.resource)
+                                    |> deliverOn(self.queue)).start(next: { [weak self, weak context] status in
+                                        guard let strongSelf = self, let context = context else {
+                                            return
+                                        }
+                                        if context.status != status {
+                                            context.status = status
+                                            strongSelf.notifyUpdatedIfReady()
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                        
+                        self.notifyUpdatedIfReady()
+                    }
+                    
+                    func notifyUpdatedIfReady() {
+                        var result: [(entry: FetchManagerEntrySummary, progress: Double)] = []
+                        loop: for (_, context) in self.entryContexts {
+                            guard let status = context.status else {
+                                return
+                            }
+                            let progress: Double
+                            switch status {
+                            case .Local:
+                                progress = 1.0
+                            case .Remote:
+                                if context.isRemoved {
+                                    continue loop
+                                }
+                                progress = 0.0
+                            case let .Paused(value):
+                                progress = Double(value)
+                            case let .Fetching(_, value):
+                                progress = Double(value)
+                            }
+                            result.append((context.entry, progress))
+                        }
+                        self.state.set(.single(result))
+                    }
+                }
+                let holder = QueueLocalObject<StateHolder>(queue: queue, generate: {
+                    return StateHolder(queue: queue)
+                })
+                let entriesDisposable = ((context.fetchManager as! FetchManagerImpl).entriesSummary).start(next: { entries in
+                    holder.with { holder in
+                        holder.update(engine: context.engine, entries: entries)
+                    }
+                })
+                let holderStateDisposable = MetaDisposable()
+                holder.with { holder in
+                    holderStateDisposable.set(holder.state.get().start(next: { state in
+                        subscriber.putNext(state)
+                    }))
+                }
+                
+                return ActionDisposable {
+                    entriesDisposable.dispose()
+                    holderStateDisposable.dispose()
+                }
+            }
+            
+            let stateSignal: Signal<State, NoError> = (combineLatest(queue: .mainQueue(), entriesWithFetchStatuses, recentDownloadItems(postbox: context.account.postbox))
             |> map { entries, recentDownloadItems -> State in
                 if !entries.isEmpty {
-                    return .downloading
+                    var totalBytes = 0.0
+                    var totalProgressInBytes = 0.0
+                    for (entry, progress) in entries {
+                        var size = 1024 * 1024 * 1024
+                        if let sizeValue = entry.resourceReference.resource.size {
+                            size = sizeValue
+                        }
+                        totalBytes += Double(size)
+                        totalProgressInBytes += Double(size) * progress
+                    }
+                    let totalProgress: Double
+                    if totalBytes.isZero {
+                        totalProgress = 0.0
+                    } else {
+                        totalProgress = totalProgressInBytes / totalBytes
+                    }
+                    return .downloading(totalProgress)
                 } else {
                     for item in recentDownloadItems {
                         if !item.isSeen {
@@ -498,57 +636,89 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             |> distinctUntilChanged
             |> deliverOnMainQueue)
             
-            if !"".isEmpty {
+            /*if !"".isEmpty {
                 stateSignal = Signal<State, NoError>.single(.downloading)
                 |> then(Signal<State, NoError>.single(.hasUnseen) |> delay(3.0, queue: .mainQueue()))
-            }
+            }*/
             
             self.activeDownloadsDisposable = stateSignal.start(next: { [weak self] state in
                 guard let strongSelf = self else {
                     return
                 }
+                let animation: LottieAnimationComponent.Animation?
+                let progressValue: Double?
                 switch state {
-                case .downloading:
-                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
-                        content: AnyComponent(LottieAnimationComponent(
-                            animation: LottieAnimationComponent.Animation(
-                                name: "anim_search_downloading",
-                                colors: [
-                                    "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                ],
-                                loop: true
-                            ),
-                            size: CGSize(width: 24.0, height: 24.0)
-                        )),
-                        insets: UIEdgeInsets(),
-                        action: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.activateSearch(filter: .downloads, query: nil)
-                        }
-                    )))
+                case let .downloading(progress):
+                    animation = LottieAnimationComponent.Animation(
+                        name: "anim_search_downloading",
+                        colors: [
+                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        ],
+                        loop: true
+                    )
+                    progressValue = progress
+                    
+                    strongSelf.clearUnseenDownloadsTimer?.invalidate()
+                    strongSelf.clearUnseenDownloadsTimer = nil
                 case .hasUnseen:
-                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
-                        content: AnyComponent(LottieAnimationComponent(
-                            animation: LottieAnimationComponent.Animation(
-                                name: "anim_search_downloaded",
-                                colors: [
-                                    "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                                    "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
-                                ],
-                                loop: false
-                            ),
+                    animation = LottieAnimationComponent.Animation(
+                        name: "anim_search_downloaded",
+                        colors: [
+                            "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
+                        ],
+                        loop: false
+                    )
+                    progressValue = 1.0
+                    
+                    if strongSelf.clearUnseenDownloadsTimer == nil {
+                        let timeout: Double
+                        #if DEBUG
+                        timeout = 10.0
+                        #else
+                        timeout = 1.0 * 60.0
+                        #endif
+                        strongSelf.clearUnseenDownloadsTimer = SwiftSignalKit.Timer(timeout: timeout, repeat: false, completion: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.clearUnseenDownloadsTimer = nil
+                            let _ = markAllRecentDownloadItemsAsSeen(postbox: strongSelf.context.account.postbox).start()
+                        }, queue: .mainQueue())
+                        strongSelf.clearUnseenDownloadsTimer?.start()
+                    }
+                case .empty:
+                    animation = nil
+                    progressValue = nil
+                    
+                    strongSelf.clearUnseenDownloadsTimer?.invalidate()
+                    strongSelf.clearUnseenDownloadsTimer = nil
+                }
+                
+                if let animation = animation, let progressValue = progressValue {
+                    let contentComponent = AnyComponent(ZStack<Empty>([
+                        AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieAnimationComponent(
+                            animation: animation,
                             size: CGSize(width: 24.0, height: 24.0)
-                        )),
+                        ))),
+                        AnyComponentWithIdentity(id: 1, component: AnyComponent(ProgressIndicatorComponent(
+                            diameter: 16.0,
+                            backgroundColor: .clear,
+                            foregroundColor: strongSelf.presentationData.theme.list.itemAccentColor,
+                            value: progressValue
+                        )))
+                    ]))
+                    
+                    strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
+                        content: contentComponent,
                         insets: UIEdgeInsets(),
                         action: {
                             guard let strongSelf = self else {
@@ -557,7 +727,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             strongSelf.activateSearch(filter: .downloads, query: nil)
                         }
                     )))
-                case .empty:
+                } else {
                     strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: nil)
                 }
             })

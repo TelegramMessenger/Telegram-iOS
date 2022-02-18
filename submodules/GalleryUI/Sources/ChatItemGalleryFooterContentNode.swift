@@ -209,7 +209,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 statusState = .cloudProgress(color: UIColor.white, strokeBackgroundColor: UIColor.white.withAlphaComponent(0.5), lineWidth: 2.0, value: CGFloat(adjustedProgress))
                             case .Local:
                                 break
-                            case .Remote:
+                            case .Remote, .Paused:
                                 if let image = cloudFetchIcon {
                                     statusState = .customIcon(image)
                                 }

@@ -83,12 +83,14 @@ public final class RenderedRecentDownloadItem: Equatable {
     public let timestamp: Int32
     public let isSeen: Bool
     public let resourceId: String
+    public let size: Int
     
-    public init(message: Message, timestamp: Int32, isSeen: Bool, resourceId: String) {
+    public init(message: Message, timestamp: Int32, isSeen: Bool, resourceId: String, size: Int) {
         self.message = message
         self.timestamp = timestamp
         self.isSeen = isSeen
         self.resourceId = resourceId
+        self.size = size
     }
     
     public static func ==(lhs: RenderedRecentDownloadItem, rhs: RenderedRecentDownloadItem) -> Bool {
@@ -105,6 +107,9 @@ public final class RenderedRecentDownloadItem: Equatable {
             return false
         }
         if lhs.resourceId != rhs.resourceId {
+            return false
+        }
+        if lhs.size != rhs.size {
             return false
         }
         return true
@@ -129,7 +134,18 @@ public func recentDownloadItems(postbox: Postbox) -> Signal<[RenderedRecentDownl
                 guard let message = transaction.getMessage(item.messageId) else {
                     continue
                 }
-                result.append(RenderedRecentDownloadItem(message: message, timestamp: item.timestamp, isSeen: item.isSeen, resourceId: item.resourceId))
+                
+                var size: Int?
+                for media in message.media {
+                    if let result = findMediaResourceById(media: media, resourceId: MediaResourceId(item.resourceId)) {
+                        size = result.size
+                        break
+                    }
+                }
+                
+                if let size = size {
+                    result.append(RenderedRecentDownloadItem(message: message, timestamp: item.timestamp, isSeen: item.isSeen, resourceId: item.resourceId, size: size))
+                }
             }
             
             return result
@@ -138,7 +154,7 @@ public func recentDownloadItems(postbox: Postbox) -> Signal<[RenderedRecentDownl
             var statusSignals: [Signal<Bool, NoError>] = []
             
             for item in items {
-                statusSignals.append(postbox.mediaBox.resourceStatus(MediaResourceId(item.resourceId), resourceSize: nil)
+                statusSignals.append(postbox.mediaBox.resourceStatus(MediaResourceId(item.resourceId), resourceSize: item.size)
                 |> map { status -> Bool in
                     switch status {
                     case .Local:
@@ -170,6 +186,41 @@ public func addRecentDownloadItem(postbox: Postbox, item: RecentDownloadItem) ->
             return
         }
         transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentDownloads, item: OrderedItemListEntry(id: RecentDownloadItem.Id(id: item.messageId, resourceId: item.resourceId).rawValue, contents: entry), removeTailIfCountExceeds: 200)
+    }
+    |> ignoreValues
+}
+
+public func markRecentDownloadItemsAsSeen(postbox: Postbox, items: [(messageId: MessageId, resourceId: String)]) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Void in
+        var unseenIds: [(messageId: MessageId, resourceId: String)] = []
+        for item in items {
+            guard let listItem = transaction.getOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentDownloads, itemId: RecentDownloadItem.Id(id: item.messageId, resourceId: item.resourceId).rawValue) else {
+                continue
+            }
+            guard let listItemValue = listItem.contents.get(RecentDownloadItem.self), !listItemValue.isSeen else {
+                continue
+            }
+            unseenIds.append(item)
+        }
+        
+        if unseenIds.isEmpty {
+            return
+        }
+        
+        let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.RecentDownloads)
+        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.RecentDownloads, items: items.compactMap { entry -> OrderedItemListEntry? in
+            guard let item = entry.contents.get(RecentDownloadItem.self) else {
+                return nil
+            }
+            if unseenIds.contains(where: { $0.messageId == item.messageId && $0.resourceId == item.resourceId }) {
+                guard let entry = CodableEntry(item.withSeen()) else {
+                    return nil
+                }
+                return OrderedItemListEntry(id: RecentDownloadItem.Id(id: item.messageId, resourceId: item.resourceId).rawValue, contents: entry)
+            } else {
+                return entry
+            }
+        })
     }
     |> ignoreValues
 }

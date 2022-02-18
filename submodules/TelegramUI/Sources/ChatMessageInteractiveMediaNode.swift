@@ -321,7 +321,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                         cancel()
                     }
-                case .Remote:
+                case .Remote, .Paused:
                     if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                         fetch(true)
                     }
@@ -1213,7 +1213,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             progressRequired = true
                         }
                     }
-                case .Remote, .Fetching:
+                case .Remote, .Fetching, .Paused:
                     if let webpage = webpage, let automaticDownload = self.automaticDownload, case .full = automaticDownload, case let .Loaded(content) = webpage.content {
                         if content.type == "telegram_background" {
                             progressRequired = true
@@ -1448,7 +1448,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : duration, position: playerPosition)
                         badgeContent = .mediaDownload(backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, duration: durationString, size: nil, muted: muted, active: false)
                     }
-                case .Remote:
+                case .Remote, .Paused:
                     state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                     if let file = self.media as? TelegramMediaFile, !file.isVideoSticker {
                         do {

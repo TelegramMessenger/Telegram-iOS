@@ -161,14 +161,16 @@ final class OrderedItemListTable: Table {
     }
     
     func addItemOrMoveToFirstPosition(collectionId: Int32, item: OrderedItemListEntry, removeTailIfCountExceeds: Int?, operations: inout [Int32: [OrderedItemListOperation]]) {
-        if let index = self.getIndex(collectionId: collectionId, id: item.id), index == 0 {
-            return
-        }
-        
         if operations[collectionId] == nil {
             operations[collectionId] = [.addOrMoveToFirstPosition(item, removeTailIfCountExceeds)]
         } else {
             operations[collectionId]!.append(.addOrMoveToFirstPosition(item, removeTailIfCountExceeds))
+        }
+        
+        if let index = self.getIndex(collectionId: collectionId, id: item.id), index == 0 {
+            self.indexTable.set(collectionId: collectionId, id: item.id, content: item.contents)
+            
+            return
         }
         
         var orderedIds = self.getItemIds(collectionId: collectionId)

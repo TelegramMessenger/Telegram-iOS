@@ -64,7 +64,7 @@ public final class LottieAnimationComponent: Component {
                         view.backgroundColor = .clear
                         view.isOpaque = false
                         
-                        view.logHierarchyKeypaths()
+                        //view.logHierarchyKeypaths()
                         
                         for (key, value) in component.animation.colors {
                             let colorCallback = LOTColorValueCallback(color: value.cgColor)

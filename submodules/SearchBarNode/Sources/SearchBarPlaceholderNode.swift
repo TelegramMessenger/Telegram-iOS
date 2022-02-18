@@ -127,7 +127,10 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
             accessoryComponentView.frame = CGRect(origin: CGPoint(x: self.bounds.width - accessorySize.width - 4.0, y: floor((self.bounds.height - accessorySize.height) / 2.0)), size: accessorySize)
         } else if let accessoryComponentView = self.accessoryComponentView {
             self.accessoryComponentView = nil
-            accessoryComponentView.removeFromSuperview()
+            accessoryComponentView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            accessoryComponentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak accessoryComponentView] _ in
+                accessoryComponentView?.removeFromSuperview()
+            })
         }
     }
     

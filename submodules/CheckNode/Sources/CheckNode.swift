@@ -291,13 +291,6 @@ public class InteractiveCheckNode: CheckNode {
     }
 }
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 public class CheckLayer: CALayer {
     private var animatingOut = false
     private var animationProgress: CGFloat = 0.0

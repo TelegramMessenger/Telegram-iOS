@@ -46,14 +46,14 @@ final class ChatListSearchInteraction {
     let clearRecentSearch: () -> Void
     let addContact: (String) -> Void
     let toggleMessageSelection: (EngineMessage.Id, Bool) -> Void
-    let messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, String?) -> Void)
+    let messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)
     let mediaMessageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void)
     let peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     let present: (ViewController, Any?) -> Void
     let dismissInput: () -> Void
     let getSelectedMessageIds: () -> Set<EngineMessage.Id>?
     
-    init(openPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, String?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
+    init(openPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -218,8 +218,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     return state.withUpdatedSelectedMessageIds(selectedMessageIds)
                 }
             }
-        }, messageContextAction: { [weak self] message, node, rect, gesture, paneKey, downloadResourceId in
-            self?.messageContextAction(message, node: node, rect: rect, gesture: gesture, paneKey: paneKey, downloadResourceId: downloadResourceId)
+        }, messageContextAction: { [weak self] message, node, rect, gesture, paneKey, downloadResource in
+            self?.messageContextAction(message, node: node, rect: rect, gesture: gesture, paneKey: paneKey, downloadResource: downloadResource)
         }, mediaMessageContextAction: { [weak self] message, node, rect, gesture in
             self?.mediaMessageContextAction(message, node: node, rect: rect, gesture: gesture)
         }, peerContextAction: { peer, source, node, gesture in
@@ -580,7 +580,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
             filters = suggestedFilters
         } else {
-            filters = [.chats, .media, .links, .files, .music, .voice]
+            filters = [.chats, .media, .downloads, .links, .files, .music, .voice]
         }
         
         let overflowInset: CGFloat = 20.0
@@ -768,7 +768,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let _ = self.paneContainerNode.scrollToTop()
     }
     
-    private func messageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?, paneKey: ChatListSearchPaneKey, downloadResourceId: String?) {
+    private func messageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?, paneKey: ChatListSearchPaneKey, downloadResource: (id: String, size: Int, isFirstInList: Bool)?) {
         guard let node = node as? ContextExtractedContentContainingNode else {
             return
         }
@@ -777,8 +777,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         if paneKey == .downloads {
             let isCachedValue: Signal<Bool, NoError>
-            if let downloadResourceId = downloadResourceId {
-                isCachedValue = self.context.account.postbox.mediaBox.resourceStatus(MediaResourceId(downloadResourceId), resourceSize: nil)
+            if let downloadResource = downloadResource {
+                isCachedValue = self.context.account.postbox.mediaBox.resourceStatus(MediaResourceId(downloadResource.id), resourceSize: downloadResource.size)
                 |> map { status -> Bool in
                     switch status {
                     case .Local:
@@ -821,27 +821,44 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     items.append(.action(ContextMenuActionItem(text: "Delete from Cache", textColor: .primary, icon: { _ in
                         return nil
                     }, action: { _, f in
-                        guard let strongSelf = self, let downloadResourceId = downloadResourceId else {
+                        guard let strongSelf = self, let downloadResource = downloadResource else {
                             f(.default)
                             return
                         }
-                        let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources([MediaResourceId(downloadResourceId)], notify: true)
+                        let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources([MediaResourceId(downloadResource.id)], notify: true)
                         |> deliverOnMainQueue).start(completed: {
                             f(.dismissWithoutContent)
                         })
                     })))
                 } else {
+                    if let downloadResource = downloadResource, !downloadResource.isFirstInList {
+                        //TODO:localize
+                        items.append(.action(ContextMenuActionItem(text: "Raise Priority", textColor: .primary, icon: { _ in
+                            return nil
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                f(.default)
+                                return
+                            }
+                            
+                            strongSelf.context.fetchManager.raisePriority(resourceId: downloadResource.id)
+                            
+                            Queue.mainQueue().after(0.1, {
+                                f(.default)
+                            })
+                        })))
+                    }
+                    
                     //TODO:localize
                     items.append(.action(ContextMenuActionItem(text: "Cancel Downloading", textColor: .primary, icon: { _ in
                         return nil
                     }, action: { _, f in
-                        guard let strongSelf = self, let downloadResourceId = downloadResourceId else {
+                        guard let strongSelf = self, let downloadResource = downloadResource else {
                             f(.default)
                             return
                         }
                         
-                        let _ = strongSelf
-                        let _ = downloadResourceId
+                        strongSelf.context.fetchManager.cancelInteractiveFetches(resourceId: downloadResource.id)
                         
                         f(.default)
                     })))

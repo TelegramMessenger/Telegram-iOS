@@ -409,7 +409,7 @@ public final class MediaBox {
                 } else if let size = fileSize(paths.partial), size == resourceSize {
                     subscriber.putNext(.single(.Local))
                 } else {
-                    subscriber.putNext(.single(.Remote) |> then(signal))
+                    subscriber.putNext(.single(.Remote(progress: 0.0)) |> then(signal))
                 }
                 subscriber.putCompletion()
                 return EmptyDisposable
@@ -783,8 +783,12 @@ public final class MediaBox {
     }
     
     public func cancelInteractiveResourceFetch(_ resource: MediaResource) {
+        self.cancelInteractiveResourceFetch(resourceId: resource.id)
+    }
+    
+    public func cancelInteractiveResourceFetch(resourceId: MediaResourceId) {
         self.dataQueue.async {
-            if let (fileContext, releaseContext) = self.fileContext(for: resource.id) {
+            if let (fileContext, releaseContext) = self.fileContext(for: resourceId) {
                 fileContext.cancelFullRangeFetches()
                 releaseContext()
             }
@@ -1363,15 +1367,17 @@ public final class MediaBox {
                 if notify {
                     for id in ids {
                         if let context = self.statusContexts[id] {
-                            context.status = .Remote
+                            context.status = .Remote(progress: 0.0)
                             for f in context.subscribers.copyItems() {
-                                f(.Remote)
+                                f(.Remote(progress: 0.0))
                             }
                         }
                     }
                 }
                 
-                self.didRemoveResourcesPipe.putNext(Void())
+                self.dataQueue.justDispatch {
+                    self.didRemoveResourcesPipe.putNext(Void())
+                }
                 
                 subscriber.putCompletion()
             }

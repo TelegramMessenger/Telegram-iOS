@@ -866,7 +866,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             switch fetchStatus {
                 case .Fetching:
                     fetchControls.cancel()
-                case .Remote:
+                case .Remote, .Paused:
                     fetchControls.fetch()
                 case .Local:
                     break
@@ -2044,7 +2044,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch fetchStatus {
                     case .Local:
                         videoNode.playOnceWithSound(playAndRecord: false, seek: .none, actionAtEnd: self.actionAtEnd)
-                    case .Remote:
+                    case .Remote, .Paused:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {

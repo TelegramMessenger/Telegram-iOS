@@ -65,6 +65,7 @@ swift_library(
         "//submodules/FetchManagerImpl:FetchManagerImpl",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/Components/ProgressIndicatorComponent:ProgressIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",

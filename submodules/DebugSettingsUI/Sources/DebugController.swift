@@ -270,7 +270,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.gz")])
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
@@ -436,7 +436,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.gz")])
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
@@ -520,7 +520,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.gz")])
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
