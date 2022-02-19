@@ -281,7 +281,7 @@ private final class AnimatedStickerDirectFrameSourceCache {
         
         self.frameCount = frameCount
         self.width = alignUp(size: width, align: 8)
-        self.height = alignUp(size: width, align: 8)
+        self.height = alignUp(size: height, align: 8)
         self.useHardware = useHardware
         
         let suffix : String
