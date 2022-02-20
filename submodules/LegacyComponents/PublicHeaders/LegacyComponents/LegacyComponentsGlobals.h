@@ -96,6 +96,8 @@ extern "C" {
 #endif
 UIImage *TGComponentsImageNamed(NSString *name);
 NSString *TGComponentsPathForResource(NSString *name, NSString *type);
+
+NSString *PTLocalized(NSString *s);
 #ifdef __cplusplus
 }
 #endif

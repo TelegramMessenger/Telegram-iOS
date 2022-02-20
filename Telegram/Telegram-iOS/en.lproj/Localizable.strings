@@ -1211,6 +1211,7 @@
 
 "PasscodeSettings.AutoLock" = "Auto-Lock";
 "PasscodeSettings.AutoLock.Disabled" = "Disabled";
+"PasscodeSettings.AutoLock.IfAwayFor_1second" = "If away for 1 sec";
 "PasscodeSettings.AutoLock.IfAwayFor_1minute" = "If away for 1 min";
 "PasscodeSettings.AutoLock.IfAwayFor_5minutes" = "If away for 5 min";
 "PasscodeSettings.AutoLock.IfAwayFor_1hour" = "If away for 1 hour";
