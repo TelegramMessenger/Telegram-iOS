@@ -19,6 +19,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
     private let gesture: ContextGesture
     private let sourceSendButton: ASDisplayNode
     private let textInputNode: EditableTextNode
+    private let attachment: Bool
     private let completion: () -> Void
     private let sendMessage: (Bool) -> Void
     private let schedule: () -> Void
@@ -32,12 +33,13 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     private let hapticFeedback = HapticFeedback()
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interfaceState: ChatPresentationInterfaceState, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool = false, completion: @escaping () -> Void, sendMessage: @escaping (Bool) -> Void, schedule: @escaping () -> Void) {
         self.context = context
         self.interfaceState = interfaceState
         self.gesture = gesture
         self.sourceSendButton = sourceSendButton
         self.textInputNode = textInputNode
+        self.attachment = attachment
         self.completion = completion
         self.sendMessage = sendMessage
         self.schedule = schedule
@@ -69,8 +71,8 @@ public final class ChatSendMessageActionSheetController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        var forwardedCount = 0
-        if let forwardMessageIds = self.interfaceState.interfaceState.forwardMessageIds {
+        var forwardedCount: Int?
+        if let forwardMessageIds = self.interfaceState.interfaceState.forwardMessageIds, forwardMessageIds.count > 0 {
             forwardedCount = forwardMessageIds.count
         }
         
@@ -83,7 +85,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
             canSchedule = !isSecret
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, forwardedCount: forwardedCount, send: { [weak self] in
             self?.sendMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

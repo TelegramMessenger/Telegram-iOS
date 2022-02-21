@@ -151,6 +151,15 @@
     return newValue;
 }
 
+- (void)moveItem:(id<TGMediaSelectableItem>)item toIndex:(NSUInteger)index {
+    NSUInteger sourceIndex = [self indexOfItem:item] - 1;
+    
+    [_selectedIdentifiers removeObjectAtIndex:sourceIndex];
+    [_selectedIdentifiers insertObject:item.uniqueIdentifier atIndex:index - 1];
+    
+    _pipe.sink([TGMediaSelectionChange changeWithItem:item selected:true animated:false sender:nil]);
+}
+
 - (SSignal *)itemSelectedSignal:(id<TGMediaSelectableItem>)item
 {
     return [[self itemInformativeSelectedSignal:item] map:^NSNumber *(TGMediaSelectionChange *change)

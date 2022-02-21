@@ -287,7 +287,6 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         
         self.actionButtons.sendButton.addTarget(self, action: #selector(self.sendButtonPressed), forControlEvents: .touchUpInside)
         self.actionButtons.sendButton.alpha = 1.0
-        self.actionButtons.expandMediaInputButton.alpha = 0.0
         self.actionButtons.updateAccessibility()
         
         self.addSubnode(self.textInputContainer)
@@ -590,9 +589,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                     }
                     self.actionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                     if self.actionButtons.sendButtonHasApplyIcon {
-                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(interfaceState.theme), for: [])
+                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), for: [])
                     } else {
-                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(interfaceState.theme), for: [])
+                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), for: [])
                     }
                 }
             }
@@ -607,9 +606,6 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         let baseWidth = width - leftInset - rightInset
         let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: baseWidth, maxHeight: maxHeight, metrics: metrics)
         var panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
-        
-        var composeButtonsOffset: CGFloat = 0.0
-        let textInputBackgroundWidthOffset: CGFloat = 0.0
         
         self.updateCounterTextNode(transition: transition)
         
@@ -629,7 +625,15 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
         
         if self.isCaption {
-            if !self.isFocused {
+            if self.isFocused {
+                self.oneLineNode.alpha = 0.0
+                self.oneLineDustNode?.alpha = 0.0
+                self.textInputNode?.alpha = 1.0
+                
+                transition.updateAlpha(node: self.actionButtons, alpha: 1.0)
+                transition.updateTransformScale(node: self.actionButtons, scale: 1.0)
+                transition.updateAlpha(node: self.textInputBackgroundImageNode, alpha: 1.0)
+            } else {
                 panelHeight = minimalHeight
                 
                 transition.updateAlpha(node: self.oneLineNode, alpha: inputHasText ? 1.0 : 0.0)
@@ -639,12 +643,12 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 if let textInputNode = self.textInputNode {
                     transition.updateAlpha(node: textInputNode, alpha: inputHasText ? 0.0 : 1.0)
                 }
-            } else {
-                self.oneLineNode.alpha = 0.0
-                self.oneLineDustNode?.alpha = 0.0
-                self.textInputNode?.alpha = 1.0
+                
+                transition.updateAlpha(node: self.actionButtons, alpha: 0.0)
+                transition.updateTransformScale(node: self.actionButtons, scale: 0.001)
+                transition.updateAlpha(node: self.textInputBackgroundImageNode, alpha: inputHasText ? 1.0 : 0.0)
             }
-            
+
             let oneLineSize = self.oneLineNode.updateLayout(CGSize(width: baseWidth - textFieldInsets.left - textFieldInsets.right, height: CGFloat.greatestFiniteMagnitude))
             let oneLineFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: oneLineSize)
             self.oneLineNode.frame = oneLineFrame
@@ -652,34 +656,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             self.updateOneLineSpoiler()
         }
         self.textPlaceholderNode.isHidden = inputHasText
-        
-        if self.isCaption {
-            if self.isFocused {
-                transition.updateAlpha(node: self.actionButtons, alpha: 1.0)
-                transition.updateTransformScale(node: self.actionButtons, scale: 1.0)
-                composeButtonsOffset = 0.0
-                
-                transition.updateAlpha(node: self.textInputBackgroundImageNode, alpha: 1.0)
-            } else {
-                transition.updateAlpha(node: self.actionButtons, alpha: 0.0)
-                transition.updateTransformScale(node: self.actionButtons, scale: 0.001)
-                composeButtonsOffset = 36.0
-                
-                transition.updateAlpha(node: self.textInputBackgroundImageNode, alpha: inputHasText ? 1.0 : 0.0)
-            }
-        }
-       
-        let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: CGSize(width: 44.0, height: minimalHeight))
-        transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
-        
-        if let presentationInterfaceState = self.presentationInterfaceState {
-            self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, interfaceState: presentationInterfaceState)
-        }
-
-        let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
-        let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: textInputFrame.size.width + composeButtonsOffset, height: textInputFrame.size.height))
+          
+        let textInputFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
         transition.updateFrame(node: self.textInputContainer, frame: textInputFrame)
-        transition.updateFrame(node: self.textInputContainerBackgroundNode, frame: textInputBackgroundFrame)
         
         if let textInputNode = self.textInputNode {
             let textFieldFrame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - textInputViewInternalInsets.bottom))
@@ -690,20 +669,72 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             }
         }
         
+        self.updateFieldAndButtonsLayout(inputHasText: inputHasText, panelHeight: panelHeight, transition: transition)
+        
+        self.actionButtons.updateAccessibility()
+        
+        return panelHeight
+    }
+    
+    private func updateFieldAndButtonsLayout(inputHasText: Bool, panelHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let (width, leftInset, rightInset, additionalSideInsets, _, metrics, _) = self.validLayout else {
+            return
+        }
+        var textFieldMinHeight: CGFloat = 33.0
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
+        }
+        let minimalHeight: CGFloat = 14.0 + textFieldMinHeight
+        
+        var panelHeight = panelHeight
+        var composeButtonsOffset: CGFloat = 0.0
+        if self.isCaption {
+            if self.isFocused {
+                composeButtonsOffset = 0.0
+            } else {
+                composeButtonsOffset = 36.0
+                panelHeight = minimalHeight
+            }
+        }
+        
+        let baseWidth = width - leftInset - rightInset
+        let textInputFrame = self.textInputContainer.frame
+        
+        var textBackgroundInset: CGFloat = 0.0
+        let actionButtonsSize: CGSize
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            actionButtonsSize = self.actionButtons.updateLayout(size: CGSize(width: 44.0, height: minimalHeight), transition: transition, minimized: !self.isAttachment || inputHasText, interfaceState: presentationInterfaceState)
+            textBackgroundInset = 44.0 - actionButtonsSize.width
+        } else {
+            actionButtonsSize = CGSize(width: 44.0, height: minimalHeight)
+        }
+        
+        var textFieldInsets = self.textFieldInsets(metrics: metrics)
+        if additionalSideInsets.right > 0.0 {
+            textFieldInsets.right += additionalSideInsets.right / 3.0
+        }
+        
+        let actionButtonsFrame = CGRect(origin: CGPoint(x: width - rightInset - actionButtonsSize.width + 1.0 - UIScreenPixel + composeButtonsOffset, y: panelHeight - minimalHeight), size: actionButtonsSize)
+        transition.updateFrame(node: self.actionButtons, frame: actionButtonsFrame)
+        
+        let textInputBackgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: textInputFrame.size.width + composeButtonsOffset + textBackgroundInset, height: textInputFrame.size.height))
+        transition.updateFrame(node: self.textInputContainerBackgroundNode, frame: textInputBackgroundFrame)
+        
+        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset + textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
+        transition.updateFrame(layer: self.textInputBackgroundImageNode.layer, frame: CGRect(x: 0.0, y: 0.0, width: baseWidth - textFieldInsets.left - textFieldInsets.right + composeButtonsOffset + textBackgroundInset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
+        
+        var textInputViewRealInsets = UIEdgeInsets()
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState)
+        }
+        
         let placeholderFrame: CGRect
         if self.isCaption && !self.isFocused {
             placeholderFrame = CGRect(origin: CGPoint(x: textInputFrame.minX + floorToScreenPixels((textInputBackgroundFrame.width - self.textPlaceholderNode.frame.width) / 2.0), y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
         } else {
             placeholderFrame = CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size)
         }
-        
         transition.updateFrame(node: self.textPlaceholderNode, frame: placeholderFrame)
-        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset + composeButtonsOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
-        transition.updateFrame(layer: self.textInputBackgroundImageNode.layer, frame: CGRect(x: 0.0, y: 0.0, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset + composeButtonsOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
-        
-        self.actionButtons.updateAccessibility()
-        
-        return panelHeight
     }
         
     private var skipUpdate = false
@@ -952,7 +983,10 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             self.oneLineNode.attributedText = nil
         }
         
-        self.updateTextHeight(animated: animated)
+        let panelHeight = self.updateTextHeight(animated: animated)
+        if self.isAttachment, let panelHeight = panelHeight {
+            self.updateFieldAndButtonsLayout(inputHasText: inputHasText, panelHeight: panelHeight, transition: .animated(duration: 0.2, curve: .easeInOut))
+        }
     }
     
     private func updateOneLineSpoiler() {
@@ -977,7 +1011,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
     }
     
-    private func updateTextHeight(animated: Bool) {
+    private func updateTextHeight(animated: Bool) -> CGFloat? {
         if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
@@ -985,6 +1019,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                 self.updateHeight(animated)
                 self.heightUpdated?(animated)
             }
+            return panelHeight
+        } else {
+            return nil
         }
     }
     
@@ -1002,12 +1039,12 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             if sendButtonHasApplyIcon != self.actionButtons.sendButtonHasApplyIcon {
                 self.actionButtons.sendButtonHasApplyIcon = sendButtonHasApplyIcon
                 if self.actionButtons.sendButtonHasApplyIcon {
-                    self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(interfaceState.theme), for: [])
+                    self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyIconImage(interfaceState.theme), for: [])
                 } else {
                     if case .scheduledMessages = interfaceState.subject {
                         self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
                     } else {
-                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(interfaceState.theme), for: [])
+                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendIconImage(interfaceState.theme), for: [])
                     }
                 }
             }

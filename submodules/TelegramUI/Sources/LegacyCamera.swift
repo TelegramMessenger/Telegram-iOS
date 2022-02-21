@@ -10,7 +10,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: ChatLocation, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, hasSchedule: Bool, photoOnly: Bool, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, dismissedWithResult: @escaping () -> Void = {}) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)
@@ -93,8 +93,12 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
     
     let screenSize = parentController.view.bounds.size
     var startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)
-    if let cameraView = cameraView, let menuController = menuController {
-        startFrame = menuController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+    if let cameraView = cameraView  {
+        if let menuController = menuController {
+            startFrame = menuController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+        } else {
+            startFrame = parentController.view.convert(cameraView.previewView()!.frame, from: cameraView)
+        }
     }
     
     legacyController.bind(controller: controller)
@@ -133,6 +137,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
         
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+        dismissedWithResult()
     }
     
     controller.finishedWithPhoto = { [weak menuController, weak legacyController] overlayController, image, caption, stickers, timer in
@@ -150,6 +155,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
         
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+        dismissedWithResult()
     }
     
     controller.finishedWithVideo = { [weak menuController, weak legacyController] overlayController, videoURL, previewImage, duration, dimensions, adjustments, caption, stickers, timer in
@@ -174,6 +180,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, chatLocation: Ch
         }
         menuController?.dismiss(animated: false)
         legacyController?.dismissWithAnimation()
+        dismissedWithResult()
     }
     
     controller.recognizedQRCode = { code in

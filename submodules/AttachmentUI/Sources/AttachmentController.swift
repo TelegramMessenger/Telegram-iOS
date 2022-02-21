@@ -12,7 +12,6 @@ import TelegramStringFormatting
 import UIKitRuntimeUtils
 
 public enum AttachmentButtonType: Equatable {
-    case camera
     case gallery
     case file
     case location
@@ -25,18 +24,33 @@ public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
 }
 
+public enum AttachmentMediaPickerSendMode {
+    case media
+    case files
+}
+
 public protocol AttachmentMediaPickerContext {
     var selectionCount: Signal<Int, NoError> { get }
     var caption: Signal<NSAttributedString?, NoError> { get }
     
     func setCaption(_ caption: NSAttributedString)
-    func send(silently: Bool)
+    func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
     func schedule()
 }
 
 public class AttachmentController: ViewController {
     private let context: AccountContext
+    private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let buttons: [AttachmentButtonType]
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        get {
+            return self.node.mediaPickerContext
+        }
+        set {
+            self.node.mediaPickerContext = newValue
+        }
+    }
         
     private final class Node: ASDisplayNode {
         private weak var controller: AttachmentController?
@@ -53,7 +67,7 @@ public class AttachmentController: ViewController {
         private let captionDisposable = MetaDisposable()
         
         private let mediaSelectionCountDisposable = MetaDisposable()
-        private var mediaPickerContext: AttachmentMediaPickerContext? {
+        fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
             didSet {
                 if let mediaPickerContext = self.mediaPickerContext {
                     self.captionDisposable.set((mediaPickerContext.caption
@@ -82,10 +96,9 @@ public class AttachmentController: ViewController {
             self.dim.alpha = 0.0
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             
-            let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-            self.container = AttachmentContainer(presentationData: presentationData)
+            self.container = AttachmentContainer()
             self.container.canHaveKeyboardFocus = true
-            self.panel = AttachmentPanel(context: controller.context)
+            self.panel = AttachmentPanel(context: controller.context, updatedPresentationData: controller.updatedPresentationData)
                         
             super.init()
             
@@ -133,9 +146,9 @@ public class AttachmentController: ViewController {
                 if let strongSelf = self {
                     switch mode {
                         case .generic:
-                            strongSelf.mediaPickerContext?.send(silently: false)
+                            strongSelf.mediaPickerContext?.send(silently: false, mode: .media)
                         case .silent:
-                            strongSelf.mediaPickerContext?.send(silently: true)
+                            strongSelf.mediaPickerContext?.send(silently: true, mode: .media)
                         case .schedule:
                             strongSelf.mediaPickerContext?.schedule()
                     }
@@ -272,6 +285,10 @@ public class AttachmentController: ViewController {
             transition.animatePositionAdditive(node: self.container, offset: CGPoint(x: 0.0, y: self.bounds.height + self.container.bounds.height / 2.0 - (self.container.position.y - self.bounds.height)))
         }
         
+        func scrollToTop() {
+            self.currentController?.scrollToTop?()
+        }
+        
         private var isCollapsed: Bool = false
         private var isUpdatingContainer = false
         private var switchingController = false
@@ -279,31 +296,7 @@ public class AttachmentController: ViewController {
             self.validLayout = layout
             
             transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
-            
-            let containerTransition: ContainedViewLayoutTransition
-            if self.container.supernode == nil {
-                containerTransition = .immediate
-            } else {
-                containerTransition = transition
-            }
-                        
-            if !self.isUpdatingContainer {
-                self.isUpdatingContainer = true
-                
-                let controllers = self.currentController.flatMap { [$0] } ?? []
-                containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: layout.size))
-                self.container.update(layout: layout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
-                                    
-                if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
-                    self.addSubnode(self.container)
-                    self.container.addSubnode(self.panel)
-                    
-                    self.animateIn(transition: transition)
-                }
-                
-                self.isUpdatingContainer = false
-            }
-                        
+                          
             if self.modalProgress < 0.5 {
                 self.isCollapsed = false
             } else if self.modalProgress == 1.0 {
@@ -317,6 +310,35 @@ public class AttachmentController: ViewController {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
             panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
+            
+            if !self.isUpdatingContainer {
+                self.isUpdatingContainer = true
+            
+                let containerTransition: ContainedViewLayoutTransition
+                if self.container.supernode == nil {
+                    containerTransition = .immediate
+                } else {
+                    containerTransition = transition
+                }
+                
+                let controllers = self.currentController.flatMap { [$0] } ?? []
+                containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: layout.size))
+                
+                var containerInsets = layout.intrinsicInsets
+                containerInsets.bottom = panelHeight
+                let containerLayout = layout.withUpdatedIntrinsicInsets(containerInsets)
+                
+                self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
+                                    
+                if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
+                    self.addSubnode(self.container)
+                    self.container.addSubnode(self.panel)
+                    
+                    self.animateIn(transition: transition)
+                }
+                
+                self.isUpdatingContainer = false
+            }
         }
     }
     
@@ -324,15 +346,22 @@ public class AttachmentController: ViewController {
         completion(nil, nil)
     }
     
-    public init(context: AccountContext, buttons: [AttachmentButtonType]) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, buttons: [AttachmentButtonType]) {
         self.context = context
         self.buttons = buttons
+        self.updatedPresentationData = updatedPresentationData
         
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
         self.blocksBackgroundWhenInOverlay = true
         self.acceptsFocusWhenInOverlay = true
+        
+        self.scrollToTop = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.node.scrollToTop()
+            }
+        }
     }
     
     public required init(coder aDecoder: NSCoder) {

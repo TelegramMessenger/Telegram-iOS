@@ -44,10 +44,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     
     private var panGestureRecognizer: UIPanGestureRecognizer?
     
-    init(presentationData: PresentationData) {
+    override init() {
         self.wrappingNode = ASDisplayNode()
         self.clipNode = ASDisplayNode()
-        self.clipNode.backgroundColor = presentationData.theme.list.plainBackgroundColor
         
         self.container = NavigationContainer(controllerRemoved: { _ in })
         self.container.clipsToBounds = true
@@ -286,7 +285,6 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         self.validLayout = (layout, controllers, coveredByModalTransition)
                 
         self.panGestureRecognizer?.isEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0)
-//        self.scrollNode.view.isScrollEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0) && self.isInteractiveDimissEnabled
 
         let isLandscape = layout.orientation == .landscape
         let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
@@ -344,24 +342,24 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 
                 let effectiveStatusBarHeight: CGFloat? = nil
                 
-                let inset: CGFloat = 70.0
+                let overflowInset: CGFloat = 70.0
                 var safeInsets = layout.safeInsets
-                safeInsets.left += inset
-                safeInsets.right += inset
+                safeInsets.left += overflowInset
+                safeInsets.right += overflowInset
                 
                 var intrinsicInsets = layout.intrinsicInsets
-                intrinsicInsets.left += inset
-                intrinsicInsets.right += inset
+                intrinsicInsets.left += overflowInset
+                intrinsicInsets.right += overflowInset
                 
-                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + inset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom + 49.0, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width + overflowInset * 2.0, height: layout.size.height - containerTopInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: safeInsets.left, bottom: safeInsets.bottom, right: safeInsets.right), additionalInsets: layout.additionalInsets, statusBarHeight: effectiveStatusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
                 let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: containerTopInset - coveredByModalTransition * 10.0), size: containerLayout.size)
                 let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
                 containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
                 let maxScaledTopInset: CGFloat = containerTopInset - 10.0
                 let scaledTopInset: CGFloat = containerTopInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
-                containerFrame = unscaledFrame.offsetBy(dx: -inset, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
+                containerFrame = unscaledFrame.offsetBy(dx: -overflowInset, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
                 
-                clipFrame = CGRect(x: containerFrame.minX + inset, y: containerFrame.minY, width: containerFrame.width - inset * 2.0, height: containerFrame.height)
+                clipFrame = CGRect(x: containerFrame.minX + overflowInset, y: containerFrame.minY, width: containerFrame.width - overflowInset * 2.0, height: containerFrame.height)
             }
         } else {
             self.clipNode.clipsToBounds = true

@@ -7267,9 +7267,40 @@ Sorry for the inconvenience.";
 "Attachment.SelectFromGallery" = "Select from Gallery";
 "Attachment.SelectFromFiles" = "Select from Files";
 
+"Attachment.AllMedia" = "All";
+
 "Attachment.SelectedMedia_1" = "%@ Selected";
 "Attachment.SelectedMedia_2" = "%@ Selected";
 "Attachment.SelectedMedia_3_10" = "%@ Selected";
 "Attachment.SelectedMedia_any" = "%@ Selected";
 "Attachment.SelectedMedia_many" = "%@ Selected";
 "Attachment.SelectedMedia_0" = "%@ Selected";
+
+"Attachment.SendAsFile" = "Send as File";
+"Attachment.SendAsFiles" = "Send as Files";
+
+"Attachment.Grouped" = "Grouped";
+"Attachment.Ungrouped" = "Ungrouped";
+
+"Attachment.MessagePreview" = "Message Preview";
+"Attachment.DragToReorder" = "Drag media to reorder";
+
+"Attachment.SearchWeb" = "Search Web";
+
+"Attachment.RecentlySentFiles" = "Recently Sent Files";
+
+"ReportPeer.ReasonIllegalDrugs" = "Illegal Drugs";
+"ReportPeer.ReasonPersonalDetails" = "Personal Details";
+
+"Attachment.FilesIntro" = "Send and receive files of any type, up to 2 GB\nin size each, access them instantly\non your other devices.";
+"Attachment.FilesSearchPlaceholder" = "Search sent files";
+
+"Attachment.MediaAccessTitle" = "Access Your Photos and Videos";
+"Attachment.MediaAccessText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
+
+"Attachment.LimitedMediaAccessText" = "You have limited Telegram from accessing all of your photos.";
+"Attachment.CameraAccessText" = "Telegram needs camera access so that you can take photos and videos.";
+"Attachment.Manage" = "Manage";
+
+"Attachment.OpenSettings" = "Go to Settings";
+"Attachment.OpenCamera" = "Open Camera";

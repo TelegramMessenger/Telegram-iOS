@@ -1835,6 +1835,11 @@ public func chatWebpageSnippetFile(account: Account, mediaReference: AnyMediaRef
                 
                 context.withFlippedContext { c in
                     c.setBlendMode(.copy)
+                    if let emptyColor = arguments.emptyColor {
+                        c.setFillColor(emptyColor.cgColor)
+                        c.fill(arguments.drawingRect)
+                    }
+                    
                     if arguments.boundingSize.width > arguments.imageSize.width || arguments.boundingSize.height > arguments.imageSize.height {
                         c.fill(arguments.drawingRect)
                     }
@@ -1847,7 +1852,21 @@ public func chatWebpageSnippetFile(account: Account, mediaReference: AnyMediaRef
                 
                 return context
             } else {
-                return nil
+                if let emptyColor = arguments.emptyColor {
+                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                    
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        c.setFillColor(emptyColor.cgColor)
+                        c.fill(arguments.drawingRect)
+                    }
+                    
+                    addCorners(context, arguments: arguments)
+                    
+                    return context
+                } else {
+                    return nil
+                }
             }
         }
     }

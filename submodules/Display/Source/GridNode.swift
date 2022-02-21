@@ -68,13 +68,15 @@ public struct GridNodeLayout: Equatable {
     public let scrollIndicatorInsets: UIEdgeInsets?
     public let preloadSize: CGFloat
     public let type: GridNodeLayoutType
+    public let cutout: CGRect?
     
-    public init(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets? = nil, preloadSize: CGFloat, type: GridNodeLayoutType) {
+    public init(size: CGSize, insets: UIEdgeInsets, scrollIndicatorInsets: UIEdgeInsets? = nil, preloadSize: CGFloat, type: GridNodeLayoutType, cutout: CGRect? = nil) {
         self.size = size
         self.insets = insets
         self.scrollIndicatorInsets = scrollIndicatorInsets
         self.preloadSize = preloadSize
         self.type = type
+        self.cutout = cutout
     }
 }
 
@@ -515,7 +517,6 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             keepSection = false
                         }
                         
-                    
                         if !previousFillsRow && item.fillsRowWithDynamicHeight != nil {
                             keepSection = false
                         }
@@ -557,6 +558,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             if nextItemOriginX + itemSize.width > self.gridLayout.size.width - itemInsets.right && remainingWidth > 0.0 {
                                 itemSize.width += remainingWidth
                             }
+                        }
+                        
+                        if let cutout = self.gridLayout.cutout, cutout.intersects(CGRect(origin: nextItemOrigin, size: itemSize)) {
+                            nextItemOrigin.x += cutout.width + itemSpacing
                         }
                         
                         if !incrementedCurrentRow {

@@ -210,5 +210,13 @@ public class ImageNode: ASDisplayNode {
         self.contents = nil
         self.disposable.set(nil)
     }
+    
+    public var image: UIImage? {
+        if let contents = self.contents {
+            return UIImage(cgImage: contents as! CGImage)
+        } else {
+            return nil
+        }
+    }
 }
 

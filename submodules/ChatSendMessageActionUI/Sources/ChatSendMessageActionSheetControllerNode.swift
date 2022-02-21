@@ -156,6 +156,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     private let sourceSendButton: ASDisplayNode
     private let textFieldFrame: CGRect
     private let textInputNode: EditableTextNode
+    private let attachment: Bool
     private let forwardedCount: Int?
     
     private let send: (() -> Void)?
@@ -180,12 +181,15 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         return self.sourceSendButton.view.convert(self.sourceSendButton.bounds, to: nil)
     }
     
-    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
+    private var animateInputField = false
+    
+    init(context: AccountContext, presentationData: PresentationData, reminders: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool, forwardedCount: Int?, send: (() -> Void)?, sendSilently: (() -> Void)?, schedule: (() -> Void)?, cancel: (() -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.sourceSendButton = sourceSendButton
         self.textFieldFrame = textInputNode.convert(textInputNode.bounds, to: nil)
         self.textInputNode = textInputNode
+        self.attachment = attachment
         self.forwardedCount = forwardedCount
         
         self.send = send
@@ -245,10 +249,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         super.init()
                         
-//        self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
         self.sendButtonNode.addTarget(self, action: #selector(self.sendButtonPressed), forControlEvents: .touchUpInside)
         
         if let attributedText = textInputNode.attributedText, !attributedText.string.isEmpty {
+            self.animateInputField = true
             self.fromMessageTextNode.attributedText = attributedText
             
             if let toAttributedText = self.fromMessageTextNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
@@ -256,7 +260,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 self.toMessageTextNode.attributedText = toAttributedText
             }
         } else {
-            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
+            if let _ = forwardedCount {
+                self.animateInputField = true
+            }
+            self.fromMessageTextNode.attributedText = NSAttributedString(string: self.attachment ? self.presentationData.strings.MediaPicker_AddCaption : self.presentationData.strings.Conversation_InputTextPlaceholder, attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.inputPanel.inputPlaceholderColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         
             self.toMessageTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ForwardedMessages(Int32(forwardedCount ?? 0)), attributes: [NSAttributedString.Key.foregroundColor: self.presentationData.theme.chat.message.outgoing.primaryTextColor, NSAttributedString.Key.font: Font.regular(self.presentationData.chatFontSize.baseDisplaySize)])
         }
@@ -359,7 +366,6 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         
         self.contentContainerNode.backgroundColor = self.presentationData.theme.contextMenu.backgroundColor
-//        self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
         
         if let toAttributedText = self.textInputNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
             toAttributedText.addAttribute(NSAttributedString.Key.foregroundColor, value: self.presentationData.theme.chat.message.outgoing.primaryTextColor, range: NSMakeRange(0, (toAttributedText.string as NSString).length))
@@ -376,6 +382,10 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     }
     
     func animateIn() {
+        guard let layout = self.validLayout else {
+            return
+        }
+        
         self.textInputNode.textView.setContentOffset(self.textInputNode.textView.contentOffset, animated: false)
         
         UIView.animate(withDuration: 0.2, animations: {
@@ -389,61 +399,66 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.messageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
-        self.fromMessageTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.toMessageTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false)
-        
-        self.textInputNode.isHidden = true
         self.sourceSendButton.isHidden = true
-        
-        if let layout = self.validLayout {
-            let duration = 0.4
-            
-            self.sendButtonNode.layer.animateScale(from: 0.75, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
-            self.sendButtonNode.layer.animatePosition(from: self.sendButtonFrame.center, to: self.sendButtonNode.position, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-            
-            var initialWidth = self.textFieldFrame.width + 32.0
-            if self.textInputNode.textView.attributedText.string.isEmpty {
-                initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
-            }
-            
-            let fromFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 2.0))
-            let delta = (fromFrame.height - self.messageClipNode.bounds.height) / 2.0
-            
-            let inputHeight = layout.inputHeight ?? 0.0
-            var clipDelta = delta
-            if inputHeight.isZero || layout.isNonExclusive {
-                clipDelta -= self.contentContainerNode.frame.height + 16.0
-            }
-            
-            self.messageClipNode.layer.animateBounds(from: fromFrame, to: self.messageClipNode.bounds, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-            self.messageClipNode.layer.animatePosition(from: CGPoint(x: (self.messageClipNode.bounds.width - initialWidth) / 2.0, y: clipDelta), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.insertSubnode(strongSelf.contentContainerNode, aboveSubnode: strongSelf.scrollNode)
-                }
-            })
-            
-            self.messageBackgroundNode.layer.animateBounds(from: fromFrame, to: self.messageBackgroundNode.bounds, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-            self.messageBackgroundNode.layer.animatePosition(from: CGPoint(x: (initialWidth - self.messageClipNode.bounds.width) / 2.0, y: delta), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-           
-            
-            var textXOffset: CGFloat = 0.0
-            let textYOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
-            if self.textInputNode.textView.numberOfLines == 1 && self.textInputNode.isRTL {
-                textXOffset = initialWidth - self.messageClipNode.bounds.width
-            }
-            self.fromMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            self.toMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            
-            let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
-        
-            let springDuration: Double = 0.42
-            let springDamping: CGFloat = 104.0
-            self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-            self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+        if self.animateInputField {
+            self.fromMessageTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            self.toMessageTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, removeOnCompletion: false)
+            self.textInputNode.isHidden = true
+        } else {
+            self.messageBackgroundNode.isHidden = true
+            self.fromMessageTextNode.isHidden = true
+            self.toMessageTextNode.isHidden = true
         }
+        
+        let duration = 0.4
+        self.sendButtonNode.layer.animateScale(from: 0.75, to: 1.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+        self.sendButtonNode.layer.animatePosition(from: self.sendButtonFrame.center, to: self.sendButtonNode.position, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        var initialWidth = self.textFieldFrame.width + 32.0
+        if self.textInputNode.textView.attributedText.string.isEmpty {
+            initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
+        }
+        
+        let fromFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 2.0))
+        let delta = (fromFrame.height - self.messageClipNode.bounds.height) / 2.0
+        
+        let inputHeight = layout.inputHeight ?? 0.0
+        var clipDelta = delta
+        if inputHeight.isZero || layout.isNonExclusive {
+            clipDelta -= self.contentContainerNode.frame.height + 16.0
+        }
+        
+        self.messageClipNode.layer.animateBounds(from: fromFrame, to: self.messageClipNode.bounds, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+        self.messageClipNode.layer.animatePosition(from: CGPoint(x: (self.messageClipNode.bounds.width - initialWidth) / 2.0, y: clipDelta), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.insertSubnode(strongSelf.contentContainerNode, aboveSubnode: strongSelf.scrollNode)
+            }
+        })
+        
+        self.messageBackgroundNode.layer.animateBounds(from: fromFrame, to: self.messageBackgroundNode.bounds, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+        self.messageBackgroundNode.layer.animatePosition(from: CGPoint(x: (initialWidth - self.messageClipNode.bounds.width) / 2.0, y: delta), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+       
+        var textXOffset: CGFloat = 0.0
+        let textYOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
+        if self.textInputNode.textView.numberOfLines == 1 && self.textInputNode.isRTL {
+            textXOffset = initialWidth - self.messageClipNode.bounds.width
+        }
+        self.fromMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        self.toMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
+        let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
+    
+        let springDuration: Double = 0.42
+        let springDamping: CGFloat = 104.0
+        self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+        self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
     }
     
     func animateOut(cancel: Bool, completion: @escaping () -> Void) {
+        guard let layout = self.validLayout else {
+            return
+        }
+        
         self.isUserInteractionEnabled = false
         
         self.scrollNode.view.setContentOffset(self.scrollNode.view.contentOffset, animated: false)
@@ -475,75 +490,77 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in })
         
-        if cancel {
-            self.fromMessageTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.15, removeOnCompletion: false)
-            self.toMessageTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.15, removeOnCompletion: false)
-            self.messageBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.15, removeOnCompletion: false, completion: { _ in
-                completedAlpha = true
-                intermediateCompletion()
-            })
+        if self.animateInputField {
+            if cancel {
+                self.fromMessageTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: 0.15, removeOnCompletion: false)
+                self.toMessageTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.15, removeOnCompletion: false)
+                self.messageBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, delay: 0.15, removeOnCompletion: false, completion: { _ in
+                    completedAlpha = true
+                    intermediateCompletion()
+                })
+            } else {
+                self.textInputNode.isHidden = false
+                self.messageClipNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                    completedAlpha = true
+                    intermediateCompletion()
+                })
+            }
         } else {
-            self.textInputNode.isHidden = false
-            self.messageClipNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
-                completedAlpha = true
-                intermediateCompletion()
-            })
+            completedAlpha = true
         }
         
-        if let layout = self.validLayout {
-            let duration = 0.4
-            
-            self.sendButtonNode.layer.animatePosition(from: self.sendButtonNode.position, to: self.sendButtonFrame.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-                completedButton = true
-                intermediateCompletion()
-            })
-            
-            if !cancel {
-                self.sourceSendButton.isHidden = false
-                self.sendButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
-                self.sendButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
-            }
-            
-            var initialWidth = self.textFieldFrame.width + 32.0
-            if self.textInputNode.textView.attributedText.string.isEmpty {
-                initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
-            }
-            
-            let toFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 1.0))
-            let delta = (toFrame.height - self.messageClipNode.bounds.height) / 2.0
-            
+        let duration = 0.4
+        
+        self.sendButtonNode.layer.animatePosition(from: self.sendButtonNode.position, to: self.sendButtonFrame.center, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            completedButton = true
+            intermediateCompletion()
+        })
+        
+        if !cancel {
+            self.sourceSendButton.isHidden = false
+            self.sendButtonNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
+            self.sendButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, timingFunction: CAMediaTimingFunctionName.linear.rawValue, removeOnCompletion: false)
+        }
+        
+        var initialWidth = self.textFieldFrame.width + 32.0
+        if self.textInputNode.textView.attributedText.string.isEmpty {
+            initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
+        }
+        
+        let toFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 1.0))
+        let delta = (toFrame.height - self.messageClipNode.bounds.height) / 2.0
+                
+        if cancel && self.animateInputField {
             let inputHeight = layout.inputHeight ?? 0.0
             var clipDelta = delta
             if inputHeight.isZero || layout.isNonExclusive {
                 clipDelta -= self.contentContainerNode.frame.height + 16.0
             }
             
-            if cancel {
-                self.messageClipNode.layer.animateBounds(from: self.messageClipNode.bounds, to: toFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
-                    completedBubble = true
-                    intermediateCompletion()
-                })
-                self.messageClipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (self.messageClipNode.bounds.width - initialWidth) / 2.0, y: clipDelta + self.scrollNode.view.contentOffset.y), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                
-                self.messageBackgroundNode.layer.animateBounds(from: self.messageBackgroundNode.bounds, to: toFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-                self.messageBackgroundNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (initialWidth - self.messageClipNode.bounds.width) / 2.0, y: delta), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                
-                var textXOffset: CGFloat = 0.0
-                let textYOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
-                if self.textInputNode.textView.numberOfLines == 1 && self.textInputNode.isRTL {
-                    textXOffset = initialWidth - self.messageClipNode.bounds.width
-                }
-                self.fromMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                self.toMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-            } else {
+            self.messageClipNode.layer.animateBounds(from: self.messageClipNode.bounds, to: toFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 completedBubble = true
+                intermediateCompletion()
+            })
+            self.messageClipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (self.messageClipNode.bounds.width - initialWidth) / 2.0, y: clipDelta + self.scrollNode.view.contentOffset.y), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            
+            self.messageBackgroundNode.layer.animateBounds(from: self.messageBackgroundNode.bounds, to: toFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            self.messageBackgroundNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (initialWidth - self.messageClipNode.bounds.width) / 2.0, y: delta), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            
+            var textXOffset: CGFloat = 0.0
+            let textYOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
+            if self.textInputNode.textView.numberOfLines == 1 && self.textInputNode.isRTL {
+                textXOffset = initialWidth - self.messageClipNode.bounds.width
             }
-            
-            let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
-            
-            self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentOffset, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-            self.contentContainerNode.layer.animateScale(from: 1.0, to: 0.1, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+            self.fromMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+            self.toMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        } else {
+            completedBubble = true
         }
+        
+        let contentOffset = CGPoint(x:  self.sendButtonFrame.midX - self.contentContainerNode.frame.midX, y:  self.sendButtonFrame.midY - self.contentContainerNode.frame.midY)
+        
+        self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentOffset, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        self.contentContainerNode.layer.animateScale(from: 1.0, to: 0.1, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -558,7 +575,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let sideInset: CGFloat = 43.0
+        let sideInset: CGFloat = self.sendButtonFrame.width - 1.0
         
         var contentSize = CGSize()
         contentSize.width = min(layout.size.width - 40.0, 250.0)
@@ -578,7 +595,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let contentOffset = self.scrollNode.view.contentOffset.y
         
         var contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
-        if inputHeight > 0.0 && !layout.isNonExclusive {
+        if inputHeight > 0.0 && !layout.isNonExclusive && self.animateInputField {
             contentOrigin.y += menuHeightWithInset
         }
         contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height)
@@ -593,7 +610,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         let initialSendButtonFrame = self.sendButtonFrame
         var sendButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - initialSendButtonFrame.width + 1.0 - UIScreenPixel - layout.safeInsets.right, y: layout.size.height - insets.bottom - initialSendButtonFrame.height), size: initialSendButtonFrame.size)
-        if inputHeight.isZero || layout.isNonExclusive {
+        if (inputHeight.isZero || layout.isNonExclusive) && self.animateInputField {
             sendButtonFrame.origin.y -= menuHeightWithInset
         }
         sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)

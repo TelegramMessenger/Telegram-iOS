@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import ComponentFlow
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -12,7 +13,7 @@ import ChatPresentationInterfaceState
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
 
-private let buttonSize = CGSize(width: 75.0, height: 49.0)
+private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let iconSize = CGSize(width: 30.0, height: 30.0)
 private let sideInset: CGFloat = 0.0
 
@@ -83,40 +84,29 @@ private final class AttachButtonComponent: CombinedComponent {
 
         return { context in
             let name: String
-            let animationName: String?
             let imageName: String?
             
             let component = context.component
             let strings = component.strings
             
             switch component.type {
-            case .camera:
-                name = strings.Attachment_Camera
-                animationName = "anim_camera"
-                imageName = "Chat/Attach Menu/Camera"
             case .gallery:
                 name = strings.Attachment_Gallery
-                animationName = "anim_gallery"
                 imageName = "Chat/Attach Menu/Gallery"
             case .file:
                 name = strings.Attachment_File
-                animationName = "anim_file"
                 imageName = "Chat/Attach Menu/File"
             case .location:
                 name = strings.Attachment_Location
-                animationName = "anim_location"
                 imageName = "Chat/Attach Menu/Location"
             case .contact:
                 name = strings.Attachment_Contact
-                animationName = "anim_contact"
                 imageName = "Chat/Attach Menu/Contact"
             case .poll:
                 name = strings.Attachment_Poll
-                animationName = "anim_poll"
                 imageName = "Chat/Attach Menu/Poll"
             case let .app(appName):
                 name = appName
-                animationName = nil
                 imageName = nil
             }
             
@@ -129,8 +119,6 @@ private final class AttachButtonComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            print(animationName ?? "")
-
             let title = title.update(
                 component: Text(
                     text: name,
@@ -169,6 +157,7 @@ private final class AttachButtonComponent: CombinedComponent {
 final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -183,7 +172,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var textInputPanelNode: AttachmentTextInputPanelNode?
     
     private var buttons: [AttachmentButtonType] = []
-    private var selectedIndex: Int = 1
+    private var selectedIndex: Int = 0
     private(set) var isCollapsed: Bool = false
     private(set) var isSelecting: Bool = false
     
@@ -198,9 +187,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     var present: (ViewController) -> Void = { _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
     
-    init(context: AccountContext) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                 
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         
@@ -362,7 +351,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             guard let textInputNode = textInputPanelNode.textInputNode else {
                 return
             }
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, completion: {
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, interfaceState: strongSelf.presentationInterfaceState, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, completion: {
             }, sendMessage: { [weak textInputPanelNode] silently in
                 textInputPanelNode?.sendMessage(silently ? .silent : .generic)
             }, schedule: { [weak textInputPanelNode] in
@@ -387,6 +376,26 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
         }, statuses: nil)
+        
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.presentationData = presentationData
+                
+                strongSelf.backgroundNode.backgroundColor = presentationData.theme.actionSheet.itemBackgroundColor
+                strongSelf.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+                
+                strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
+            
+                if let layout = strongSelf.validLayout {
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isCollapsed: strongSelf.isCollapsed, isSelecting: strongSelf.isSelecting, transition: .immediate)
+                }
+            }
+        })
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -407,6 +416,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             effect = UIBlurEffect(style: .dark)
         }
         let effectView = UIVisualEffectView(effect: effect)
+        effectView.frame = self.containerNode.bounds
         self.effectView = effectView
         self.containerNode.view.insertSubview(effectView, at: 0)
     }
@@ -644,7 +654,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         containerTransition.updateFrame(node: self.backgroundNode, frame: containerBounds)
         containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
         if let effectView = self.effectView {
-            containerTransition.updateFrame(view: effectView, frame: bounds)
+            containerTransition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: containerFrame.height + 44.0)))
         }
                 
         let _ = self.updateScrollLayoutIfNeeded(force: isCollapsedUpdated || isSelectingUpdated, transition: containerTransition)

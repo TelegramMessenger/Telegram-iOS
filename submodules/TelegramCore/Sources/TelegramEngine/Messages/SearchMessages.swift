@@ -10,7 +10,7 @@ public enum SearchMessagesLocation: Equatable {
     case group(groupId: PeerGroupId, tags: MessageTags?, minDate: Int32?, maxDate: Int32?)
     case peer(peerId: PeerId, fromId: PeerId?, tags: MessageTags?, topMsgId: MessageId?, minDate: Int32?, maxDate: Int32?)
     case publicForwards(messageId: MessageId, datacenterId: Int?)
-    case recentDocuments
+    case sentMedia(tags: MessageTags?)
 }
 
 private struct SearchMessagesPeerState: Equatable {
@@ -339,42 +339,20 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                     return .single((nil, nil))
                 }
             }
-        case .recentDocuments:
-            let filter: Api.MessagesFilter = messageFilterForTagMask(.file) ?? .inputMessagesFilterEmpty
-            let peerId = account.peerId
+        case let .sentMedia(tags):
+            let filter: Api.MessagesFilter = tags.flatMap { messageFilterForTagMask($0) } ?? .inputMessagesFilterEmpty
         
-            remoteSearchResult = account.postbox.transaction { transaction -> Peer? in
-                guard let peer = transaction.getPeer(peerId) else {
-                    return nil
+            let peerMessages: Signal<Api.messages.Messages?, NoError>
+            if let completed = state?.main.completed, completed {
+                peerMessages = .single(nil)
+            } else {
+                peerMessages = account.network.request(Api.functions.messages.searchSentMedia(q: query, filter: filter, limit: limit))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                    return .single(nil)
                 }
-                return peer
             }
-            |> mapToSignal { peer -> Signal<(Api.messages.Messages?, Api.messages.Messages?), NoError> in
-                guard let peer = peer else {
-                    return .single((nil, nil))
-                }
-                let inputPeer = Api.InputPeer.inputPeerEmpty
-             
-                var flags: Int32 = 0
-                
-                let fromInputPeer = apiInputPeer(peer)
-                flags |= (1 << 0)
-             
-                let peerMessages: Signal<Api.messages.Messages?, NoError>
-                if let completed = state?.main.completed, completed {
-                    peerMessages = .single(nil)
-                } else {
-                    let lowerBound = state?.main.messages.last.flatMap({ $0.index })
-                    let signal = account.network.request(Api.functions.messages.search(flags: flags, peer: inputPeer, q: query, fromId: fromInputPeer, topMsgId: nil, filter: filter, minDate: 0, maxDate: (Int32.max - 1), offsetId: lowerBound?.id.id ?? 0, addOffset: 0, limit: limit, maxId: Int32.max - 1, minId: 0, hash: 0))
-                    
-                    peerMessages = signal
-                    |> map(Optional.init)
-                    |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
-                        return .single(nil)
-                    }
-                }
-                return combineLatest(peerMessages, .single(nil))
-            }
+            remoteSearchResult = combineLatest(peerMessages, .single(nil))
     }
     
     return remoteSearchResult

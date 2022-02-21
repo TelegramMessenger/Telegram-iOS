@@ -29,6 +29,8 @@
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item success:(bool *)success;
 - (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender success:(bool *)success;
 
+- (void)moveItem:(id<TGMediaSelectableItem>)item toIndex:(NSUInteger)index;
+
 - (void)clear;
 
 - (bool)isItemSelected:(id<TGMediaSelectableItem>)item;

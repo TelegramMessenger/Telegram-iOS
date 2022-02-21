@@ -16,13 +16,15 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
     
     private var queryUpdated: ((String) -> Void)?
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    var cancel: (() -> Void)?
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, attachment: Bool) {
         self.theme = theme
         self.strings = strings
         
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
-        self.searchBar.hasCancelButton = false
-        self.searchBar.placeholderString = NSAttributedString(string: strings.Common_Search, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
+        self.searchBar.hasCancelButton = attachment
+        self.searchBar.placeholderString = NSAttributedString(string: attachment ? strings.Attachment_SearchWeb : strings.Common_Search, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
         super.init()
         
@@ -35,6 +37,9 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
             if query.isEmpty {
                 self?.queryUpdated?(query)
             }
+        }
+        self.searchBar.cancel = { [weak self] in
+            self?.cancel?()
         }
     }
     
