@@ -54,6 +54,7 @@ swift_library(
     ],
     deps = [
         ":DctHuffman",
+        "//submodules/Components/MetalImageView:MetalImageView",
     ],
     visibility = [
         "//visibility:public",

@@ -248,7 +248,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     override public func didLoad() {
         super.didLoad()
         
-        if #available(iOS 10.0, *), self.useMetalCache {
+        if #available(iOS 10.0, *), (self.useMetalCache/* || "".isEmpty*/) {
             self.renderer = AnimatedStickerNode.hardwareRendererPool.take()
         } else {
             self.renderer = AnimatedStickerNode.softwareRendererPool.take()

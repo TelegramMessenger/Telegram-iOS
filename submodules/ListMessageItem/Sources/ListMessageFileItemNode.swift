@@ -360,7 +360,6 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
-    
     override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         var rect = rect
         rect.origin.y += self.insets.top
@@ -446,7 +445,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 
                                 var descriptionString: String
                                 if let performer = performer {
-                                    if item.isGlobalSearchResult {
+                                    if item.isGlobalSearchResult || item.isDownloadList {
                                         descriptionString = performer
                                     } else {
                                         descriptionString = "\(stringForDuration(Int32(duration))) • \(performer)"
@@ -457,7 +456,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                     descriptionString = ""
                                 }
                                 
-                                if item.isGlobalSearchResult {
+                                if item.isGlobalSearchResult || item.isDownloadList {
                                     let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                                     if descriptionString.isEmpty {
                                         descriptionString = authorString
@@ -501,7 +500,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 authorName = " "
                             }
                             
-                            if item.isGlobalSearchResult {
+                            if item.isGlobalSearchResult || item.isDownloadList {
                                 authorName = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                             }
                             
@@ -509,13 +508,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             let dateString = stringForFullDate(timestamp: message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                             var descriptionString: String = ""
                             if let duration = file.duration {
-                                if item.isGlobalSearchResult || !item.displayFileInfo {
+                                if item.isGlobalSearchResult || item.isDownloadList || !item.displayFileInfo {
                                     descriptionString = stringForDuration(Int32(duration))
                                 } else {
                                     descriptionString = "\(stringForDuration(Int32(duration))) • \(dateString)"
                                 }
                             } else {
-                                if !item.isGlobalSearchResult {
+                                if !(item.isGlobalSearchResult || item.isDownloadList) {
                                     descriptionString = dateString
                                 }
                             }
@@ -523,7 +522,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             iconImage = .roundVideo(file)
                         } else if !isAudio {
-                            let fileName: String = file.fileName ?? ""
+                            let fileName: String = file.fileName ?? "File"
                             titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                             
                             var fileExtension: String?
@@ -543,18 +542,18 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             var descriptionString: String = ""
                             if let size = file.size {
-                                if item.isGlobalSearchResult || !item.displayFileInfo {
+                                if item.isGlobalSearchResult || item.isDownloadList || !item.displayFileInfo {
                                     descriptionString = dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))
                                 } else {
                                     descriptionString = "\(dataSizeString(size, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) • \(dateString)"
                                 }
                             } else {
-                                if !item.isGlobalSearchResult {
+                                if !(item.isGlobalSearchResult || item.isDownloadList) {
                                     descriptionString = "\(dateString)"
                                 }
                             }
                             
-                            if item.isGlobalSearchResult {
+                            if item.isGlobalSearchResult || item.isDownloadList {
                                 let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                                 if descriptionString.isEmpty {
                                     descriptionString = authorString
@@ -581,11 +580,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         let dateString = stringForFullDate(timestamp: message.timestamp, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat)
                         
                         var descriptionString: String = ""
-                        if !item.isGlobalSearchResult {
+                        if !(item.isGlobalSearchResult || item.isDownloadList) {
                             descriptionString = "\(dateString)"
                         }
                         
-                        if item.isGlobalSearchResult {
+                        if item.isGlobalSearchResult || item.isDownloadList {
                             let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
                             if descriptionString.isEmpty {
                                 descriptionString = authorString
@@ -597,7 +596,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                     }
                 }
-                
+    
                 for attribute in message.attributes {
                     if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
                         isRestricted = true
@@ -638,16 +637,24 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }, cancel: {
                         if let file = selectedMedia as? TelegramMediaFile {
-                            messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                            if item.isDownloadList {
+                                context.fetchManager.toggleInteractiveFetchPaused(resourceId: file.resource.id.stringRepresentation, isPaused: true)
+                            } else {
+                                messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
+                            }
                         } else if let image = selectedMedia as? TelegramMediaImage, let representation = image.representations.last {
-                            messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: representation.resource)
+                            if item.isDownloadList {
+                                context.fetchManager.toggleInteractiveFetchPaused(resourceId: representation.resource.id.stringRepresentation, isPaused: true)
+                            } else {
+                                messageMediaImageCancelInteractiveFetch(context: context, messageId: message.id, image: image, resource: representation.resource)
+                            }
                         }
                     })
                 }
                 
                 if statusUpdated && item.displayFileInfo {
                     if let file = selectedMedia as? TelegramMediaFile {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -670,10 +677,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                         }
                         if isVoice {
-                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult)
+                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         }
                     } else if let image = selectedMedia as? TelegramMediaImage {
-                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult)
+                        updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -929,7 +936,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 break
                             case let .fetchStatus(fetchStatus):
                                 switch fetchStatus {
-                                    case .Remote, .Fetching:
+                                    case .Remote, .Fetching, .Paused:
                                         descriptionOffset = 14.0
                                     case .Local:
                                         break
@@ -1100,7 +1107,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if isAudio || isInstantVideo {
                                 iconStatusState = .play
                             }
-                        case .Remote:
+                        case .Remote, .Paused:
                             if isAudio || isInstantVideo {
                                 iconStatusState = .play
                             }
@@ -1151,7 +1158,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     }
     
     override public func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
-        if let item = self.item, item.message?.id == id, self.iconImageNode.supernode != nil {
+        if let item = self.item, let message = item.message, message.id == id, self.iconImageNode.supernode != nil {
             let iconImageNode = self.iconImageNode
             return (self.iconImageNode, self.iconImageNode.bounds, { [weak iconImageNode] in
                 return (iconImageNode?.view.snapshotContentTree(unhide: true), nil)
@@ -1190,7 +1197,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 case let .fetchStatus(fetchStatus):
                     maybeFetchStatus = fetchStatus
                     switch fetchStatus {
-                        case let .Fetching(_, progress):
+                        case .Fetching(_, let progress), .Paused(let progress):
                             if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
                                 downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData)))"
                             }
@@ -1203,8 +1210,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             }
             
             switch maybeFetchStatus {
-                case let .Fetching(_, progress):
-                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 2.0, width: floor((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
+                case .Fetching(_, let progress), .Paused(let progress):
+                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 3.0, width: floor((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
                     let linearProgressNode: LinearProgressNode
                     if let current = self.linearProgressNode {
                         linearProgressNode = current
@@ -1223,7 +1230,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             animated = false
                             self.offsetContainerNode.addSubnode(downloadStatusIconNode)
                         }
-                        downloadStatusIconNode.enqueueState(.pause, animated: animated)
+                        if case .Paused = maybeFetchStatus {
+                            downloadStatusIconNode.enqueueState(.download, animated: animated)
+                        } else {
+                            downloadStatusIconNode.enqueueState(.pause, animated: animated)
+                        }
                     }
                 case .Local:
                     if let linearProgressNode = self.linearProgressNode {
@@ -1304,12 +1315,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                                 cancel()
                             }
-                        case .Remote:
+                        case .Remote, .Paused:
                             if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                                 fetch()
                             }
                         case .Local:
-                            if let item = self.item, let interaction = self.interaction, let message = item.message {
+                            if let item = self.item, let message = item.message, let interaction = self.interaction {
                                 let _ = interaction.openMessage(message, .default)
                             }
                         }
@@ -1344,7 +1355,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                     cancel()
                 }
-            case .Remote:
+            case .Remote, .Paused:
                 if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                     fetch()
                 }

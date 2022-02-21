@@ -529,7 +529,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 let previousStatus = strongSelf.status
                 strongSelf.status = status
                 switch status {
-                    case .Remote:
+                    case .Remote, .Paused:
                         strongSelf.statusNode.isHidden = false
                         strongSelf.statusNode.alpha = 1.0
                         strongSelf.statusNodeContainer.isUserInteractionEnabled = true

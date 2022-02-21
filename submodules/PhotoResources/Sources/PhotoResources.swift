@@ -1673,10 +1673,12 @@ public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId
                 switch status {
                 case .Local:
                     return .Local
-                case .Remote:
-                    return .Remote
+                case let .Remote(progress):
+                    return .Remote(progress: progress)
                 case let .Fetching(isActive, progress):
                     return .Fetching(isActive: isActive, progress: max(progress, 0.0))
+                case let .Paused(progress):
+                    return .Paused(progress: progress)
                 }
             }
             |> distinctUntilChanged

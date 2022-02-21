@@ -404,7 +404,6 @@ private enum PeerInfoSettingsSection {
     case avatar
     case edit
     case proxy
-    case downloads
     case savedMessages
     case recentCalls
     case devices
@@ -664,10 +663,6 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    //TODO:localize
-    items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 0, text: "Downloads", icon: PresentationResourcesSettings.savedMessages, action: {
-        interaction.openSettings(.downloads)
-    }))
     items[.shortcuts]!.append(PeerInfoScreenDisclosureItem(id: 1, text: presentationData.strings.Settings_SavedMessages, icon: PresentationResourcesSettings.savedMessages, action: {
         interaction.openSettings(.savedMessages)
     }))
@@ -4118,6 +4113,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
+                #if DEBUG
+                let isExternalStream: Bool = true
+                #else
+                let isExternalStream: Bool = false
+                #endif
+                
                 var cancelImpl: (() -> Void)?
                 let presentationData = strongSelf.presentationData
                 let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
@@ -4134,7 +4135,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 |> runOn(Queue.mainQueue())
                 |> delay(0.15, queue: Queue.mainQueue())
                 let progressDisposable = progressSignal.start()
-                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil)
+                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil, isExternalStream: isExternalStream)
                 |> afterDisposed {
                     Queue.mainQueue().async {
                         progressDisposable.dispose()
@@ -5533,8 +5534,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             case .proxy:
                 self.controller?.push(proxySettingsController(context: self.context))
-            case .downloads:
-                self.controller?.push(downloadsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData))
             case .savedMessages:
                 if let controller = self.controller, let navigationController = controller.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(self.context.account.peerId)))

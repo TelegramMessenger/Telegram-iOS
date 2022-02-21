@@ -19,6 +19,7 @@ protocol ChatListSearchPaneNode: ASDisplayNode {
     func updateHiddenMedia()
     func updateSelectedMessages(animated: Bool)
     func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)?
+    func didBecomeFocused()
     var searchCurrentMessages: [EngineMessage]? { get }
 }
 
@@ -44,16 +45,17 @@ final class ChatListSearchPaneWrapper {
     }
 }
 
-enum ChatListSearchPaneKey {
+public enum ChatListSearchPaneKey {
     case chats
     case media
+    case downloads
     case links
     case files
     case music
     case voice
 }
 
-let defaultAvailableSearchPanes: [ChatListSearchPaneKey] = [.chats, .media, .links, .files, .music, .voice]
+let defaultAvailableSearchPanes: [ChatListSearchPaneKey] = [.chats, .media, .downloads, .links, .files, .music, .voice]
 
 struct ChatListSearchPaneSpecifier: Equatable {
     var key: ChatListSearchPaneKey
@@ -475,6 +477,9 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
                     })
                 }
                 pane.update(size: paneFrame.size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: paneWasAdded, transition: paneTransition)
+                if paneWasAdded && key == self.currentPaneKey {
+                    pane.node.didBecomeFocused()
+                }
             }
         }
         

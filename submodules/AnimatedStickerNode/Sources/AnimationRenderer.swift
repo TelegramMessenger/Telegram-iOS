@@ -42,9 +42,9 @@ final class AnimationRendererPool {
     }
     
     private func putBack(renderer: AnimationRenderer) {
-        #if DEBUG
+        /*#if DEBUG
         self.items.append(renderer)
-        #endif
+        #endif*/
     }
 }
 

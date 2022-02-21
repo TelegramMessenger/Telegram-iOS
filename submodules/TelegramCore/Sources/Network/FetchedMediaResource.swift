@@ -142,6 +142,71 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
     return nil
 }
 
+public func findMediaResourceById(message: Message, resourceId: MediaResourceId) -> TelegramMediaResource? {
+    for media in message.media {
+        if let result = findMediaResourceById(media: media, resourceId: resourceId) {
+            return result
+        }
+    }
+    return nil
+}
+
+func findMediaResourceById(media: Media, resourceId: MediaResourceId) -> TelegramMediaResource? {
+    if let image = media as? TelegramMediaImage {
+        for representation in image.representations {
+            if representation.resource.id == resourceId {
+                return representation.resource
+            }
+        }
+        for representation in image.videoRepresentations {
+            if representation.resource.id == resourceId {
+                return representation.resource
+            }
+        }
+    } else if let file = media as? TelegramMediaFile {
+        if file.resource.id == resourceId {
+            return file.resource
+        }
+        
+        for representation in file.previewRepresentations {
+            if representation.resource.id == resourceId {
+                return representation.resource
+            }
+        }
+    } else if let webPage = media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content {
+        if let image = content.image, let result = findMediaResourceById(media: image, resourceId: resourceId) {
+            return result
+        }
+        if let file = content.file, let result = findMediaResourceById(media: file, resourceId: resourceId) {
+            return result
+        }
+        if let instantPage = content.instantPage {
+            for pageMedia in instantPage.media.values {
+                if let result = findMediaResourceById(media: pageMedia, resourceId: resourceId) {
+                    return result
+                }
+            }
+        }
+    } else if let game = media as? TelegramMediaGame {
+        if let image = game.image, let result = findMediaResourceById(media: image, resourceId: resourceId) {
+            return result
+        }
+        if let file = game.file, let result = findMediaResourceById(media: file, resourceId: resourceId) {
+            return result
+        }
+    } else if let action = media as? TelegramMediaAction {
+        switch action.action {
+        case let .photoUpdated(image):
+            if let image = image, let result = findMediaResourceById(media: image, resourceId: resourceId) {
+                return result
+            }
+        default:
+            break
+        }
+    }
+    return nil
+}
+
 private func findUpdatedMediaResource(media: Media, previousMedia: Media?, resource: MediaResource) -> TelegramMediaResource? {
     if let foundResource = findMediaResource(media: media, previousMedia: previousMedia, resource: resource) {
         return foundResource

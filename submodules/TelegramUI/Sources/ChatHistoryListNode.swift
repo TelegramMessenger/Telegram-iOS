@@ -1815,6 +1815,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
+            var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1875,6 +1876,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         }
                                     }
                                 }
+                                downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
+                            } else if let image = media as? TelegramMediaImage {
+                                if let representation = image.representations.last {
+                                    downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
+                                }
                             }
                         }
                         if contentRequiredValidation {
@@ -1889,6 +1895,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnseenReactions {
                             messageIdsWithUnseenReactions.append(message.id)
                         }
+                        
                         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
@@ -1906,6 +1913,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                                         hasUnconsumedMention = true
+                                    }
+                                }
+                            }
+                            for media in message.media {
+                                if let telegramFile = media as? TelegramMediaFile {
+                                    downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
+                                } else if let image = media as? TelegramMediaImage {
+                                    if let representation = image.representations.last {
+                                        downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
                                     }
                                 }
                             }
@@ -2072,6 +2088,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !messageIdsWithPossibleReactions.isEmpty {
                 self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions)
+            }
+            if !downloadableResourceIds.isEmpty {
+                let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).start()
             }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages

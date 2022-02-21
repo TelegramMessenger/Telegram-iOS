@@ -110,7 +110,7 @@ public class ChatListSearchItemNode: ListViewItemNode {
         let searchBarNodeLayout = self.searchBarNode.asyncLayout()
         let placeholder = self.placeholder
         
-        return { item, params, nextIsPinned, isEnabled in
+        return { [weak self] item, params, nextIsPinned, isEnabled in
             let baseWidth = params.width - params.leftInset - params.rightInset
             
             let backgroundColor = nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor
@@ -120,7 +120,7 @@ public class ChatListSearchItemNode: ListViewItemNode {
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 54.0), insets: UIEdgeInsets())
             
-            return (layout, { [weak self] animated in
+            return (layout, { animated in
                 if let strongSelf = self {
                     let transition: ContainedViewLayoutTransition
                     if animated {

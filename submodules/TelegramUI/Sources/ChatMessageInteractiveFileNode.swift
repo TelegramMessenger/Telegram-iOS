@@ -226,7 +226,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                     cancel()
                 }
-            case .Remote:
+            case .Remote, .Paused:
                 if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                     fetch()
                 }
@@ -249,7 +249,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 if let cancel = self.fetchControls.with({ return $0?.cancel }) {
                                     cancel()
                                 }
-                            case .Remote:
+                            case .Remote, .Paused:
                                 if let fetch = self.fetchControls.with({ return $0?.fetch }) {
                                     fetch()
                                 }
@@ -947,7 +947,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else {
                             state = .none
                         }
-                    case .Remote:
+                    case .Remote, .Paused:
                         if isAudio && !isVoice {
                             state = .play
                         } else {
@@ -971,7 +971,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     streamingState = .progress(value: CGFloat(adjustedProgress), cancelEnabled: true, appearance: .init(inset: 1.0, lineWidth: 2.0))
                 case .Local:
                     streamingState = .none
-                case .Remote:
+                case .Remote, .Paused:
                     streamingState = .download
             }
         } else {

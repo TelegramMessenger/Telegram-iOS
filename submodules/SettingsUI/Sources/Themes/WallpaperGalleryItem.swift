@@ -602,7 +602,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         case .Local:
                             state = .none
                             local = true
-                        case .Remote:
+                        case .Remote, .Paused:
                             state = .progress(color: statusForegroundColor, lineWidth: nil, value: 0.027, cancelEnabled: false, animateRotation: true)
                     }
                     strongSelf.statusNode.transitionToState(state, completion: {})

@@ -143,7 +143,7 @@ public enum CreateGroupCallError {
     case scheduledTooLate
 }
 
-func _internal_createGroupCall(account: Account, peerId: PeerId, title: String?, scheduleDate: Int32?) -> Signal<GroupCallInfo, CreateGroupCallError> {
+func _internal_createGroupCall(account: Account, peerId: PeerId, title: String?, scheduleDate: Int32?, isExternalStream: Bool) -> Signal<GroupCallInfo, CreateGroupCallError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         let callPeer = transaction.getPeer(peerId).flatMap(apiInputPeer)
         return callPeer
@@ -159,6 +159,9 @@ func _internal_createGroupCall(account: Account, peerId: PeerId, title: String?,
         }
         if let _ = scheduleDate {
             flags |= (1 << 1)
+        }
+        if isExternalStream {
+            flags |= (1 << 2)
         }
         return account.network.request(Api.functions.phone.createGroupCall(flags: flags, peer: inputPeer, randomId: Int32.random(in: Int32.min ... Int32.max), title: title, scheduleDate: scheduleDate))
         |> mapError { error -> CreateGroupCallError in
@@ -433,7 +436,7 @@ public enum JoinGroupCallError {
 public struct JoinGroupCallResult {
     public enum ConnectionMode {
         case rtc
-        case broadcast
+        case broadcast(isExternalStream: Bool)
     }
     
     public var callInfo: GroupCallInfo
@@ -589,12 +592,16 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                 let connectionMode: JoinGroupCallResult.ConnectionMode
                 if let clientParamsData = parsedClientParams.data(using: .utf8), let dict = (try? JSONSerialization.jsonObject(with: clientParamsData, options: [])) as? [String: Any] {
                     if let stream = dict["stream"] as? Bool, stream {
-                        connectionMode = .broadcast
+                        var isExternalStream = false
+                        if let rtmp = dict["rtmp"] as? Bool, rtmp {
+                            isExternalStream = true
+                        }
+                        connectionMode = .broadcast(isExternalStream: isExternalStream)
                     } else {
                         connectionMode = .rtc
                     }
                 } else {
-                    connectionMode = .broadcast
+                    connectionMode = .broadcast(isExternalStream: false)
                 }
 
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in

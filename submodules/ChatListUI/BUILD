@@ -62,6 +62,10 @@ swift_library(
         "//submodules/TelegramCallsUI:TelegramCallsUI",
         "//submodules/StickerResources:StickerResources",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/FetchManagerImpl:FetchManagerImpl",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/Components/ProgressIndicatorComponent:ProgressIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",

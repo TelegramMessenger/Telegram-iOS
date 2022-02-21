@@ -1053,9 +1053,14 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
 
         self.textBackgroundNode.isHidden = true
 
-        self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { _ in
+        self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak node] _ in
             textBackgroundCompleted = true
             intermediateCompletion()
+            
+            if let node = node, let accessoryComponentView = node.accessoryComponentView {
+                accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                accessoryComponentView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
+            }
         })
         
         let transitionBackgroundNode = ASDisplayNode()

@@ -675,7 +675,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         } else {
                             state = .none
                         }
-                    case .Remote:
+                    case .Remote, .Paused:
                         state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                 }
             default:
@@ -824,7 +824,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             } else {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }
-                        case .Remote:
+                        case .Remote, .Paused:
                             if let file = self.media {
                                 self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: file, userInitiated: true).start())
                             }

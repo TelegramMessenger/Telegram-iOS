@@ -16,6 +16,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/ComponentFlow:ComponentFlow",
     ],
     visibility = [
         "//visibility:public",

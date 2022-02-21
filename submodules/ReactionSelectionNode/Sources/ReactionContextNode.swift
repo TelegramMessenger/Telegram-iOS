@@ -635,6 +635,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 targetView.imageView.alpha = 0.0
                 targetView.addSubnode(itemNode)
                 itemNode.frame = targetView.bounds
+                
+                if strongSelf.hapticFeedback == nil {
+                    strongSelf.hapticFeedback = HapticFeedback()
+                }
+                strongSelf.hapticFeedback?.tap()
             })
         })
         

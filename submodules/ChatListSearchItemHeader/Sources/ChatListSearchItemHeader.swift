@@ -27,6 +27,8 @@ public enum ChatListSearchItemHeaderType {
     case recentCalls
     case orImportIntoAnExistingGroup
     case subscribers
+    case downloading
+    case recentDownloads
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -74,6 +76,12 @@ public enum ChatListSearchItemHeaderType {
                 return strings.ChatList_HeaderImportIntoAnExistingGroup
             case .subscribers:
                 return strings.Channel_ChannelSubscribersHeader
+            case .downloading:
+                //TODO:localize
+                return "Downloading"
+            case .recentDownloads:
+                //TODO:localize
+                return "Recently Downloaded"
         }
     }
     
@@ -123,6 +131,10 @@ public enum ChatListSearchItemHeaderType {
                 return .orImportIntoAnExistingGroup
             case .subscribers:
                 return .subscribers
+            case .downloading:
+                return .downloading
+            case .recentDownloads:
+                return .recentDownloads
         }
     }
 }
@@ -154,6 +166,8 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case recentCalls
     case orImportIntoAnExistingGroup
     case subscribers
+    case downloading
+    case recentDownloads
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {

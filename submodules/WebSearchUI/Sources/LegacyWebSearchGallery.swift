@@ -251,7 +251,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             switch status {
                 case .Local:
                     return 1.0
-                case .Remote:
+                case .Remote, .Paused:
                     return 0.027
                 case let .Fetching(_, progress):
                     return max(progress, 0.1)

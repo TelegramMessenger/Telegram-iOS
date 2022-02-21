@@ -5,13 +5,6 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 public protocol SparseItemGridLayer: CALayer {
     func update(size: CGSize)
     func needsShimmer() -> Bool
