@@ -12,108 +12,10 @@ import MergeLists
 import Photos
 import PhotosUI
 import LegacyComponents
-import AttachmentUI
-import SegmentedControlNode
-import ManagedAnimationNode
-import ContextUI
 import LegacyMediaPickerUI
+import AttachmentUI
+import ContextUI
 import WebSearchUI
-
-private class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
-    private var registeredChangeObserver = false
-    private let changeSink = ValuePipe<PHChange>()
-    private let mediaAccessSink = ValuePipe<PHAuthorizationStatus>()
-    private let cameraAccessSink = ValuePipe<AVAuthorizationStatus?>()
-    
-    override init() {
-        super.init()
-        
-        if PHPhotoLibrary.authorizationStatus() == .authorized {
-            PHPhotoLibrary.shared().register(self)
-            self.registeredChangeObserver = true
-        }
-    }
-    
-    deinit {
-        if self.registeredChangeObserver {
-            PHPhotoLibrary.shared().unregisterChangeObserver(self)
-        }
-    }
-    
-    func photoLibraryDidChange(_ changeInstance: PHChange) {
-        self.changeSink.putNext(changeInstance)
-    }
-    
-    func fetchResultAssets(_ initialFetchResult: PHFetchResult<PHAsset>) -> Signal<PHFetchResult<PHAsset>?, NoError> {
-        let fetchResult = Atomic<PHFetchResult<PHAsset>>(value: initialFetchResult)
-        return .single(initialFetchResult)
-        |> then(
-            self.changeSink.signal()
-            |> mapToSignal { change in
-                if let updatedFetchResult = change.changeDetails(for: fetchResult.with { $0 })?.fetchResultAfterChanges {
-                    let _ = fetchResult.modify { _ in return updatedFetchResult }
-                    return .single(updatedFetchResult)
-                } else {
-                    return .complete()
-                }
-            }
-        )
-    }
-    
-    func recentAssets() -> Signal<PHFetchResult<PHAsset>?, NoError> {
-        let collections = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumUserLibrary, options: nil)
-        if let collection = collections.firstObject {
-            let initialFetchResult = PHAsset.fetchAssets(in: collection, options: nil)
-            return fetchResultAssets(initialFetchResult)
-        } else {
-            return .single(nil)
-        }
-    }
-    
-    func mediaAccess() -> Signal<PHAuthorizationStatus, NoError> {
-        let initialStatus: PHAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            initialStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        } else {
-            initialStatus = PHPhotoLibrary.authorizationStatus()
-        }
-        return .single(initialStatus)
-        |> then(
-            self.mediaAccessSink.signal()
-        )
-    }
-    
-    func requestMediaAccess() -> Void {
-        PHPhotoLibrary.requestAuthorization { [weak self] status in
-            self?.mediaAccessSink.putNext(status)
-        }
-    }
-    
-    func cameraAccess() -> Signal<AVAuthorizationStatus?, NoError> {
-#if targetEnvironment(simulator)
-        return .single(.authorized)
-#else
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            return .single(AVCaptureDevice.authorizationStatus(for: .video))
-            |> then(
-                self.cameraAccessSink.signal()
-            )
-        } else {
-            return .single(nil)
-        }
-#endif
-    }
-    
-    func requestCameraAccess() -> Void {
-        AVCaptureDevice.requestAccess(for: .video, completionHandler: { [weak self] result in
-            if result {
-                self?.cameraAccessSink.putNext(.authorized)
-            } else {
-                self?.cameraAccessSink.putNext(.denied)
-            }
-        })
-    }
-}
 
 final class MediaPickerInteraction {
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void
@@ -166,218 +68,6 @@ private struct MediaPickerGridTransaction {
     }
 }
 
-private final class MediaPickerSegmentedTitleView: UIView {
-    private let titleNode: ImmediateTextNode
-    private let segmentedControlNode: SegmentedControlNode
-    
-    public var theme: PresentationTheme {
-        didSet {
-            self.titleNode.attributedText = NSAttributedString(string: self.title, font: NavigationBar.titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
-            self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
-        }
-    }
-    
-    public var title: String = "" {
-        didSet {
-            if self.title != oldValue {
-                self.titleNode.attributedText = NSAttributedString(string: self.title, font: NavigationBar.titleFont, textColor: theme.rootController.navigationBar.primaryTextColor)
-                self.setNeedsLayout()
-            }
-        }
-    }
-    
-    public var segmentsHidden = true {
-        didSet {
-            if self.segmentsHidden != oldValue {
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.21, curve: .easeInOut)
-                transition.updateAlpha(node: self.titleNode, alpha: self.segmentsHidden ? 1.0 : 0.0)
-                transition.updateAlpha(node: self.segmentedControlNode, alpha: self.segmentsHidden ? 0.0 : 1.0)
-                self.segmentedControlNode.isUserInteractionEnabled = !self.segmentsHidden
-            }
-        }
-    }
-    
-    public var segments: [String] {
-        didSet {
-            if self.segments != oldValue {
-                self.segmentedControlNode.items = self.segments.map { SegmentedControlItem(title: $0) }
-                self.setNeedsLayout()
-            }
-        }
-    }
-    
-    public var index: Int {
-        get {
-            return self.segmentedControlNode.selectedIndex
-        }
-        set {
-            self.segmentedControlNode.selectedIndex = newValue
-        }
-    }
-    
-    public var indexUpdated: ((Int) -> Void)?
-    
-    public init(theme: PresentationTheme, segments: [String], selectedIndex: Int) {
-        self.theme = theme
-        self.segments = segments
-        
-        self.titleNode = ImmediateTextNode()
-        self.titleNode.displaysAsynchronously = false
-        
-        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: segments.map { SegmentedControlItem(title: $0) }, selectedIndex: selectedIndex)
-        self.segmentedControlNode.alpha = 0.0
-        self.segmentedControlNode.isUserInteractionEnabled = false
-        
-        super.init(frame: CGRect())
-        
-        self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
-            self?.indexUpdated?(index)
-        }
-        
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.segmentedControlNode)
-    }
-    
-    required public init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    override public func layoutSubviews() {
-        super.layoutSubviews()
-        
-        let size = self.bounds.size
-        let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: min(300.0, size.width - 36.0)), transition: .immediate)
-        self.segmentedControlNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - controlSize.width) / 2.0), y: floorToScreenPixels((size.height - controlSize.height) / 2.0)), size: controlSize)
-        
-        let titleSize = self.titleNode.updateLayout(CGSize(width: 160.0, height: 44.0))
-        self.titleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize)
-    }
-}
-
-private final class MediaPickerMoreButtonNode: ASDisplayNode {
-    fileprivate final class MoreIconNode: ManagedAnimationNode {
-        enum State: Equatable {
-            case more
-            case search
-        }
-        
-        private let duration: Double = 0.21
-        var iconState: State = .search
-        
-        init() {
-            super.init(size: CGSize(width: 30.0, height: 30.0))
-            
-            self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 90, endFrame: 90), duration: 0.0))
-        }
-            
-        func play() {
-            if case .more = self.iconState {
-                self.trackTo(item: ManagedAnimationItem(source: .local("anim_moredots"), frames: .range(startFrame: 0, endFrame: 46), duration: 0.76))
-            }
-        }
-        
-        func enqueueState(_ state: State, animated: Bool) {
-            guard self.iconState != state else {
-                return
-            }
-            
-            let previousState = self.iconState
-            self.iconState = state
-            
-            let source = ManagedAnimationSource.local("anim_moretosearch")
-            
-            let totalLength: Int = 90
-            if animated {
-                switch previousState {
-                    case .more:
-                        switch state {
-                            case .more:
-                                break
-                            case .search:
-                                self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: totalLength), duration: self.duration))
-                        }
-                    case .search:
-                        switch state {
-                            case .more:
-                                self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: 0), duration: self.duration))
-                            case .search:
-                                break
-                        }
-                }
-            } else {
-                switch state {
-                    case .more:
-                        self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
-                    case .search:
-                        self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: totalLength), duration: 0.0))
-                }
-            }
-        }
-    }
-
-    var action: ((ASDisplayNode, ContextGesture?) -> Void)?
-    
-    private let containerNode: ContextControllerSourceNode
-    let contextSourceNode: ContextReferenceContentNode
-    private let buttonNode: HighlightableButtonNode
-    let iconNode: MoreIconNode
-    
-    var theme: PresentationTheme {
-        didSet {
-            self.iconNode.customColor = self.theme.rootController.navigationBar.buttonColor
-        }
-    }
-    
-    init(theme: PresentationTheme) {
-        self.theme = theme
-        
-        self.contextSourceNode = ContextReferenceContentNode()
-        self.containerNode = ContextControllerSourceNode()
-        self.containerNode.animateScale = false
-        
-        self.buttonNode = HighlightableButtonNode()
-        self.iconNode = MoreIconNode()
-        self.iconNode.customColor = self.theme.rootController.navigationBar.buttonColor
-        
-        super.init()
-        
-        self.addSubnode(self.buttonNode)
-        
-        self.buttonNode.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.contextSourceNode)
-        self.contextSourceNode.addSubnode(self.iconNode)
-        
-        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-        
-        self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.action?(strongSelf.contextSourceNode, gesture)
-        }
-    }
-    
-    @objc private func buttonPressed() {
-        self.action?(self.contextSourceNode, nil)
-        if case .more = self.iconNode.iconState {
-            self.iconNode.play()
-        }
-    }
-    
-    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
-        let animationSize = CGSize(width: 30.0, height: 30.0)
-        let inset: CGFloat = 0.0
-        self.iconNode.frame = CGRect(origin: CGPoint(x: inset + 4.0, y: floor((constrainedSize.height - animationSize.height) / 2.0)), size: animationSize)
-        
-        let size = CGSize(width: animationSize.width + inset * 2.0, height: constrainedSize.height)
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        self.buttonNode.frame = bounds
-        self.containerNode.frame = bounds
-        self.contextSourceNode.frame = bounds
-        return size
-    }
-}
-
 public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let context: AccountContext
     private var presentationData: PresentationData
@@ -386,7 +76,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
     
-    private let titleView: MediaPickerSegmentedTitleView
+    private let titleView: MediaPickerTitleView
     private let moreButtonNode: MediaPickerMoreButtonNode
     
     public weak var webSearchController: WebSearchController?
@@ -939,6 +629,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             if case let .noAccess(cameraAccess) = self.state {
+                var placeholderTransition = transition
                 let placeholderNode: MediaPickerPlaceholderNode
                 if let current = self.placeholderNode {
                     placeholderNode = current
@@ -952,9 +643,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     self.insertSubnode(placeholderNode, aboveSubnode: self.gridNode)
                     self.placeholderNode = placeholderNode
+                    
+                    if transition.isAnimated {
+                        placeholderNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    }
+                    placeholderTransition = .immediate
                 }
-                placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, hasCamera: cameraAccess == .authorized, transition: transition)
-                transition.updateFrame(node: placeholderNode, frame: bounds)
+                placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, hasCamera: cameraAccess == .authorized, transition: placeholderTransition)
+                placeholderTransition.updateFrame(node: placeholderNode, frame: bounds)
             } else if let placeholderNode = self.placeholderNode {
                 self.placeholderNode = nil
                 placeholderNode.removeFromSupernode()
@@ -991,7 +687,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.peer = peer
         self.chatLocation = chatLocation
         
-        self.titleView = MediaPickerSegmentedTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Attachment_AllMedia, self.presentationData.strings.Attachment_SelectedMedia(1)], selectedIndex: 0)
+        self.titleView = MediaPickerTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Attachment_AllMedia, self.presentationData.strings.Attachment_SelectedMedia(1)], selectedIndex: 0)
         self.titleView.title = self.presentationData.strings.Attachment_Gallery
         
         self.moreButtonNode = MediaPickerMoreButtonNode(theme: self.presentationData.theme)
@@ -1166,7 +862,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
-    public var mediaPickerContext: MediaPickerContext? {
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
         if let interaction = self.controllerNode.interaction {
             return MediaPickerContext(interaction: interaction)
         } else {
@@ -1175,10 +871,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
 }
 
-public class MediaPickerContext: AttachmentMediaPickerContext {
+final class MediaPickerContext: AttachmentMediaPickerContext {
     private weak var interaction: MediaPickerInteraction?
     
-    public var selectionCount: Signal<Int, NoError> {
+    var selectionCount: Signal<Int, NoError> {
         return Signal { [weak self] subscriber in
             let disposable = self?.interaction?.selectionState?.selectionChangedSignal().start(next: { [weak self] value in
                 subscriber.putNext(Int(self?.interaction?.selectionState?.count() ?? 0))
@@ -1189,7 +885,7 @@ public class MediaPickerContext: AttachmentMediaPickerContext {
         }
     }
     
-    public var caption: Signal<NSAttributedString?, NoError> {
+    var caption: Signal<NSAttributedString?, NoError> {
         return Signal { [weak self] subscriber in
             let disposable = self?.interaction?.editingState.forcedCaption().start(next: { caption in
                 if let caption = caption as? NSAttributedString {
@@ -1208,15 +904,15 @@ public class MediaPickerContext: AttachmentMediaPickerContext {
         self.interaction = interaction
     }
     
-    public func setCaption(_ caption: NSAttributedString) {
+    func setCaption(_ caption: NSAttributedString) {
         self.interaction?.editingState.setForcedCaption(caption, skipUpdate: true)
     }
     
-    public func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
         self.interaction?.sendSelected(nil, silently, nil, true)
     }
     
-    public func schedule() {
+    func schedule() {
         self.interaction?.schedule()
     }
 }

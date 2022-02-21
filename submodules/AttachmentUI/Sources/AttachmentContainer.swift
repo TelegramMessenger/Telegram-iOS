@@ -98,7 +98,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             return 210.0
         }
         if case .compact = layout.metrics.widthClass {
-            return min(layout.size.width, layout.size.height) * 0.2488
+            return max(layout.size.width, layout.size.height) * 0.2488
         } else {
             return 210.0
         }
