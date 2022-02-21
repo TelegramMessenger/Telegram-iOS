@@ -152,7 +152,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let _ = titleApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
                 }
             })
         }
