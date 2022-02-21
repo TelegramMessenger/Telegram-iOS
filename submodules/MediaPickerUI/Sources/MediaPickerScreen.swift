@@ -17,6 +17,7 @@ import SegmentedControlNode
 import ManagedAnimationNode
 import ContextUI
 import LegacyMediaPickerUI
+import WebSearchUI
 
 private class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
     private var registeredChangeObserver = false
@@ -387,6 +388,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     private let titleView: MediaPickerSegmentedTitleView
     private let moreButtonNode: MediaPickerMoreButtonNode
+    
+    public weak var webSearchController: WebSearchController?
     
     public var openCamera: ((TGAttachmentCameraView?) -> Void)?
     public var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
@@ -1016,7 +1019,21 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
-                strongSelf.controllerNode.scrollToTop(animated: true)
+                if let webSearchController = strongSelf.webSearchController {
+                    webSearchController.scrollToTop?()
+                } else {
+                    strongSelf.controllerNode.scrollToTop(animated: true)
+                }
+            }
+        }
+        
+        self.scrollToTopWithTabBar = { [weak self] in
+            if let strongSelf = self {
+                if let webSearchController = strongSelf.webSearchController {
+                    webSearchController.cancel()
+                } else {
+                    strongSelf.scrollToTop?()
+                }
             }
         }
     }
@@ -1065,6 +1082,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     @objc private func cancelPressed() {
         self.dismiss()
+    }
+    
+    public func prepareForReuse() {
+        if let webSearchController = self.webSearchController {
+            self.webSearchController = nil
+            webSearchController.dismiss()
+        }
+        self.scrollToTop?()
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {

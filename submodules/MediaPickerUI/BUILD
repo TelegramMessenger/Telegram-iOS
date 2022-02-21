@@ -36,6 +36,7 @@ swift_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
+        "//submodules/WebSearchUI:WebSearchUI",
     ],
     visibility = [
         "//visibility:public",

@@ -10989,6 +10989,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     webSearchController.dismissed = {
                         updateMediaPickerContext(mediaPickerContext)
                     }
+                    controller?.webSearchController = webSearchController
                     updateMediaPickerContext(webSearchController.mediaPickerContext)
                 }
             })

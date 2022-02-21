@@ -22,6 +22,14 @@ public enum AttachmentButtonType: Equatable {
 
 public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
+    
+    func prepareForReuse()
+}
+
+public extension AttachmentContainable {
+    func prepareForReuse() {
+        
+    }
 }
 
 public enum AttachmentMediaPickerSendMode {
@@ -226,6 +234,9 @@ public class AttachmentController: ViewController {
         
         func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) {
             guard self.currentType != type else {
+                if let controller = self.currentController {
+                    controller.scrollToTopWithTabBar?()
+                }
                 return
             }
             let previousType = self.currentType
@@ -240,6 +251,7 @@ public class AttachmentController: ViewController {
                             self?.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
                         }
                         
+                        let previousController = strongSelf.currentController
                         let animateTransition = previousType != nil
                         strongSelf.currentController = controller
                         
@@ -256,15 +268,10 @@ public class AttachmentController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                
-                                if ascending {
-                                    strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: 70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                } else {
-                                    strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: -70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                }
-                                
+                                strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: ascending ? 70.0 : -70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                                     snapshotView?.removeFromSuperview()
+                                    previousController?.prepareForReuse()
                                 })
                             })
                         }

@@ -158,6 +158,12 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
 
 private class AttachmentFileControllerImpl: ItemListController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
+    
+    var prepareForReuseImpl: () -> Void = {}
+    public func prepareForReuse() {
+        self.prepareForReuseImpl()
+        self.scrollToTop?()
+    }
 }
 
 private struct AttachmentFileControllerState: Equatable {
@@ -259,6 +265,13 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     }
     
     let controller = AttachmentFileControllerImpl(context: context, state: signal)
+    controller.prepareForReuseImpl = {
+        updateState { state in
+            var updatedState = state
+            updatedState.searching = false
+            return updatedState
+        }
+    }
     dismissImpl = { [weak controller] in
         controller?.dismiss(animated: true)
     }

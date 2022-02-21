@@ -241,11 +241,7 @@ public final class WebSearchController: ViewController {
         }
         navigationContentNode.cancel = { [weak self] in
             if let strongSelf = self {
-                strongSelf.controllerNode.dismissInput?()
-                strongSelf.controllerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
-                    self?.dismissed()
-                    self?.dismiss()
-                })
+                strongSelf.cancel()
             }
         }
         self.navigationBar?.setContentNode(navigationContentNode, animated: false)
@@ -318,6 +314,14 @@ public final class WebSearchController: ViewController {
         self.disposable?.dispose()
         self.resultsDisposable.dispose()
         self.selectionDisposable?.dispose()
+    }
+    
+    public func cancel() {
+        self.controllerNode.dismissInput?()
+        self.controllerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.dismissed()
+            self?.dismiss()
+        })
     }
     
     override public func viewDidAppear(_ animated: Bool) {

@@ -93,7 +93,17 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     
     private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
     
-    let defaultTopInset: CGFloat = 210.0
+    private var defaultTopInset: CGFloat {
+        guard let (layout, _, _) = self.validLayout else{
+            return 210.0
+        }
+        if case .compact = layout.metrics.widthClass {
+            return min(layout.size.width, layout.size.height) * 0.2488
+        } else {
+            return 210.0
+        }
+    }
+    
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         guard let (layout, controllers, coveredByModalTransition) = self.validLayout else {
             return
@@ -449,61 +459,10 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if !self.wrappingNode.frame.contains(point) {
+        let convertedPoint = self.view.convert(point, to: self.container.view)
+        if !self.container.frame.contains(convertedPoint) {
             return false
         }
         return super.point(inside: point, with: event)
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard let result = super.hitTest(point, with: event) else {
-            return nil
-        }
-//        var currentParent: UIView? = result
-//        var enableScrolling = true
-//        while true {
-//            if currentParent == nil {
-//                break
-//            }
-//            if currentParent is UIKeyInput {
-//                if currentParent?.disablesInteractiveModalDismiss == true {
-//                    enableScrolling = false
-//                    break
-//                }
-//            } else if let scrollView = currentParent as? UIScrollView {
-//                if scrollView === self.scrollNode.view {
-//                    break
-//                }
-//                if scrollView.disablesInteractiveModalDismiss {
-//                    enableScrolling = false
-//                    break
-//                } else {
-//                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
-//                        return self.scrollNode.view
-//                    }
-//                }
-//            } else if let listView = currentParent as? ListViewBackingView, let listNode = listView.target {
-//                if listNode.view.disablesInteractiveModalDismiss {
-//                    enableScrolling = false
-//                    break
-//                } else if listNode.scroller.isDecelerating && listNode.scroller.contentOffset.y < listNode.scroller.contentInset.top {
-//                    return self.scrollNode.view
-//                }
-//            }
-//            currentParent = currentParent?.superview
-//        }
-//        if let controller = self.container.controllers.last {
-//            if controller.view.disablesInteractiveModalDismiss {
-//                enableScrolling = false
-//            }
-//        }
-//        self.isInteractiveDimissEnabled = enableScrolling
-//        if let layout = self.validLayout {
-//            if layout.inputHeight != nil && layout.inputHeight != 0.0 {
-//                enableScrolling = false
-//            }
-//        }
-//        self.scrollNode.view.isScrollEnabled = enableScrolling
-        return result
     }
 }

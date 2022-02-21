@@ -333,4 +333,10 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         
         self.interaction?.openSearch()
     }
+    
+    public func prepareForReuse() {
+        self.interaction?.updateMapMode(.map)
+        self.interaction?.dismissSearch()
+        self.scrollToTop?()
+    }
 }

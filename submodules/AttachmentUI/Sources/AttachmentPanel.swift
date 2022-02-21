@@ -27,8 +27,6 @@ private final class AttachButtonComponent: CombinedComponent {
     let context: AccountContext
     let type: AttachmentButtonType
     let isSelected: Bool
-    let isCollapsed: Bool
-    let transitionFraction: CGFloat
     let strings: PresentationStrings
     let theme: PresentationTheme
     let action: () -> Void
@@ -37,8 +35,6 @@ private final class AttachButtonComponent: CombinedComponent {
         context: AccountContext,
         type: AttachmentButtonType,
         isSelected: Bool,
-        isCollapsed: Bool,
-        transitionFraction: CGFloat,
         strings: PresentationStrings,
         theme: PresentationTheme,
         action: @escaping () -> Void
@@ -46,8 +42,6 @@ private final class AttachButtonComponent: CombinedComponent {
         self.context = context
         self.type = type
         self.isSelected = isSelected
-        self.isCollapsed = isCollapsed
-        self.transitionFraction = transitionFraction
         self.strings = strings
         self.theme = theme
         self.action = action
@@ -63,12 +57,6 @@ private final class AttachButtonComponent: CombinedComponent {
         if lhs.isSelected != rhs.isSelected {
             return false
         }
-        if lhs.isCollapsed != rhs.isCollapsed {
-            return false
-        }
-        if lhs.transitionFraction != rhs.transitionFraction {
-            return false
-        }
         if lhs.strings !== rhs.strings {
             return false
         }
@@ -81,6 +69,7 @@ private final class AttachButtonComponent: CombinedComponent {
     static var body: Body {
         let icon = Child(Image.self)
         let title = Child(Text.self)
+        let button = Child(Rectangle.self)
 
         return { context in
             let name: String
@@ -114,7 +103,10 @@ private final class AttachButtonComponent: CombinedComponent {
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
             
             let icon = icon.update(
-                component: Image(image: image, tintColor: tintColor),
+                component: Image(
+                    image: image,
+                    tintColor: tintColor
+                ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
                 transition: context.transition
             )
@@ -128,8 +120,18 @@ private final class AttachButtonComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: .immediate
             )
+            
+            let button = button.update(
+                component: Rectangle(
+                    color: .clear,
+                    width: context.availableSize.width,
+                    height: context.availableSize.height
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
 
-            let topInset: CGFloat = 5.0 + UIScreenPixel
+            let topInset: CGFloat = 4.0 + UIScreenPixel
             let spacing: CGFloat = 15.0 + UIScreenPixel
             
             let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0), y: topInset), size: icon.size)
@@ -137,18 +139,19 @@ private final class AttachButtonComponent: CombinedComponent {
             
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
-                .gesture(.tap {
-                    component.action()
-                })
             )
 
             context.add(icon
                 .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
+            )
+            
+            context.add(button
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                 .gesture(.tap {
                     component.action()
                 })
             )
-            
+                        
             return context.availableSize
         }
     }
@@ -451,32 +454,25 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let visibleRect = self.scrollNode.bounds.insetBy(dx: -180.0, dy: 0.0)
-        let actualVisibleRect = self.scrollNode.bounds
         var validButtons = Set<Int>()
         
-        var sideInset = sideInset
-        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
-        if buttonsWidth < layout.size.width {
-            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
-        }
-        
+        let distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
+        let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
+        let leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
+                
+//        var sideInset = sideInset
+//        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
+//        if buttonsWidth < layout.size.width {
+//            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
+//        }
+//
         for i in 0 ..< self.buttons.count {
-            let buttonFrame = CGRect(origin: CGPoint(x: sideInset + buttonSize.width * CGFloat(i), y: 0.0), size: buttonSize)
+            let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonSize.width / 2.0)
+            let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: buttonSize)
             if !visibleRect.intersects(buttonFrame) {
                 continue
             }
             validButtons.insert(i)
-            
-            let edge = buttonSize.width * 0.75
-            let leftEdge = max(-edge, min(0.0, buttonFrame.minX - actualVisibleRect.minX)) / -edge
-            let rightEdge = min(edge, max(0.0, buttonFrame.maxX - actualVisibleRect.maxX)) / edge
-            
-            let transitionFraction: CGFloat
-            if leftEdge > rightEdge {
-                transitionFraction = leftEdge
-            } else {
-                transitionFraction = -rightEdge
-            }
             
             var buttonTransition = transition
             let buttonView: ComponentHostView<Empty>
@@ -496,8 +492,6 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     context: self.context,
                     type: type,
                     isSelected: i == self.selectedIndex,
-                    isCollapsed: self.isCollapsed,
-                    transitionFraction: transitionFraction,
                     strings: self.presentationData.strings,
                     theme: self.presentationData.theme,
                     action: { [weak self] in
@@ -524,13 +518,14 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
         
-        var sideInset = sideInset
-        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
-        if buttonsWidth < layout.size.width {
-            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
-        }
+//        var sideInset = sideInset
+//        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
+//        if buttonsWidth < layout.size.width {
+//            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
+//        }
 
-        let contentSize = CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
+        let contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
+//        CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
         self.scrollLayout = (layout.size.width, contentSize)
 
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
