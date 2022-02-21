@@ -423,7 +423,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         private var placeholderNode: MediaPickerPlaceholderNode?
         private var manageNode: MediaPickerManageNode?
         
-        private let selectionNode: MediaPickerSelectedListNode
+        private var selectionNode: MediaPickerSelectedListNode?
         
         private var nextStableId: Int = 1
         private var currentEntries: [MediaPickerGridEntry] = []
@@ -453,17 +453,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.mediaAssetsContext = mediaAssetsContext
             
             self.gridNode = GridNode()
-            
-            self.selectionNode = MediaPickerSelectedListNode(context: controller.context)
-            self.selectionNode.alpha = 0.0
-            self.selectionNode.isUserInteractionEnabled = false
-            
+
             super.init()
             
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
             self.addSubnode(self.gridNode)
-            self.addSubnode(self.selectionNode)
                         
             self.interaction = MediaPickerInteraction(openMedia: { [weak self] fetchResult, index, immediateThumbnail in
                 self?.openMedia(fetchResult: fetchResult, index: index, immediateThumbnail: immediateThumbnail)
@@ -526,7 +521,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         }
                     }
                     
-                    strongSelf.selectionNode.updateHiddenMedia()
+                    strongSelf.selectionNode?.updateHiddenMedia()
                 }
             })
             
@@ -569,8 +564,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                 })
             }
-                        
-            self.selectionNode.interaction = self.interaction
         }
         
         deinit {
@@ -669,7 +662,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     itemNode.updateSelectionState()
                 }
             }
-            self.selectionNode.updateSelectionState()
+            self.selectionNode?.updateSelectionState()
             
             let count = Int32(self.interaction?.selectionState?.count() ?? 0)
             self.controller?.updateSelectionState(count: count)
@@ -689,17 +682,33 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         func updateMode(_ displayMode: DisplayMode) {
             self.currentDisplayMode = displayMode
             
+            if case .selected = displayMode, self.selectionNode == nil, let controller = self.controller {
+                let selectionNode = MediaPickerSelectedListNode(context: controller.context)
+                selectionNode.alpha = 0.0
+                selectionNode.isUserInteractionEnabled = false
+                selectionNode.interaction = self.interaction
+                self.insertSubnode(selectionNode, aboveSubnode: self.gridNode)
+                self.selectionNode = selectionNode
+                
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                }
+            }
+            
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             self.gridNode.isUserInteractionEnabled = displayMode == .all
             
-            transition.updateAlpha(node: self.selectionNode, alpha: displayMode == .selected ? 1.0 : 0.0)
-            self.selectionNode.isUserInteractionEnabled = displayMode == .selected
+            if let selectionNode = self.selectionNode {
+                transition.updateAlpha(node: selectionNode, alpha: displayMode == .selected ? 1.0 : 0.0)
+                selectionNode.isUserInteractionEnabled = displayMode == .selected
+            }
         }
         
         private func openMedia(fetchResult: PHFetchResult<PHAsset>, index: Int, immediateThumbnail: UIImage?) {
             guard let controller = self.controller, let interaction = self.interaction, let (layout, _) = self.validLayout else {
                 return
             }
+            self.dismissInput()
             
             let index = fetchResult.count - index - 1
             presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, chatLocation: controller.chatLocation, presentationData: self.presentationData, source: .fetchResult(fetchResult: fetchResult, index: index), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState, editingContext: interaction.editingState, hasSilentPosting: true, hasSchedule: true, hasTimer: true, updateHiddenMedia: { [weak self] id in
@@ -721,10 +730,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             guard let controller = self.controller, let interaction = self.interaction, let (layout, _) = self.validLayout else {
                 return
             }
+            self.dismissInput()
+            
             presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, chatLocation: controller.chatLocation, presentationData: self.presentationData, source: .selection(item: item), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState, editingContext: interaction.editingState, hasSilentPosting: true, hasSchedule: true, hasTimer: true, updateHiddenMedia: { [weak self] id in
                 self?.hiddenMediaId.set(.single(id))
             }, initialLayout: layout, transitionHostView: { [weak self] in
-                return self?.selectionNode.view
+                return self?.selectionNode?.view
             }, transitionView: { [weak self] identifier in
                 return self?.transitionView(for: identifier)
             }, completed: { [weak self] result, silently, scheduleTime in
@@ -769,8 +780,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         private func transitionView(for identifier: String) -> UIView? {
-            if self.selectionNode.alpha > 0.0 {
-                return self.selectionNode.transitionView(for: identifier)
+            if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
+                return selectionNode.transitionView(for: identifier)
             } else {
                 var transitionNode: MediaPickerGridItemNode?
                 self.gridNode.forEachItemNode { itemNode in
@@ -799,8 +810,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         func scrollToTop(animated: Bool = false) {
-            if self.selectionNode.alpha > 0.0 {
-                self.selectionNode.scrollToTop(animated: animated)
+            if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
+                selectionNode.scrollToTop(animated: animated)
             } else {
                 self.gridNode.scrollView.setContentOffset(CGPoint(x: 0.0, y: -self.gridNode.scrollView.contentInset.top), animated: animated)
             }
@@ -889,7 +900,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 guard let strongSelf = self else {
                     return
                 }
-                if !strongSelf.didSetReady {
+                if !strongSelf.didSetReady && strongSelf.state != nil {
                     strongSelf.didSetReady = true
                     Queue.mainQueue().justDispatch {
                         strongSelf._ready.set(.single(true))
@@ -897,18 +908,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             })
             
-            let selectedItems = self.interaction?.selectionState?.selectedItems() as? [TGMediaSelectableItem] ?? []
-            let updateSelectionNode = {
-                self.selectionNode.updateLayout(size: bounds.size, insets: cleanGridInsets, items: selectedItems, grouped: self.controller?.groupedValue ?? true, theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners, transition: transition)
+            if let selectionNode = self.selectionNode {
+                let selectedItems = self.interaction?.selectionState?.selectedItems() as? [TGMediaSelectableItem] ?? []
+                let updateSelectionNode = {
+                    selectionNode.updateLayout(size: bounds.size, insets: cleanGridInsets, items: selectedItems, grouped: self.controller?.groupedValue ?? true, theme: self.presentationData.theme, wallpaper: self.presentationData.chatWallpaper, bubbleCorners: self.presentationData.chatBubbleCorners, transition: transition)
+                }
+                
+                if selectedItems.count < 1 && self.currentDisplayMode == .selected {
+                    self.updateMode(.all)
+                    Queue.mainQueue().after(0.3, updateSelectionNode)
+                } else {
+                    updateSelectionNode()
+                }
+                transition.updateFrame(node: selectionNode, frame: bounds)
             }
-            
-            if selectedItems.count < 1 && self.currentDisplayMode == .selected {
-                self.updateMode(.all)
-                Queue.mainQueue().after(0.3, updateSelectionNode)
-            } else {
-                updateSelectionNode()
-            }
-            transition.updateFrame(node: self.selectionNode, frame: bounds)
             
             if let cameraView = self.cameraView {
                 if let cameraRect = cameraRect {
@@ -937,7 +950,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     placeholderNode.cameraPressed = { [weak self] in
                         self?.controller?.openCamera?(nil)
                     }
-                    self.insertSubnode(placeholderNode, aboveSubnode: self.selectionNode)
+                    self.insertSubnode(placeholderNode, aboveSubnode: self.gridNode)
                     self.placeholderNode = placeholderNode
                 }
                 placeholderNode.update(layout: layout, theme: self.presentationData.theme, strings: self.presentationData.strings, hasCamera: cameraAccess == .authorized, transition: transition)

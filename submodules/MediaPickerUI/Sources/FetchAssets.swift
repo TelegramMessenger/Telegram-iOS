@@ -4,6 +4,7 @@ import Photos
 import SwiftSignalKit
 
 private let imageManager = PHCachingImageManager()
+private let assetsQueue = Queue()
 
 func assetImage(fetchResult: PHFetchResult<PHAsset>, index: Int, targetSize: CGSize, exact: Bool) -> Signal<UIImage?, NoError> {
     let asset = fetchResult[index]
@@ -36,9 +37,11 @@ func assetImage(asset: PHAsset, targetSize: CGSize, exact: Bool) -> Signal<UIIma
             }
         }
         return ActionDisposable {
-            imageManager.cancelImageRequest(token)
+            assetsQueue.async {
+                imageManager.cancelImageRequest(token)
+            }
         }
-    }
+    } |> runOn(assetsQueue)
 }
 
 func assetVideo(fetchResult: PHFetchResult<PHAsset>, index: Int) -> Signal<AVAsset?, NoError> {

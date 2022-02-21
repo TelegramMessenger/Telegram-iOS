@@ -173,7 +173,9 @@
         groupSignal = [SSignal single:_assetGroup];
     } else {
         groupSignal = [_assetsLibrary cameraRollGroup];
-        reversed = true;
+        if (_intent == TGMediaAssetsControllerSendMediaIntent) {
+            reversed = true;
+        }
     }
     
     __weak TGMediaAssetsPickerController *weakSelf = self;
