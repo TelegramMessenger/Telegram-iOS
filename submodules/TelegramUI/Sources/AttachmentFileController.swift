@@ -127,7 +127,11 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
                     arguments.send(message)
                     return false
                 }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
-                return ListMessageItem(presentationData: ChatPresentationData(presentationData: arguments.context.sharedContext.currentPresentationData.with({$0})), context: arguments.context, chatLocation: .peer(PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, displayFileInfo: false, displayBackground: true, style: .blocks)
+            
+                let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
+                let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
+            
+                return ListMessageItem(presentationData: chatPresentationData, context: arguments.context, chatLocation: .peer(PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, displayFileInfo: false, displayBackground: true, style: .blocks)
         }
     }
 }
@@ -212,8 +216,18 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
 
     let previousRecentDocuments = Atomic<[Message]?>(value: nil)
-    let signal = combineLatest(queue: Queue.mainQueue(), presentationData, recentDocuments, statePromise.get())
+    let signal = combineLatest(queue: Queue.mainQueue(),
+       presentationData,
+       recentDocuments,
+       statePromise.get()
+    )
     |> map { presentationData, recentDocuments, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
+            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+            presentationData = presentationData.withUpdated(theme: updatedTheme)
+        }
+        
         let previousRecentDocuments = previousRecentDocuments.swap(recentDocuments)
         let crossfade = previousRecentDocuments == nil && recentDocuments != nil
         var animateChanges = false

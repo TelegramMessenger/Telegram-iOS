@@ -269,6 +269,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     private var listOffset: CGFloat?
         
+    var beganInteractiveDragging: () -> Void = {}
+    
     init(context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction, locationManager: LocationManager) {
         self.context = context
         self.presentationData = presentationData
@@ -654,6 +656,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             guard let strongSelf = self else {
                 return
             }
+            strongSelf.beganInteractiveDragging()
             strongSelf.updateState { state in
                 var state = state
                 state.displayingMapModeOptions = false

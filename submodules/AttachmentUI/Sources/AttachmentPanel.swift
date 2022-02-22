@@ -166,9 +166,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
     private let containerNode: ASDisplayNode
-    private var effectView: UIVisualEffectView?
+    private let backgroundNode: NavigationBackgroundNode
     private let scrollNode: ASScrollNode
-    private let backgroundNode: ASDisplayNode
     private let separatorNode: ASDisplayNode
     private var buttonViews: [Int: ComponentHostView<Empty>] = [:]
     
@@ -200,11 +199,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.containerNode.clipsToBounds = true
         
         self.scrollNode = ASScrollNode()
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
         
+        self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.separatorNode.backgroundColor = self.presentationData.theme.rootController.tabBar.separatorColor
         
         super.init()
                         
@@ -385,8 +383,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 
-                strongSelf.backgroundNode.backgroundColor = presentationData.theme.actionSheet.itemBackgroundColor
-                strongSelf.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
+                strongSelf.backgroundNode.updateColor(color: presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
+                strongSelf.separatorNode.backgroundColor = presentationData.theme.rootController.tabBar.separatorColor
                 
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
@@ -410,18 +408,6 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.delegate = self
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.showsVerticalScrollIndicator = false
-        
-        let effect: UIVisualEffect
-        switch self.presentationData.theme.actionSheet.backgroundType {
-        case .light:
-            effect = UIBlurEffect(style: .light)
-        case .dark:
-            effect = UIBlurEffect(style: .dark)
-        }
-        let effectView = UIVisualEffectView(effect: effect)
-        effectView.frame = self.containerNode.bounds
-        self.effectView = effectView
-        self.containerNode.view.insertSubview(effectView, at: 0)
     }
     
     func updateCaption(_ caption: NSAttributedString) {
@@ -647,10 +633,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         
         containerTransition.updateFrame(node: self.containerNode, frame: containerFrame)
         containerTransition.updateFrame(node: self.backgroundNode, frame: containerBounds)
+        self.backgroundNode.update(size: containerBounds.size, transition: transition)
         containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
-        if let effectView = self.effectView {
-            containerTransition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: containerFrame.height + 44.0)))
-        }
                 
         let _ = self.updateScrollLayoutIfNeeded(force: isCollapsedUpdated || isSelectingUpdated, transition: containerTransition)
 

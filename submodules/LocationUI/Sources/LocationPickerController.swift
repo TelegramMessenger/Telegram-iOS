@@ -293,6 +293,9 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         
         self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
+        self.controllerNode.beganInteractiveDragging = { [weak self] in
+            self?.requestAttachmentMenuExpansion()
+        }
         
         self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))
         |> deliverOnMainQueue).start(next: { [weak self] next in

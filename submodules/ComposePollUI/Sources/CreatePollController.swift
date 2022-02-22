@@ -792,6 +792,12 @@ public func createPollController(context: AccountContext, updatedPresentationDat
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.Limits())
     )
     |> map { presentationData, state, limitsConfiguration -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
+            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+            presentationData = presentationData.withUpdated(theme: updatedTheme)
+        }
+        
         var enabled = true
         if processPollText(state.text).isEmpty {
             enabled = false

@@ -1456,7 +1456,8 @@ open class NavigationBar: ASDisplayNode {
             return nil
         }
         
-        if result == self.view || result == self.buttonsContainerNode.view {
+        //result == self.view ||
+        if result == self.buttonsContainerNode.view {
             return nil
         }
         

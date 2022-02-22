@@ -6,6 +6,7 @@ import UIKitRuntimeUtils
 import Display
 import DirectionalPanGesture
 import TelegramPresentationData
+import MapKit
 
 final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     let wrappingNode: ASDisplayNode
@@ -86,6 +87,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
+            if let _ = otherGestureRecognizer.view?.superview as? MKMapView {
+                return false
+            }
             return true
         }
         return false
@@ -116,6 +120,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             case .began:
                 let point = recognizer.location(in: self.view)
                 let currentHitView = self.hitTest(point, with: nil)
+                
                 let scrollViewAndListNode = self.findScrollView(view: currentHitView)
                 let scrollView = scrollViewAndListNode?.0
                 let listNode = scrollViewAndListNode?.1
@@ -183,12 +188,14 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let translation = recognizer.translation(in: self.view).y
                 var velocity = recognizer.velocity(in: self.view)
                 
-                if case let .known(value) = visibleContentOffset, value > 0.0 {
-                    velocity = CGPoint()
-                } else if case .unknown = visibleContentOffset {
-                    velocity = CGPoint()
-                } else if contentOffset > 0.0 {
-                    velocity = CGPoint()
+                if self.isExpanded {
+                    if case let .known(value) = visibleContentOffset, value > 0.1 {
+                        velocity = CGPoint()
+                    } else if case .unknown = visibleContentOffset {
+                        velocity = CGPoint()
+                    } else if contentOffset > 0.1 {
+                        velocity = CGPoint()
+                    }
                 }
             
                 var bounds = self.bounds
@@ -226,7 +233,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         self.interactivelyDismissed?()
                         dismissing = true
                     } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
-                        if velocity.y > -2200.0, let listNode = listNode {
+                        if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
                             DispatchQueue.main.async {
                                 listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                             }

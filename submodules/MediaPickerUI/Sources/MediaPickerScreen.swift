@@ -398,7 +398,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             guard let controller = self.controller, let interaction = self.interaction, let (layout, _) = self.validLayout else {
                 return
             }
-            self.dismissInput()
+            Queue.mainQueue().justDispatch {
+                self.dismissInput()
+            }
             
             let index = fetchResult.count - index - 1
             presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, chatLocation: controller.chatLocation, presentationData: self.presentationData, source: .fetchResult(fetchResult: fetchResult, index: index), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState, editingContext: interaction.editingState, hasSilentPosting: true, hasSchedule: true, hasTimer: true, updateHiddenMedia: { [weak self] id in
@@ -420,7 +422,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             guard let controller = self.controller, let interaction = self.interaction, let (layout, _) = self.validLayout else {
                 return
             }
-            self.dismissInput()
+            Queue.mainQueue().justDispatch {
+                self.dismissInput()
+            }
             
             presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, chatLocation: controller.chatLocation, presentationData: self.presentationData, source: .selection(item: item), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState, editingContext: interaction.editingState, hasSilentPosting: true, hasSchedule: true, hasTimer: true, updateHiddenMedia: { [weak self] id in
                 self?.hiddenMediaId.set(.single(id))
