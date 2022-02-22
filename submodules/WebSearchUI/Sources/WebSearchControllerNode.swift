@@ -65,7 +65,7 @@ private func preparedTransition(from fromEntries: [WebSearchEntry], to toEntries
 }
 
 private func gridNodeLayoutForContainerLayout(size: CGSize, insets: UIEdgeInsets) -> GridNodeLayoutType {
-    let side = floorToScreenPixels((size.width - insets.left - insets.right - 3.0) / 4.0)
+    let side = floorToScreenPixels((size.width - insets.left - insets.right - 2.0) / 3.0)
     return .fixed(itemSize: CGSize(width: side, height: side), fillWidth: true, lineSpacing: 1.0, itemSpacing: 1.0)
 }
 

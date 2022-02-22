@@ -66,15 +66,18 @@ public class AttachmentController: ViewController {
         private let container: AttachmentContainer
         let panel: AttachmentPanel
         
-        private var validLayout: ContainerViewLayout?
-        private var modalProgress: CGFloat = 0.0
-        
         private var currentType: AttachmentButtonType?
         private var currentController: AttachmentContainable?
         
+        private var validLayout: ContainerViewLayout?
+        private var modalProgress: CGFloat = 0.0
+        private var isDismissing = false
+                
         private let captionDisposable = MetaDisposable()
-        
         private let mediaSelectionCountDisposable = MetaDisposable()
+        
+        private var selectionCount: Int = 0
+        
         fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
             didSet {
                 if let mediaPickerContext = self.mediaPickerContext {
@@ -113,7 +116,7 @@ public class AttachmentController: ViewController {
             self.addSubnode(self.dim)
                         
             self.container.updateModalProgress = { [weak self] progress, transition in
-                if let strongSelf = self, let layout = strongSelf.validLayout {
+                if let strongSelf = self, let layout = strongSelf.validLayout, !strongSelf.isDismissing {
                     strongSelf.controller?.updateModalStyleOverlayTransitionFactor(progress, transition: transition)
                     
                     strongSelf.modalProgress = progress
@@ -195,7 +198,6 @@ public class AttachmentController: ViewController {
             self.switchToController(.gallery, false)
         }
         
-        private var selectionCount: Int = 0
         private func updateSelectionCount(_ count: Int) {
             self.selectionCount = count
             if let layout = self.validLayout {
@@ -206,29 +208,6 @@ public class AttachmentController: ViewController {
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 self.controller?.dismiss(animated: true)
-            }
-        }
-        
-        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if let controller = self.controller, controller.isInteractionDisabled() {
-                return self.view
-            } else {
-                return super.hitTest(point, with: event)
-            }
-        }
-        
-        func dismiss(animated: Bool, completion: @escaping () -> Void = {}) {
-            if animated {
-                let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height), beginWithCurrentState: true, completion: { [weak self] _ in
-                    let _ = self?.container.dismiss(transition: .immediate, completion: completion)
-                })
-                let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
-                
-                self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
-            } else {
-                self.controller?.dismiss(animated: false, completion: nil)
             }
         }
         
@@ -286,14 +265,42 @@ public class AttachmentController: ViewController {
             })
         }
         
-        func animateIn(transition: ContainedViewLayoutTransition) {
+        func animateIn() {
             ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
             
-            transition.animatePositionAdditive(node: self.container, offset: CGPoint(x: 0.0, y: self.bounds.height + self.container.bounds.height / 2.0 - (self.container.position.y - self.bounds.height)))
+            let targetPosition = self.container.position
+            let startPosition = targetPosition.offsetBy(dx: 0.0, dy: self.bounds.height)
+            
+            self.container.position = startPosition
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            transition.animateView({
+                self.container.position = targetPosition
+            })
+        }
+        
+        func animateOut(completion: @escaping () -> Void = {}) {
+            self.isDismissing = true
+            
+            let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+            positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0), completion: { [weak self] _ in
+                let _ = self?.container.dismiss(transition: .immediate, completion: completion)
+            })
+            let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+            alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
+            
+            self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
         }
         
         func scrollToTop() {
             self.currentController?.scrollToTop?()
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            if let controller = self.controller, controller.isInteractionDisabled() {
+                return self.view
+            } else {
+                return super.hitTest(point, with: event)
+            }
         }
         
         private var isCollapsed: Bool = false
@@ -318,7 +325,7 @@ public class AttachmentController: ViewController {
             }
             panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: panelHeight)))
             
-            if !self.isUpdatingContainer {
+            if !self.isUpdatingContainer && !self.isDismissing {
                 self.isUpdatingContainer = true
             
                 let containerTransition: ContainedViewLayoutTransition
@@ -341,7 +348,7 @@ public class AttachmentController: ViewController {
                     self.addSubnode(self.container)
                     self.container.addSubnode(self.panel)
                     
-                    self.animateIn(transition: transition)
+                    self.animateIn()
                 }
                 
                 self.isUpdatingContainer = false
@@ -387,8 +394,8 @@ public class AttachmentController: ViewController {
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         if flag {
-            self.node.dismiss(animated: true, completion: {
-                super.dismiss(animated: flag, completion: {})
+            self.node.animateOut(completion: {
+                super.dismiss(animated: false, completion: {})
                 completion?()
             })
         } else {

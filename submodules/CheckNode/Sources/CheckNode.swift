@@ -284,11 +284,9 @@ public class InteractiveCheckNode: CheckNode {
                 return
             }
             if highlighted {
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
-                transition.updateTransformScale(node: strongSelf, scale: 0.85)
-            } else {
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
-                transition.updateTransformScale(node: strongSelf, scale: 1.0)
+                strongSelf.layer.animateScale(from: 1.0, to: 0.85, duration: 0.15, removeOnCompletion: false)
+            } else if let presentationLayer = strongSelf.layer.presentation() {
+                strongSelf.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
             }
         }
     }

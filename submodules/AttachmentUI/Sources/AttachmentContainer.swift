@@ -311,7 +311,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size))
         
-        let modalProgress = isLandscape ? 0.0 :  (1.0 - topInset / defaultTopInset)
+        let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / defaultTopInset)
         self.updateModalProgress?(modalProgress, transition)
                 
         let containerLayout: ContainerViewLayout
