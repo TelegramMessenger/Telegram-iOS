@@ -9121,6 +9121,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        var layout = layout
+        if let _ = self.attachmentController {
+            layout = layout.withUpdatedInputHeight(nil)
+        }
+                
         var navigationBarTransition = transition
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
@@ -10320,18 +10325,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         self.chatDisplayNode.dismissInput()
-        
-        let currentFilesController = Atomic<AttachmentContainable?>(value: nil)
-        let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
-        
+                
+        var bannedSendMedia: (Int32, Bool)?
         var canSendPolls = true
         if peer is TelegramUser || peer is TelegramSecretChat {
             canSendPolls = false
         } else if let channel = peer as? TelegramChannel {
+            if let value = channel.hasBannedPermission(.banSendMedia) {
+                bannedSendMedia = value
+            }
             if channel.hasBannedPermission(.banSendPolls) != nil {
                 canSendPolls = false
             }
         } else if let group = peer as? TelegramGroup {
+            if group.hasBannedPermission(.banSendMedia) {
+                bannedSendMedia = (Int32.max, false)
+            }
             if group.hasBannedPermission(.banSendPolls) {
                 canSendPolls = false
             }
@@ -10344,6 +10353,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
         
+        let currentMediaController = Atomic<AttachmentContainable?>(value: nil)
+        let currentFilesController = Atomic<AttachmentContainable?>(value: nil)
+        let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
+        
         let attachmentController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, buttons: availableTabs)
         attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
             guard let strongSelf = self else {
@@ -10351,7 +10364,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             switch type {
             case .gallery:
-                strongSelf.presentMediaPicker(present: { controller, mediaPickerContext in
+                strongSelf.controllerNavigationDisposable.set(nil)
+                let existingController = currentMediaController.with { $0 }
+                if let controller = existingController {
+                    controller.prepareForReuse()
+                    completion(controller, nil)
+                    return
+                }
+                strongSelf.presentMediaPicker(bannedSendMedia: bannedSendMedia, present: { controller, mediaPickerContext in
+                    let _ = currentMediaController.swap(controller)
                     completion(controller, mediaPickerContext)
                 }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                     attachmentController?.mediaPickerContext = mediaPickerContext
@@ -10361,7 +10382,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime)
                 })
-                strongSelf.controllerNavigationDisposable.set(nil)
             case .file:
                 strongSelf.controllerNavigationDisposable.set(nil)
                 let existingController = currentFilesController.with { $0 }
@@ -10978,11 +10998,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(present: @escaping (AttachmentContainable, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?) -> Void) {
+    private func presentMediaPicker(bannedSendMedia: (Int32, Bool)?, present: @escaping (AttachmentContainable, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
-        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), chatLocation: self.chatLocation)
+        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), chatLocation: self.chatLocation, bannedSendMedia: bannedSendMedia)
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self] cameraView in
             self?.openCamera(cameraView: cameraView)

@@ -58,7 +58,7 @@ final class MediaPickerManageNode: ASDisplayNode {
         
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: theme.list.freeTextColor, paragraphAlignment: .left)
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 16.0 - buttonWidth - 26.0, height: layout.size.height))
-        let panelHeight = max(64.0, textSize.height + 10.0)
+        let panelHeight = max(64.0, textSize.height + 24.0)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + 16.0, y: floorToScreenPixels((panelHeight - textSize.height) / 2.0) - 5.0), size: textSize))
         
         if themeUpdated {
