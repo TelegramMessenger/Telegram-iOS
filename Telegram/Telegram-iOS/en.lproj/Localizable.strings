@@ -443,6 +443,7 @@
 "DialogList.TabTitle" = "Chats";
 "DialogList.Title" = "Chats";
 "DialogList.SearchLabel" = "Search for messages or users";
+"DialogList.SearchLabelCompact" = "Search";
 "DialogList.NoMessagesTitle" = "You have no conversations yet";
 "DialogList.NoMessagesText" = "Start messaging by pressing the pencil button in the top right corner or go to the Contacts section.";
 "DialogList.SingleTypingSuffix" = "%@ is typing";

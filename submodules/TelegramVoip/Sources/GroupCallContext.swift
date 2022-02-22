@@ -58,6 +58,8 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             return self.engine.calls.requestStreamState(callId: self.callId, accessHash: self.accessHash).start(next: { result in
                 if let channel = result?.channels.first {
                     completion(channel.latestTimestamp)
+                } else {
+                    completion(0)
                 }
             })
         } else {
@@ -124,6 +126,11 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
+                /*#if DEBUG
+                let tempFile = EngineTempBox.shared.tempFile(fileName: "part.mp4")
+                let _ = try? dataValue.write(to: URL(fileURLWithPath: tempFile.path))
+                print("Dump stream part: \(tempFile.path)")
+                #endif*/
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
@@ -606,7 +613,7 @@ public final class OngoingGroupCallContext {
             self.context.stop()
         }
         
-        func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool) {
+        func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool, isUnifiedBroadcast: Bool) {
             let mappedConnectionMode: OngoingCallConnectionMode
             switch connectionMode {
             case .none:
@@ -616,7 +623,7 @@ public final class OngoingGroupCallContext {
             case .broadcast:
                 mappedConnectionMode = .broadcast
             }
-            self.context.setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled)
+            self.context.setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled, isUnifiedBroadcast: isUnifiedBroadcast)
             
             if (mappedConnectionMode != .rtc) {
                 self.joinPayload.set(.never())
@@ -900,9 +907,9 @@ public final class OngoingGroupCallContext {
         })
     }
     
-    public func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool) {
+    public func setConnectionMode(_ connectionMode: ConnectionMode, keepBroadcastConnectedIfWasEnabled: Bool, isUnifiedBroadcast: Bool) {
         self.impl.with { impl in
-            impl.setConnectionMode(connectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled)
+            impl.setConnectionMode(connectionMode, keepBroadcastConnectedIfWasEnabled: keepBroadcastConnectedIfWasEnabled, isUnifiedBroadcast: isUnifiedBroadcast)
         }
     }
     
