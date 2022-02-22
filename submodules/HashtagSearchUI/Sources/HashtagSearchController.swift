@@ -98,7 +98,7 @@ public final class HashtagSearchController: TelegramBaseController {
                 let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: entries, displayingResults: true, isEmpty: entries.isEmpty, isLoading: false, animated: false, context: strongSelf.context, presentationData: strongSelf.presentationData, enableHeaders: false, filter: [], key: .chats, tagMask: nil, interaction: interaction, listInteraction: listInteraction, peerContextAction: nil, toggleExpandLocalResults: {
                 }, toggleExpandGlobalResults: {
                 }, searchPeer: { _ in
-                }, searchQuery: "", searchOptions: nil, messageContextAction: nil, openStorageSettings: {}, toggleAllPaused: {})
+                }, searchQuery: "", searchOptions: nil, messageContextAction: nil, openClearRecentlyDownloaded: {}, toggleAllPaused: {})
                 strongSelf.controllerNode.enqueueTransition(transition, firstTime: firstTime)
             }
         })

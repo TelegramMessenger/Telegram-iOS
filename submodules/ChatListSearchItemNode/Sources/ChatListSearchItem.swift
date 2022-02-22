@@ -116,7 +116,8 @@ public class ChatListSearchItemNode: ListViewItemNode {
             let backgroundColor = nextIsPinned ? item.theme.chatList.pinnedItemBackgroundColor : item.theme.chatList.itemBackgroundColor
             let placeholderColor = item.theme.list.itemSecondaryTextColor
             
-            let (_, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: placeholderColor), CGSize(width: baseWidth - 20.0, height: 36.0), 1.0, placeholderColor, nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor, .immediate)
+            let placeholderString = NSAttributedString(string: placeholder ?? "", font: searchBarFont, textColor: placeholderColor)
+            let (_, searchBarApply) = searchBarNodeLayout(placeholderString, placeholderString, CGSize(width: baseWidth - 20.0, height: 36.0), 1.0, placeholderColor, nextIsPinned ? item.theme.chatList.pinnedSearchBarColor : item.theme.chatList.regularSearchBarColor, backgroundColor, .immediate)
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 54.0), insets: UIEdgeInsets())
             

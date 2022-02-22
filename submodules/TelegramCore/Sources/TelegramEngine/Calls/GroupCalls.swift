@@ -863,6 +863,13 @@ public final class GroupCallParticipantsContext {
             public var ssrcGroups: [SsrcGroup]
             public var audioSsrc: UInt32?
             public var isPaused: Bool
+            
+            public init(endpointId: String, ssrcGroups: [SsrcGroup], audioSsrc: UInt32?, isPaused: Bool) {
+                self.endpointId = endpointId
+                self.ssrcGroups = ssrcGroups
+                self.audioSsrc = audioSsrc
+                self.isPaused = isPaused
+            }
         }
         
         public var peer: Peer

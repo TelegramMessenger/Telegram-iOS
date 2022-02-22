@@ -654,7 +654,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 
                 if statusUpdated && item.displayFileInfo {
                     if let file = selectedMedia as? TelegramMediaFile {
-                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
+                        updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
                             if case .Fetching = value.fetchStatus {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
@@ -668,16 +668,20 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 updatedStatusSignal = currentUpdatedStatusSignal
                                 |> map { status in
                                     switch status.mediaStatus {
-                                        case .fetchStatus:
+                                    case .fetchStatus:
+                                        if item.isDownloadList {
+                                            return FileMediaResourceStatus(mediaStatus: .fetchStatus(status.fetchStatus), fetchStatus: status.fetchStatus)
+                                        } else {
                                             return FileMediaResourceStatus(mediaStatus: .fetchStatus(.Local), fetchStatus: status.fetchStatus)
-                                        case .playbackStatus:
-                                            return status
+                                        }
+                                    case .playbackStatus:
+                                        return status
                                     }
                                 }
                             }
                         }
                         if isVoice {
-                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
+                            updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: item.context, file: file, message: message, isRecentActions: false, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
                         }
                     } else if let image = selectedMedia as? TelegramMediaImage {
                         updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
@@ -890,7 +894,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset + leftOffset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - leftOffset, height: UIScreenPixel)))
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.contentSize.height + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: nodeLayout.contentSize.height + UIScreenPixel))
                     
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.contentSize.height))
@@ -1098,27 +1102,32 @@ public final class ListMessageFileItemNode: ListMessageNode {
         if !isAudio && !isInstantVideo {
             self.updateProgressFrame(size: contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
         } else {
+            if item.isDownloadList {
+                self.updateProgressFrame(size: contentSize, leftInset: layoutParams.leftInset, rightInset: layoutParams.rightInset, transition: .immediate)
+            }
             switch status {
-                case let .fetchStatus(fetchStatus):
-                    switch fetchStatus {
-                        case .Fetching:
-                            break
-                        case .Local:
-                            if isAudio || isInstantVideo {
-                                iconStatusState = .play
-                            }
-                        case .Remote, .Paused:
-                            if isAudio || isInstantVideo {
-                                iconStatusState = .play
-                            }
+            case let .fetchStatus(fetchStatus):
+                switch fetchStatus {
+                case let .Fetching(_, progress):
+                    if item.isDownloadList {
+                        iconStatusState = .progress(value: CGFloat(progress), cancelEnabled: true, appearance: nil)
                     }
-                case let .playbackStatus(playbackStatus):
-                    switch playbackStatus {
-                    case .playing:
-                        iconStatusState = .pause
-                    case .paused:
+                case .Local:
+                    if isAudio || isInstantVideo {
                         iconStatusState = .play
                     }
+                case .Remote, .Paused:
+                    if isAudio || isInstantVideo {
+                        iconStatusState = .play
+                    }
+                }
+            case let .playbackStatus(playbackStatus):
+                switch playbackStatus {
+                case .playing:
+                    iconStatusState = .pause
+                case .paused:
+                    iconStatusState = .play
+                }
             }
         }
         self.iconStatusNode.backgroundNodeColor = iconStatusBackgroundColor
@@ -1196,17 +1205,22 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     break
                 case let .fetchStatus(fetchStatus):
                     maybeFetchStatus = fetchStatus
-                    switch fetchStatus {
-                        case .Fetching(_, let progress), .Paused(let progress):
-                            if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
-                                downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData)))"
-                            }
-                            descriptionOffset = 14.0
-                        case .Remote:
-                            descriptionOffset = 14.0
-                        case .Local:
-                            break
-                    }
+            }
+            
+            if item.isDownloadList, let fetchStatus = self.fetchStatus {
+                maybeFetchStatus = fetchStatus
+            }
+            
+            switch maybeFetchStatus {
+            case .Fetching(_, let progress), .Paused(let progress):
+                if let file = self.currentMedia as? TelegramMediaFile, let size = file.size {
+                    downloadingString = "\(dataSizeString(Int(Float(size) * progress), forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData))) / \(dataSizeString(size, forceDecimal: true, formatting: DataSizeStringFormatting(chatPresentationData: item.presentationData)))"
+                }
+                descriptionOffset = 14.0
+            case .Remote:
+                descriptionOffset = 14.0
+            case .Local:
+                break
             }
             
             switch maybeFetchStatus {
@@ -1269,7 +1283,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         } else {
             if let linearProgressNode = self.linearProgressNode {
                 self.linearProgressNode = nil
-                linearProgressNode.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { [weak linearProgressNode] _ in
+                linearProgressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak linearProgressNode] _ in
                     linearProgressNode?.removeFromSupernode()
                 })
             }
@@ -1525,9 +1539,11 @@ private final class DownloadIconNode: ASImageNode {
     }
 
     func updateTheme(theme: PresentationTheme) {
-        self.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(theme, generate: {
-            return generateDownloadIcon(color: theme.list.itemAccentColor)
-        })
+        if self.image != nil {
+            self.image = PresentationResourcesChat.sharedMediaFileDownloadStartIcon(theme, generate: {
+                return generateDownloadIcon(color: theme.list.itemAccentColor)
+            })
+        }
         self.customColor = theme.list.itemAccentColor
         self.animationNode?.customColor = self.customColor
     }

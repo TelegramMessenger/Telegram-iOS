@@ -20,7 +20,7 @@ import ContextUI
 import ChatPresentationInterfaceState
 
 private struct FetchControls {
-    let fetch: () -> Void
+    let fetch: (Bool) -> Void
     let cancel: () -> Void
 }
 
@@ -228,7 +228,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
             case .Remote, .Paused:
                 if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-                    fetch()
+                    fetch(true)
                 }
             case .Local:
                 break
@@ -251,7 +251,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }
                             case .Remote, .Paused:
                                 if let fetch = self.fetchControls.with({ return $0?.fetch }) {
-                                    fetch()
+                                    fetch(true)
                                 }
                             case .Local:
                                 self.activateLocalContent()
@@ -316,9 +316,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         updateImageSignal = chatMessageImageFile(account: arguments.context.account, fileReference: .message(message: MessageReference(arguments.message), media: arguments.file), thumbnail: true)
                     }
                     
-                    updatedFetchControls = FetchControls(fetch: { [weak self] in
+                    updatedFetchControls = FetchControls(fetch: { [weak self] userInitiated in
                         if let strongSelf = self {
-                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: arguments.context, message: arguments.message, file: arguments.file, userInitiated: true).start())
+                            strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: arguments.context, message: arguments.message, file: arguments.file, userInitiated: userInitiated).start())
                         }
                     }, cancel: {
                         messageMediaFileCancelInteractiveFetch(context: arguments.context, messageId: arguments.message.id, file: arguments.file)
@@ -331,15 +331,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         |> map { resourceStatus, actualFetchStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, actualFetchStatus)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                     } else {
                         updatedStatusSignal = messageFileMediaResourceStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions)
                         |> map { resourceStatus -> (FileMediaResourceStatus, MediaResourceStatus?) in
                             return (resourceStatus, nil)
                         }
-                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false)
+                        updatedAudioLevelEventsSignal = messageFileMediaPlaybackAudioLevelEvents(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                     }
-                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false)
+                    updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                 }
                 
                 var consumableContentIcon: UIImage?
@@ -765,7 +765,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if let updatedFetchControls = updatedFetchControls {
                                 let _ = strongSelf.fetchControls.swap(updatedFetchControls)
                                 if arguments.automaticDownload {
-                                    updatedFetchControls.fetch()
+                                    updatedFetchControls.fetch(false)
                                 }
                             }
                             
