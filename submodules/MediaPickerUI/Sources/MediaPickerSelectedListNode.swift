@@ -189,7 +189,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     }
 }
 
-final class MediaPickerSelectedListNode: ASDisplayNode {
+final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
@@ -225,6 +225,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         
+        self.scrollNode.view.delegate = self
+        
         self.view.addGestureRecognizer(ReorderingGestureRecognizer(shouldBegin: { [weak self] point in
             if let strongSelf = self, !strongSelf.scrollNode.view.isTracking {
                 for (_, itemNode) in strongSelf.itemNodes {
@@ -244,6 +246,10 @@ final class MediaPickerSelectedListNode: ASDisplayNode {
         }, moved: { [weak self] offset in
             self?.updateReordering(offset: offset)
         }))
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        self.interaction?.dismissInput()
     }
     
     func scrollToTop(animated: Bool) {
@@ -399,9 +405,21 @@ final class MediaPickerSelectedListNode: ASDisplayNode {
             for i in stride(from: 0, to: itemSizes.count, by: groupSize) {
                 let sizes = itemSizes[i ..< min(i + groupSize, itemSizes.count)]
                 let items = items[i ..< min(i + groupSize, items.count)]
-                let (mosaicLayout, size) = chatMessageBubbleMosaicLayout(maxSize: boundingSize, itemSizes: Array(sizes), spacing: 1.0, fillWidth: true)
-                let layout = zip(items, mosaicLayout).map { ($0, $1.0, $1.1) }
-                groupLayouts.append((layout, size))
+                
+                if items.count > 1 {
+                    let (mosaicLayout, size) = chatMessageBubbleMosaicLayout(maxSize: boundingSize, itemSizes: Array(sizes), spacing: 1.0, fillWidth: true)
+                    let layout = zip(items, mosaicLayout).map { ($0, $1.0, $1.1) }
+                    groupLayouts.append((layout, size))
+                } else if let item = items.first, var itemSize = sizes.first {
+                    if itemSize.width > itemSize.height {
+                        itemSize = itemSize.aspectFitted(boundingSize)
+                    } else {
+                        itemSize = boundingSize
+                    }
+                    let itemRect = CGRect(origin: CGPoint(), size: itemSize)
+                    let position: MosaicItemPosition = [.top, .bottom, .left, .right]
+                    groupLayouts.append(([(item, itemRect, position)], itemRect.size))
+                }
             }
         } else {
             for i in 0 ..< itemSizes.count {

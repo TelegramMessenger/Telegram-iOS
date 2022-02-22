@@ -273,7 +273,7 @@ public class AttachmentController: ViewController {
             
             self.container.position = startPosition
             let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
-            transition.animateView({
+            transition.animateView(allowUserInteraction: true, {
                 self.container.position = targetPosition
             })
         }

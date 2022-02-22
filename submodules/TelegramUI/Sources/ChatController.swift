@@ -10325,7 +10325,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
         
         var canSendPolls = true
-        if let _ = peer as? TelegramUser {
+        if peer is TelegramUser || peer is TelegramSecretChat {
             canSendPolls = false
         } else if let channel = peer as? TelegramChannel {
             if channel.hasBannedPermission(.banSendPolls) != nil {
@@ -10434,11 +10434,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
             case .contact:
                 let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true))
+                contactsController.presentScheduleTimePicker = { [weak self] completion in
+                    if let strongSelf = self {
+                        strongSelf.presentScheduleTimePicker(completion: completion)
+                    }
+                }
                 contactsController.navigationPresentation = .modal
-                completion(contactsController, nil)
+                completion(contactsController, contactsController.mediaPickerContext)
                 strongSelf.controllerNavigationDisposable.set((contactsController.result
                 |> deliverOnMainQueue).start(next: { [weak self] peers in
-                    if let strongSelf = self, let (peers, _) = peers {
+                    if let strongSelf = self, let (peers, _, silent, scheduleTime) = peers {
                         if peers.count > 1 {
                             var enqueueMessages: [EnqueueMessage] = []
                             for peer in peers {
@@ -10475,7 +10480,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     enqueueMessages.append(message)
                                 }
                             }
-                            strongSelf.sendMessages(enqueueMessages)
+                            strongSelf.sendMessages(strongSelf.transformEnqueueMessages(enqueueMessages, silentPosting: silent, scheduleTime: scheduleTime))
                         } else if let peer = peers.first {
                             let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
                             switch peer {
@@ -10531,7 +10536,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             }
                                         }, nil)
                                         let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
-                                        strongSelf.sendMessages([message])
+                                        strongSelf.sendMessages(strongSelf.transformEnqueueMessages([message], silentPosting: silent, scheduleTime: scheduleTime))
                                     } else {
                                         let contactController = strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
                                             guard let strongSelf = self, !contactData.basicData.phoneNumbers.isEmpty else {
@@ -10549,7 +10554,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     }
                                                 }, nil)
                                                 let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil, correlationId: nil)
-                                                strongSelf.sendMessages([message])
+                                                strongSelf.sendMessages(strongSelf.transformEnqueueMessages([message], silentPosting: silent, scheduleTime: scheduleTime))
                                             }
                                         }), completed: nil, cancelled: nil)
                                         strongSelf.effectiveNavigationController?.pushViewController(contactController)
@@ -11267,7 +11272,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.effectiveNavigationController?.pushViewController(contactsController)
         self.controllerNavigationDisposable.set((contactsController.result
         |> deliverOnMainQueue).start(next: { [weak self] peers in
-            if let strongSelf = self, let (peers, _) = peers {
+            if let strongSelf = self, let (peers, _, _, _) = peers {
                 if peers.count > 1 {
                     var enqueueMessages: [EnqueueMessage] = []
                     for peer in peers {

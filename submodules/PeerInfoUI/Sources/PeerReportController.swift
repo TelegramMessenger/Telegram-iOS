@@ -63,10 +63,10 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
             case .illegalDrugs:
                 title = presentationData.strings.ReportPeer_ReasonIllegalDrugs
-                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportDrugs")
             case .personalDetails:
                 title = presentationData.strings.ReportPeer_ReasonPersonalDetails
-                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+                icon = UIImage(bundleImageName: "Chat/Context Menu/User")
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
                 icon = UIImage(bundleImageName: "Chat/Context Menu/Report")

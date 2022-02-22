@@ -36,7 +36,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
-    var requestMultipleAction: (() -> Void)?
+    var requestMultipleAction: ((_ silent: Bool, _ scheduleTime: Int32?) -> Void)?
     var dismiss: (() -> Void)?
     
     var presentationData: PresentationData {
@@ -58,7 +58,10 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, multipleSelection: multipleSelection)
+        var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture in
+            contextActionImpl?(peer, node, gesture)
+        } : nil, multipleSelection: multipleSelection)
         
         self.dimNode = ASDisplayNode()
         
@@ -98,7 +101,17 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         }
         
         shareImpl = { [weak self] in
-            self?.requestMultipleAction?()
+            self?.requestMultipleAction?(false, nil)
+        }
+        
+        contextActionImpl = { [weak self] peer, node, gesture in
+            if let strongSelf = self, (strongSelf.selectionState?.selectedPeerIndices.isEmpty ?? true) {
+                strongSelf.contactListNode.updateSelectionState { state in
+                    let peerId = ContactListPeerId.peer(peer.id)
+                    let state = state ?? ContactListNodeGroupSelectionState()
+                    return state.withToggledPeerId(peerId).withSelectedPeerMap([peerId: ContactListPeer.peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil)])
+                }
+            }
         }
     }
     
@@ -134,13 +147,13 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         
-        let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
-        if (self.selectionState?.selectedPeerIndices.isEmpty ?? true) {
-            transition.updateFrame(node: self.countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: countPanelHeight)))
-        } else {
-            insets.bottom += countPanelHeight
-            transition.updateFrame(node: self.countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - countPanelHeight), size: CGSize(width: layout.size.width, height: countPanelHeight)))
-        }
+//        let countPanelHeight = self.countPanelNode.updateLayout(width: layout.size.width, sideInset: layout.safeInsets.left, bottomInset: layout.intrinsicInsets.bottom, transition: transition)
+//        if (self.selectionState?.selectedPeerIndices.isEmpty ?? true) {
+//            transition.updateFrame(node: self.countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: CGSize(width: layout.size.width, height: countPanelHeight)))
+//        } else {
+//            insets.bottom += countPanelHeight
+//            transition.updateFrame(node: self.countPanelNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - countPanelHeight), size: CGSize(width: layout.size.width, height: countPanelHeight)))
+//        }
         
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)

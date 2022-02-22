@@ -17,7 +17,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     private let context: AccountContext
     private let autoDismiss: Bool
     
-    private var contactsNode: ContactSelectionControllerNode {
+    fileprivate var contactsNode: ContactSelectionControllerNode {
         return self.displayNode as! ContactSelectionControllerNode
     }
     
@@ -43,13 +43,15 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         return self._ready
     }
     
-    private let _result = Promise<([ContactListPeer], ContactListAction)?>()
-    var result: Signal<([ContactListPeer], ContactListAction)?, NoError> {
+    private let _result = Promise<([ContactListPeer], ContactListAction, Bool, Int32?)?>()
+    var result: Signal<([ContactListPeer], ContactListAction, Bool, Int32?)?, NoError> {
         return self._result.get()
     }
     
     private let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
     var dismissed: (() -> Void)?
+    
+    var presentScheduleTimePicker: (@escaping (Int32) -> Void) -> Void = { _ in }
     
     private let createActionDisposable = MetaDisposable()
     private let confirmationDisposable = MetaDisposable()
@@ -215,10 +217,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         }
 
-        self.contactsNode.requestMultipleAction = { [weak self] in
+        self.contactsNode.requestMultipleAction = { [weak self] silent, scheduleTime in
             if let strongSelf = self {
                 let selectedPeers = strongSelf.contactsNode.contactListNode.selectedPeers
-                strongSelf._result.set(.single((selectedPeers, .generic)))
+                strongSelf._result.set(.single((selectedPeers, .generic, silent, scheduleTime)))
                 if strongSelf.autoDismiss {
                     strongSelf.dismiss()
                 }
@@ -313,7 +315,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf._result.set(.single(([peer], action)))
+                    strongSelf._result.set(.single(([peer], action, false, nil)))
                     if strongSelf.autoDismiss {
                         strongSelf.dismiss()
                     }
@@ -324,6 +326,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     func dismissSearch() {
         self.deactivateSearch()
+    }
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext {
+        return ContactsPickerContext(controller: self)
     }
 }
 
@@ -378,5 +384,42 @@ final class ContactsSearchNavigationContentNode: NavigationBarContentNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         self.searchBar.updateThemeAndStrings(theme: SearchBarNodeTheme(theme: presentationData.theme, hasSeparator: false), strings: presentationData.strings)
+    }
+}
+
+final class ContactsPickerContext: AttachmentMediaPickerContext {
+    private weak var controller: ContactSelectionControllerImpl?
+    
+    var selectionCount: Signal<Int, NoError> {
+        if let controller = self.controller {
+            return controller.contactsNode.contactListNode.selectionStateSignal
+            |> map { state in
+                return state?.selectedPeerIndices.count ?? 0
+            }
+        } else {
+            return .single(0)
+        }
+    }
+    
+    var caption: Signal<NSAttributedString?, NoError> {
+        return .single(nil)
+    }
+        
+    init(controller: ContactSelectionControllerImpl) {
+        self.controller = controller
+    }
+    
+    func setCaption(_ caption: NSAttributedString) {
+        
+    }
+    
+    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+        self.controller?.contactsNode.requestMultipleAction?(silently, nil)
+    }
+    
+    func schedule() {
+        self.controller?.presentScheduleTimePicker ({ time in
+            self.controller?.contactsNode.requestMultipleAction?(false, time)
+        })
     }
 }

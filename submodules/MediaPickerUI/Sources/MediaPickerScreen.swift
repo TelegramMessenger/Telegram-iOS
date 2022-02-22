@@ -23,16 +23,18 @@ final class MediaPickerInteraction {
     let toggleSelection: (TGMediaSelectableItem, Bool) -> Void
     let sendSelected: (TGMediaSelectableItem?, Bool, Int32?, Bool) -> Void
     let schedule: () -> Void
+    let dismissInput: () -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool) -> Void, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool) -> Void, schedule: @escaping  () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openMedia: @escaping (PHFetchResult<PHAsset>, Int, UIImage?) -> Void, openSelectedMedia: @escaping (TGMediaSelectableItem, UIImage?) -> Void, toggleSelection: @escaping (TGMediaSelectableItem, Bool) -> Void, sendSelected: @escaping (TGMediaSelectableItem?, Bool, Int32?, Bool) -> Void, schedule: @escaping  () -> Void, dismissInput: @escaping () -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openMedia = openMedia
         self.openSelectedMedia = openSelectedMedia
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
         self.schedule = schedule
+        self.dismissInput = dismissInput
         self.selectionState = selectionState
         self.editingState = editingState
     }
@@ -108,6 +110,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         private var presentationData: PresentationData
         private let mediaAssetsContext: MediaAssetsContext
         
+        private let backgroundNode: NavigationBackgroundNode
         private let gridNode: GridNode
         private var cameraView: TGAttachmentCameraView?
         private var placeholderNode: MediaPickerPlaceholderNode?
@@ -142,12 +145,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             let mediaAssetsContext = MediaAssetsContext()
             self.mediaAssetsContext = mediaAssetsContext
             
+            self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
             self.gridNode = GridNode()
 
             super.init()
             
             self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             
+            self.addSubnode(self.backgroundNode)
             self.addSubnode(self.gridNode)
                         
             self.interaction = MediaPickerInteraction(openMedia: { [weak self] fetchResult, index, immediateThumbnail in
@@ -170,6 +175,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     strongSelf.controller?.presentSchedulePicker(false, { [weak self] time in
                         self?.interaction?.sendSelected(nil, false, time, true)
                     })
+                }
+            }, dismissInput: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.dismissInput()
                 }
             }, selectionState: TGMediaSelectionContext(), editingState: TGMediaEditingContext())
             self.interaction?.selectionState?.grouping = true
@@ -281,6 +290,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             cameraView.startPreview()
             
             self.gridNode.scrollView.addSubview(cameraView)
+            
+//            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         }
                 
         private func dismissInput() {
@@ -590,6 +601,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             let gridInsets = UIEdgeInsets(top: insets.top + manageHeight, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
             transition.updateFrame(node: self.gridNode, frame: bounds)
             
+            transition.updateFrame(node: self.backgroundNode, frame: bounds)
+            self.backgroundNode.update(size: bounds.size, transition: transition)
+            
             self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: 200.0, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
@@ -695,8 +709,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.titleView.title = self.presentationData.strings.Attachment_Gallery
         
         self.moreButtonNode = MediaPickerMoreButtonNode(theme: self.presentationData.theme)
-        
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
+                
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData, hideBackground: false, hideBadge: false, hideSeparator: true))
         
         self.statusBar.statusBarStyle = .Ignore
         
