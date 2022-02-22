@@ -671,7 +671,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.topStripeNode.removeFromSupernode()
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
                             }
                             if strongSelf.maskNode.supernode != nil {
                                 strongSelf.maskNode.removeFromSupernode()
@@ -693,10 +693,10 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
                             }
                             if strongSelf.maskNode.supernode == nil {
-                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                                strongSelf.addSubnode(strongSelf.maskNode)
                             }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -764,7 +764,11 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         } else {
                             shimmerNode = ShimmerEffectNode()
                             strongSelf.placeholderNode = shimmerNode
-                            strongSelf.addSubnode(shimmerNode)
+                            if strongSelf.bottomStripeNode.supernode != nil {
+                                strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.bottomStripeNode)
+                            } else {
+                                strongSelf.addSubnode(shimmerNode)
+                            }
                         }
                         shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                         if let (rect, size) = strongSelf.absoluteLocation {

@@ -204,15 +204,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                         return .theme(file)
                     } else if ext == "wav" || ext == "opus" {
                         return .audio(file)
-                    } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
-                        if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let composition = LOTComposition(filePath: path), composition.timeDuration > 0.0 {
-                            let gallery = GalleryController(context: context, source: .peerMessagesAtId(messageId: message.id, chatLocation: chatLocation ?? ChatLocation.peer(message.id.peerId), chatLocationContextHolder: chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                                navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                                }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                            return .gallery(.single(gallery))
-                        }
                     }
-                    
                     if ext == "mkv" {
                         return .document(file, true)
                     }

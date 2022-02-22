@@ -385,15 +385,26 @@
     }]];
 }
 
+- (id<TGModernGalleryItem>)item {
+    if (_fetchItem != nil) {
+        return _fetchItem;
+    } else {
+        return _item;
+    }
+}
+
 - (void)setItem:(TGMediaPickerGalleryVideoItem *)item synchronously:(bool)synchronously
 {
+    TGMediaPickerGalleryFetchResultItem *fetchItem;
     if ([item isKindOfClass:[TGMediaPickerGalleryFetchResultItem class]]) {
-        _fetchItem = (TGMediaPickerGalleryFetchResultItem *)item;
-        item = (TGMediaPickerGalleryVideoItem *)[_fetchItem backingItem];
+        fetchItem = (TGMediaPickerGalleryFetchResultItem *)item;
+        item = (TGMediaPickerGalleryVideoItem *)[fetchItem backingItem];
     }
     
     bool itemChanged = ![item isEqual:self.item];
     bool itemIdChanged = item.uniqueId != self.item.uniqueId;
+    
+    _fetchItem = fetchItem;
     
     [super setItem:item synchronously:synchronously];
     

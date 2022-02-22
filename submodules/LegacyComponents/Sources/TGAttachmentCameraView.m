@@ -1,4 +1,5 @@
 #import "TGAttachmentCameraView.h"
+#import "TGImageUtils.h"
 
 #import "LegacyComponentsInternal.h"
 
@@ -13,6 +14,7 @@
 #import <LegacyComponents/TGMenuSheetController.h>
 
 #import <AVFoundation/AVFoundation.h>
+
 
 @interface TGAttachmentCameraView ()
 {
@@ -52,7 +54,7 @@
         [_wrapperView addSubview:_previewView];
         [camera attachPreviewView:_previewView];
         
-        _iconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"Editor/Camera"]];
+        _iconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"Chat/Attach Menu/Camera"]];
         [self addSubview:_iconView];
         
         [self addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGesture:)]];
@@ -119,6 +121,10 @@
         [self stopPreview];
     
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+}
+
+- (void)removeCorners {
+    [_cornersView removeFromSuperview];
 }
 
 - (void)setPallete:(TGMenuSheetPallete *)pallete
@@ -228,6 +234,7 @@
     void(^block)(void) = ^
     {
         _wrapperView.transform = CGAffineTransformMakeRotation(-1 * TGRotationForInterfaceOrientation(orientation));
+        _wrapperView.frame = self.bounds;
     };
     
     if (animated)
@@ -240,11 +247,13 @@
 {
     [super layoutSubviews];
     
+    _wrapperView.frame = self.bounds;
+    
     TGCameraPreviewView *previewView = _previewView;
     if (previewView.superview == _wrapperView)
         previewView.frame = self.bounds;
     
-    _iconView.frame = CGRectMake((self.frame.size.width - _iconView.frame.size.width) / 2, (self.frame.size.height - _iconView.frame.size.height) / 2, _iconView.frame.size.width, _iconView.frame.size.height);
+    _iconView.frame = CGRectMake(self.frame.size.width - _iconView.frame.size.width - 3.0, 3.0 - TGScreenPixel, _iconView.frame.size.width, _iconView.frame.size.height);
 }
 
 - (void)saveStartImage:(void (^)(void))completion {

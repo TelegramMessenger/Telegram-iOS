@@ -1440,13 +1440,17 @@ public struct CombinedTransition {
 }
     
 public extension ContainedViewLayoutTransition {
-    func animateView(_ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
+    func animateView(allowUserInteraction: Bool = false, _ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:
             f()
             completion?(true)
         case let .animated(duration, curve):
-            UIView.animate(withDuration: duration, delay: 0.0, options: curve.viewAnimationOptions, animations: {
+            var options = curve.viewAnimationOptions
+            if allowUserInteraction {
+                options.insert(.allowUserInteraction)
+            }
+            UIView.animate(withDuration: duration, delay: 0.0, options: options, animations: {
                 f()
             }, completion: completion)
         }

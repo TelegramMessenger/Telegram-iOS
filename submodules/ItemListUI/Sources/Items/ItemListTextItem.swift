@@ -111,7 +111,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 15.0 + params.leftInset
+            let leftInset: CGFloat = 15.0
             let topInset: CGFloat = 7.0
             var bottomInset: CGFloat = 7.0
             
@@ -130,7 +130,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     return (TelegramTextAttributes.URL, contents)
                 }))
             }
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0 - params.leftInset - params.rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             
@@ -152,7 +152,7 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                     
                     let _ = titleApply()
                     
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleLayout.size)
+                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + params.leftInset, y: topInset), size: titleLayout.size)
                 }
             })
         }

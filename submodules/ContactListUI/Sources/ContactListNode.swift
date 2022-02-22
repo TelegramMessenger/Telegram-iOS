@@ -801,6 +801,9 @@ public final class ContactListNode: ASDisplayNode {
     public var selectionState: ContactListNodeGroupSelectionState? {
         return self.selectionStateValue
     }
+    public var selectionStateSignal: Signal<ContactListNodeGroupSelectionState?, NoError> {
+        return self.selectionStatePromise.get()
+    }
     public var selectionStateUpdated: ((ContactListNodeGroupSelectionState?) -> Void)?
     
     public var selectedPeers: [ContactListPeer] {

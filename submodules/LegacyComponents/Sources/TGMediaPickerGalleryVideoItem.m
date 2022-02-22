@@ -159,6 +159,7 @@
         backingItem.editingContext = self.editingContext;
         backingItem.stickersContext = self.stickersContext;
         backingItem.asFile = self.asFile;
+        backingItem.immediateThumbnailImage = self.immediateThumbnailImage;
         _backingItem = backingItem;
     }
     return _backingItem;

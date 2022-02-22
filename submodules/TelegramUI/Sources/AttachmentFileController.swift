@@ -13,14 +13,19 @@ import AccountContext
 import ItemListPeerActionItem
 import AttachmentUI
 import TelegramStringFormatting
+import ListMessageItem
 
 private final class AttachmentFileControllerArguments {
+    let context: AccountContext
     let openGallery: () -> Void
     let openFiles: () -> Void
+    let send: (Message) -> Void
    
-    init(openGallery: @escaping () -> Void, openFiles: @escaping () -> Void) {
+    init(context: AccountContext, openGallery: @escaping () -> Void, openFiles: @escaping () -> Void, send: @escaping (Message) -> Void) {
+        self.context = context
         self.openGallery = openGallery
         self.openFiles = openFiles
+        self.send = send
     }
 }
 
@@ -29,7 +34,10 @@ private enum AttachmentFileSection: Int32 {
     case recent
 }
 
-private func areMessagesEqual(_ lhsMessage: Message, _ rhsMessage: Message) -> Bool {
+private func areMessagesEqual(_ lhsMessage: Message?, _ rhsMessage: Message?) -> Bool {
+    guard let lhsMessage = lhsMessage, let rhsMessage = rhsMessage else {
+        return lhsMessage == nil && rhsMessage == nil
+    }
     if lhsMessage.stableVersion != rhsMessage.stableVersion {
         return false
     }
@@ -44,7 +52,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
     case selectFromFiles(PresentationTheme, String)
     
     case recentHeader(PresentationTheme, String)
-    case file(Int32, PresentationTheme, Message)
+    case file(Int32, PresentationTheme, Message?)
   
     var section: ItemListSectionId {
         switch self {
@@ -89,7 +97,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
                     return false
                 }
             case let .file(lhsIndex, lhsTheme, lhsMessage):
-                if case let .file(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex != rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
+                if case let .file(rhsIndex, rhsTheme, rhsMessage) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, areMessagesEqual(lhsMessage, rhsMessage) {
                     return true
                 } else {
                     return false
@@ -115,33 +123,38 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
             case let .recentHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .file(_, _, message):
-                let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile
-                let label: String
-                if let file = file {
-                    label = dataSizeString(file.size ?? 0, formatting: DataSizeStringFormatting(strings: presentationData.strings, decimalSeparator: "."))
-                } else {
-                    label = ""
-                }
-                return ItemListDisclosureItem(presentationData: presentationData, title: file?.fileName ?? "", label: label, sectionId: self.section, style: .blocks, action: {
-                
-                })
+                let interaction = ListMessageItemInteraction(openMessage: { message, _ in
+                    arguments.send(message)
+                    return false
+                }, openMessageContextMenu: { _, _, _, _, _ in }, toggleMessagesSelection: { _, _ in }, openUrl: { _, _, _, _ in }, openInstantPage: { _, _ in }, longTap: { _, _ in }, getHiddenMedia: { return [:] })
+            
+                let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
+                let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
+            
+                return ListMessageItem(presentationData: chatPresentationData, context: arguments.context, chatLocation: .peer(PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, displayFileInfo: false, displayBackground: true, style: .blocks)
         }
     }
 }
 
 private func attachmentFileControllerEntries(presentationData: PresentationData, recentDocuments: [Message]?) -> [AttachmentFileEntry] {
     var entries: [AttachmentFileEntry] = []
-    
     entries.append(.selectFromGallery(presentationData.theme, presentationData.strings.Attachment_SelectFromGallery))
     entries.append(.selectFromFiles(presentationData.theme, presentationData.strings.Attachment_SelectFromFiles))
     
-    if let _ = recentDocuments {
-//        entries.append(.recentHeader(presentationData.theme, "RECENTLY SENT FILES".uppercased()))
-//        var i: Int32 = 0
-//        for file in recentDocuments {
-//            entries.append(.file(i, presentationData.theme, file))
-//            i += 1
-//        }
+    if let recentDocuments = recentDocuments {
+        if recentDocuments.count > 0 {
+            entries.append(.recentHeader(presentationData.theme, presentationData.strings.Attachment_RecentlySentFiles.uppercased()))
+            var i: Int32 = 0
+            for file in recentDocuments {
+                entries.append(.file(i, presentationData.theme, file))
+                i += 1
+            }
+        }
+    } else {
+        entries.append(.recentHeader(presentationData.theme, presentationData.strings.Attachment_RecentlySentFiles.uppercased()))
+        for i in 0 ..< 8 {
+            entries.append(.file(Int32(i), presentationData.theme, nil))
+        }
     }
 
     return entries
@@ -149,32 +162,116 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
 
 private class AttachmentFileControllerImpl: ItemListController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
+    
+    var prepareForReuseImpl: () -> Void = {}
+    public func prepareForReuse() {
+        self.prepareForReuseImpl()
+        self.scrollToTop?()
+    }
 }
 
-public func attachmentFileController(context: AccountContext, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void) -> AttachmentContainable {
+private struct AttachmentFileControllerState: Equatable {
+    var searching: Bool
+}
+
+public func attachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentContainable {
     let actionsDisposable = DisposableSet()
     
+    let statePromise = ValuePromise(AttachmentFileControllerState(searching: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: AttachmentFileControllerState(searching: false))
+    let updateState: ((AttachmentFileControllerState) -> AttachmentFileControllerState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    var expandImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
-    let arguments = AttachmentFileControllerArguments(openGallery: {
-        presentGallery()
-    }, openFiles: {
-        presentFiles()
-    })
+    var dismissInputImpl: (() -> Void)?
+    let arguments = AttachmentFileControllerArguments(
+        context: context,
+        openGallery: {
+            presentGallery()
+        },
+        openFiles: {
+            presentFiles()
+        },
+        send: { message in
+            let _ = (context.engine.messages.getMessagesLoadIfNecessary([message.id], strategy: .cloud(skipLocal: true))
+            |> deliverOnMainQueue).start(next: { messages in
+                if let message = messages.first, let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
+                    send(.message(message: MessageReference(message), media: file))
+                }
+                dismissImpl?()
+            })
+        }
+    )
     
     let recentDocuments: Signal<[Message]?, NoError> = .single(nil)
     |> then(
-        context.engine.messages.searchMessages(location: .recentDocuments, query: "", state: nil)
+        context.engine.messages.searchMessages(location: .sentMedia(tags: [.file]), query: "", state: nil)
         |> map { result -> [Message]? in
             return result.0.messages
         }
     )
+    
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
 
-    let signal = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, recentDocuments)
-    |> map { presentationData, recentDocuments -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let previousRecentDocuments = Atomic<[Message]?>(value: nil)
+    let signal = combineLatest(queue: Queue.mainQueue(),
+       presentationData,
+       recentDocuments,
+       statePromise.get()
+    )
+    |> map { presentationData, recentDocuments, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if presentationData.theme.list.blocksBackgroundColor.rgb == 0x000000 {
+            let updatedTheme = presentationData.theme.withInvertedBlocksBackground()
+            presentationData = presentationData.withUpdated(theme: updatedTheme)
+        }
+        
+        let previousRecentDocuments = previousRecentDocuments.swap(recentDocuments)
+        let crossfade = previousRecentDocuments == nil && recentDocuments != nil
+        var animateChanges = false
+        if let previousRecentDocuments = previousRecentDocuments, let recentDocuments = recentDocuments, !previousRecentDocuments.isEmpty && !recentDocuments.isEmpty, !crossfade {
+            animateChanges = true
+        }
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        if let recentDocuments = recentDocuments, recentDocuments.count > 10 {
+            rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
+                expandImpl?()
+                updateState { state in
+                    var updatedState = state
+                    updatedState.searching = true
+                    return updatedState
+                }
+            })
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Attachment_File), leftNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
-        }), rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, recentDocuments: recentDocuments), style: .blocks, emptyStateItem: nil, animateChanges: false)
+        }), rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        
+        var emptyItem: AttachmentFileEmptyStateItem?
+        if let recentDocuments = recentDocuments, recentDocuments.isEmpty {
+            emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings)
+        }
+        
+        var searchItem: ItemListControllerSearch?
+        if state.searching {
+            searchItem = AttachmentFileSearchItem(context: context, presentationData: presentationData, cancel: {
+                updateState { state in
+                    var updatedState = state
+                    updatedState.searching = false
+                    return updatedState
+                }
+            }, send: { message in
+                arguments.send(message)
+            }, dismissInput: {
+                dismissInputImpl?()
+            })
+        }
+        
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, recentDocuments: recentDocuments), style: .blocks, emptyStateItem: emptyItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -182,8 +279,21 @@ public func attachmentFileController(context: AccountContext, presentGallery: @e
     }
     
     let controller = AttachmentFileControllerImpl(context: context, state: signal)
+    controller.prepareForReuseImpl = {
+        updateState { state in
+            var updatedState = state
+            updatedState.searching = false
+            return updatedState
+        }
+    }
     dismissImpl = { [weak controller] in
         controller?.dismiss(animated: true)
+    }
+    dismissInputImpl = { [weak controller] in
+        controller?.view.endEditing(true)
+    }
+    expandImpl = { [weak controller] in
+        controller?.requestAttachmentMenuExpansion()
     }
     return controller
 }

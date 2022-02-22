@@ -145,6 +145,7 @@
 #import <LegacyComponents/TGMediaOriginInfo.h>
 #import <LegacyComponents/TGMediaPickerGalleryInterfaceView.h>
 #import <LegacyComponents/TGMediaPickerGalleryModel.h>
+#import <LegacyComponents/TGMediaPickerGallerySelectedItemsModel.h>
 #import <LegacyComponents/TGMediaSelectionContext.h>
 #import <LegacyComponents/TGMediaVideoConverter.h>
 #import <LegacyComponents/TGMemoryImageCache.h>

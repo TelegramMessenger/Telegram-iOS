@@ -1478,4 +1478,10 @@ public final class PresentationTheme: Equatable {
     public func withUpdated(preview: Bool) -> PresentationTheme {
         return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: preview)
     }
+    
+    public func withInvertedBlocksBackground() -> PresentationTheme {
+        let list = self.list.withUpdated(blocksBackgroundColor: self.list.itemBlocksBackgroundColor, itemBlocksBackgroundColor: self.list.blocksBackgroundColor)
+        
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
+    }
 }

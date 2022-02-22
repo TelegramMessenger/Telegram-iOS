@@ -147,11 +147,14 @@
     
     if (_cachedDuration == nil)
     {
-        return [[TGMediaAssetImageSignals avAssetForVideoAsset:self] map:^id(AVAsset *asset)
+        NSTimeInterval assetDuration = self.videoDuration;
+        return [[[TGMediaAssetImageSignals avAssetForVideoAsset:self] map:^id(AVAsset *asset)
         {
             NSTimeInterval duration = CMTimeGetSeconds(asset.duration);
             _cachedDuration = @(duration);
             return _cachedDuration;
+        }] catch:^SSignal * _Nonnull(id  _Nullable error) {
+            return [SSignal single:@(assetDuration)];
         }];
     }
     

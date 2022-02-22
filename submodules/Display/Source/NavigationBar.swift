@@ -1104,7 +1104,7 @@ open class NavigationBar: ASDisplayNode {
             }
         } else if self.leftButtonNode.supernode != nil {
             let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
-            leftTitleInset += leftButtonSize.width + leftButtonInset + 1.0
+            leftTitleInset = leftButtonSize.width + leftButtonInset + 1.0
             
             self.leftButtonNode.alpha = 1.0
             transition.updateFrame(node: self.leftButtonNode, frame: CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
@@ -1116,7 +1116,7 @@ open class NavigationBar: ASDisplayNode {
         
         if self.rightButtonNode.supernode != nil {
             let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)), isLandscape: isLandscape)
-            rightTitleInset += rightButtonSize.width + leftButtonInset + 1.0
+            rightTitleInset = rightButtonSize.width + leftButtonInset + 1.0
             self.rightButtonNode.alpha = 1.0
             transition.updateFrame(node: self.rightButtonNode, frame: CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
         }
@@ -1456,7 +1456,8 @@ open class NavigationBar: ASDisplayNode {
             return nil
         }
         
-        if result == self.view || result == self.buttonsContainerNode.view {
+        //result == self.view ||
+        if result == self.buttonsContainerNode.view {
             return nil
         }
         

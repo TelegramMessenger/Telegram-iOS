@@ -13010,6 +13010,8 @@ public extension Api {
         case inputReportReasonCopyright
         case inputReportReasonGeoIrrelevant
         case inputReportReasonFake
+        case inputReportReasonIllegalDrugs
+        case inputReportReasonPersonalDetails
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13061,6 +13063,18 @@ public extension Api {
                     }
                     
                     break
+                case .inputReportReasonIllegalDrugs:
+                    if boxed {
+                        buffer.appendInt32(177124030)
+                    }
+                    
+                    break
+                case .inputReportReasonPersonalDetails:
+                    if boxed {
+                        buffer.appendInt32(-1631091139)
+                    }
+                    
+                    break
     }
     }
     
@@ -13082,6 +13096,10 @@ public extension Api {
                 return ("inputReportReasonGeoIrrelevant", [])
                 case .inputReportReasonFake:
                 return ("inputReportReasonFake", [])
+                case .inputReportReasonIllegalDrugs:
+                return ("inputReportReasonIllegalDrugs", [])
+                case .inputReportReasonPersonalDetails:
+                return ("inputReportReasonPersonalDetails", [])
     }
     }
     
@@ -13108,6 +13126,12 @@ public extension Api {
         }
         public static func parse_inputReportReasonFake(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonFake
+        }
+        public static func parse_inputReportReasonIllegalDrugs(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonIllegalDrugs
+        }
+        public static func parse_inputReportReasonPersonalDetails(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonPersonalDetails
         }
     
     }

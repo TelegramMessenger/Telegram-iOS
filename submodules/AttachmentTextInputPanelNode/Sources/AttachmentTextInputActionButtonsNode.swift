@@ -15,8 +15,8 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
     let sendButton: HighlightTrackingButtonNode
     var sendButtonHasApplyIcon = false
     var animatingSendButton = false
-    let expandMediaInputButton: HighlightableButtonNode
-    
+    let textNode: ImmediateTextNode
+
     var sendButtonLongPressed: ((ASDisplayNode, ContextGesture) -> Void)?
     
     private var gestureRecognizer: ContextGesture?
@@ -40,8 +40,10 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
         self.backgroundNode.clipsToBounds = true
         self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
-        
-        self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .default)
+                
+        self.textNode = ImmediateTextNode()
+        self.textNode.attributedText = NSAttributedString(string: self.strings.MediaPicker_Send, font: Font.semibold(17.0), textColor: theme.chat.inputPanel.actionControlForegroundColor)
+        self.textNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -71,7 +73,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         self.addSubnode(self.sendContainerNode)
         self.sendContainerNode.addSubnode(self.backgroundNode)
         self.sendContainerNode.addSubnode(self.sendButton)
-        self.addSubnode(self.expandMediaInputButton)
+        self.sendContainerNode.addSubnode(self.textNode)
     }
     
     override func didLoad() {
@@ -91,9 +93,9 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
     }
     
     func updateTheme(theme: PresentationTheme, wallpaper: TelegramWallpaper) {
-        self.expandMediaInputButton.setImage(PresentationResourcesChat.chatInputPanelExpandButtonImage(theme), for: [])
-        
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
+        
+        self.textNode.attributedText = NSAttributedString(string: self.strings.MediaPicker_Send, font: Font.semibold(17.0), textColor: theme.chat.inputPanel.actionControlForegroundColor)
     }
     
     private var absoluteRect: (CGRect, CGSize)?
@@ -101,22 +103,31 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         self.absoluteRect = (rect, containerSize)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, minimized: Bool, interfaceState: ChatPresentationInterfaceState) -> CGSize {
         self.validLayout = size
         
-        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.sendContainerNode, frame: CGRect(origin: CGPoint(), size: size))
-        
-        let backgroundSize = CGSize(width: 33.0, height: 33.0)
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - backgroundSize.width) / 2.0), y: floorToScreenPixels((size.height - backgroundSize.height) / 2.0)), size: backgroundSize))
-        self.backgroundNode.cornerRadius = backgroundSize.width / 2.0
-        
-        transition.updateFrame(node: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
-        var expanded = false
-        if case let .media(_, maybeExpanded, _) = interfaceState.inputMode, maybeExpanded != nil {
-            expanded = true
+        let width: CGFloat
+        let textSize = self.textNode.updateLayout(CGSize(width: 100.0, height: size.height))
+        if minimized {
+            width = 44.0
+        } else {
+            width = textSize.width + 36.0
         }
-        transition.updateSublayerTransformScale(node: self.expandMediaInputButton, scale: CGPoint(x: 1.0, y: expanded ? 1.0 : -1.0))
+        
+        let buttonSize = CGSize(width: width, height: size.height)
+        
+        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - textSize.width) / 2.0), y: floorToScreenPixels((buttonSize.height - textSize.height) / 2.0)), size: textSize))
+        transition.updateAlpha(node: self.textNode, alpha: minimized ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.sendButton.imageNode, alpha: minimized ? 1.0 : 0.0)
+        
+        transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: buttonSize))
+        transition.updateFrame(node: self.sendContainerNode, frame: CGRect(origin: CGPoint(), size: buttonSize))
+        
+        let backgroundSize = CGSize(width: width - 11.0, height: 33.0)
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - backgroundSize.width) / 2.0), y: floorToScreenPixels((size.height - backgroundSize.height) / 2.0)), size: backgroundSize))
+        self.backgroundNode.cornerRadius = backgroundSize.height / 2.0
+        
+        return buttonSize
     }
     
     func updateAccessibility() {

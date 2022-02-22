@@ -6264,6 +6264,20 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func resolvePhone(phone: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ResolvedPeer>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1963375804)
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "contacts.resolvePhone", parameters: [("phone", phone)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.contacts.ResolvedPeer? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.contacts.ResolvedPeer?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.contacts.ResolvedPeer
+                        }
+                        return result
+                    })
+                }
             }
             public struct help {
                 public static func test() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
