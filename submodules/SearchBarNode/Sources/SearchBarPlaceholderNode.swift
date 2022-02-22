@@ -134,12 +134,19 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
         }
     }
     
-    public func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {
+    public func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ compactPlaceholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let currentForegroundColor = self.foregroundColor
         let currentIconColor = self.iconColor
         
-        return { placeholderString, constrainedSize, expansionProgress, iconColor, foregroundColor, backgroundColor, transition in
+        return { fullPlaceholderString, compactPlaceholderString, constrainedSize, expansionProgress, iconColor, foregroundColor, backgroundColor, transition in
+            let placeholderString: NSAttributedString?
+            if constrainedSize.width < 350.0 {
+                placeholderString = compactPlaceholderString
+            } else {
+                placeholderString = fullPlaceholderString
+            }
+            
             let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: placeholderString, backgroundColor: .clear, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var updatedColor: UIColor?

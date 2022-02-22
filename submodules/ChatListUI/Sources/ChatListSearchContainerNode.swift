@@ -870,7 +870,28 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     })
                 })))
                 
-                if !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
+                if isCachedValue {
+                    if !items.isEmpty {
+                        items.append(.separator)
+                    }
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_ContextMenuSelect, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
+                        c.dismiss(completion: {
+                            if let strongSelf = self {
+                                strongSelf.dismissInput()
+                                
+                                strongSelf.updateState { state in
+                                    return state.withUpdatedSelectedMessageIds([message.id])
+                                }
+                                
+                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                                }
+                            }
+                        })
+                    })))
+                }
+                
+                /*if !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
                     if !items.isEmpty {
                         items.append(.separator)
                     }
@@ -905,7 +926,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             f(.dismissWithoutContent)
                         })))
                     }
-                }
+                }*/
                 
                 return items
             }
@@ -1061,34 +1082,53 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     }
     
     func deleteMessages(messageIds: Set<EngineMessage.Id>?) {
+        let isDownloads = self.paneContainerNode.currentPaneKey == .downloads
+        
         if let messageIds = messageIds ?? self.stateValue.selectedMessageIds, !messageIds.isEmpty {
-            let (peers, messages) = self.currentMessages
-            let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                for id in messageIds {
-                    if transaction.getMessage(id) == nil, let message = messages[id] {
-                        storeMessageFromSearch(transaction: transaction, message: message._asMessage())
-                    }
+            if isDownloads {
+                let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
+                    return messageIds.compactMap(transaction.getMessage)
                 }
-            }).start()
-            
-            self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
-            |> deliverOnMainQueue).start(next: { [weak self] actions in
-                if let strongSelf = self, !actions.options.isEmpty {
-                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                    var items: [ActionSheetItem] = []
-                    let personalPeerName: String? = nil
+                |> deliverOnMainQueue).start(next: { [weak self] messages in
+                    guard let strongSelf = self else {
+                        return
+                    }
                     
-                    if actions.options.contains(.deleteGlobally) {
-                        let globalTitle: String
-                        if let personalPeerName = personalPeerName {
-                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
-                        } else {
-                            globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                        }
-                        items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
+                    let title: String
+                    let text: String
+                    
+                    //TODO:localize
+                    if messageIds.count == 1 {
+                        title = "Remove Document?"
+                        text = "Are you sure you want to remove this\ndocument from Downloads?\nIt will be deleted from your disk, but\nwill remain accessible in the cloud.";
+                    } else {
+                        title = "Remove \(messages.count) Documents?"
+                        text = "Do you want to remove these\n\(messages.count) documents from Downloads?\nThey will be deleted from your disk,\nbut will remain accessible\nin the cloud."
+                    }
+                    
+                    strongSelf.present?(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                        }),
+                        //TODO:localize
+                        TextAlertAction(type: .defaultAction, title: "Remove", action: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            var resourceIds = Set<MediaResourceId>()
+                            for message in messages {
+                                for media in message.media {
+                                    if let file = media as? TelegramMediaFile {
+                                        resourceIds.insert(file.resource.id)
+                                    }
+                                }
+                            }
+                            
+                            let _ = (strongSelf.context.account.postbox.mediaBox.removeCachedResources(resourceIds, force: true, notify: true)
+                            |> deliverOnMainQueue).start(completed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
                                 
                                 strongSelf.updateState { state in
                                     return state.withUpdatedSelectedMessageIds(nil)
@@ -1096,34 +1136,74 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
                                 }
-                            }
-                        }))
-                    }
-                    if actions.options.contains(.deleteLocally) {
-                        let localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
-                        items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            if let strongSelf = self {
-                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
-                                
-                                strongSelf.updateState { state in
-                                    return state.withUpdatedSelectedMessageIds(nil)
-                                }
-                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
-                                }
-                            }
-                        }))
-                    }
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
+                            })
                         })
-                    ])])
-                    strongSelf.view.endEditing(true)
-                    strongSelf.present?(actionSheet, nil)
-                }
-            }))
+                    ], actionLayout: .horizontal, parseMarkdown: true), nil)
+                })
+            } else {
+                let (peers, messages) = self.currentMessages
+                let _ = (self.context.account.postbox.transaction { transaction -> Void in
+                    for id in messageIds {
+                        if transaction.getMessage(id) == nil, let message = messages[id] {
+                            storeMessageFromSearch(transaction: transaction, message: message._asMessage())
+                        }
+                    }
+                }).start()
+                
+                self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
+                |> deliverOnMainQueue).start(next: { [weak self] actions in
+                    if let strongSelf = self, !actions.options.isEmpty {
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        var items: [ActionSheetItem] = []
+                        let personalPeerName: String? = nil
+                        
+                        if actions.options.contains(.deleteGlobally) {
+                            let globalTitle: String
+                            if let personalPeerName = personalPeerName {
+                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesFor(personalPeerName).string
+                            } else {
+                                globalTitle = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
+                            }
+                            items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).start()
+                                    
+                                    strongSelf.updateState { state in
+                                        return state.withUpdatedSelectedMessageIds(nil)
+                                    }
+                                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                    }
+                                }
+                            }))
+                        }
+                        if actions.options.contains(.deleteLocally) {
+                            let localOptionText = strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe
+                            items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                if let strongSelf = self {
+                                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forLocalPeer).start()
+                                    
+                                    strongSelf.updateState { state in
+                                        return state.withUpdatedSelectedMessageIds(nil)
+                                    }
+                                    if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.3, curve: .easeInOut))
+                                    }
+                                }
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        strongSelf.view.endEditing(true)
+                        strongSelf.present?(actionSheet, nil)
+                    }
+                }))
+            }
         }
     }
     

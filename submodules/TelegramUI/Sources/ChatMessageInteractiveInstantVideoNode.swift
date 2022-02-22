@@ -720,7 +720,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             playbackStatusNode.frame = videoFrame.insetBy(dx: 1.5, dy: 1.5)
             
-            let status = messageFileMediaPlaybackStatus(context: item.context, file: file, message: item.message, isRecentActions: item.associatedData.isRecentActions, isGlobalSearch: false)
+            let status = messageFileMediaPlaybackStatus(context: item.context, file: file, message: item.message, isRecentActions: item.associatedData.isRecentActions, isGlobalSearch: false, isDownloadList: false)
             playbackStatusNode.status = status
             self.durationNode?.status = status
             |> map(Optional.init)

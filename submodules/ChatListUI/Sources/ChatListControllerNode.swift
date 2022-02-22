@@ -1193,7 +1193,7 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter, navigationController: NavigationController?) -> (ASDisplayNode, (Bool) -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }
@@ -1226,7 +1226,7 @@ final class ChatListControllerNode: ASDisplayNode {
         })
         self.containerNode.accessibilityElementsHidden = true
                 
-        return (contentNode.filterContainerNode, { [weak self] in
+        return (contentNode.filterContainerNode, { [weak self] focus in
             guard let strongSelf = self else {
                 return
             }
@@ -1239,7 +1239,7 @@ final class ChatListControllerNode: ASDisplayNode {
                         strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                     }
                 }
-            }, placeholder: placeholderNode)
+            }, placeholder: placeholderNode, focus: focus)
         })
     }
     
