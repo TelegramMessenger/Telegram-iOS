@@ -1511,12 +1511,12 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     switch joinCallResult.connectionMode {
                     case .rtc:
                         strongSelf.currentConnectionMode = .rtc
-                        strongSelf.genericCallContext?.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
+                        strongSelf.genericCallContext?.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
                         strongSelf.genericCallContext?.setJoinResponse(payload: clientParams)
                     case let .broadcast(isExternalStream):
                         strongSelf.currentConnectionMode = .broadcast
                         strongSelf.genericCallContext?.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: isExternalStream))
-                        strongSelf.genericCallContext?.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false)
+                        strongSelf.genericCallContext?.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: isExternalStream)
                     }
 
                     strongSelf.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
@@ -1784,15 +1784,25 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                 }
                 
+                let chatPeer = self.accountContext.account.postbox.peerView(id: self.peerId)
+                |> map { view -> Peer? in
+                    if let peer = peerViewMainPeer(view) {
+                        return peer
+                    } else {
+                        return nil
+                    }
+                }
+                
                 self.participantsContextStateDisposable.set(combineLatest(queue: .mainQueue(),
                     participantsContext.state,
                     participantsContext.activeSpeakers,
                     self.speakingParticipantsContext.get(),
                     adminIds,
                     myPeer,
+                    chatPeer,
                     accountContext.account.postbox.peerView(id: peerId),
                     self.isReconnectingAsSpeakerPromise.get()
-                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds, myPeerAndCachedData, view, isReconnectingAsSpeaker in
+                ).start(next: { [weak self] state, activeSpeakers, speakingParticipants, adminIds, myPeerAndCachedData, chatPeer, view, isReconnectingAsSpeaker in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1873,6 +1883,30 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             ))
                             participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                         }
+                    }
+                    
+                    if let chatPeer = chatPeer, !participants.contains(where: { $0.peer.id == chatPeer.id }) {
+                        participants.append(GroupCallParticipantsContext.Participant(
+                            peer: chatPeer,
+                            ssrc: 100,
+                            videoDescription: GroupCallParticipantsContext.Participant.VideoDescription(
+                                endpointId: "unified",
+                                ssrcGroups: [],
+                                audioSsrc: 100,
+                                isPaused: false
+                            ),
+                            presentationDescription: nil,
+                            joinTimestamp: strongSelf.temporaryJoinTimestamp,
+                            raiseHandRating: nil,
+                            hasRaiseHand: false,
+                            activityTimestamp: nil,
+                            activityRank: nil,
+                            muteState: GroupCallParticipantsContext.Participant.MuteState(canUnmute: false, mutedByYou: false),
+                            volume: nil,
+                            about: nil,
+                            joinedVideo: false
+                        ))
+                        participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
                     }
 
                     var otherParticipantsWithVideo = 0
@@ -2691,7 +2725,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 }
                 let clientParams = joinCallResult.jsonParams
 
-                screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false)
+                screencastCallContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
                 screencastCallContext.setJoinResponse(payload: clientParams)
             }, error: { error in
                 guard let _ = self else {
@@ -2885,7 +2919,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if !self.didInitializeConnectionMode || self.currentConnectionMode != .none {
             self.didInitializeConnectionMode = true
             self.currentConnectionMode = .none
-            self.genericCallContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc)
+            self.genericCallContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc, isUnifiedBroadcast: false)
         }
         
         self.internalState = .requesting

@@ -469,7 +469,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         
         if !previewing {
-            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, activate: { [weak self] in
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact, activate: { [weak self] in
                 self?.activateSearch()
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
@@ -601,9 +601,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
             }
             
-            let stateSignal: Signal<State, NoError> = (combineLatest(queue: .mainQueue(), entriesWithFetchStatuses, recentDownloadItems(postbox: context.account.postbox))
-            |> map { entries, recentDownloadItems -> State in
-                if !entries.isEmpty {
+            let displayRecentDownloads = context.account.postbox.tailChatListView(groupId: .root, filterPredicate: nil, count: 11, summaryComponents: ChatListEntrySummaryComponents(components: [:]))
+            |> map { view -> Bool in
+                return view.0.entries.count >= 10
+            }
+            |> distinctUntilChanged
+            
+            let stateSignal: Signal<State, NoError> = (combineLatest(queue: .mainQueue(), entriesWithFetchStatuses, recentDownloadItems(postbox: context.account.postbox), displayRecentDownloads)
+            |> map { entries, recentDownloadItems, displayRecentDownloads -> State in
+                if !entries.isEmpty && displayRecentDownloads {
                     var totalBytes = 0.0
                     var totalProgressInBytes = 0.0
                     for (entry, progress) in entries {
@@ -799,7 +805,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationItem.backBarButtonItem = backBarButtonItem
         }
         
-        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact)
         let editing = self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing
         let editItem: UIBarButtonItem
         if editing {
@@ -2088,7 +2094,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                         }
                         
-                        activate()
+                        activate(filter != .downloads)
                         
                         if let searchContentNode = strongSelf.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
                             searchContentNode.search(filter: filter, query: query)

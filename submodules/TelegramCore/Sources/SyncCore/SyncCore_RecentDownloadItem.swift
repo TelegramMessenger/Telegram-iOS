@@ -190,6 +190,13 @@ public func addRecentDownloadItem(postbox: Postbox, item: RecentDownloadItem) ->
     |> ignoreValues
 }
 
+public func clearRecentDownloadList(postbox: Postbox) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Void in
+        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.RecentDownloads, items: [])
+    }
+    |> ignoreValues
+}
+
 public func markRecentDownloadItemsAsSeen(postbox: Postbox, items: [(messageId: MessageId, resourceId: String)]) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in
         var unseenIds: [(messageId: MessageId, resourceId: String)] = []

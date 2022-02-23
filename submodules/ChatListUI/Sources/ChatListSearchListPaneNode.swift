@@ -400,7 +400,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    public func item(context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, key: ChatListSearchPaneKey, tagMask: EngineMessage.Tags?, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, searchPeer: @escaping (EnginePeer) -> Void, searchQuery: String?, searchOptions: ChatListSearchOptions?, messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)?, openStorageSettings: @escaping () -> Void, toggleAllPaused: @escaping () -> Void) -> ListViewItem {
+    public func item(context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, key: ChatListSearchPaneKey, tagMask: EngineMessage.Tags?, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, searchPeer: @escaping (EnginePeer) -> Void, searchQuery: String?, searchOptions: ChatListSearchOptions?, messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)?, openClearRecentlyDownloaded: @escaping () -> Void, toggleAllPaused: @escaping () -> Void) -> ListViewItem {
         switch self {
             case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder, expandType):
                 let primaryPeer: EnginePeer
@@ -564,8 +564,8 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                     }
                 case .downloaded:
                     //TODO:localize
-                    header = ChatListSearchItemHeader(type: .recentDownloads, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "Settings", action: {
-                        openStorageSettings()
+                    header = ChatListSearchItemHeader(type: .recentDownloads, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "Clear", action: {
+                        openClearRecentlyDownloaded()
                     })
                 case .index:
                     header = ChatListSearchItemHeader(type: .messages, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil)
@@ -628,12 +628,12 @@ private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, isEmpty: Bool, isLoading: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, key: ChatListSearchPaneKey, tagMask: EngineMessage.Tags?, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, searchPeer: @escaping (EnginePeer) -> Void, searchQuery: String?, searchOptions: ChatListSearchOptions?, messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)?, openStorageSettings: @escaping () -> Void, toggleAllPaused: @escaping () -> Void) -> ChatListSearchContainerTransition {
+public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, isEmpty: Bool, isLoading: Bool, animated: Bool, context: AccountContext, presentationData: PresentationData, enableHeaders: Bool, filter: ChatListNodePeersFilter, key: ChatListSearchPaneKey, tagMask: EngineMessage.Tags?, interaction: ChatListNodeInteraction, listInteraction: ListMessageItemInteraction, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, toggleExpandLocalResults: @escaping () -> Void, toggleExpandGlobalResults: @escaping () -> Void, searchPeer: @escaping (EnginePeer) -> Void, searchQuery: String?, searchOptions: ChatListSearchOptions?, messageContextAction: ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int, isFirstInList: Bool)?) -> Void)?, openClearRecentlyDownloaded: @escaping () -> Void, toggleAllPaused: @escaping () -> Void) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openStorageSettings: openStorageSettings, toggleAllPaused: toggleAllPaused), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, key: key, tagMask: tagMask,  interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openStorageSettings: openStorageSettings, toggleAllPaused: toggleAllPaused), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, key: key, tagMask: tagMask, interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, enableHeaders: enableHeaders, filter: filter, key: key, tagMask: tagMask,  interaction: interaction, listInteraction: listInteraction, peerContextAction: peerContextAction, toggleExpandLocalResults: toggleExpandLocalResults, toggleExpandGlobalResults: toggleExpandGlobalResults, searchPeer: searchPeer, searchQuery: searchQuery, searchOptions: searchOptions, messageContextAction: messageContextAction, openClearRecentlyDownloaded: openClearRecentlyDownloaded, toggleAllPaused: toggleAllPaused), directionHint: nil) }
     
     return ChatListSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, displayingResults: displayingResults, isEmpty: isEmpty, isLoading: isLoading, query: searchQuery, animated: animated)
 }
@@ -981,8 +981,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return false
                 }
                 
-                return presentationDataPromise.get()
-                |> map { presentationData -> ([ChatListSearchEntry], Bool)? in
+                return combineLatest(queue: .mainQueue(), presentationDataPromise.get(), selectionPromise.get())
+                |> map { presentationData, selectionState -> ([ChatListSearchEntry], Bool)? in
                     var entries: [ChatListSearchEntry] = []
                     var existingMessageIds = Set<MessageId>()
                     
@@ -1047,7 +1047,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 peer = EngineRenderedPeer(peer: EnginePeer(channelPeer))
                             }
                         }
-                        entries.append(.message(message, peer, nil, presentationData, 1, nil, false, .downloaded(timestamp: item.timestamp, index: message.index), (item.resourceId, item.size, false), .recentlyDownloaded, false))
+                        
+                        entries.append(.message(message, peer, nil, presentationData, 1, selectionState?.contains(message.id), false, .downloaded(timestamp: item.timestamp, index: message.index), (item.resourceId, item.size, false), .recentlyDownloaded, false))
                     }
                     return (entries.sorted(), false)
                 }
@@ -1501,6 +1502,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 })
             }
             
+            let playlistLocation: PeerMessagesPlaylistLocation?
+            if strongSelf.key == .downloads {
+                playlistLocation = nil
+            } else {
+                playlistLocation = .custom(messages: foundMessages |> map { message, a, b in
+                    return (message.map { $0._asMessage() }, a, b)
+                }, at: message.id, loadMore: {
+                    loadMore()
+                })
+            }
+            
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: nil, message: message, standalone: false, reverseMessageGalleryOrder: true, mode: mode, navigationController: navigationController, dismissInput: {
                 interaction.dismissInput()
             }, present: { c, a in
@@ -1524,11 +1536,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }, openPeer: { peer, navigation in
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
-            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: .custom(messages: foundMessages |> map { message, a, b in
-                return (message.map { $0._asMessage() }, a, b)
-            }, at: message.id, loadMore: {
-                loadMore()
-            }), gallerySource: gallerySource))
+            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: playlistLocation, gallerySource: gallerySource))
         }, openMessageContextMenu: { [weak self] message, _, node, rect, gesture in
             guard let strongSelf = self, let currentEntries = strongSelf.currentEntries else {
                 return
@@ -1641,11 +1649,44 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }, searchPeer: { peer in
                 }, searchQuery: strongSelf.searchQueryValue, searchOptions: strongSelf.searchOptionsValue, messageContextAction: { message, node, rect, gesture, paneKey, downloadResource in
                     interaction.messageContextAction(message, node, rect, gesture, paneKey, downloadResource)
-                }, openStorageSettings: {
+                }, openClearRecentlyDownloaded: {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.context.sharedContext.openStorageUsage(context: strongSelf.context)
+                    
+                    let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                    var items: [ActionSheetItem] = []
+                    
+                    //TODO:localize
+                    items.append(ActionSheetTextItem(title: "Telegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device."))
+                    
+                    //TODO:localize
+                    items.append(ActionSheetButtonItem(title: "Manage Device Storage", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.context.sharedContext.openStorageUsage(context: strongSelf.context)
+                    }))
+                    
+                    //TODO:localize
+                    items.append(ActionSheetButtonItem(title: "Clear Downloads List", color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let _ = clearRecentDownloadList(postbox: strongSelf.context.account.postbox).start()
+                    }))
+                    
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    strongSelf.interaction.dismissInput()
+                    strongSelf.interaction.present(actionSheet, nil)
                 }, toggleAllPaused: {
                     guard let strongSelf = self else {
                         return
@@ -1833,7 +1874,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             loadMore()
         }
         
-        if [.file, .music, .voiceOrInstantVideo].contains(tagMask) {
+        if [.file, .music, .voiceOrInstantVideo].contains(tagMask) || self.key == .downloads {
             self.mediaStatusDisposable = (context.sharedContext.mediaManager.globalMediaPlayerState
             |> mapToSignal { playlistStateAndType -> Signal<(Account, SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
                 if let (account, state, type) = playlistStateAndType {
@@ -1846,7 +1887,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     return .single(nil) |> delay(0.2, queue: .mainQueue())
                                 }
                             case .music:
-                                if tagMask != .music {
+                                if tagMask != .music && self.key != .downloads {
                                     return .single(nil) |> delay(0.2, queue: .mainQueue())
                                 }
                             case .file:

@@ -110,7 +110,7 @@ private final class AttachButtonComponent: CombinedComponent {
                 availableSize: CGSize(width: 30.0, height: 30.0),
                 transition: context.transition
             )
-            
+
             let title = title.update(
                 component: Text(
                     text: name,

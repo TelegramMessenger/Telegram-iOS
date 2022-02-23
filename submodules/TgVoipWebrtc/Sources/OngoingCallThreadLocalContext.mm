@@ -1580,7 +1580,7 @@ private:
     }
 }
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast {
     if (_instance) {
         tgcalls::GroupConnectionMode mappedConnectionMode;
         switch (connectionMode) {
@@ -1601,7 +1601,7 @@ private:
                 break;
             }
         }
-        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled);
+        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled, isUnifiedBroadcast);
     }
 }
 

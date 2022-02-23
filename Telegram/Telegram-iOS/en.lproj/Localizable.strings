@@ -443,6 +443,7 @@
 "DialogList.TabTitle" = "Chats";
 "DialogList.Title" = "Chats";
 "DialogList.SearchLabel" = "Search for messages or users";
+"DialogList.SearchLabelCompact" = "Search";
 "DialogList.NoMessagesTitle" = "You have no conversations yet";
 "DialogList.NoMessagesText" = "Start messaging by pressing the pencil button in the top right corner or go to the Contacts section.";
 "DialogList.SingleTypingSuffix" = "%@ is typing";
@@ -7304,3 +7305,24 @@ Sorry for the inconvenience.";
 
 "Attachment.OpenSettings" = "Go to Settings";
 "Attachment.OpenCamera" = "Open Camera";
+
+"Attachment.DeselectedPhotos_1" = "%@ photo deselected";
+"Attachment.DeselectedPhotos_2" = "%@ photos deselected";
+"Attachment.DeselectedPhotos_3_10" = "%@ photos deselected";
+"Attachment.DeselectedPhotos_any" = "%@ photos deselected";
+"Attachment.DeselectedPhotos_many" = "%@ photos deselected";
+"Attachment.DeselectedPhotos_0" = "%@ photos deselected";
+
+"Attachment.DeselectedVideos_1" = "%@ video deselected";
+"Attachment.DeselectedVideos_2" = "%@ videos deselected";
+"Attachment.DeselectedVideos_3_10" = "%@ videos deselected";
+"Attachment.DeselectedVideos_any" = "%@ videos deselected";
+"Attachment.DeselectedVideos_many" = "%@ videos deselected";
+"Attachment.DeselectedVideos_0" = "%@ videos deselected";
+
+"Attachment.DeselectedItems_1" = "%@ item deselected";
+"Attachment.DeselectedItems_2" = "%@ items deselected";
+"Attachment.DeselectedItems_3_10" = "%@ items deselected";
+"Attachment.DeselectedItems_any" = "%@ items deselected";
+"Attachment.DeselectedItems_many" = "%@ items deselected";
+"Attachment.DeselectedItems_0" = "%@ items deselected";

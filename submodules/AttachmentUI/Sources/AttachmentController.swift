@@ -23,10 +23,15 @@ public enum AttachmentButtonType: Equatable {
 public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
     
+    func resetForReuse()
     func prepareForReuse()
 }
 
 public extension AttachmentContainable {
+    func resetForReuse() {
+        
+    }
+    
     func prepareForReuse() {
         
     }
