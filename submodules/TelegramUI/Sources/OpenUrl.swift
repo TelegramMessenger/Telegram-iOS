@@ -605,6 +605,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 
                 if parsedUrl.host == "resolve" {
                     if let components = URLComponents(string: "/?" + query) {
+                        var phone: String?
                         var domain: String?
                         var start: String?
                         var startGroup: String?
@@ -614,7 +615,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
-                                    if queryItem.name == "domain" {
+                                    if queryItem.name == "phone" {
+                                        phone = value
+                                    } else if queryItem.name == "domain" {
                                         domain = value
                                     } else if queryItem.name == "start" {
                                         start = value
@@ -633,7 +636,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             }
                         }
                         
-                        if let domain = domain {
+                        if let phone = phone {
+                            convertedUrl = "https://t.me/+\(phone)"
+                        } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
                             if let post = post, let postValue = Int(post) {
                                 result += "/\(postValue)"

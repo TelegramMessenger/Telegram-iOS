@@ -66,7 +66,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 icon = UIImage(bundleImageName: "Chat/Context Menu/ReportDrugs")
             case .personalDetails:
                 title = presentationData.strings.ReportPeer_ReasonPersonalDetails
-                icon = UIImage(bundleImageName: "Chat/Context Menu/User")
+                icon = UIImage(bundleImageName: "Chat/Context Menu/ReportPersonal")
             case .other:
                 title = presentationData.strings.ReportPeer_ReasonOther
                 icon = UIImage(bundleImageName: "Chat/Context Menu/Report")
