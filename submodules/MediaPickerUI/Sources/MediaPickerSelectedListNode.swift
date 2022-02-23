@@ -189,7 +189,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     }
 }
 
-final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate {
+final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let context: AccountContext
     
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
@@ -226,9 +226,11 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.scrollNode.view.delegate = self
+        self.scrollNode.view.panGestureRecognizer.cancelsTouchesInView = true
         
         self.view.addGestureRecognizer(ReorderingGestureRecognizer(shouldBegin: { [weak self] point in
-            if let strongSelf = self, !strongSelf.scrollNode.view.isTracking {
+            if let strongSelf = self, !strongSelf.scrollNode.view.isDragging {
+                let point = strongSelf.view.convert(point, to: strongSelf.scrollNode.view)
                 for (_, itemNode) in strongSelf.itemNodes {
                     if itemNode.frame.contains(point) {
                         return (true, true, itemNode)
@@ -242,18 +244,52 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate {
         }, began: { [weak self] itemNode in
             self?.beginReordering(itemNode: itemNode)
         }, ended: { [weak self] point in
-            self?.endReordering(point: point)
+            if let strongSelf = self {
+                if var point = point {
+                    point = strongSelf.view.convert(point, to: strongSelf.scrollNode.view)
+                    strongSelf.endReordering(point: point)
+                } else {
+                    strongSelf.endReordering(point: nil)
+                }
+            }
         }, moved: { [weak self] offset in
             self?.updateReordering(offset: offset)
         }))
+        
+        Queue.mainQueue().after(0.1, {
+            self.updateAbsoluteRects()
+        })
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.interaction?.dismissInput()
     }
     
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.updateAbsoluteRects()
+    }
+    
     func scrollToTop(animated: Bool) {
         self.scrollNode.view.setContentOffset(CGPoint(), animated: animated)
+    }
+    
+    func updateAbsoluteRects() {
+        guard let messageNodes = self.messageNodes, let (size, _, _, _, _, _, _) = self.validLayout else {
+            return
+        }
+        
+        for itemNode in messageNodes {
+            var absoluteRect = itemNode.frame
+            if let supernode = self.supernode {
+                absoluteRect = supernode.convert(itemNode.bounds, from: itemNode)
+            }
+            absoluteRect.origin.y = size.height - absoluteRect.origin.y - absoluteRect.size.height
+            itemNode.updateAbsoluteRect(absoluteRect, within: self.bounds.size)
+        }
     }
     
     private func beginReordering(itemNode: MediaPickerSelectedItemNode) {
@@ -265,7 +301,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate {
         
         let reorderNode = ReorderingItemNode(itemNode: itemNode, initialLocation: itemNode.frame.origin)
         self.reorderNode = reorderNode
-        self.addSubnode(reorderNode)
+        self.scrollNode.addSubnode(reorderNode)
         
         itemNode.isHidden = true
         
@@ -548,6 +584,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate {
                 self.scrollNode.layer.animateBounds(from: previousBounds, to: updatedBounds, duration: duration, timingFunction: curve.timingFunction)
             }
         }
+        
+        self.updateAbsoluteRects()
         
         self.scrollNode.view.contentSize = CGSize(width: size.width, height: contentHeight)
     }

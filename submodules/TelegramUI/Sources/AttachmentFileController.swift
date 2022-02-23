@@ -164,7 +164,7 @@ private class AttachmentFileControllerImpl: ItemListController, AttachmentContai
     public var requestAttachmentMenuExpansion: () -> Void = {}
     
     var prepareForReuseImpl: () -> Void = {}
-    public func prepareForReuse() {
+    public func resetForReuse() {
         self.prepareForReuseImpl()
         self.scrollToTop?()
     }

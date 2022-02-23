@@ -127,7 +127,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             self.checkNode = checkNode
             self.setNeedsLayout()
         }
-        
+
         if let asset = self.asset, let interaction = self.interaction, let selectionState = interaction.selectionState  {
             let selected = selectionState.isIdentifierSelected(asset.localIdentifier)
             if let legacyAsset = TGMediaAsset(phAsset: asset) {
@@ -177,7 +177,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                         }
                     }, error: { _ in
                     }, completed: nil)!
-                    
+
                     return ActionDisposable {
                         disposable.dispose()
                     }
@@ -185,9 +185,9 @@ final class MediaPickerGridItemNode: GridItemNode {
                     return EmptyDisposable
                 }
             }
-            
+
             let scale = min(2.0, UIScreenScale)
-            let targetSize = CGSize(width: 140.0 * scale, height: 140.0 * scale)
+            let targetSize = CGSize(width: 128.0 * scale, height: 128.0 * scale)
             let originalSignal = assetImage(fetchResult: fetchResult, index: index, targetSize: targetSize, exact: false)
             let imageSignal: Signal<UIImage?, NoError> = editedSignal
             |> mapToSignal { result in

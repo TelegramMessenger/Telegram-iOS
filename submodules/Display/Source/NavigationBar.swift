@@ -1106,6 +1106,11 @@ open class NavigationBar: ASDisplayNode {
             let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
             leftTitleInset = leftButtonSize.width + leftButtonInset + 1.0
             
+            var transition = transition
+            if self.leftButtonNode.frame.width.isZero {
+                transition = .immediate
+            }
+            
             self.leftButtonNode.alpha = 1.0
             transition.updateFrame(node: self.leftButtonNode, frame: CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
         }
@@ -1118,6 +1123,11 @@ open class NavigationBar: ASDisplayNode {
             let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)), isLandscape: isLandscape)
             rightTitleInset = rightButtonSize.width + leftButtonInset + 1.0
             self.rightButtonNode.alpha = 1.0
+            
+            var transition = transition
+            if self.rightButtonNode.frame.width.isZero {
+                transition = .immediate
+            }
             transition.updateFrame(node: self.rightButtonNode, frame: CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
         }
         
@@ -1182,6 +1192,10 @@ open class NavigationBar: ASDisplayNode {
                         self.titleNode.alpha = progress * progress
                 }
             } else {
+                var transition = transition
+                if self.titleNode.frame.width.isZero {
+                    transition = .immediate
+                }
                 self.titleNode.alpha = 1.0
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize))
             }
