@@ -7326,3 +7326,5 @@ Sorry for the inconvenience.";
 "Attachment.DeselectedItems_any" = "%@ items deselected";
 "Attachment.DeselectedItems_many" = "%@ items deselected";
 "Attachment.DeselectedItems_0" = "%@ items deselected";
+
+"PrivacyPhoneNumberSettings.CustomPublicLink" = "Users who have your number saved in their contacts will also see it on Telegram.\n\nThis public link opens a chat with you:\n[https://t.me/%@]()";
