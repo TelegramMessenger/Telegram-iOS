@@ -220,6 +220,7 @@ public class AttachmentController: ViewController {
             guard self.currentType != type else {
                 if let controller = self.currentController {
                     controller.scrollToTopWithTabBar?()
+                    controller.requestAttachmentMenuExpansion()
                 }
                 return
             }
@@ -255,7 +256,7 @@ public class AttachmentController: ViewController {
                                 strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: ascending ? 70.0 : -70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                                     snapshotView?.removeFromSuperview()
-                                    previousController?.prepareForReuse()
+                                    previousController?.resetForReuse()
                                 })
                             })
                         }

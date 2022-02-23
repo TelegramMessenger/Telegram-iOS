@@ -193,7 +193,7 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     model.interfaceView.doneLongPressed = { [weak selectionContext, weak editingContext, weak legacyController, weak model] item in
         if let legacyController = legacyController, let item = item as? TGMediaPickerGalleryItem, let model = model, let selectionContext = selectionContext {
             var effectiveHasSchedule = hasSchedule
-            
+    
             if let editingContext = editingContext {
                 for item in selectionContext.selectedItems() {
                     if let editableItem = item as? TGMediaEditableItem, let timer = editingContext.timer(for: editableItem)?.intValue, timer > 0 {
@@ -202,9 +202,8 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                     }
                 }
             }
-            
+                        
             let legacySheetController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
-            
             let controller = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
             let dismissImpl = { [weak model] in
                 model?.dismiss(true, false)
@@ -241,8 +240,10 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                 legacySheetController?.dismiss()
             }
             legacySheetController.bind(controller: controller)
-            
             present(legacySheetController, nil)
+            
+            let hapticFeedback = HapticFeedback()
+            hapticFeedback.impact()
         }
     }
     model.interfaceView.setThumbnailSignalForItem { item in
