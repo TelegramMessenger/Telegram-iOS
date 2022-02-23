@@ -14,6 +14,8 @@ optimization_flags = select({
     "//conditions:default": ["-DNDEBUG"],
 })
 
+enable_x264 = False
+
 objc_library(
     name = "TgVoipWebrtc",
     enable_modules = True,
@@ -70,7 +72,7 @@ objc_library(
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
         "-std=c++14",
-    ] + optimization_flags,
+    ] + optimization_flags + (["-DTGCALLS_ENABLE_X264"] if enable_x264 else []),
     includes = [
         "PublicHeaders",
     ],
@@ -84,8 +86,7 @@ objc_library(
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/rnnoise:rnnoise",
         "//third-party/libyuv:libyuv",
-        "//third-party/libx264:libx264",
-    ],
+    ] + (["//third-party/libx264:libx264"] if enable_x264 else []),
     sdk_frameworks = [
         "Foundation",
         "UIKit",
