@@ -1530,6 +1530,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private var regularSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
     private var editingSections: [AnyHashable: PeerInfoScreenItemSectionContainerNode] = [:]
     private let paneContainerNode: PeerInfoPaneContainerNode
+    private let versionLabelNode: ImmediateTextNode
     private var ignoreScrolling: Bool = false
     private var hapticFeedback: HapticFeedback?
 
@@ -1625,6 +1626,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         
         self.headerNode = PeerInfoHeaderNode(context: context, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isMediaOnly: self.isMediaOnly, isSettings: isSettings)
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, updatedPresentationData: controller.updatedPresentationData, peerId: peerId, isMediaOnly: self.isMediaOnly)
+
+        self.versionLabelNode = ImmediateTextNode()
+        self.versionLabelNode.maximumNumberOfLines = 2
+
+        let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.ptgVersion).string
+        self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
+        self.versionLabelNode.isHidden = true
         
         super.init()
         
@@ -2267,7 +2275,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.scrollNode.view.delegate = self
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.paneContainerNode)
-        
+
         if !self.isMediaOnly {
             self.addSubnode(self.headerNode.buttonsContainerNode)
         }
@@ -2960,6 +2968,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
 
         self.refreshMessageTagStatsDisposable = context.engine.messages.refreshMessageTagStats(peerId: peerId, tags: [.video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file]).start()
+
+        self.scrollNode.addSubnode(self.versionLabelNode)
     }
     
     deinit {
@@ -6616,9 +6626,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 selectionPanelNode?.removeFromSupernode()
             })
         }
-        
+
         if self.isSettings {
             contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
+
+            if self.context.sharedContext.appLockContext.unlockMode == .full {
+                versionLabelNode.isHidden = false
+                let horizontalPadding = 20.0
+                var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
+                let size = self.versionLabelNode.updateLayout(frame.size)
+                frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
+                frame.size = size
+                transition.updateFrameAdditive(node: self.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
+                let bottomPadding = horizontalPadding
+                contentHeight += size.height + bottomPadding
+            } else {
+                versionLabelNode.isHidden = true
+            }
         }
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {

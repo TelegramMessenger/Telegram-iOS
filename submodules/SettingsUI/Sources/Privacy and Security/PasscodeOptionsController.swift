@@ -21,27 +21,77 @@ private final class PasscodeOptionsControllerArguments {
     let changePasscode: () -> Void
     let changePasscodeTimeout: () -> Void
     let changeTouchId: (Bool) -> Void
+    let changeFakePasscode: (Int) -> Void
+    let addFakePasscode: () -> Void
     
-    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void) {
+    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, changeFakePasscode: @escaping (Int) -> Void, addFakePasscode: @escaping () -> Void) {
         self.turnPasscodeOff = turnPasscodeOff
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout
         self.changeTouchId = changeTouchId
+        self.changeFakePasscode = changeFakePasscode
+        self.addFakePasscode = addFakePasscode
     }
 }
 
 private enum PasscodeOptionsSection: Int32 {
     case setting
     case options
+    case partisan
 }
 
 private enum PasscodeOptionsEntry: ItemListNodeEntry {
+    enum StableId: Hashable, Comparable {
+        case togglePasscode
+        case changePasscode
+        case settingInfo
+        case autoLock
+        case touchId
+        case changeFakePasscode(Int)
+        case addFakePasscode
+        case fakePasscodeInfo
+
+        private var order: Int32 {
+            switch self {
+                case .togglePasscode:
+                    return 0
+                case .changePasscode:
+                    return 1
+                case .settingInfo:
+                    return 2
+                case .autoLock:
+                    return 3
+                case .touchId:
+                    return 4
+                case .changeFakePasscode(_):
+                    return 5
+                case .addFakePasscode:
+                    return 6
+                case .fakePasscodeInfo:
+                    return 7
+            }
+        }
+
+        static func <(lsid: StableId, rsid: StableId) -> Bool {
+            switch (lsid, rsid) {
+            case (.changeFakePasscode(let lidx), .changeFakePasscode(let ridx)):
+                return lidx < ridx
+            default:
+                return lsid.order < rsid.order
+            }
+        }
+    }
+
     case togglePasscode(PresentationTheme, String, Bool)
     case changePasscode(PresentationTheme, String)
     case settingInfo(PresentationTheme, String)
     
     case autoLock(PresentationTheme, String, String)
     case touchId(PresentationTheme, String, Bool)
+
+    case changeFakePasscode(PresentationTheme, String, Int)
+    case addFakePasscode(PresentationTheme, String)
+    case fakePasscodeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -49,21 +99,29 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return PasscodeOptionsSection.setting.rawValue
             case .autoLock, .touchId:
                 return PasscodeOptionsSection.options.rawValue
+            case .changeFakePasscode, .addFakePasscode, .fakePasscodeInfo:
+                return PasscodeOptionsSection.partisan.rawValue
         }
     }
     
-    var stableId: Int32 {
+    var stableId: StableId {
         switch self {
             case .togglePasscode:
-                return 0
+                return .togglePasscode
             case .changePasscode:
-                return 1
+                return .changePasscode
             case .settingInfo:
-                return 2
+                return .settingInfo
             case .autoLock:
-                return 3
+                return .autoLock
             case .touchId:
-                return 4
+                return .touchId
+            case .changeFakePasscode(_, _, let index):
+                return .changeFakePasscode(index)
+            case .addFakePasscode:
+                return .addFakePasscode
+            case .fakePasscodeInfo:
+                return .fakePasscodeInfo
         }
     }
     
@@ -99,6 +157,24 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .changeFakePasscode(lhsTheme, lhsText, lhsIdx):
+                if case let .changeFakePasscode(rhsTheme, rhsText, rhsIdx) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsIdx == rhsIdx {
+                    return true
+                } else {
+                    return false
+                }
+            case let .addFakePasscode(lhsTheme, lhsText):
+                if case let .addFakePasscode(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .fakePasscodeInfo(lhsTheme, lhsText):
+                if case let .fakePasscodeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -129,6 +205,16 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
                 })
+            case let .changeFakePasscode(_, title, index):
+                return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.changeFakePasscode(index)
+                })
+            case let .addFakePasscode(_, title):
+                return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                    arguments.addFakePasscode()
+                })
+            case let .fakePasscodeInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -185,12 +271,12 @@ private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int
 
 private func passcodeOptionsControllerEntries(presentationData: PresentationData, state: PasscodeOptionsControllerState, passcodeOptionsData: PasscodeOptionsData) -> [PasscodeOptionsEntry] {
     var entries: [PasscodeOptionsEntry] = []
-    
+
     switch passcodeOptionsData.accessChallenge {
         case .none:
             entries.append(.togglePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_TurnPasscodeOn, false))
             entries.append(.settingInfo(presentationData.theme, presentationData.strings.PasscodeSettings_Help))
-        case .numericalPassword, .plaintextPassword:
+        case .numericalPassword(_, let fakeCodes), .plaintextPassword(_, let fakeCodes):
             entries.append(.togglePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_TurnPasscodeOff, true))
             entries.append(.changePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_ChangePasscode))
             entries.append(.settingInfo(presentationData.theme, presentationData.strings.PasscodeSettings_Help))
@@ -203,6 +289,12 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
                         entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithFaceId, passcodeOptionsData.presentationSettings.enableBiometrics))
                 }
             }
+
+            for (index, _) in fakeCodes.enumerated() {
+                entries.append(.changeFakePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscode(index).string, index))
+            }
+            entries.append(.addFakePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_AddFakePasscode))
+            entries.append(.fakePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeHelp))
     }
     
     return entries
@@ -212,14 +304,13 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     let initialState = PasscodeOptionsControllerState()
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
-    
+
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
     var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
     
     let actionsDisposable = DisposableSet()
-    
     let passcodeOptionsDataPromise = Promise<PasscodeOptionsData>()
     passcodeOptionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings) in
         let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings)?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
@@ -228,7 +319,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     |> map { accessChallenge, passcodeSettings -> PasscodeOptionsData in
         return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: passcodeSettings)
     })
-    
+
     let arguments = PasscodeOptionsControllerArguments(turnPasscodeOff: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -359,6 +450,36 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 return current.withUpdatedEnableBiometrics(value)
             }).start()
         })
+    }, changeFakePasscode: { index in
+        passcodeSetupController(context: context, optsPromise: passcodeOptionsDataPromise, pushController: pushControllerImpl, popController: popControllerImpl) { oldChallengeData, newPasscode, numerical in
+            switch oldChallengeData {
+                case .none:
+                    assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
+                    return oldChallengeData
+                case .numericalPassword(let code, var fakes), .plaintextPassword(let code, var fakes):
+                    fakes[index] = newPasscode
+                    if numerical {
+                        return PostboxAccessChallengeData.numericalPassword(value: code, fakeValue: fakes)
+                    } else {
+                        return PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
+                    }
+            }
+        }
+    }, addFakePasscode: {
+        passcodeSetupController(context: context, optsPromise: passcodeOptionsDataPromise, pushController: pushControllerImpl, popController: popControllerImpl) { oldChallengeData, newPasscode, numerical in
+            switch oldChallengeData {
+                case .none:
+                    assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
+                    return oldChallengeData
+                case .numericalPassword(let code, var fakes), .plaintextPassword(let code, var fakes):
+                    fakes.append(newPasscode)
+                    if numerical {
+                        return PostboxAccessChallengeData.numericalPassword(value: code, fakeValue: fakes)
+                    } else {
+                        return PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
+                    }
+            }
+        }
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
@@ -371,7 +492,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
-    
+
     let controller = ItemListController(context: context, state: signal)
     presentControllerImpl = { [weak controller] c, p in
         if let controller = controller {
@@ -424,15 +545,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
         } else {
             let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
             controller.check = { passcode in
-                var succeed = false
-                switch challenge {
-                    case .none:
-                        succeed = true
-                    case let .numericalPassword(code):
-                        succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                    case let .plaintextPassword(code):
-                        succeed = passcode == code
-                }
+                let succeed = challenge.check(passcode: passcode) { code in normalizeArabicNumeralString(code, type: .western) } == .full // TODO allow proceed and sync the logic with Android
                 if succeed {
                     completion(true)
                 }
@@ -485,4 +598,44 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             return controller
         }
     }
+}
+
+private func passcodeSetupController(context: AccountContext, optsPromise: Promise<PasscodeOptionsData>, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping (PostboxAccessChallengeData, String, Bool) -> PostboxAccessChallengeData) {
+    let _ = (context.sharedContext.accountManager.transaction({ transaction -> (PasscodeEntryFieldType, [String]) in
+        let data = transaction.getAccessChallengeData()
+        switch data {
+            case .none:
+                assertionFailure()
+                return (.alphanumeric, [])
+            case .numericalPassword(let passcode, let fakePasscodes):
+                return (passcode.count == 6 ? .digits6 : .digits4, fakePasscodes + [passcode])
+            case .plaintextPassword(let passcode, let fakePasscodes):
+                return (.alphanumeric, fakePasscodes + [passcode])
+        }
+    })
+    |> deliverOnMainQueue).start(next: { (fieldType, reserved) in
+        let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, fieldType))
+        setupController.validate = { newPasscode in
+            if reserved.contains(newPasscode) {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                return presentationData.strings.PasscodeSettings_PasscodeInUse
+            }
+            return nil
+        }
+        setupController.complete = { newPasscode, numerical in
+            let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
+                let data = transaction.getAccessChallengeData()
+                let updatedData = challengeDataUpdate(data, newPasscode, numerical)
+                transaction.setAccessChallengeData(updatedData)
+                let _ = (optsPromise.get() |> take(1)).start(next: { [weak optsPromise] data in
+                    optsPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData)))
+                })
+            }) |> deliverOnMainQueue).start(next: { _ in
+            }, error: { _ in
+            }, completed: {
+                popController?()
+            })
+        }
+        pushController?(setupController)
+    })
 }

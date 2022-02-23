@@ -1198,6 +1198,12 @@
 "PasscodeSettings.EncryptData" = "Encrypt Local Database";
 "PasscodeSettings.EncryptDataHelp" = "Experimental feature, use with caution. Encrypt your local Telegram data, using a derivative of your passcode as the key.";
 
+"PasscodeSettings.FakePasscodes" = "Fake Passcodes";
+"PasscodeSettings.FakePasscode" = "Fake Passcode %1$d";
+"PasscodeSettings.AddFakePasscode" = "Add Fake Passcode";
+"PasscodeSettings.FakePasscodeHelp" = "When a fake passcode is entered, selected actions are performed.";
+"PasscodeSettings.PasscodeInUse" = "This passcode is already in use";
+
 "EnterPasscode.EnterTitle" = "Enter your Telegram Passcode";
 "EnterPasscode.ChangeTitle" = "Change Passcode";
 "EnterPasscode.EnterPasscode" = "Enter your Telegram Passcode";
@@ -7225,3 +7231,5 @@ Sorry for the inconvenience.";
 "Chat.OutgoingContextReactionCount_1" = "1 reacted";
 "Chat.OutgoingContextReactionCount_any" = "%@ reacted";
 "Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";
+
+"Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";

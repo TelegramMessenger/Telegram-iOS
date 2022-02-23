@@ -1,1 +1,9 @@
 "PasscodeSettings.AutoLock.IfAwayFor_1second" = "Через 1 секунду";
+
+"PasscodeSettings.FakePasscodes" = "Ложные код-пароли";
+"PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";
+"PasscodeSettings.AddFakePasscode" = "Добавить ложный код-пароль";
+"PasscodeSettings.FakePasscodeHelp" = "Действия которые будут выполнены, когда введен ложный код-пароль";
+"PasscodeSettings.PasscodeInUse" = "Этот код-пароль уже используется";
+
+"Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версия %3$@";

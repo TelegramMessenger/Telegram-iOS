@@ -23,6 +23,7 @@ public final class PasscodeSetupController: ViewController {
     
     public var complete: ((String, Bool) -> Void)?
     public var check: ((String) -> Bool)?
+    public var validate: ((String) -> String?)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -54,6 +55,7 @@ public final class PasscodeSetupController: ViewController {
         self.displayNodeDidLoad()
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.controllerNode.updateMode(self.mode)
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
             guard let strongSelf = self, case let .setup(change, type) = strongSelf.mode else {
@@ -125,6 +127,9 @@ public final class PasscodeSetupController: ViewController {
         }
         self.controllerNode.checkPasscode = { [weak self] passcode in
             return self?.check?(passcode) ?? false
+        }
+        self.controllerNode.validatePasscode = { [weak self] passcode in
+            return self?.validate?(passcode)
         }
     }
     
