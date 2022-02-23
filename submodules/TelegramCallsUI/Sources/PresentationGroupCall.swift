@@ -107,7 +107,8 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 sortAscending: true,
                 defaultParticipantsAreMuted: nil,
                 isVideoEnabled: false,
-                unmutedVideoLimit: 0
+                unmutedVideoLimit: 0,
+                isStream: call.isStream
             ),
             topParticipants: [],
             participantCount: 0,
@@ -160,7 +161,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 return GroupCallPanelData(
                     peerId: peerId,
                     isChannel: isChannel,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit, isStream: call.isStream),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -629,6 +630,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var screencastAudioDataDisposable: Disposable?
     private var screencastStateDisposable: Disposable?
     
+    public var isStream = false
+    
     init(
         accountContext: AccountContext,
         audioSession: ManagedAudioSession,
@@ -655,6 +658,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.joinAsPeerId = joinAsPeerId ?? accountContext.account.peerId
         self.schedulePending = initialCall == nil
         self.isScheduled = initialCall == nil || initialCall?.scheduleTimestamp != nil
+        
+        if let initialCall = initialCall {
+            self.isStream = initialCall.isStream
+        }
         
         self.stateValue = PresentationGroupCallState.initialValue(myPeerId: self.joinAsPeerId, title: initialCall?.title, scheduleTimestamp: initialCall?.scheduleTimestamp, subscribedToScheduled: initialCall?.subscribedToScheduled ?? false)
         self.statePromise = ValuePromise(self.stateValue)
@@ -837,7 +844,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         })
         
         if let initialCall = initialCall, let temporaryParticipantsContext = (self.accountContext.cachedGroupCallContexts as? AccountGroupCallContextCacheImpl)?.impl.syncWith({ impl in
-            impl.get(account: accountContext.account, engine: accountContext.engine, peerId: peerId, isChannel: isChannel, call: EngineGroupCallDescription(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled))
+            impl.get(account: accountContext.account, engine: accountContext.engine, peerId: peerId, isChannel: isChannel, call: EngineGroupCallDescription(id: initialCall.id, accessHash: initialCall.accessHash, title: initialCall.title, scheduleTimestamp: initialCall.scheduleTimestamp, subscribedToScheduled: initialCall.subscribedToScheduled, isStream: initialCall.isStream))
         }) {
             self.switchToTemporaryParticipantsContext(sourceContext: temporaryParticipantsContext.context.participantsContext, oldMyPeerId: self.joinAsPeerId)
         } else {
@@ -1312,7 +1319,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             strongSelf.stateValue.subscribedToScheduled = state.subscribedToScheduled
             strongSelf.stateValue.scheduleTimestamp = strongSelf.isScheduledStarted ? nil : state.scheduleTimestamp
             if state.scheduleTimestamp == nil && !strongSelf.isScheduledStarted {
-                strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true, defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted, isVideoEnabled: callInfo.isVideoEnabled, unmutedVideoLimit: callInfo.unmutedVideoLimit)), audioSessionControl: strongSelf.audioSessionControl)
+                strongSelf.updateSessionState(internalState: .active(GroupCallInfo(id: callInfo.id, accessHash: callInfo.accessHash, participantCount: state.totalCount, streamDcId: callInfo.streamDcId, title: state.title, scheduleTimestamp: nil, subscribedToScheduled: false, recordingStartTimestamp: nil, sortAscending: true, defaultParticipantsAreMuted: callInfo.defaultParticipantsAreMuted ?? state.defaultParticipantsAreMuted, isVideoEnabled: callInfo.isVideoEnabled, unmutedVideoLimit: callInfo.unmutedVideoLimit, isStream: callInfo.isStream)), audioSessionControl: strongSelf.audioSessionControl)
             } else {
                 strongSelf.summaryInfoState.set(.single(SummaryInfoState(info: GroupCallInfo(
                     id: callInfo.id,
@@ -1326,7 +1333,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     sortAscending: state.sortAscending,
                     defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                     isVideoEnabled: state.isVideoEnabled,
-                    unmutedVideoLimit: state.unmutedVideoLimit
+                    unmutedVideoLimit: state.unmutedVideoLimit,
+                    isStream: callInfo.isStream
                 ))))
                 
                 strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -2067,7 +2075,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         sortAscending: state.sortAscending,
                         defaultParticipantsAreMuted: state.defaultParticipantsAreMuted,
                         isVideoEnabled: state.isVideoEnabled,
-                        unmutedVideoLimit: state.unmutedVideoLimit
+                        unmutedVideoLimit: state.unmutedVideoLimit,
+                        isStream: callInfo.isStream
                     ))))
                     
                     strongSelf.summaryParticipantsState.set(.single(SummaryParticipantsState(
@@ -2980,7 +2989,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             
             if let value = value {
-                strongSelf.initialCall = EngineGroupCallDescription(id: value.id, accessHash: value.accessHash, title: value.title, scheduleTimestamp: nil, subscribedToScheduled: false)
+                strongSelf.initialCall = EngineGroupCallDescription(id: value.id, accessHash: value.accessHash, title: value.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: value.isStream)
+                strongSelf.isStream = value.isStream
                 
                 strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
             } else {

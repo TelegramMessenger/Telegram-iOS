@@ -143,16 +143,16 @@ public extension TelegramEngine {
                             return EngineCallStreamState.Channel(id: channel, scale: scale, latestTimestamp: lastTimestampMs)
                         }
                     })
-                    /*if state.channels.isEmpty {
-                        return .fail(MTRpcError(errorCode: 500, errorDescription: "Generated")) |> delay(10.0, queue: .mainQueue())
-                    }*/
                     return .single(state)
                 }
             }
-            //|> restartIfError
             |> `catch` { _ -> Signal<EngineCallStreamState?, NoError> in
                 return .single(nil)
             }
+        }
+        
+        public func getGroupCallStreamCredentials(peerId: EnginePeer.Id, revokePreviousCredentials: Bool) -> Signal<GroupCallStreamCredentials, GetGroupCallStreamCredentialsError> {
+            return _internal_getGroupCallStreamCredentials(account: self.account, peerId: peerId, revokePreviousCredentials: revokePreviousCredentials)
         }
     }
 }

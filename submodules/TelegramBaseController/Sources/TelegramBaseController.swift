@@ -420,7 +420,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
                         invite: nil,
-                        activeCall: EngineGroupCallDescription(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled)
+                        activeCall: EngineGroupCallDescription(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled, isStream: groupCallPanelData.info.isStream)
                     )
                 })
                 self.navigationBar?.additionalContentNode.addSubnode(groupCallAccessoryPanel)

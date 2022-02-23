@@ -84,9 +84,12 @@ extension UIView {
     }
 }
 
-public class ComponentState {
+open class ComponentState {
     var _updated: ((Transition) -> Void)?
     var isUpdated: Bool = false
+    
+    public init() {
+    }
     
     public final func updated(transition: Transition = .immediate) {
         self.isUpdated = true

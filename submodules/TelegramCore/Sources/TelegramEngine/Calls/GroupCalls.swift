@@ -16,6 +16,7 @@ public struct GroupCallInfo: Equatable {
     public var defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?
     public var isVideoEnabled: Bool
     public var unmutedVideoLimit: Int
+    public var isStream: Bool
     
     public init(
         id: Int64,
@@ -29,7 +30,8 @@ public struct GroupCallInfo: Equatable {
         sortAscending: Bool,
         defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?,
         isVideoEnabled: Bool,
-        unmutedVideoLimit: Int
+        unmutedVideoLimit: Int,
+        isStream: Bool
     ) {
         self.id = id
         self.accessHash = accessHash
@@ -43,6 +45,7 @@ public struct GroupCallInfo: Equatable {
         self.defaultParticipantsAreMuted = defaultParticipantsAreMuted
         self.isVideoEnabled = isVideoEnabled
         self.unmutedVideoLimit = unmutedVideoLimit
+        self.isStream = isStream
     }
 }
 
@@ -67,7 +70,8 @@ extension GroupCallInfo {
                 sortAscending: (flags & (1 << 6)) != 0,
                 defaultParticipantsAreMuted: GroupCallParticipantsContext.State.DefaultParticipantsAreMuted(isMuted: (flags & (1 << 1)) != 0, canChange: (flags & (1 << 2)) != 0),
                 isVideoEnabled: (flags & (1 << 9)) != 0,
-                unmutedVideoLimit: Int(unmutedVideoLimit)
+                unmutedVideoLimit: Int(unmutedVideoLimit),
+                isStream: (flags & (1 << 12)) != 0
             )
         case .groupCallDiscarded:
             return nil
@@ -111,9 +115,9 @@ func _internal_getCurrentGroupCall(account: Account, callId: Int64, accessHash: 
                 if let peerId = peerId {
                     transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                         if let cachedData = current as? CachedChannelData {
-                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall.init(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false))
+                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall.init(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false, isStream: info.isStream))
                         } else if let cachedData = current as? CachedGroupData {
-                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false))
+                            return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: info.id, accessHash: info.accessHash, title: info.title, scheduleTimestamp: info.scheduleTimestamp, subscribedToScheduled: cachedData.activeCall?.subscribedToScheduled ?? false, isStream: info.isStream))
                         } else {
                             return current
                         }
@@ -191,9 +195,9 @@ func _internal_createGroupCall(account: Account, peerId: PeerId, title: String?,
             return account.postbox.transaction { transaction -> GroupCallInfo in
                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                     if let cachedData = cachedData as? CachedChannelData {
-                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
                     } else if let cachedData = cachedData as? CachedGroupData {
-                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
+                        return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
                     } else {
                         return cachedData
                     }
@@ -236,9 +240,9 @@ func _internal_startScheduledGroupCall(account: Account, peerId: PeerId, callId:
         return account.postbox.transaction { transaction -> GroupCallInfo in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                 if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: callInfo.isStream))
                 } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: callInfo.isStream))
                 } else {
                     return cachedData
                 }
@@ -280,9 +284,9 @@ func _internal_toggleScheduledGroupCallSubscription(account: Account, peerId: Pe
         return account.postbox.transaction { transaction in
             transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                 if let cachedData = cachedData as? CachedChannelData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
                 } else if let cachedData = cachedData as? CachedGroupData {
-                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled))
+                    return cachedData.withUpdatedActiveCall(CachedChannelData.ActiveCall(id: callInfo.id, accessHash: callInfo.accessHash, title: callInfo.title, scheduleTimestamp: callInfo.scheduleTimestamp, subscribedToScheduled: callInfo.subscribedToScheduled, isStream: callInfo.isStream))
                 } else {
                     return cachedData
                 }
@@ -607,9 +611,9 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                 return account.postbox.transaction { transaction -> JoinGroupCallResult in
                     transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, cachedData -> CachedPeerData? in
                         if let cachedData = cachedData as? CachedChannelData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: parsedCall.isStream))
                         } else if let cachedData = cachedData as? CachedGroupData {
-                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false))
+                            return cachedData.withUpdatedCallJoinPeerId(joinAs).withUpdatedActiveCall(CachedChannelData.ActiveCall(id: parsedCall.id, accessHash: parsedCall.accessHash, title: parsedCall.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: parsedCall.isStream))
                         } else {
                             return cachedData
                         }
@@ -2603,6 +2607,38 @@ private extension GroupCallParticipantsContext.Participant.VideoDescription {
             }
             let isPaused = (flags & (1 << 0)) != 0
             self.init(endpointId: endpoint, ssrcGroups: parsedSsrcGroups, audioSsrc: audioSource.flatMap(UInt32.init(bitPattern:)), isPaused: isPaused)
+        }
+    }
+}
+
+public struct GroupCallStreamCredentials {
+    public var url: String
+    public var streamKey: String
+}
+
+public enum GetGroupCallStreamCredentialsError {
+    case generic
+}
+
+func _internal_getGroupCallStreamCredentials(account: Account, peerId: PeerId, revokePreviousCredentials: Bool) -> Signal<GroupCallStreamCredentials, GetGroupCallStreamCredentialsError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+    }
+    |> castError(GetGroupCallStreamCredentialsError.self)
+    |> mapToSignal { inputPeer -> Signal<GroupCallStreamCredentials, GetGroupCallStreamCredentialsError> in
+        guard let inputPeer = inputPeer else {
+            return .fail(.generic)
+        }
+        
+        return account.network.request(Api.functions.phone.getGroupCallStreamRtmpUrl(peer: inputPeer, revoke: revokePreviousCredentials ? .boolTrue : .boolFalse))
+        |> mapError { _ -> GetGroupCallStreamCredentialsError in
+            return .generic
+        }
+        |> map { result -> GroupCallStreamCredentials in
+            switch result {
+            case let .groupCallStreamRtmpUrl(url, key):
+                return GroupCallStreamCredentials(url: url, streamKey: key)
+            }
         }
     }
 }

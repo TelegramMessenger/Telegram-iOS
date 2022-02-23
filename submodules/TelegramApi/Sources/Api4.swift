@@ -1822,6 +1822,44 @@ public struct phone {
         }
     
     }
+    public enum GroupCallStreamRtmpUrl: TypeConstructorDescription {
+        case groupCallStreamRtmpUrl(url: String, key: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallStreamRtmpUrl(let url, let key):
+                    if boxed {
+                        buffer.appendInt32(767505458)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(key, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallStreamRtmpUrl(let url, let key):
+                return ("groupCallStreamRtmpUrl", [("url", url), ("key", key)])
+    }
+    }
+    
+        public static func parse_groupCallStreamRtmpUrl(_ reader: BufferReader) -> GroupCallStreamRtmpUrl? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.phone.GroupCallStreamRtmpUrl.groupCallStreamRtmpUrl(url: _1!, key: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum GroupCall: TypeConstructorDescription {
         case groupCall(call: Api.GroupCall, participants: [Api.GroupCallParticipant], participantsNextOffset: String, chats: [Api.Chat], users: [Api.User])
     
@@ -8683,6 +8721,21 @@ public extension Api {
                         var result: Api.phone.GroupCallStreamChannels?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.phone.GroupCallStreamChannels
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getGroupCallStreamRtmpUrl(peer: Api.InputPeer, revoke: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCallStreamRtmpUrl>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-558650433)
+                    peer.serialize(buffer, true)
+                    revoke.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.getGroupCallStreamRtmpUrl", parameters: [("peer", peer), ("revoke", revoke)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCallStreamRtmpUrl? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.GroupCallStreamRtmpUrl?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.GroupCallStreamRtmpUrl
                         }
                         return result
                     })

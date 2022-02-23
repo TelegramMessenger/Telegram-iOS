@@ -542,6 +542,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-6249322] = { return Api.InputStickerSetItem.parse_inputStickerSetItem($0) }
     dict[-1728664459] = { return Api.help.PromoData.parse_promoDataEmpty($0) }
     dict[-1942390465] = { return Api.help.PromoData.parse_promoData($0) }
+    dict[767505458] = { return Api.phone.GroupCallStreamRtmpUrl.parse_groupCallStreamRtmpUrl($0) }
     dict[1753266509] = { return Api.messages.PeerSettings.parse_peerSettings($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
@@ -1335,6 +1336,8 @@ public struct Api {
             case let _1 as Api.InputStickerSetItem:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PromoData:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.phone.GroupCallStreamRtmpUrl:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.PeerSettings:
                 _1.serialize(buffer, boxed)
