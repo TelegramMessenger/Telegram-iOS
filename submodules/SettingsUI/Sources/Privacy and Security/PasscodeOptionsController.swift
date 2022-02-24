@@ -252,7 +252,7 @@ private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int
         if timeout == 10 {
             return "If away for 10 seconds"
         } else if timeout == 1 {
-            return PTLocalized("PasscodeSettings.AutoLock.IfAwayFor_1second")
+            return strings.PasscodeSettings_AutoLock_IfAwayFor_1second
         } else if timeout == 1 * 60 {
             return strings.PasscodeSettings_AutoLock_IfAwayFor_1minute
         } else if timeout == 5 * 60 {
