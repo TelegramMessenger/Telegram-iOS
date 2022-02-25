@@ -2611,7 +2611,7 @@ private extension GroupCallParticipantsContext.Participant.VideoDescription {
     }
 }
 
-public struct GroupCallStreamCredentials {
+public struct GroupCallStreamCredentials : Equatable {
     public var url: String
     public var streamKey: String
 }
