@@ -8,8 +8,6 @@ config_setting(
 
 optimization_flags = select({
     ":debug_build": [
-        "-O2",
-        "-DNDEBUG",
     ],
     "//conditions:default": ["-DNDEBUG"],
 })

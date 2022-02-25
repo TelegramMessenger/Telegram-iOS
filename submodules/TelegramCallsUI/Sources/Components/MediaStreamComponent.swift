@@ -4,39 +4,396 @@ import ComponentFlow
 import Display
 import AccountContext
 import SwiftSignalKit
+import AVKit
+import TelegramCore
+import Postbox
+import ShareController
+import UndoUI
+import TelegramPresentationData
+import LottieAnimationComponent
+
+final class NavigationBackButtonComponent: Component {
+    let text: String
+    let color: UIColor
+    
+    init(text: String, color: UIColor) {
+        self.text = text
+        self.color = color
+    }
+    
+    static func ==(lhs: NavigationBackButtonComponent, rhs: NavigationBackButtonComponent) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.color != rhs.color {
+            return false
+        }
+        return false
+    }
+    
+    public final class View: UIView {
+        private let arrowView: UIImageView
+        private let textView: ComponentHostView<Empty>
+        
+        private var component: NavigationBackButtonComponent?
+        
+        override init(frame: CGRect) {
+            self.arrowView = UIImageView()
+            self.textView = ComponentHostView<Empty>()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.arrowView)
+            self.addSubview(self.textView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: NavigationBackButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            let spacing: CGFloat = 6.0
+            let innerArrowInset: CGFloat = -8.0
+            
+            if self.component?.color != component.color {
+                self.arrowView.image = NavigationBarTheme.generateBackArrowImage(color: component.color)
+            }
+            
+            self.component = component
+            
+            let textSize = self.textView.update(
+                transition: .immediate,
+                component: AnyComponent(Text(
+                    text: component.text,
+                    font: Font.regular(17.0),
+                    color: component.color
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            var leftInset: CGFloat = 0.0
+            var size = textSize
+            if let arrowImage = self.arrowView.image {
+                size.width += innerArrowInset + arrowImage.size.width + spacing
+                size.height = max(size.height, arrowImage.size.height)
+                
+                self.arrowView.frame = CGRect(origin: CGPoint(x: innerArrowInset, y: floor((size.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                leftInset += innerArrowInset + arrowImage.size.width + spacing
+            }
+            self.textView.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
+            
+            return size
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
+final class BundleIconComponent: Component {
+    let name: String
+    let tintColor: UIColor?
+    
+    init(name: String, tintColor: UIColor?) {
+        self.name = name
+        self.tintColor = tintColor
+    }
+    
+    static func ==(lhs: BundleIconComponent, rhs: BundleIconComponent) -> Bool {
+        if lhs.name != rhs.name {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
+            return false
+        }
+        return false
+    }
+    
+    public final class View: UIImageView {
+        private var component: BundleIconComponent?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: BundleIconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            if self.component?.name != component.name || self.component?.tintColor != component.tintColor {
+                if let tintColor = component.tintColor {
+                    self.image = generateTintedImage(image: UIImage(bundleImageName: component.name), color: tintColor, backgroundColor: nil)
+                } else {
+                    self.image = UIImage(bundleImageName: component.name)
+                }
+            }
+            self.component = component
+            
+            let imageSize = self.image?.size ?? CGSize()
+            
+            return CGSize(width: min(imageSize.width, availableSize.width), height: min(imageSize.height, availableSize.height))
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
 
 private final class NavigationBarComponent: CombinedComponent {
+    let topInset: CGFloat
+    let sideInset: CGFloat
+    let leftItem: AnyComponent<Empty>?
+    let rightItems: [AnyComponentWithIdentity<Empty>]
+    let centerItem: AnyComponent<Empty>?
+    
+    init(
+        topInset: CGFloat,
+        sideInset: CGFloat,
+        leftItem: AnyComponent<Empty>?,
+        rightItems: [AnyComponentWithIdentity<Empty>],
+        centerItem: AnyComponent<Empty>?
+    ) {
+        self.topInset = topInset
+        self.sideInset = sideInset
+        self.leftItem = leftItem
+        self.rightItems = rightItems
+        self.centerItem = centerItem
+    }
+    
+    static func ==(lhs: NavigationBarComponent, rhs: NavigationBarComponent) -> Bool {
+        if lhs.topInset != rhs.topInset {
+            return false
+        }
+        if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.leftItem != rhs.leftItem {
+            return false
+        }
+        if lhs.rightItems != rhs.rightItems {
+            return false
+        }
+        if lhs.centerItem != rhs.centerItem {
+            return false
+        }
+        
+        return true
+    }
+    
+    static var body: Body {
+        let background = Child(Rectangle.self)
+        let leftItem = Child(environment: Empty.self)
+        let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
+        let centerItem = Child(environment: Empty.self)
+        
+        return { context in
+            var availableWidth = context.availableSize.width
+            let sideInset: CGFloat = 16.0 + context.component.sideInset
+            
+            let contentHeight: CGFloat = 44.0
+            let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
+            
+            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.0)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
+            
+            let leftItem = context.component.leftItem.flatMap { leftItemComponent in
+                return leftItem.update(
+                    component: leftItemComponent,
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    transition: context.transition
+                )
+            }
+            if let leftItem = leftItem {
+                availableWidth -= leftItem.size.width
+            }
+            
+            var rightItemList: [_UpdatedChildComponent] = []
+            for item in context.component.rightItems {
+                let item = rightItems[item.id].update(
+                    component: item.component,
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    transition: context.transition
+                )
+                rightItemList.append(item)
+                availableWidth -= item.size.width
+            }
+            
+            let centerItem = context.component.centerItem.flatMap { centerItemComponent in
+                return centerItem.update(
+                    component: centerItemComponent,
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    transition: context.transition
+                )
+            }
+            if let centerItem = centerItem {
+                availableWidth -= centerItem.size.width
+            }
+            
+            context.add(background
+                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+            )
+            
+            var centerLeftInset = sideInset
+            if let leftItem = leftItem {
+                context.add(leftItem
+                    .position(CGPoint(x: sideInset + leftItem.size.width / 2.0, y: context.component.topInset + contentHeight / 2.0))
+                )
+                centerLeftInset += leftItem.size.width + 4.0
+            }
+            
+            var centerRightInset = sideInset
+            var rightItemX = context.availableSize.width - sideInset
+            for item in rightItemList.reversed() {
+                context.add(item
+                    .position(CGPoint(x: rightItemX - item.size.width / 2.0, y: context.component.topInset + contentHeight / 2.0))
+                )
+                rightItemX -= item.size.width + 4.0
+                centerRightInset += item.size.width + 4.0
+            }
+            
+            let maxCenterInset = max(centerLeftInset, centerRightInset)
+            if let centerItem = centerItem {
+                context.add(centerItem
+                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0, y: context.component.topInset + contentHeight / 2.0))
+                )
+            }
+            
+            return size
+        }
+    }
+}
+
+private final class OriginInfoComponent: CombinedComponent {
+    let title: String
+    let subtitle: String
+    
+    init(
+        title: String,
+        subtitle: String
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+    }
+    
+    static func ==(lhs: OriginInfoComponent, rhs: OriginInfoComponent) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.subtitle != rhs.subtitle {
+            return false
+        }
+        
+        return true
+    }
+    
+    static var body: Body {
+        let title = Child(Text.self)
+        let subtitle = Child(Text.self)
+        
+        return { context in
+            let spacing: CGFloat = 0.0
+            
+            let title = title.update(
+                component: Text(
+                    text: context.component.title, font: Font.semibold(17.0), color: .white),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            let subtitle = subtitle.update(
+                component: Text(
+                    text: context.component.subtitle, font: Font.regular(14.0), color: .white),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            var size = CGSize(width: max(title.size.width, subtitle.size.width), height: title.size.height + spacing + subtitle.size.height)
+            size.width = min(size.width, context.availableSize.width)
+            size.height = min(size.height, context.availableSize.height)
+            
+            context.add(title
+                .position(CGPoint(x: size.width / 2.0, y: title.size.height / 2.0))
+            )
+            context.add(subtitle
+                .position(CGPoint(x: size.width / 2.0, y: title.size.height + spacing + subtitle.size.height / 2.0))
+            )
+            
+            return size
+        }
+    }
+}
+
+private final class ToolbarComponent: CombinedComponent {
+    let bottomInset: CGFloat
+    let sideInset: CGFloat
     let leftItem: AnyComponent<Empty>?
     let rightItem: AnyComponent<Empty>?
     let centerItem: AnyComponent<Empty>?
     
     init(
+        bottomInset: CGFloat,
+        sideInset: CGFloat,
         leftItem: AnyComponent<Empty>?,
         rightItem: AnyComponent<Empty>?,
         centerItem: AnyComponent<Empty>?
     ) {
+        self.bottomInset = bottomInset
+        self.sideInset = sideInset
         self.leftItem = leftItem
         self.rightItem = rightItem
         self.centerItem = centerItem
     }
     
-    static func ==(lhs: NavigationBarComponent, rhs: NavigationBarComponent) -> Bool {
+    static func ==(lhs: ToolbarComponent, rhs: ToolbarComponent) -> Bool {
+        if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if lhs.sideInset != rhs.sideInset {
+            return false
+        }
+        if lhs.leftItem != rhs.leftItem {
+            return false
+        }
+        if lhs.rightItem != rhs.rightItem {
+            return false
+        }
+        if lhs.centerItem != rhs.centerItem {
+            return false
+        }
+        
         return true
     }
     
     static var body: Body {
+        let background = Child(Rectangle.self)
         let leftItem = Child(environment: Empty.self)
         let rightItem = Child(environment: Empty.self)
         let centerItem = Child(environment: Empty.self)
         
         return { context in
             var availableWidth = context.availableSize.width
-            let sideInset: CGFloat = 16.0
+            let sideInset: CGFloat = 16.0 + context.component.sideInset
+            
+            let contentHeight: CGFloat = 44.0
+            let size = CGSize(width: context.availableSize.width, height: contentHeight + context.component.bottomInset)
+            
+            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.0)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
                     component: leftItemComponent,
-                    availableSize: CGSize(width: availableWidth, height: context.availableSize.height),
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
                     transition: context.transition
                 )
             }
@@ -47,7 +404,7 @@ private final class NavigationBarComponent: CombinedComponent {
             let rightItem = context.component.rightItem.flatMap { rightItemComponent in
                 return rightItem.update(
                     component: rightItemComponent,
-                    availableSize: CGSize(width: availableWidth, height: context.availableSize.height),
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
                     transition: context.transition
                 )
             }
@@ -58,7 +415,7 @@ private final class NavigationBarComponent: CombinedComponent {
             let centerItem = context.component.centerItem.flatMap { centerItemComponent in
                 return centerItem.update(
                     component: centerItemComponent,
-                    availableSize: CGSize(width: availableWidth, height: context.availableSize.height),
+                    availableSize: CGSize(width: availableWidth, height: contentHeight),
                     transition: context.transition
                 )
             }
@@ -66,10 +423,14 @@ private final class NavigationBarComponent: CombinedComponent {
                 availableWidth -= centerItem.size.width
             }
             
+            context.add(background
+                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
+            )
+            
             var centerLeftInset = sideInset
             if let leftItem = leftItem {
                 context.add(leftItem
-                    .position(CGPoint(x: sideInset + leftItem.size.width / 2.0, y: context.availableSize.height / 2.0))
+                    .position(CGPoint(x: sideInset + leftItem.size.width / 2.0, y: contentHeight / 2.0))
                 )
                 centerLeftInset += leftItem.size.width + 4.0
             }
@@ -77,7 +438,7 @@ private final class NavigationBarComponent: CombinedComponent {
             var centerRightInset = sideInset
             if let rightItem = rightItem {
                 context.add(rightItem
-                    .position(CGPoint(x: context.availableSize.width - sideInset - rightItem.size.width / 2.0, y: context.availableSize.height / 2.0))
+                    .position(CGPoint(x: context.availableSize.width - sideInset - rightItem.size.width / 2.0, y: contentHeight / 2.0))
                 )
                 centerRightInset += rightItem.size.width + 4.0
             }
@@ -85,16 +446,21 @@ private final class NavigationBarComponent: CombinedComponent {
             let maxCenterInset = max(centerLeftInset, centerRightInset)
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0, y: context.availableSize.height / 2.0))
+                    .position(CGPoint(x: maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0, y: contentHeight / 2.0))
                 )
             }
             
-            return context.availableSize
+            return size
         }
     }
 }
 
 public final class MediaStreamComponent: CombinedComponent {
+    struct OriginInfo: Equatable {
+        var title: String
+        var memberCount: Int
+    }
+    
     public typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     public let call: PresentationGroupCallImpl
@@ -116,9 +482,23 @@ public final class MediaStreamComponent: CombinedComponent {
         
         private(set) var hasVideo: Bool = false
         private var stateDisposable: Disposable?
+        private var infoDisposable: Disposable?
+        
+        private(set) var originInfo: OriginInfo?
+        
+        private(set) var displayUI: Bool = true
+        var dismissOffset: CGFloat = 0.0
+        
+        let isPictureInPictureSupported: Bool
         
         init(call: PresentationGroupCallImpl) {
             self.call = call
+            
+            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
+                self.isPictureInPictureSupported = true
+            } else {
+                self.isPictureInPictureSupported = false
+            }
             
             super.init()
             
@@ -140,11 +520,44 @@ public final class MediaStreamComponent: CombinedComponent {
                 strongSelf.updated(transition: .immediate)
             })
             
+            let peerId = call.peerId
+            let callPeer = call.accountContext.account.postbox.transaction { transaction -> Peer? in
+                return transaction.getPeer(peerId)
+            }
+            
+            self.infoDisposable = (combineLatest(queue: .mainQueue(), call.members, callPeer)
+            |> deliverOnMainQueue).start(next: { [weak self] members, callPeer in
+                guard let strongSelf = self, let members = members, let callPeer = callPeer else {
+                    return
+                }
+                
+                let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: members.totalCount)
+                if strongSelf.originInfo != originInfo {
+                    strongSelf.originInfo = originInfo
+                    strongSelf.updated(transition: .immediate)
+                }
+            })
+            
             let _ = call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false).start()
         }
         
         deinit {
             self.stateDisposable?.dispose()
+            self.infoDisposable?.dispose()
+        }
+        
+        func toggleDisplayUI() {
+            self.displayUI = !self.displayUI
+            self.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .easeInOut)))
+        }
+        
+        func updateDismissOffset(value: CGFloat, interactive: Bool) {
+            self.dismissOffset = value
+            if interactive {
+                self.updated(transition: .immediate)
+            } else {
+                self.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
+            }
         }
     }
     
@@ -156,9 +569,15 @@ public final class MediaStreamComponent: CombinedComponent {
         let background = Child(Rectangle.self)
         let video = Child(MediaStreamVideoComponent.self)
         let navigationBar = Child(NavigationBarComponent.self)
+        let toolbar = Child(ToolbarComponent.self)
+        
+        let activatePictureInPicture = StoredActionSlot(Action<Void>.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
+            if !environment.isVisible {
+                context.state.dismissOffset = 0.0
+            }
             
             let background = background.update(
                 component: Rectangle(color: .black),
@@ -166,44 +585,190 @@ public final class MediaStreamComponent: CombinedComponent {
                 transition: context.transition
             )
             
+            let call = context.component.call
+            let controller = environment.controller
+            
             let video = Condition(context.state.hasVideo) {
                 return video.update(
                     component: MediaStreamVideoComponent(
-                        call: context.component.call
+                        call: context.component.call,
+                        activatePictureInPicture: activatePictureInPicture,
+                        bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
+                            guard let call = call else {
+                                completed()
+                                return
+                            }
+                            
+                            call.accountContext.sharedContext.mainWindow?.inCallNavigate?()
+                            
+                            completed()
+                        }
                     ),
-                    availableSize: CGSize(width: context.availableSize.width, height: floor(context.availableSize.width * 9.0 / 16.0)),
+                    availableSize: context.availableSize,
                     transition: context.transition
                 )
             }
             
-            let call = context.component.call
+            var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
+            if context.state.isPictureInPictureSupported, let _ = video {
+                navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Media Gallery/PictureInPictureButton",
+                        tintColor: .white
+                    )),
+                    action: {
+                        activatePictureInPicture.invoke(Action {
+                            guard let controller = controller() as? MediaStreamComponentController else {
+                                return
+                            }
+                            controller.dismiss(closing: false, manual: true)
+                        })
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)))))
+            }
+            
+            /*let whiteColor = UIColor(white: 1.0, alpha: 1.0)
+            navigationRightItems.append(AnyComponentWithIdentity(id: "more", component: AnyComponent(Button(
+                content: AnyComponent(ZStack([
+                    AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
+                        color: .white,
+                        size: CGSize(width: 22.0, height: 22.0),
+                        width: 1.5
+                    ))),
+                    AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
+                        animation: LottieAnimationComponent.Animation(
+                            name: "anim_profilemore",
+                            colors: [
+                                "Point 2.Group 1.Fill 1": whiteColor,
+                                "Point 3.Group 1.Fill 1": whiteColor,
+                                "Point 1.Group 1.Fill 1": whiteColor
+                            ],
+                            loop: true
+                        ),
+                        size: CGSize(width: 22.0, height: 22.0)
+                    ))),
+                ])),
+                action: {
+                    activatePictureInPicture.invoke(Action {
+                        guard let controller = controller() as? MediaStreamComponentController else {
+                            return
+                        }
+                        controller.dismiss(closing: false, manual: true)
+                    })
+                }
+            ).minSize(CGSize(width: 44.0, height: 44.0)))))*/
+            
+            //TODO:localize
             let navigationBar = navigationBar.update(
                 component: NavigationBarComponent(
+                    topInset: environment.statusBarHeight,
+                    sideInset: environment.safeInsets.left,
                     leftItem: AnyComponent(Button(
-                        content: AnyComponent(Text(text: "Leave", font: Font.regular(17.0), color: .white)),
-                        insets: UIEdgeInsets(),
+                        content: AnyComponent(NavigationBackButtonComponent(text: environment.strings.Common_Back, color: .white)),
                         action: { [weak call] in
                             let _ = call?.leave(terminateIfPossible: false)
                         })
                     ),
-                    rightItem: nil,
+                    rightItems: navigationRightItems,
                     centerItem: AnyComponent(Text(text: "Live Stream", font: Font.semibold(17.0), color: .white))
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: 44.0),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                 transition: context.transition
             )
             
+            let isLandscape = context.availableSize.width > context.availableSize.height
+            
+            var infoItem: AnyComponent<Empty>?
+            if let originInfo = context.state.originInfo {
+                let memberCountString: String
+                if originInfo.memberCount == 1 {
+                    memberCountString = "1 viewer"
+                } else {
+                    memberCountString = "\(originInfo.memberCount) viewers"
+                }
+                infoItem = AnyComponent(OriginInfoComponent(
+                    title: originInfo.title,
+                    subtitle: memberCountString
+                ))
+            }
+            
+            let toolbar = toolbar.update(
+                component: ToolbarComponent(
+                    bottomInset: environment.safeInsets.bottom,
+                    sideInset: environment.safeInsets.left,
+                    leftItem: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: "Chat/Input/Accessory Panels/MessageSelectionForward",
+                            tintColor: .white
+                        )),
+                        action: {
+                            guard let controller = controller() as? MediaStreamComponentController else {
+                                return
+                            }
+                            controller.presentShare()
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0))),
+                    rightItem: AnyComponent(Button(
+                        content: AnyComponent(BundleIconComponent(
+                            name: isLandscape ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
+                            tintColor: .white
+                        )),
+                        action: {
+                            if let controller = controller() as? MediaStreamComponentController {
+                                controller.updateOrientation(orientation: isLandscape ? .portrait : .landscapeRight)
+                            }
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0))),
+                    centerItem: infoItem
+                ),
+                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+                transition: context.transition
+            )
+            
+            let state = context.state
+            let height = context.availableSize.height
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+                .gesture(.tap { [weak state] in
+                    guard let state = state else {
+                        return
+                    }
+                    state.toggleDisplayUI()
+                })
+                .gesture(.pan { [weak state] panState in
+                    guard let state = state else {
+                        return
+                    }
+                    switch panState {
+                    case .began:
+                        break
+                    case let .updated(offset):
+                        state.updateDismissOffset(value: offset.y, interactive: true)
+                    case let .ended(velocity):
+                        if abs(velocity.y) > 200.0 {
+                            state.updateDismissOffset(value: velocity.y < 0 ? -height : height, interactive: false)
+                            (controller() as? MediaStreamComponentController)?.dismiss(closing: false, manual: true)
+                        } else {
+                            state.updateDismissOffset(value: 0.0, interactive: false)
+                        }
+                    }
+                })
             )
             
             if let video = video {
                 context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0)))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0 + context.state.dismissOffset))
+                )
             }
             
             context.add(navigationBar
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.statusBarHeight + navigationBar.size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
+                .opacity(context.state.displayUI ? 1.0 : 0.0)
+            )
+            
+            context.add(toolbar
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0))
+                .opacity(context.state.displayUI ? 1.0 : 0.0)
             )
             
             return context.availableSize
@@ -219,16 +784,25 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
     public var onViewDidAppear: (() -> Void)?
     public var onViewDidDisappear: (() -> Void)?
     
+    private var initialOrientation: UIInterfaceOrientation?
+    
     public init(call: PresentationGroupCall) {
         self.call = call
         
-        super.init(MediaStreamComponent(call: call as! PresentationGroupCallImpl))
+        super.init(context: call.accountContext, component: MediaStreamComponent(call: call as! PresentationGroupCallImpl))
         
         self.statusBar.statusBarStyle = .White
+        self.view.disablesInteractiveModalDismiss = true
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        if let initialOrientation = self.initialOrientation {
+            self.call.accountContext.sharedContext.applicationBindings.forceOrientation(initialOrientation)
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -237,6 +811,14 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         DispatchQueue.main.async {
             self.onViewDidAppear?()
         }
+        
+        self.view.layer.allowsGroupOpacity = true
+        self.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.view.layer.allowsGroupOpacity = false
+        })
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -248,6 +830,115 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
     }
     
     public func dismiss(closing: Bool, manual: Bool) {
-        self.dismiss(animated: true, completion: nil)
+        self.dismiss(completion: nil)
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.view.layer.allowsGroupOpacity = true
+        self.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+            guard let strongSelf = self else {
+                completion?()
+                return
+            }
+            strongSelf.view.layer.allowsGroupOpacity = false
+            strongSelf.dismissImpl(completion: completion)
+        })
+    }
+    
+    private func dismissImpl(completion: (() -> Void)? = nil) {
+        super.dismiss(completion: completion)
+    }
+    
+    func updateOrientation(orientation: UIInterfaceOrientation) {
+        if self.initialOrientation == nil {
+            self.initialOrientation = orientation == .portrait ? .landscapeRight : .portrait
+        } else if self.initialOrientation == orientation {
+            self.initialOrientation = nil
+        }
+        self.call.accountContext.sharedContext.applicationBindings.forceOrientation(orientation)
+    }
+    
+    func presentShare() {
+        let formatSendTitle: (String) -> String = { string in
+            var string = string
+            if string.contains("[") && string.contains("]") {
+                if let startIndex = string.firstIndex(of: "["), let endIndex = string.firstIndex(of: "]") {
+                    string.removeSubrange(startIndex ... endIndex)
+                }
+            } else {
+                string = string.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789-,."))
+            }
+            return string
+        }
+        
+        let _ = (combineLatest(self.call.accountContext.account.postbox.loadedPeerWithId(self.call.peerId), self.call.state |> take(1))
+        |> deliverOnMainQueue).start(next: { [weak self] peer, callState in
+            if let strongSelf = self {
+                var maybeInviteLinks: GroupCallInviteLinks? = nil
+                
+                if let peer = peer as? TelegramChannel, let addressName = peer.addressName {
+                    maybeInviteLinks = GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)", speakerLink: nil)
+                }
+                
+                guard let inviteLinks = maybeInviteLinks else {
+                    return
+                }
+                
+                let presentationData = strongSelf.call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                
+                var segmentedValues: [ShareControllerSegmentedValue]?
+                if let speakerLink = inviteLinks.speakerLink {
+                    segmentedValues = [ShareControllerSegmentedValue(title: presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
+                        return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
+                    }), ShareControllerSegmentedValue(title: presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
+                        return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
+                    })]
+                }
+                let shareController = ShareController(context: strongSelf.call.accountContext, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: defaultDarkColorPresentationTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
+                shareController.completed = { [weak self] peerIds in
+                    if let strongSelf = self {
+                        let _ = (strongSelf.call.accountContext.account.postbox.transaction { transaction -> [Peer] in
+                            var peers: [Peer] = []
+                            for peerId in peerIds {
+                                if let peer = transaction.getPeer(peerId) {
+                                    peers.append(peer)
+                                }
+                            }
+                            return peers
+                        } |> deliverOnMainQueue).start(next: { peers in
+                            if let strongSelf = self {
+                                let presentationData = strongSelf.call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                                
+                                let text: String
+                                var isSavedMessages = false
+                                if peers.count == 1, let peer = peers.first {
+                                    isSavedMessages = peer.id == strongSelf.call.accountContext.account.peerId
+                                    let peerName = peer.id == strongSelf.call.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).string
+                                } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                    let firstPeerName = firstPeer.id == strongSelf.call.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.call.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).string
+                                } else if let peer = peers.first {
+                                    let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.VoiceChat_ForwardTooltip_ManyChats(peerName, "\(peers.count - 1)").string
+                                } else {
+                                    text = ""
+                                }
+                                
+                                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: isSavedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            }
+                        })
+                    }
+                }
+                shareController.actionCompleted = {
+                    if let strongSelf = self {
+                        let presentationData = strongSelf.call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                }
+                strongSelf.present(shareController, in: .window(.root))
+            }
+        })
     }
 }

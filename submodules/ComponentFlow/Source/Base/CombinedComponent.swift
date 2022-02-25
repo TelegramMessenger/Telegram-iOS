@@ -617,7 +617,7 @@ public extension CombinedComponent {
         return UIView()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         let context = view.getCombinedComponentContext(Self.self)
         
         let storedBody: Body
@@ -822,5 +822,9 @@ public extension CombinedComponent {
 
     static func Guide() -> _ChildComponentGuide {
         return _ChildComponentGuide()
+    }
+    
+    static func StoredActionSlot<Arguments>(_ argumentsType: Arguments.Type) -> ActionSlot<Arguments> {
+        return ActionSlot<Arguments>()
     }
 }

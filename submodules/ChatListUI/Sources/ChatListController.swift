@@ -725,7 +725,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     strongSelf.searchContentNode?.placeholderNode.setAccessoryComponent(component: AnyComponent(Button(
                         content: contentComponent,
-                        insets: UIEdgeInsets(),
                         action: {
                             guard let strongSelf = self else {
                                 return

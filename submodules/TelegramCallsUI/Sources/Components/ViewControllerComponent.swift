@@ -3,6 +3,8 @@ import UIKit
 import ComponentFlow
 import Display
 import SwiftSignalKit
+import TelegramPresentationData
+import AccountContext
 
 public extension Transition.Animation.Curve {
     init(_ curve: ContainedViewLayoutTransitionCurve) {
@@ -36,20 +38,39 @@ open class ViewControllerComponentContainer: ViewController {
     public final class Environment: Equatable {
         public let statusBarHeight: CGFloat
         public let safeInsets: UIEdgeInsets
+        public let isVisible: Bool
+        public let strings: PresentationStrings
+        public let controller: () -> ViewController?
         
         public init(
             statusBarHeight: CGFloat,
-            safeInsets: UIEdgeInsets
+            safeInsets: UIEdgeInsets,
+            isVisible: Bool,
+            strings: PresentationStrings,
+            controller: @escaping () -> ViewController?
         ) {
             self.statusBarHeight = statusBarHeight
             self.safeInsets = safeInsets
+            self.isVisible = isVisible
+            self.strings = strings
+            self.controller = controller
         }
         
         public static func ==(lhs: Environment, rhs: Environment) -> Bool {
+            if lhs === rhs {
+                return true
+            }
+            
             if lhs.statusBarHeight != rhs.statusBarHeight {
                 return false
             }
             if lhs.safeInsets != rhs.safeInsets {
+                return false
+            }
+            if lhs.isVisible != rhs.isVisible {
+                return false
+            }
+            if lhs.strings !== rhs.strings {
                 return false
             }
             
@@ -58,12 +79,18 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     private final class Node: ViewControllerTracingNode {
+        private var presentationData: PresentationData
         private weak var controller: ViewControllerComponentContainer?
         
         private let component: AnyComponent<ViewControllerComponentContainer.Environment>
         private let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
-        init(controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>) {
+        private var currentIsVisible: Bool = false
+        private var currentLayout: ContainerViewLayout?
+        
+        init(context: AccountContext, controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>) {
+            self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
             self.controller = controller
             
             self.component = component
@@ -74,20 +101,39 @@ open class ViewControllerComponentContainer: ViewController {
             self.view.addSubview(self.hostView)
         }
         
-        func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: Transition) {
+            self.currentLayout = layout
+            
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
-                safeInsets: layout.intrinsicInsets
+                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.intrinsicInsets.left + layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.intrinsicInsets.right + layout.safeInsets.right),
+                isVisible: self.currentIsVisible,
+                strings: self.presentationData.strings,
+                controller: { [weak self] in
+                    return self?.controller
+                }
             )
             let _ = self.hostView.update(
-                transition: Transition(transition),
+                transition: transition,
                 component: self.component,
                 environment: {
                     environment
                 },
                 containerSize: layout.size
             )
-            transition.updateFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: layout.size))
+            transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
+        }
+        
+        func updateIsVisible(isVisible: Bool) {
+            if self.currentIsVisible == isVisible {
+                return
+            }
+            self.currentIsVisible = isVisible
+            
+            guard let currentLayout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(currentLayout, transition: .immediate)
         }
     }
     
@@ -95,9 +141,11 @@ open class ViewControllerComponentContainer: ViewController {
         return self.displayNode as! Node
     }
     
+    private let context: AccountContext
     private let component: AnyComponent<ViewControllerComponentContainer.Environment>
     
-    public init<C: Component>(_ component: C) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    public init<C: Component>(context: AccountContext, component: C) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+        self.context = context
         self.component = AnyComponent(component)
         
         super.init(navigationBarPresentationData: nil)
@@ -108,14 +156,26 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = Node(controller: self, component: self.component)
+        self.displayNode = Node(context: self.context, controller: self, component: self.component)
         
         self.displayNodeDidLoad()
+    }
+    
+    override open func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        self.node.updateIsVisible(isVisible: true)
+    }
+    
+    override open func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        
+        self.node.updateIsVisible(isVisible: false)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.node.containerLayoutUpdated(layout, transition: transition)
+        self.node.containerLayoutUpdated(layout, transition: Transition(transition))
     }
 }

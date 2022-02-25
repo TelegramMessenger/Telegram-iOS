@@ -679,7 +679,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             self.audioOutputStatePromise.set(.single(([], .speaker)))
         }
         
-        self.audioSessionDisposable = audioSession.push(audioSessionType: .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
+        self.audioSessionDisposable = audioSession.push(audioSessionType: self.isStream ? .play : .voiceCall, activateImmediately: true, manualActivate: { [weak self] control in
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: control)
@@ -725,13 +725,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             }
             if value {
                 if let audioSessionControl = strongSelf.audioSessionControl {
-                    //let audioSessionActive: Signal<Bool, NoError>
-                    if let callKitIntegration = strongSelf.callKitIntegration {
+                    if !strongSelf.isStream, let callKitIntegration = strongSelf.callKitIntegration {
                         _ = callKitIntegration.audioSessionActive
                         |> filter { $0 }
                         |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
-                            /*if let strongSelf = self, let _ = strongSelf.audioSessionControl {
-                            }*/
                             subscriber.putNext(true)
                             subscriber.putCompletion()
                             return EmptyDisposable
@@ -1355,11 +1352,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.internalStatePromise.set(.single(internalState))
         
         if let audioSessionControl = audioSessionControl, previousControl == nil {
-            switch self.currentSelectedAudioOutputValue {
-            case .speaker:
-                audioSessionControl.setOutputMode(.custom(self.currentSelectedAudioOutputValue))
-            default:
-                break
+            if self.isStream {
+                audioSessionControl.setOutputMode(.system)
+            } else {
+                switch self.currentSelectedAudioOutputValue {
+                case .speaker:
+                    audioSessionControl.setOutputMode(.custom(self.currentSelectedAudioOutputValue))
+                default:
+                    break
+                }
             }
             audioSessionControl.setup(synchronous: false)
         }
@@ -1427,7 +1428,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             strongSelf.requestCall(movingFromBroadcastToRtc: false)
                         }
                     }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264")
+                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264")
 
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
@@ -1521,10 +1522,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         strongSelf.currentConnectionMode = .rtc
                         strongSelf.genericCallContext?.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
                         strongSelf.genericCallContext?.setJoinResponse(payload: clientParams)
-                    case let .broadcast(isExternalStream):
+                    case .broadcast:
                         strongSelf.currentConnectionMode = .broadcast
-                        strongSelf.genericCallContext?.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: isExternalStream))
-                        strongSelf.genericCallContext?.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: isExternalStream)
+                        strongSelf.genericCallContext?.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
+                        strongSelf.genericCallContext?.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: callInfo.isStream)
                     }
 
                     strongSelf.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
@@ -1893,7 +1894,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
                     
-                    if let chatPeer = chatPeer, !participants.contains(where: { $0.peer.id == chatPeer.id }) {
+                    /*if let chatPeer = chatPeer, !participants.contains(where: { $0.peer.id == chatPeer.id }) {
                         participants.append(GroupCallParticipantsContext.Participant(
                             peer: chatPeer,
                             ssrc: 100,
@@ -1915,7 +1916,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                             joinedVideo: false
                         ))
                         participants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: state.sortAscending) })
-                    }
+                    }*/
 
                     var otherParticipantsWithVideo = 0
                     var videoWatchingParticipants = 0
@@ -2712,7 +2713,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.hasScreencast = true
 
-        let screencastCallContext = OngoingGroupCallContext(video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, preferX264: false)
+        let screencastCallContext = OngoingGroupCallContext(video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, preferX264: false)
         self.screencastCallContext = screencastCallContext
 
         self.screencastJoinDisposable.set((screencastCallContext.joinPayload
@@ -2823,7 +2824,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         ))
         
         if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setOutputMode(.custom(output))
+            if self.isStream {
+                audioSessionControl.setOutputMode(.system)
+            } else {
+                audioSessionControl.setOutputMode(.custom(output))
+            }
         }
     }
     

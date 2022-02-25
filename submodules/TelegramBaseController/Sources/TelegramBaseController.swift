@@ -329,7 +329,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     if previousCurrentGroupCall != nil && currentGroupCall == nil && availableState?.participantCount == 1 {
                         panelData = nil
                     } else {
-                        panelData = currentGroupCall != nil || (availableState?.participantCount == 0 && availableState?.info.scheduleTimestamp == nil) ? nil : availableState
+                        panelData = currentGroupCall != nil || (availableState?.participantCount == 0 && availableState?.info.scheduleTimestamp == nil && availableState?.info.isStream == false) ? nil : availableState
                     }
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil

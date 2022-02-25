@@ -2534,7 +2534,7 @@ func _internal_getVideoBroadcastPart(dataSource: AudioBroadcastDataSource, callI
                 status: .notReady,
                 responseTimestamp: responseTimestamp
             ))
-        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" {
+        } else if error.errorDescription == "TIME_INVALID" || error.errorDescription == "TIME_TOO_SMALL" || error.errorDescription.hasSuffix("_CHANNEL_INVALID") {
             return .single(GetAudioBroadcastPartResult(
                 status: .resyncNeeded,
                 responseTimestamp: responseTimestamp

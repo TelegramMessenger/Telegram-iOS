@@ -118,7 +118,7 @@ public protocol Component: _TypeErasedComponent, Equatable {
     
     func makeView() -> View
     func makeState() -> State
-    func update(view: View, availableSize: CGSize, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize
 }
 
 public extension Component {
@@ -131,7 +131,9 @@ public extension Component {
     }
 
     func _update(view: UIView, availableSize: CGSize, environment: Any, transition: Transition) -> CGSize {
-        return self.update(view: view as! Self.View, availableSize: availableSize, environment: environment as! Environment<EnvironmentType>, transition: transition)
+        let view = view as! Self.View
+        
+        return self.update(view: view, availableSize: availableSize, state: view.context(component: self).state, environment: environment as! Environment<EnvironmentType>, transition: transition)
     }
 
     func _isEqual(to other: _TypeErasedComponent) -> Bool {

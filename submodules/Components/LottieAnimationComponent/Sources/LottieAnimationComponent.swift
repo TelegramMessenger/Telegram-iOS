@@ -17,9 +17,9 @@ public final class LottieAnimationComponent: Component {
     }
     
     public let animation: Animation
-    public let size: CGSize
+    public let size: CGSize?
     
-    public init(animation: Animation, size: CGSize) {
+    public init(animation: Animation, size: CGSize?) {
         self.animation = animation
         self.size = size
     }
@@ -41,8 +41,6 @@ public final class LottieAnimationComponent: Component {
         private var animationView: LOTAnimationView?
         
         func update(component: LottieAnimationComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            let size = CGSize(width: min(component.size.width, availableSize.width), height: min(component.size.height, availableSize.height))
-            
             if self.currentAnimation != component.animation {
                 if let animationView = self.animationView, animationView.isAnimationPlaying {
                     animationView.completionBlock = { [weak self] _ in
@@ -64,8 +62,6 @@ public final class LottieAnimationComponent: Component {
                         view.backgroundColor = .clear
                         view.isOpaque = false
                         
-                        //view.logHierarchyKeypaths()
-                        
                         for (key, value) in component.animation.colors {
                             let colorCallback = LOTColorValueCallback(color: value.cgColor)
                             self.colorCallbacks.append(colorCallback)
@@ -78,8 +74,18 @@ public final class LottieAnimationComponent: Component {
                 }
             }
             
+            var animationSize = CGSize()
+            if let animationView = self.animationView, let sceneModel = animationView.sceneModel {
+                animationSize = sceneModel.compBounds.size
+            }
+            if let customSize = component.size {
+                animationSize = customSize
+            }
+            
+            let size = CGSize(width: min(animationSize.width, availableSize.width), height: min(animationSize.height, availableSize.height))
+            
             if let animationView = self.animationView {
-                animationView.frame = CGRect(origin: CGPoint(x: floor((size.width - component.size.width) / 2.0), y: floor((size.height - component.size.height) / 2.0)), size: component.size)
+                animationView.frame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
                 
                 if !animationView.isAnimationPlaying {
                     animationView.play { _ in
@@ -95,7 +101,7 @@ public final class LottieAnimationComponent: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

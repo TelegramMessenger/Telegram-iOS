@@ -527,9 +527,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         var joinText = self.strings.VoiceChat_PanelJoin
         var title = self.strings.VoiceChat_Title
         var isChannel = false
-        if let currentData = self.currentData, currentData.isChannel {
-            title = self.strings.VoiceChatChannel_Title
-            isChannel = true
+        if let currentData = self.currentData {
+            if currentData.isChannel || currentData.info.isStream {
+                title = self.strings.VoiceChatChannel_Title
+                isChannel = true
+            }
         }
         var text = self.currentText
         var isScheduled = false
