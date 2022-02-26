@@ -39,7 +39,10 @@ final class MediaStreamVideoComponent: Component {
         return State()
     }
     
-    public final class View: UIView, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate {
+    public final class View: UIView, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate, ComponentTaggedView {
+        public final class Tag {
+        }
+        
         private let videoRenderingContext = VideoRenderingContext()
         private var videoView: VideoRenderingView?
         private let blurTintView: UIView
@@ -49,6 +52,7 @@ final class MediaStreamVideoComponent: Component {
         private var pictureInPictureController: AVPictureInPictureController?
         
         private var component: MediaStreamVideoComponent?
+        private var hadVideo: Bool = false
         
         override init(frame: CGRect) {
             self.blurTintView = UIView()
@@ -66,6 +70,17 @@ final class MediaStreamVideoComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        public func matches(tag: Any) -> Bool {
+            if let _ = tag as? Tag {
+                return true
+            }
+            return false
+        }
+        
+        func expandFromPictureInPicture() {
+            self.pictureInPictureController?.stopPictureInPicture()
+        }
+        
         func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
@@ -80,11 +95,12 @@ final class MediaStreamVideoComponent: Component {
                         
                         if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
                             let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: self))
-                            self.pictureInPictureController = pictureInPictureController
                             
+                            pictureInPictureController.delegate = self
                             pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = true
                             pictureInPictureController.requiresLinearPlayback = true
-                            pictureInPictureController.delegate = self
+                            
+                            self.pictureInPictureController = pictureInPictureController
                         }
                         
                         videoView.setOnOrientationUpdated { [weak state] _, _ in
@@ -95,6 +111,7 @@ final class MediaStreamVideoComponent: Component {
                                 return
                             }
                             
+                            strongSelf.hadVideo = true
                             strongSelf.activityIndicatorView?.removeFromSuperview()
                             strongSelf.activityIndicatorView = nil
                             
@@ -120,7 +137,9 @@ final class MediaStreamVideoComponent: Component {
                     videoBlurView.updateIsEnabled(true)
                     transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
                 }
-            } else {
+            }
+            
+            if !self.hadVideo {
                 var activityIndicatorTransition = transition
                 let activityIndicatorView: ComponentHostView<Empty>
                 if let current = self.activityIndicatorView {

@@ -1684,7 +1684,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 strongSelf.processMyAudioLevel(level: mappedLevel, hasVoice: myLevelHasVoice)
                 strongSelf.isSpeakingPromise.set(orignalMyLevelHasVoice)
                 
-                if !missingSsrcs.isEmpty {
+                if !missingSsrcs.isEmpty && !strongSelf.isStream {
                     strongSelf.participantsContext?.ensureHaveParticipants(ssrcs: missingSsrcs)
                 }
             }))
@@ -2235,6 +2235,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func beginTone(tone: PresentationCallTone) {
+        if self.isStream {
+            switch tone {
+            case .groupJoined, .groupLeft:
+                return
+            default:
+                break
+            }
+        }
         var completed: (() -> Void)?
         let toneRenderer = PresentationCallToneRenderer(tone: tone, completed: {
             completed?()

@@ -489,7 +489,11 @@ public final class MediaStreamComponent: CombinedComponent {
         private(set) var displayUI: Bool = true
         var dismissOffset: CGFloat = 0.0
         
+        var storedIsLandscape: Bool?
+        
         let isPictureInPictureSupported: Bool
+        
+        private var scheduledDismissUITimer: SwiftSignalKit.Timer?
         
         init(call: PresentationGroupCallImpl) {
             self.call = call
@@ -551,6 +555,26 @@ public final class MediaStreamComponent: CombinedComponent {
             self.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .easeInOut)))
         }
         
+        func cancelScheduledDismissUI() {
+            self.scheduledDismissUITimer?.invalidate()
+            self.scheduledDismissUITimer = nil
+        }
+        
+        func scheduleDismissUI() {
+            if self.scheduledDismissUITimer == nil {
+                self.scheduledDismissUITimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: false, completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.scheduledDismissUITimer = nil
+                    if strongSelf.displayUI {
+                        strongSelf.toggleDisplayUI()
+                    }
+                }, queue: .mainQueue())
+                self.scheduledDismissUITimer?.start()
+            }
+        }
+        
         func updateDismissOffset(value: CGFloat, interactive: Bool) {
             self.dismissOffset = value
             if interactive {
@@ -575,7 +599,8 @@ public final class MediaStreamComponent: CombinedComponent {
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
-            if !environment.isVisible {
+            if environment.isVisible {
+            } else {
                 context.state.dismissOffset = 0.0
             }
             
@@ -675,6 +700,14 @@ public final class MediaStreamComponent: CombinedComponent {
             )
             
             let isLandscape = context.availableSize.width > context.availableSize.height
+            if context.state.storedIsLandscape != isLandscape {
+                context.state.storedIsLandscape = isLandscape
+                if isLandscape {
+                    context.state.scheduleDismissUI()
+                } else {
+                    context.state.cancelScheduledDismissUI()
+                }
+            }
             
             var infoItem: AnyComponent<Empty>?
             if let originInfo = context.state.originInfo {
@@ -813,6 +846,10 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         
         DispatchQueue.main.async {
             self.onViewDidAppear?()
+        }
+        
+        if let view = self.node.hostView.findTaggedView(tag: MediaStreamVideoComponent.View.Tag()) as? MediaStreamVideoComponent.View {
+            view.expandFromPictureInPicture()
         }
         
         self.view.layer.allowsGroupOpacity = true
