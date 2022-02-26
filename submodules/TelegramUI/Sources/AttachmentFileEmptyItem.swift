@@ -10,19 +10,26 @@ import TelegramAnimatedStickerNode
 import AccountContext
 
 final class AttachmentFileEmptyStateItem: ItemListControllerEmptyStateItem {
+    enum Content: Equatable {
+        case intro
+        case bannedSendMedia(String)
+    }
+    
     let context: AccountContext
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let content: Content
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: Content) {
         self.context = context
         self.theme = theme
         self.strings = strings
+        self.content = content
     }
     
     func isEqual(to: ItemListControllerEmptyStateItem) -> Bool {
         if let item = to as? AttachmentFileEmptyStateItem {
-            return self.theme === item.theme && self.strings === item.strings
+            return self.theme === item.theme && self.strings === item.strings && self.content == item.content
         } else {
             return false
         }
@@ -75,22 +82,32 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
     }
     
     private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        self.textNode.attributedText = NSAttributedString(string: strings.Attachment_FilesIntro, font: Font.regular(15.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
+        let text: String
+        switch self.item.content {
+            case .intro:
+                text = strings.Attachment_FilesIntro
+            case let .bannedSendMedia(banDescription):
+                text = banDescription
+        }
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: theme.list.freeTextColor, paragraphAlignment: .center)
     }
     
     override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         var insets = layout.insets(options: [])
-        insets.top += navigationBarHeight - 92.0
-        
+        insets.top += navigationBarHeight
+
         let imageSpacing: CGFloat = 12.0
-    
         let imageSize = CGSize(width: 144.0, height: 144.0)
         let imageHeight = layout.size.width < layout.size.height ? imageSize.height + imageSpacing : 0.0
-        
-        self.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: -10.0), size: imageSize)
-        self.animationNode.updateLayout(size: imageSize)
-        
+        if !imageHeight.isZero {
+            if case .intro = self.item.content {
+                insets.top -= 92.0
+            } else {
+                insets.top -= 160.0
+            }
+        } 
+         
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 70.0, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
         
         let totalHeight = imageHeight + textSize.height
@@ -98,6 +115,8 @@ final class AttachmentFileEmptyStateItemNode: ItemListControllerEmptyStateItemNo
         
         transition.updateAlpha(node: self.animationNode, alpha: imageHeight > 0.0 ? 1.0 : 0.0)
         transition.updateFrame(node: self.animationNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: topOffset), size: imageSize))
+        self.animationNode.updateLayout(size: imageSize)
+        
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - textSize.width - layout.safeInsets.left - layout.safeInsets.right) / 2.0), y: topOffset + imageHeight), size: textSize))
     }
 }

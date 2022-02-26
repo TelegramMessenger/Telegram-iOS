@@ -29,8 +29,26 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
         self.changeSink.putNext(changeInstance)
     }
     
-    func fetchResultAssets(_ initialFetchResult: PHFetchResult<PHAsset>) -> Signal<PHFetchResult<PHAsset>?, NoError> {
+    func fetchAssets(_ collection: PHAssetCollection) -> Signal<PHFetchResult<PHAsset>, NoError> {
+        let initialFetchResult = PHAsset.fetchAssets(in: collection, options: nil)
         let fetchResult = Atomic<PHFetchResult<PHAsset>>(value: initialFetchResult)
+        return .single(initialFetchResult)
+        |> then(
+            self.changeSink.signal()
+            |> mapToSignal { change in
+                if let updatedFetchResult = change.changeDetails(for: fetchResult.with { $0 })?.fetchResultAfterChanges {
+                    let _ = fetchResult.modify { _ in return updatedFetchResult }
+                    return .single(updatedFetchResult)
+                } else {
+                    return .complete()
+                }
+            }
+        )
+    }
+    
+    func fetchAssetsCollections(_ type: PHAssetCollectionType) -> Signal<PHFetchResult<PHAssetCollection>, NoError> {
+        let initialFetchResult = PHAssetCollection.fetchAssetCollections(with: type, subtype: .any, options: nil)
+        let fetchResult = Atomic<PHFetchResult<PHAssetCollection>>(value: initialFetchResult)
         return .single(initialFetchResult)
         |> then(
             self.changeSink.signal()
@@ -48,13 +66,13 @@ class MediaAssetsContext: NSObject, PHPhotoLibraryChangeObserver {
     func recentAssets() -> Signal<PHFetchResult<PHAsset>?, NoError> {
         let collections = PHAssetCollection.fetchAssetCollections(with: .smartAlbum, subtype: .smartAlbumUserLibrary, options: nil)
         if let collection = collections.firstObject {
-            let initialFetchResult = PHAsset.fetchAssets(in: collection, options: nil)
-            return fetchResultAssets(initialFetchResult)
+            return fetchAssets(collection)
+            |> map(Optional.init)
         } else {
             return .single(nil)
         }
     }
-    
+        
     func mediaAccess() -> Signal<PHAuthorizationStatus, NoError> {
         let initialStatus: PHAuthorizationStatus
         if #available(iOS 14.0, *) {

@@ -713,6 +713,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     public var textReturned: ((String) -> Void)?
     public var clearPrefix: (() -> Void)?
     public var clearTokens: (() -> Void)?
+    public var focusUpdated: ((Bool) -> Void)?
     
     public var tokensUpdated: (([SearchBarToken]) -> Void)?
     
@@ -1120,6 +1121,10 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.midY), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
     }
     
+    public func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.focusUpdated?(true)
+    }
+    
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if let _ = self.textField.selectedTokenIndex {
             if !string.isEmpty {
@@ -1151,6 +1156,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func textFieldDidEndEditing(_ textField: UITextField) {
+        self.focusUpdated?(false)
         self.textField.selectedTokenIndex = nil
     }
     

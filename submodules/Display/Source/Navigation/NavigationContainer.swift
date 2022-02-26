@@ -109,6 +109,8 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
         self.state.top?.value.isInFocus = isInFocus
     }
     
+    public var overflowInset: CGFloat = 0.0
+    
     private var currentKeyboardLeftEdge: CGFloat = 0.0
     private var additionalKeyboardLeftEdgeOffset: CGFloat = 0.0
     

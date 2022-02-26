@@ -2225,11 +2225,21 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
     if (!CGRectEqualToRect(fromFrame, CGRectZero))
     {
+        __weak TGCameraController *weakSelf = self;
         POPSpringAnimation *frameAnimation = [POPSpringAnimation animationWithPropertyNamed:kPOPViewFrame];
         frameAnimation.fromValue = [NSValue valueWithCGRect:fromFrame];
         frameAnimation.toValue = [NSValue valueWithCGRect:toFrame];
         frameAnimation.springSpeed = 20;
         frameAnimation.springBounciness = 1;
+        frameAnimation.completionBlock = ^(POPAnimation *anim, BOOL finished) {
+            __strong TGCameraController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (strongSelf.finishedTransitionIn != NULL) {
+                ;strongSelf.finishedTransitionIn();
+            }
+        };
         [_previewView pop_addAnimation:frameAnimation forKey:@"frame"];
         
         POPSpringAnimation *cornersFrameAnimation = [POPSpringAnimation animationWithPropertyNamed:kPOPViewFrame];

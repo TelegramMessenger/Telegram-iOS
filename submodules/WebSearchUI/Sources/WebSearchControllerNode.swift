@@ -64,8 +64,20 @@ private func preparedTransition(from fromEntries: [WebSearchEntry], to toEntries
     return WebSearchTransition(deleteItems: deleteIndices, insertItems: insertions, updateItems: updates, entryCount: toEntries.count, hasMore: hasMore)
 }
 
-private func gridNodeLayoutForContainerLayout(size: CGSize, insets: UIEdgeInsets) -> GridNodeLayoutType {
-    let side = floorToScreenPixels((size.width - insets.left - insets.right - 2.0) / 3.0)
+private func gridNodeLayoutForContainerLayout(_ layout: ContainerViewLayout) -> GridNodeLayoutType {
+    let itemsPerRow: Int
+    if case .compact = layout.metrics.widthClass {
+        switch layout.orientation {
+            case .portrait:
+                itemsPerRow = 3
+            case .landscape:
+                itemsPerRow = 5
+        }
+    } else {
+        itemsPerRow = 3
+    }
+    
+    let side = floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - CGFloat(itemsPerRow - 1)) / CGFloat(itemsPerRow))
     return .fixed(itemSize: CGSize(width: side, height: side), fillWidth: true, lineSpacing: 1.0, itemSpacing: 1.0)
 }
 
@@ -116,6 +128,7 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 }
 
 class WebSearchControllerNode: ASDisplayNode {
+    private weak var controller: WebSearchController?
     private let context: AccountContext
     private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
@@ -129,6 +142,7 @@ class WebSearchControllerNode: ASDisplayNode {
     private var webSearchInterfaceState: WebSearchInterfaceState
     private let webSearchInterfaceStatePromise: ValuePromise<WebSearchInterfaceState>
     
+    private let segmentedContainerNode: ASDisplayNode
     private let segmentedBackgroundNode: ASDisplayNode
     private let segmentedSeparatorNode: ASDisplayNode
     private let segmentedControlNode: SegmentedControlNode
@@ -173,7 +187,8 @@ class WebSearchControllerNode: ASDisplayNode {
     var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
     var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
     
-    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: EnginePeer?, chatLocation: ChatLocation?, mode: WebSearchMode, attachment: Bool) {
+    init(controller: WebSearchController, context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: EnginePeer?, chatLocation: ChatLocation?, mode: WebSearchMode, attachment: Bool) {
+        self.controller = controller
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
@@ -186,6 +201,9 @@ class WebSearchControllerNode: ASDisplayNode {
         
         self.webSearchInterfaceState = WebSearchInterfaceState(presentationData: context.sharedContext.currentPresentationData.with { $0 })
         self.webSearchInterfaceStatePromise = ValuePromise(self.webSearchInterfaceState, ignoreRepeated: true)
+        
+        self.segmentedContainerNode = ASDisplayNode()
+        self.segmentedContainerNode.clipsToBounds = true
         
         self.segmentedBackgroundNode = ASDisplayNode()
         self.segmentedSeparatorNode = ASDisplayNode()
@@ -225,10 +243,11 @@ class WebSearchControllerNode: ASDisplayNode {
         if !attachment {
             self.addSubnode(self.recentQueriesNode)
         }
-        self.addSubnode(self.segmentedBackgroundNode)
-        self.addSubnode(self.segmentedSeparatorNode)
+        self.addSubnode(self.segmentedContainerNode)
+        self.segmentedContainerNode.addSubnode(self.segmentedBackgroundNode)
+        self.segmentedContainerNode.addSubnode(self.segmentedSeparatorNode)
         if case .media = mode {
-            self.addSubnode(self.segmentedControlNode)
+            self.segmentedContainerNode.addSubnode(self.segmentedControlNode)
         }
         if !attachment {
             self.addSubnode(self.toolbarBackgroundNode)
@@ -339,6 +358,11 @@ class WebSearchControllerNode: ASDisplayNode {
         self.applyPresentationData(themeUpdated: themeUpdated)
     }
     
+    func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: transition)
+        transition.updateAlpha(node: self.segmentedBackgroundNode, alpha: alpha)
+    }
+    
     func applyPresentationData(themeUpdated: Bool = true) {
         self.cancelButton.setTitle(self.strings.Common_Cancel, with: Font.regular(17.0), with: self.theme.rootController.navigationBar.accentTextColor, for: .normal)
         
@@ -349,6 +373,7 @@ class WebSearchControllerNode: ASDisplayNode {
         }
         
         if themeUpdated {
+            self.gridNode.backgroundColor = self.theme.list.plainBackgroundColor
             self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
             self.segmentedSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
@@ -393,14 +418,19 @@ class WebSearchControllerNode: ASDisplayNode {
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
         
+        let hasQuery = !(self.webSearchInterfaceState.state?.query ?? "").isEmpty
+        
         let segmentedHeight: CGFloat = self.segmentedControlNode.supernode != nil ? 44.0 : 5.0
         let panelY: CGFloat = insets.top - UIScreenPixel - 4.0
         
-        transition.updateFrame(node: self.segmentedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: segmentedHeight)))
-        transition.updateFrame(node: self.segmentedSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY + segmentedHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        transition.updateSublayerTransformOffset(layer: self.segmentedContainerNode.layer, offset: CGPoint(x: 0.0, y: !hasQuery ? -44.0 : 0.0), completion: nil)
+        transition.updateFrame(node: self.segmentedContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: segmentedHeight)))
+        
+        transition.updateFrame(node: self.segmentedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: segmentedHeight)))
+        transition.updateFrame(node: self.segmentedSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: segmentedHeight - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right - 10.0 * 2.0), transition: transition)
-        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - controlSize.width) / 2.0), y: panelY + 5.0), size: controlSize))
+        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - controlSize.width) / 2.0), y: 5.0), size: controlSize))
         
         insets.top -= 4.0
         
@@ -466,7 +496,7 @@ class WebSearchControllerNode: ASDisplayNode {
         
         insets.top += segmentedHeight
         insets.bottom += toolbarHeight
-        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, preloadSize: 400.0, type: gridNodeLayoutForContainerLayout(size: layout.size, insets: insets)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, preloadSize: 400.0, type: gridNodeLayoutForContainerLayout(layout)), transition: .immediate), itemTransition: .immediate, stationaryItems: .none,updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         
@@ -541,7 +571,7 @@ class WebSearchControllerNode: ASDisplayNode {
             if self.recentQueriesNode.supernode != nil {
                 self.insertSubnode(gridNode, belowSubnode: self.recentQueriesNode)
             } else {
-                self.addSubnode(gridNode)
+                self.insertSubnode(gridNode, aboveSubnode: previousNode)
             }
             self.gridNode = gridNode
             self.currentEntries = nil

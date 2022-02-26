@@ -164,6 +164,8 @@ public final class WebSearchController: ViewController {
     
     public var dismissed: () -> Void = { }
     
+    public var searchingUpdated: (Bool) -> Void = { _ in }
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
@@ -237,6 +239,7 @@ public final class WebSearchController: ViewController {
         navigationContentNode.setQueryUpdated { [weak self] query in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 strongSelf.updateSearchQuery(query)
+                strongSelf.searchingUpdated(!query.isEmpty)
             }
         }
         navigationContentNode.cancel = { [weak self] in
@@ -354,7 +357,7 @@ public final class WebSearchController: ViewController {
         if case let .media(attachmentValue, _) = self.mode, attachmentValue {
             attachment = true
         }
-        self.displayNode = WebSearchControllerNode(context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, chatLocation: self.chatLocation, mode: self.mode.mode, attachment: attachment)
+        self.displayNode = WebSearchControllerNode(controller: self, context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, chatLocation: self.chatLocation, mode: self.mode.mode, attachment: attachment)
         self.controllerNode.requestUpdateInterfaceState = { [weak self] animated, f in
             if let strongSelf = self {
                 strongSelf.updateInterfaceState(f)
@@ -374,6 +377,8 @@ public final class WebSearchController: ViewController {
         
         self._ready.set(.single(true))
         self.displayNodeDidLoad()
+        
+        self.controllerNode.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     private func updateInterfaceState(animated: Bool = true, _ f: (WebSearchInterfaceState) -> WebSearchInterfaceState) {
@@ -542,7 +547,8 @@ public final class WebSearchController: ViewController {
         
         self.validLayout = layout
         
-        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        let navigationBarHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+        self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
 }
 

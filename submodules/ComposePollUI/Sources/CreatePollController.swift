@@ -518,6 +518,8 @@ public final class ComposedPoll {
 
 private class CreatePollControllerImpl: ItemListController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
 }
 
 public func createPollController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer, isQuiz: Bool? = nil, completion: @escaping (ComposedPoll) -> Void) -> AttachmentContainable {
@@ -904,8 +906,8 @@ public func createPollController(context: AccountContext, updatedPresentationDat
             focusItemTag = CreatePollEntryTag.solution
             ensureVisibleItemTag = focusItemTag
         } else {
-            focusItemTag = CreatePollEntryTag.text
-            ensureVisibleItemTag = focusItemTag
+//            focusItemTag = CreatePollEntryTag.text
+//            ensureVisibleItemTag = focusItemTag
         }
         
         let title: String
@@ -927,6 +929,15 @@ public func createPollController(context: AccountContext, updatedPresentationDat
     weak var currentTooltipController: TooltipController?
     let controller = CreatePollControllerImpl(context: context, state: signal)
     controller.navigationPresentation = .modal
+//    controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
+//        switch offset {
+//            case let .known(value):
+//                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
+//                controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
+//            case .unknown, .none:
+//                controller?.updateTabBarAlpha(1.0, .immediate)
+//        }
+//    }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

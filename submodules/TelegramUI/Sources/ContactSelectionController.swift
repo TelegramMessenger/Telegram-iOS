@@ -43,8 +43,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         return self._ready
     }
     
-    private let _result = Promise<([ContactListPeer], ContactListAction, Bool, Int32?)?>()
-    var result: Signal<([ContactListPeer], ContactListAction, Bool, Int32?)?, NoError> {
+    fileprivate var caption: NSAttributedString?
+    
+    private let _result = Promise<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?)?>()
+    var result: Signal<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?)?, NoError> {
         return self._result.get()
     }
     
@@ -74,6 +76,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     var requestAttachmentMenuExpansion: () -> Void = {}
+    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context
@@ -199,6 +203,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             }
         }
         
+        self.contactsNode.cancelSearch = { [weak self] in
+            self?.deactivateSearch()
+        }
+        
         self.contactsNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: true, completion: nil)
         }
@@ -220,7 +228,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.contactsNode.requestMultipleAction = { [weak self] silent, scheduleTime in
             if let strongSelf = self {
                 let selectedPeers = strongSelf.contactsNode.contactListNode.selectedPeers
-                strongSelf._result.set(.single((selectedPeers, .generic, silent, scheduleTime)))
+                strongSelf._result.set(.single((selectedPeers, .generic, silent, scheduleTime, strongSelf.caption)))
                 if strongSelf.autoDismiss {
                     strongSelf.dismiss()
                 }
@@ -307,6 +315,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
             if let searchContentNode = self.searchContentNode as? NavigationBarSearchContentNode {
                 self.contactsNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
             }
+        } else if let searchContentNode = self.searchContentNode as? ContactsSearchNavigationContentNode {
+            searchContentNode.cancel()
         }
     }
     
@@ -315,7 +325,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
-                    strongSelf._result.set(.single(([peer], action, false, nil)))
+                    strongSelf._result.set(.single(([peer], action, false, nil, nil)))
                     if strongSelf.autoDismiss {
                         strongSelf.dismiss()
                     }
@@ -377,6 +387,10 @@ final class ContactsSearchNavigationContentNode: NavigationBarContentNode {
         self.searchBar.deactivate(clear: false)
     }
     
+    func cancel() {
+        self.searchBar.cancel?()
+    }
+    
     func updateActivity(_ activity: Bool) {
         self.searchBar.activity = activity
     }
@@ -410,7 +424,7 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
     }
     
     func setCaption(_ caption: NSAttributedString) {
-        
+        self.controller?.caption = caption
     }
     
     func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {

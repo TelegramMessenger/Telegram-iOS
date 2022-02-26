@@ -136,7 +136,10 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
     }
 }
 
-private func attachmentFileControllerEntries(presentationData: PresentationData, recentDocuments: [Message]?) -> [AttachmentFileEntry] {
+private func attachmentFileControllerEntries(presentationData: PresentationData, recentDocuments: [Message]?, empty: Bool) -> [AttachmentFileEntry] {
+    guard !empty else {
+        return []
+    }
     var entries: [AttachmentFileEntry] = []
     entries.append(.selectFromGallery(presentationData.theme, presentationData.strings.Attachment_SelectFromGallery))
     entries.append(.selectFromFiles(presentationData.theme, presentationData.strings.Attachment_SelectFromFiles))
@@ -152,7 +155,7 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
         }
     } else {
         entries.append(.recentHeader(presentationData.theme, presentationData.strings.Attachment_RecentlySentFiles.uppercased()))
-        for i in 0 ..< 8 {
+        for i in 0 ..< 11 {
             entries.append(.file(Int32(i), presentationData.theme, nil))
         }
     }
@@ -162,11 +165,17 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
 
 private class AttachmentFileControllerImpl: ItemListController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     
-    var prepareForReuseImpl: () -> Void = {}
+    var resetForReuseImpl: () -> Void = {}
     public func resetForReuse() {
-        self.prepareForReuseImpl()
+        self.resetForReuseImpl()
         self.scrollToTop?()
+    }
+    
+    public func prepareForReuse() {
+        self.visibleBottomContentOffsetChanged?(self.visibleBottomContentOffset)
     }
 }
 
@@ -174,7 +183,7 @@ private struct AttachmentFileControllerState: Equatable {
     var searching: Bool
 }
 
-public func attachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentContainable {
+public func attachmentFileController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, bannedSendMedia: (Int32, Bool)?, presentGallery: @escaping () -> Void, presentFiles: @escaping () -> Void, send: @escaping (AnyMediaReference) -> Void) -> AttachmentContainable {
     let actionsDisposable = DisposableSet()
     
     let statePromise = ValuePromise(AttachmentFileControllerState(searching: false), ignoreRepeated: true)
@@ -236,9 +245,8 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
         }
         
         var rightNavigationButton: ItemListNavigationButton?
-        if let recentDocuments = recentDocuments, recentDocuments.count > 10 {
+        if bannedSendMedia == nil && (recentDocuments == nil || (recentDocuments?.count ?? 0) > 10) {
             rightNavigationButton = ItemListNavigationButton(content: .icon(.search), style: .regular, enabled: true, action: {
-                expandImpl?()
                 updateState { state in
                     var updatedState = state
                     updatedState.searching = true
@@ -252,13 +260,25 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
         }), rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         
         var emptyItem: AttachmentFileEmptyStateItem?
-        if let recentDocuments = recentDocuments, recentDocuments.isEmpty {
-            emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings)
+        if let (untilDate, personal) = bannedSendMedia {
+            let banDescription: String
+            if untilDate != 0 && untilDate != Int32.max {
+                banDescription = presentationData.strings.Conversation_RestrictedMediaTimed(stringForFullDate(timestamp: untilDate, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)).string
+            } else if personal {
+                banDescription = presentationData.strings.Conversation_RestrictedMedia
+            } else {
+                banDescription = presentationData.strings.Conversation_DefaultRestrictedMedia
+            }
+            emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings, content: .bannedSendMedia(banDescription))
+        } else if let recentDocuments = recentDocuments, recentDocuments.isEmpty {
+            emptyItem = AttachmentFileEmptyStateItem(context: context, theme: presentationData.theme, strings: presentationData.strings, content: .intro)
         }
         
         var searchItem: ItemListControllerSearch?
         if state.searching {
-            searchItem = AttachmentFileSearchItem(context: context, presentationData: presentationData, cancel: {
+            searchItem = AttachmentFileSearchItem(context: context, presentationData: presentationData, focus: {
+                expandImpl?()
+            }, cancel: {
                 updateState { state in
                     var updatedState = state
                     updatedState.searching = false
@@ -271,7 +291,7 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
             })
         }
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, recentDocuments: recentDocuments), style: .blocks, emptyStateItem: emptyItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: attachmentFileControllerEntries(presentationData: presentationData, recentDocuments: recentDocuments, empty: bannedSendMedia != nil), style: .blocks, emptyStateItem: emptyItem, searchItem: searchItem, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
@@ -279,7 +299,16 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     }
     
     let controller = AttachmentFileControllerImpl(context: context, state: signal)
-    controller.prepareForReuseImpl = {
+    controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
+        switch offset {
+            case let .known(value):
+                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
+                controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
+            case .unknown, .none:
+                controller?.updateTabBarAlpha(1.0, .immediate)
+        }
+    }
+    controller.resetForReuseImpl = {
         updateState { state in
             var updatedState = state
             updatedState.searching = false

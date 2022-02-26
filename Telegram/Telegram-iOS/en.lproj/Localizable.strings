@@ -7354,3 +7354,6 @@ Sorry for the inconvenience.";
 "LiveStream.NoViewers" = "No viewers";
 "LiveStream.ViewerCount_1" = "1 viewer";
 "LiveStream.ViewerCount_any" = "%@ viewers";
+
+"Attachment.MyAlbums" = "My Albums";
+"Attachment.MediaTypes" = "Media Types";

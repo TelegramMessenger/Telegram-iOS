@@ -24,6 +24,7 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
     private var theme: PresentationTheme
     private let strings: PresentationStrings
     
+    private let focus: () -> Void
     private let cancel: () -> Void
     
     private let searchBar: SearchBarNode
@@ -34,10 +35,11 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
             self.searchBar.activity = activity
         }
     }
-    init(theme: PresentationTheme, strings: PresentationStrings, cancel: @escaping () -> Void, updateActivity: @escaping(@escaping(Bool)->Void) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, focus: @escaping () -> Void, cancel: @escaping () -> Void, updateActivity: @escaping(@escaping(Bool)->Void) -> Void) {
         self.theme = theme
         self.strings = strings
         
+        self.focus = focus
         self.cancel = cancel
         
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, displayBackground: false)
@@ -45,7 +47,7 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
         super.init()
         
         self.addSubnode(self.searchBar)
-        
+                
         self.searchBar.cancel = { [weak self] in
             self?.searchBar.deactivate(clear: false)
             self?.cancel()
@@ -53,6 +55,12 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
         
         self.searchBar.textUpdated = { [weak self] query, _ in
             self?.queryUpdated?(query)
+        }
+        
+        self.searchBar.focusUpdated = { [weak self] focus in
+            if focus {
+                self?.focus()
+            }
         }
         
         updateActivity({ [weak self] value in
@@ -99,6 +107,7 @@ private final class AttachmentFileSearchNavigationContentNode: NavigationBarCont
 final class AttachmentFileSearchItem: ItemListControllerSearch {
     let context: AccountContext
     let presentationData: PresentationData
+    let focus: () -> Void
     let cancel: () -> Void
     let send: (Message) -> Void
     let dismissInput: () -> Void
@@ -107,9 +116,10 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
     private var activity: ValuePromise<Bool> = ValuePromise(ignoreRepeated: false)
     private let activityDisposable = MetaDisposable()
     
-    init(context: AccountContext, presentationData: PresentationData, cancel: @escaping () -> Void, send: @escaping (Message) -> Void, dismissInput: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, focus: @escaping () -> Void, cancel: @escaping () -> Void, send: @escaping (Message) -> Void, dismissInput: @escaping () -> Void) {
         self.context = context
         self.presentationData = presentationData
+        self.focus = focus
         self.cancel = cancel
         self.send = send
         self.dismissInput = dismissInput
@@ -145,7 +155,7 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
             current.updateTheme(presentationData.theme)
             return current
         } else {
-            return AttachmentFileSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, cancel: self.cancel, updateActivity: { [weak self] value in
+            return AttachmentFileSearchNavigationContentNode(theme: presentationData.theme, strings: presentationData.strings, focus: self.focus, cancel: self.cancel, updateActivity: { [weak self] value in
                 self?.updateActivity = value
             })
         }
