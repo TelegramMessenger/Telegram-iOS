@@ -2414,7 +2414,7 @@ private func mergeAndSortParticipants(current currentParticipants: [GroupCallPar
 }
 
 public final class AudioBroadcastDataSource {
-    fileprivate let download: Download
+    let download: Download
     
     fileprivate init(download: Download) {
         self.download = download
