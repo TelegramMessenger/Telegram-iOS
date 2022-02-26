@@ -1515,7 +1515,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 interaction.dismissInput()
             }, present: { c, a in
                 interaction.present(c, a)
-            }, transitionNode: { [weak self] messageId, media in
+            }, transitionNode: { messageId, media in
                 var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                 if let strongSelf = self {
                     strongSelf.listNode.forEachItemNode { itemNode in
@@ -1527,7 +1527,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 return transitionNode
-            }, addToTransitionSurface: { [weak self] view in
+            }, addToTransitionSurface: { view in
                 self?.addToTransitionSurface(view: view)
             }, openUrl: { url in
                 interaction.openUrl(url)
@@ -1626,7 +1626,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let firstTime = previousEntries == nil
                 var transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags?.0 != nil, isEmpty: !isSearching && (entriesAndFlags?.0.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture in
                     interaction.peerContextAction?(message, node, rect, gesture)
-                }, toggleExpandLocalResults: { [weak self] in
+                }, toggleExpandLocalResults: {
                     guard let strongSelf = self else {
                         return
                     }
@@ -1635,7 +1635,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         state.expandLocalSearch = !state.expandLocalSearch
                         return state
                     }
-                }, toggleExpandGlobalResults: { [weak self] in
+                }, toggleExpandGlobalResults: {
                     guard let strongSelf = self else {
                         return
                     }
@@ -1959,6 +1959,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.recentDisposable.dispose()
         self.updatedRecentPeersDisposable.dispose()
         self.deletedMessagesDisposable?.dispose()
+        if self.key == .downloads {
+            print("downloads")
+        }
     }
     
     override func didLoad() {
