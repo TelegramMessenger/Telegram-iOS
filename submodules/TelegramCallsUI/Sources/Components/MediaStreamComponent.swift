@@ -562,7 +562,7 @@ public final class MediaStreamComponent: CombinedComponent {
         
         func scheduleDismissUI() {
             if self.scheduledDismissUITimer == nil {
-                self.scheduledDismissUITimer = SwiftSignalKit.Timer(timeout: 5.0, repeat: false, completion: { [weak self] in
+                self.scheduledDismissUITimer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }

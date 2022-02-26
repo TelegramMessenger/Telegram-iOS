@@ -56,7 +56,7 @@ final class MediaStreamVideoComponent: Component {
         
         override init(frame: CGRect) {
             self.blurTintView = UIView()
-            self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+            self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
             
             super.init(frame: frame)
             

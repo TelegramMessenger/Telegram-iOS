@@ -379,6 +379,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     let membersText: String
                     if summaryState.participantCount == 0 {
                         membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
+                    } else if let info = summaryState.info, info.isStream {
+                        membersText = strongSelf.strings.LiveStream_ViewerCount(Int32(summaryState.participantCount))
                     } else {
                         membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
