@@ -342,17 +342,17 @@ public enum GetGroupCallParticipantsError {
 }
 
 func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessHash: Int64, offset: String, ssrcs: [UInt32], limit: Int32, sortAscending: Bool?) -> Signal<GroupCallParticipantsContext.State, GetGroupCallParticipantsError> {
-    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int), GetGroupCallParticipantsError>
+    let sortAscendingValue: Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError>
     
     sortAscendingValue = _internal_getCurrentGroupCall(account: account, callId: callId, accessHash: accessHash)
     |> mapError { _ -> GetGroupCallParticipantsError in
         return .generic
     }
-    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int), GetGroupCallParticipantsError> in
+    |> mapToSignal { result -> Signal<(Bool, Int32?, Bool, GroupCallParticipantsContext.State.DefaultParticipantsAreMuted?, Bool, Int, Bool), GetGroupCallParticipantsError> in
         guard let result = result else {
             return .fail(.generic)
         }
-        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled, result.info.unmutedVideoLimit))
+        return .single((sortAscending ?? result.info.sortAscending, result.info.scheduleTimestamp, result.info.subscribedToScheduled, result.info.defaultParticipantsAreMuted, result.info.isVideoEnabled, result.info.unmutedVideoLimit, result.info.isStream))
     }
 
     return combineLatest(
@@ -369,7 +369,7 @@ func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessH
             let version: Int32
             let nextParticipantsFetchOffset: String?
             
-            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted, isVideoEnabled, unmutedVideoLimit) = sortAscendingAndScheduleTimestamp
+            let (sortAscendingValue, scheduleTimestamp, subscribedToScheduled, defaultParticipantsAreMuted, isVideoEnabled, unmutedVideoLimit, isStream) = sortAscendingAndScheduleTimestamp
             
             switch result {
             case let .groupParticipants(count, participants, nextOffset, chats, users, apiVersion):
@@ -423,6 +423,7 @@ func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessH
                 totalCount: totalCount,
                 isVideoEnabled: isVideoEnabled,
                 unmutedVideoLimit: unmutedVideoLimit,
+                isStream: isStream,
                 version: version
             )
         }
@@ -1047,6 +1048,7 @@ public final class GroupCallParticipantsContext {
         public var totalCount: Int
         public var isVideoEnabled: Bool
         public var unmutedVideoLimit: Int
+        public var isStream: Bool
         public var version: Int32
         
         public mutating func mergeActivity(from other: State, myPeerId: PeerId?, previousMyPeerId: PeerId?, mergeActivityTimestamps: Bool) {
@@ -1081,6 +1083,7 @@ public final class GroupCallParticipantsContext {
             totalCount: Int,
             isVideoEnabled: Bool,
             unmutedVideoLimit: Int,
+            isStream: Bool,
             version: Int32
         ) {
             self.participants = participants
@@ -1096,6 +1099,7 @@ public final class GroupCallParticipantsContext {
             self.totalCount = totalCount
             self.isVideoEnabled = isVideoEnabled
             self.unmutedVideoLimit = unmutedVideoLimit
+            self.isStream = isStream
             self.version = version
         }
     }
@@ -1398,6 +1402,7 @@ public final class GroupCallParticipantsContext {
                             totalCount: strongSelf.stateValue.state.totalCount,
                             isVideoEnabled: strongSelf.stateValue.state.isVideoEnabled,
                             unmutedVideoLimit: strongSelf.stateValue.state.unmutedVideoLimit,
+                            isStream: strongSelf.stateValue.state.isStream,
                             version: strongSelf.stateValue.state.version
                         ),
                         overlayState: strongSelf.stateValue.overlayState
@@ -1471,6 +1476,14 @@ public final class GroupCallParticipantsContext {
         }
     }
     
+    public func removeLocalPeerId() {
+        var state = self.stateValue.state
+        
+        state.participants.removeAll(where: { $0.peer.id == self.myPeerId })
+        
+        self.stateValue.state = state
+    }
+    
     private func takeNextActivityRank() -> Int {
         let value = self.serviceState.nextActivityRank
         self.serviceState.nextActivityRank += 1
@@ -1537,6 +1550,7 @@ public final class GroupCallParticipantsContext {
                     totalCount: strongSelf.stateValue.state.totalCount,
                     isVideoEnabled: strongSelf.stateValue.state.isVideoEnabled,
                     unmutedVideoLimit: strongSelf.stateValue.state.unmutedVideoLimit,
+                    isStream: strongSelf.stateValue.state.isStream,
                     version: strongSelf.stateValue.state.version
                 ),
                 overlayState: strongSelf.stateValue.overlayState
@@ -1758,6 +1772,7 @@ public final class GroupCallParticipantsContext {
             let scheduleTimestamp = strongSelf.stateValue.state.scheduleTimestamp
             let subscribedToScheduled = strongSelf.stateValue.state.subscribedToScheduled
             let isVideoEnabled = strongSelf.stateValue.state.isVideoEnabled
+            let isStream = strongSelf.stateValue.state.isStream
             let unmutedVideoLimit = strongSelf.stateValue.state.unmutedVideoLimit
             
             updatedParticipants.sort(by: { GroupCallParticipantsContext.Participant.compare(lhs: $0, rhs: $1, sortAscending: strongSelf.stateValue.state.sortAscending) })
@@ -1777,6 +1792,7 @@ public final class GroupCallParticipantsContext {
                     totalCount: updatedTotalCount,
                     isVideoEnabled: isVideoEnabled,
                     unmutedVideoLimit: unmutedVideoLimit,
+                    isStream: isStream,
                     version: update.version
                 ),
                 overlayState: updatedOverlayState
