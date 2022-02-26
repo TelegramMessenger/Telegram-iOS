@@ -7328,3 +7328,29 @@ Sorry for the inconvenience.";
 "Attachment.DeselectedItems_0" = "%@ items deselected";
 
 "PrivacyPhoneNumberSettings.CustomPublicLink" = "Users who have your number saved in their contacts will also see it on Telegram.\n\nThis public link opens a chat with you:\n[https://t.me/%@]()";
+
+"DownloadList.DownloadingHeader" = "Downloading";
+"DownloadList.DownloadedHeader" = "Recently Downloaded";
+"DownloadList.PauseAll" = "Pause All";
+"DownloadList.ResumeAll" = "Resume All";
+"DownloadList.Clear" = "Clear";
+"DownloadList.OptionManageDeviceStorage" = "Manage Device Storage";
+"DownloadList.ClearDownloadList" = "Clear Download List";
+"DownloadList.DeleteFromCache" = "Delete from Cache";
+"DownloadList.RaisePriority" = "Raise Priority";
+"DownloadList.CancelDownloading" = "Cancel Downloading";
+
+"DownloadList.RemoveFileAlertTitle_1" = "Remove Document?";
+"DownloadList.RemoveFileAlertTitle_any" = "Remove %@ Documents?";
+"DownloadList.RemoveFileAlertText_1" = "Are you sure you want to remove this\ndocument from Downloads?\nIt will be deleted from your disk, but\nwill remain accessible in the cloud.";
+"DownloadList.RemoveFileAlertText_any" = "Are you sure you want to remove these\n%@ documents from Downloads?\nThey will be deleted from your disk, but\nwill remain accessible in the cloud.";
+"DownloadList.RemoveFileAlertRemove" = "Remove";
+
+"DownloadList.ClearAlertTitle" = "Downloaded Files";
+"DownloadList.ClearAlertText" = "Telegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device.";
+
+"ChatList.Search.FilterDownloads" = "Downloads";
+
+"LiveStream.NoViewers" = "No viewers";
+"LiveStream.ViewerCount_1" = "1 viewer";
+"LiveStream.ViewerCount_any" = "%@ viewers";

@@ -522,7 +522,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionText = NSAttributedString(string: descriptionString, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
                             iconImage = .roundVideo(file)
                         } else if !isAudio {
-                            let fileName: String = file.fileName ?? "File"
+                            var fileName: String = file.fileName ?? "File"
+                            if file.isVideo {
+                                fileName = item.presentationData.strings.Message_Video
+                            }
                             titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                             
                             var fileExtension: String?
@@ -569,8 +572,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     } else if let image = media as? TelegramMediaImage {
                         selectedMedia = image
                         
-                        //TODO:localize
-                        let fileName: String = "Photo"
+                        let fileName: String = item.presentationData.strings.Message_Photo
                         titleText = NSAttributedString(string: fileName, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                         
                         if let representation = smallestImageRepresentation(image.representations) {
@@ -656,7 +658,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     if let file = selectedMedia as? TelegramMediaFile {
                         updatedStatusSignal = messageFileMediaResourceStatus(context: item.context, file: file, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult, isDownloadList: item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
-                            if case .Fetching = value.fetchStatus {
+                            if case .Fetching = value.fetchStatus, !item.isDownloadList {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
                             } else {
                                 return .single(value)
@@ -686,7 +688,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     } else if let image = selectedMedia as? TelegramMediaImage {
                         updatedStatusSignal = messageImageMediaResourceStatus(context: item.context, image: image, message: message, isRecentActions: false, isSharedMedia: true, isGlobalSearch: item.isGlobalSearchResult || item.isDownloadList)
                         |> mapToSignal { value -> Signal<FileMediaResourceStatus, NoError> in
-                            if case .Fetching = value.fetchStatus {
+                            if case .Fetching = value.fetchStatus, !item.isDownloadList {
                                 return .single(value) |> delay(0.1, queue: Queue.concurrentDefaultQueue())
                             } else {
                                 return .single(value)
@@ -1301,7 +1303,12 @@ public final class ListMessageFileItemNode: ListMessageNode {
             transition.updateFrame(node: self.descriptionNode, frame: descriptionFrame)
         }
         
-        let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+        let alphaTransition: ContainedViewLayoutTransition
+        if item.isDownloadList {
+            alphaTransition = .immediate
+        } else {
+            alphaTransition = .animated(duration: 0.3, curve: .easeInOut)
+        }
         if downloadingString != nil {
             alphaTransition.updateAlpha(node: self.descriptionProgressNode, alpha: 1.0)
             alphaTransition.updateAlpha(node: self.descriptionNode, alpha: 0.0)

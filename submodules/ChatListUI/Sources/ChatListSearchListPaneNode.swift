@@ -552,19 +552,17 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 let header: ChatListSearchItemHeader
                 switch orderingKey {
                 case .downloading:
-                    //TODO:localize
                     if allPaused {
-                        header = ChatListSearchItemHeader(type: .downloading, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "Resume All", action: {
+                        header = ChatListSearchItemHeader(type: .downloading, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.DownloadList_ResumeAll, action: {
                             toggleAllPaused()
                         })
                     } else {
-                        header = ChatListSearchItemHeader(type: .downloading, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "Pause All", action: {
+                        header = ChatListSearchItemHeader(type: .downloading, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.DownloadList_PauseAll, action: {
                             toggleAllPaused()
                         })
                     }
                 case .downloaded:
-                    //TODO:localize
-                    header = ChatListSearchItemHeader(type: .recentDownloads, theme: presentationData.theme, strings: presentationData.strings, actionTitle: "Clear", action: {
+                    header = ChatListSearchItemHeader(type: .recentDownloads, theme: presentationData.theme, strings: presentationData.strings, actionTitle: presentationData.strings.DownloadList_Clear, action: {
                         openClearRecentlyDownloaded()
                     })
                 case .index:
@@ -949,6 +947,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> map { items -> (inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]) in
                     return (items.compactMap { $0 }, recentDownloadItems)
                 }
+                |> delay(0.1, queue: .mainQueue())
             }
         } else {
             downloadItems = .single(([], []))
@@ -1076,7 +1075,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 |> map { notificationSettings, unreadCounts, peers -> (peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)]) in
-
                     var unread: [EnginePeer.Id: (Int32, Bool)] = [:]
                     for peer in peers {
                         var isMuted: Bool = false
@@ -1626,7 +1624,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 let animated = (previousSelectedMessageIds == nil) != (strongSelf.selectedMessages == nil)
                 let firstTime = previousEntries == nil
-                let transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags?.0 != nil, isEmpty: !isSearching && (entriesAndFlags?.0.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture in
+                var transition = chatListSearchContainerPreparedTransition(from: previousEntries ?? [], to: newEntries, displayingResults: entriesAndFlags?.0 != nil, isEmpty: !isSearching && (entriesAndFlags?.0.isEmpty ?? false), isLoading: isSearching, animated: animated, context: context, presentationData: strongSelf.presentationData, enableHeaders: true, filter: peersFilter, key: strongSelf.key, tagMask: tagMask, interaction: chatListInteraction, listInteraction: listInteraction, peerContextAction: { message, node, rect, gesture in
                     interaction.peerContextAction?(message, node, rect, gesture)
                 }, toggleExpandLocalResults: { [weak self] in
                     guard let strongSelf = self else {
@@ -1658,10 +1656,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     var items: [ActionSheetItem] = []
                     
                     //TODO:localize
-                    items.append(ActionSheetTextItem(title: "Telegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device."))
+                    items.append(ActionSheetAnimationAndTextItem(title: strongSelf.presentationData.strings.DownloadList_ClearAlertTitle, text: strongSelf.presentationData.strings.DownloadList_ClearAlertText))
                     
-                    //TODO:localize
-                    items.append(ActionSheetButtonItem(title: "Manage Device Storage", color: .accent, action: { [weak actionSheet] in
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DownloadList_OptionManageDeviceStorage, color: .accent, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         guard let strongSelf = self else {
                             return
@@ -1670,8 +1667,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         strongSelf.context.sharedContext.openStorageUsage(context: strongSelf.context)
                     }))
                     
-                    //TODO:localize
-                    items.append(ActionSheetButtonItem(title: "Clear Downloads List", color: .destructive, action: { [weak actionSheet] in
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DownloadList_ClearDownloadList, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         guard let strongSelf = self else {
                             return
@@ -1712,9 +1708,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     })
                 })
                 strongSelf.currentEntries = newEntries
-                /*if key == .downloads, !firstTime {
+                if key == .downloads, !firstTime, !"".isEmpty {
                     transition.animated = true
-                }*/
+                }
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
                 var messages: [EngineMessage] = []

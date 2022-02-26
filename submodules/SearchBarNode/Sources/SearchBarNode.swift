@@ -1052,14 +1052,28 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         })
 
         self.textBackgroundNode.isHidden = true
+        
+        if let accessoryComponentView = node.accessoryComponentView {
+            let tempContainer = UIView()
+            
+            let accessorySize = accessoryComponentView.bounds.size
+            tempContainer.frame = CGRect(origin: CGPoint(x: self.textBackgroundNode.frame.maxX - accessorySize.width - 4.0, y: floor((self.textBackgroundNode.frame.minY + self.textBackgroundNode.frame.height - accessorySize.height) / 2.0)), size: accessorySize)
+            
+            let targetTempContainerFrame = CGRect(origin: CGPoint(x: targetTextBackgroundFrame.maxX - accessorySize.width - 4.0, y: floor((targetTextBackgroundFrame.minY + 8.0 + targetTextBackgroundFrame.height - accessorySize.height) / 2.0)), size: accessorySize)
+            
+            tempContainer.layer.animateFrame(from: tempContainer.frame, to: targetTempContainerFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+            
+            accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            tempContainer.addSubview(accessoryComponentView)
+            self.view.addSubview(tempContainer)
+        }
 
         self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak node] _ in
             textBackgroundCompleted = true
             intermediateCompletion()
             
-            if let node = node, let accessoryComponentView = node.accessoryComponentView {
-                accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                accessoryComponentView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.35, timingFunction: kCAMediaTimingFunctionSpring)
+            if let node = node, let accessoryComponentContainer = node.accessoryComponentContainer, let accessoryComponentView = node.accessoryComponentView {
+                accessoryComponentContainer.addSubview(accessoryComponentView)
             }
         })
         

@@ -36,7 +36,8 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     
     public private(set) var placeholderString: NSAttributedString?
     
-    var accessoryComponentView: ComponentHostView<Empty>?
+    private(set) var accessoryComponentContainer: UIView?
+    private(set) var accessoryComponentView: ComponentHostView<Empty>?
     
     convenience public override init() {
         self.init(fieldStyle: .legacy)
@@ -110,13 +111,22 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     
     public func setAccessoryComponent(component: AnyComponent<Empty>?) {
         if let component = component {
+            let accessoryComponentContainer: UIView
+            if let current = self.accessoryComponentContainer {
+                accessoryComponentContainer = current
+            } else {
+                accessoryComponentContainer = UIView()
+                self.accessoryComponentContainer = accessoryComponentContainer
+                self.view.addSubview(accessoryComponentContainer)
+            }
+            
             let accessoryComponentView: ComponentHostView<Empty>
             if let current = self.accessoryComponentView {
                 accessoryComponentView = current
             } else {
                 accessoryComponentView = ComponentHostView()
                 self.accessoryComponentView = accessoryComponentView
-                self.view.addSubview(accessoryComponentView)
+                accessoryComponentContainer.addSubview(accessoryComponentView)
             }
             let accessorySize = accessoryComponentView.update(
                 transition: .immediate,
@@ -124,7 +134,8 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                 environment: {},
                 containerSize: CGSize(width: 32.0, height: 32.0)
             )
-            accessoryComponentView.frame = CGRect(origin: CGPoint(x: self.bounds.width - accessorySize.width - 4.0, y: floor((self.bounds.height - accessorySize.height) / 2.0)), size: accessorySize)
+            accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: self.bounds.width - accessorySize.width - 4.0, y: floor((self.bounds.height - accessorySize.height) / 2.0)), size: accessorySize)
+            accessoryComponentView.frame = CGRect(origin: CGPoint(), size: accessorySize)
         } else if let accessoryComponentView = self.accessoryComponentView {
             self.accessoryComponentView = nil
             accessoryComponentView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
@@ -220,8 +231,8 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
                     
-                    if let accessoryComponentView = strongSelf.accessoryComponentView {
-                        accessoryComponentView.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentView.bounds.width - 4.0, y: floor((constrainedSize.height - accessoryComponentView.bounds.height) / 2.0)), size: accessoryComponentView.bounds.size)
+                    if let accessoryComponentContainer = strongSelf.accessoryComponentContainer {
+                        accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentContainer.bounds.width - 4.0, y: floor((constrainedSize.height - accessoryComponentContainer.bounds.height) / 2.0)), size: accessoryComponentContainer.bounds.size)
                     }
                 }
             })

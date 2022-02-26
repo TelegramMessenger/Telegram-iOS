@@ -155,6 +155,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let tabContainerNode: ChatListFilterTabContainerNode
     private var tabContainerData: ([ChatListFilterTabEntry], Bool)?
     
+    private var hasDownloads: Bool = false
     private var activeDownloadsDisposable: Disposable?
     private var clearUnseenDownloadsTimer: SwiftSignalKit.Timer?
     
@@ -476,8 +477,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
             
             enum State: Equatable {
-                case empty
-                case downloading(Double)
+                case empty(hasDownloads: Bool)
+                case downloading(progress: Double)
                 case hasUnseen
             }
             
@@ -626,14 +627,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     } else {
                         totalProgress = totalProgressInBytes / totalBytes
                     }
-                    return .downloading(totalProgress)
+                    return .downloading(progress: totalProgress)
                 } else {
                     for item in recentDownloadItems {
                         if !item.isSeen {
                             return .hasUnseen
                         }
                     }
-                    return .empty
+                    return .empty(hasDownloads: !recentDownloadItems.isEmpty)
                 }
             }
             |> mapToSignal { value -> Signal<State, NoError> in
@@ -641,11 +642,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             |> distinctUntilChanged
             |> deliverOnMainQueue)
-            
-            /*if !"".isEmpty {
-                stateSignal = Signal<State, NoError>.single(.downloading)
-                |> then(Signal<State, NoError>.single(.hasUnseen) |> delay(3.0, queue: .mainQueue()))
-            }*/
             
             self.activeDownloadsDisposable = stateSignal.start(next: { [weak self] state in
                 guard let strongSelf = self else {
@@ -655,6 +651,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let progressValue: Double?
                 switch state {
                 case let .downloading(progress):
+                    strongSelf.hasDownloads = true
+                    
                     animation = LottieAnimationComponent.Animation(
                         name: "anim_search_downloading",
                         colors: [
@@ -669,6 +667,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.clearUnseenDownloadsTimer?.invalidate()
                     strongSelf.clearUnseenDownloadsTimer = nil
                 case .hasUnseen:
+                    strongSelf.hasDownloads = true
+                    
                     animation = LottieAnimationComponent.Animation(
                         name: "anim_search_downloaded",
                         colors: [
@@ -701,7 +701,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }, queue: .mainQueue())
                         strongSelf.clearUnseenDownloadsTimer?.start()
                     }
-                case .empty:
+                case let .empty(hasDownloadsValue):
+                    strongSelf.hasDownloads = hasDownloadsValue
+                    
                     animation = nil
                     progressValue = nil
                     
@@ -2084,7 +2086,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if let searchContentNode = strongSelf.searchContentNode {                    
-                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
+                    if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: strongSelf.hasDownloads, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
                         if displaySearchFilters {
                             strongSelf.navigationBar?.setSecondaryContentNode(filterContainerNode, animated: false)
@@ -2102,6 +2104,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if !tabsIsEmpty {
                             Queue.mainQueue().after(0.01) {
                                 filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 38.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                                filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 
                                 strongSelf.tabContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                             }

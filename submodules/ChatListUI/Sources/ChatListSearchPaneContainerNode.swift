@@ -55,7 +55,36 @@ public enum ChatListSearchPaneKey {
     case voice
 }
 
-let defaultAvailableSearchPanes: [ChatListSearchPaneKey] = [.chats, .media, .downloads, .links, .files, .music, .voice]
+extension ChatListSearchPaneKey {
+    var filter: ChatListSearchFilter {
+        switch self {
+        case .chats:
+            return .chats
+        case .media:
+            return .media
+        case .downloads:
+            return .downloads
+        case .links:
+            return .links
+        case .files:
+            return .files
+        case .music:
+            return .music
+        case .voice:
+            return .voice
+        }
+    }
+}
+
+func defaultAvailableSearchPanes(hasDownloads: Bool) -> [ChatListSearchPaneKey] {
+    var result: [ChatListSearchPaneKey] = [.chats, .media, .downloads, .links, .files, .music, .voice]
+    
+    if !hasDownloads {
+        result.removeAll(where: { $0 == .downloads })
+    }
+    
+    return result
+}
 
 struct ChatListSearchPaneSpecifier: Equatable {
     var key: ChatListSearchPaneKey

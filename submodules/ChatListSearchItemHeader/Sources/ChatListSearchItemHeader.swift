@@ -77,11 +77,9 @@ public enum ChatListSearchItemHeaderType {
             case .subscribers:
                 return strings.Channel_ChannelSubscribersHeader
             case .downloading:
-                //TODO:localize
-                return "Downloading"
+                return strings.DownloadList_DownloadingHeader
             case .recentDownloads:
-                //TODO:localize
-                return "Recently Downloaded"
+                return strings.DownloadList_DownloadedHeader
         }
     }
     
@@ -259,6 +257,10 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         self.validLayout = (size, leftInset, rightInset)
         self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: size)
         self.sectionHeaderNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+    }
+    
+    override public func animateAdded(duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
     }
     
     override public func animateRemoved(duration: Double) {

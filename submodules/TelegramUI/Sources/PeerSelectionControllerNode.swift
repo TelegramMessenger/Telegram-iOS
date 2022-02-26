@@ -577,6 +577,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     filter: self.filter,
                     groupId: EngineChatList.Group(.root),
                     displaySearchFilters: false,
+                    hasDownloads: false,
                     openPeer: { [weak self] peer, chatPeer, _ in
                         guard let strongSelf = self else {
                             return

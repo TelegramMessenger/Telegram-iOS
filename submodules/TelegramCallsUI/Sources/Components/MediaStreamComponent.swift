@@ -658,7 +658,6 @@ public final class MediaStreamComponent: CombinedComponent {
                 }
             ).minSize(CGSize(width: 44.0, height: 44.0)))))*/
             
-            //TODO:localize
             let navigationBar = navigationBar.update(
                 component: NavigationBarComponent(
                     topInset: environment.statusBarHeight,
@@ -670,7 +669,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         })
                     ),
                     rightItems: navigationRightItems,
-                    centerItem: AnyComponent(Text(text: "Live Stream", font: Font.semibold(17.0), color: .white))
+                    centerItem: AnyComponent(Text(text: environment.strings.VoiceChatChannel_Title, font: Font.semibold(17.0), color: .white))
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
                 transition: context.transition
@@ -681,10 +680,10 @@ public final class MediaStreamComponent: CombinedComponent {
             var infoItem: AnyComponent<Empty>?
             if let originInfo = context.state.originInfo {
                 let memberCountString: String
-                if originInfo.memberCount == 1 {
-                    memberCountString = "1 viewer"
+                if originInfo.memberCount == 0 {
+                    memberCountString = environment.strings.LiveStream_NoViewers
                 } else {
-                    memberCountString = "\(originInfo.memberCount) viewers"
+                    memberCountString = environment.strings.LiveStream_ViewerCount(Int32(originInfo.memberCount))
                 }
                 infoItem = AnyComponent(OriginInfoComponent(
                     title: originInfo.title,

@@ -30,6 +30,7 @@ import ShareController
 import UndoUI
 import TextFormat
 import Postbox
+import TelegramAnimatedStickerNode
 
 private enum ChatListTokenId: Int32 {
     case archive
@@ -83,6 +84,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let peersFilter: ChatListNodePeersFilter
     private let groupId: EngineChatList.Group
     private let displaySearchFilters: Bool
+    private let hasDownloads: Bool
     private var interaction: ChatListSearchInteraction?
     private let openMessage: (EnginePeer, EngineMessage.Id, Bool) -> Void
     private let navigationController: NavigationController?
@@ -127,11 +129,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, groupId: EngineChatList.Group, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, groupId: EngineChatList.Group, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
         self.groupId = groupId
         self.displaySearchFilters = displaySearchFilters
+        self.hasDownloads = hasDownloads
         self.navigationController = navigationController
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
@@ -265,7 +268,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     if let suggestedFilters = strongSelf.suggestedFilters, !suggestedFilters.isEmpty {
                         filters = suggestedFilters
                     } else {
-                        filters = [.chats, .media, .downloads, .links, .files, .music, .voice]
+                        filters = defaultAvailableSearchPanes(hasDownloads: strongSelf.hasDownloads).map(\.filter)
                     }
                     strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilter?.id, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
                 }
@@ -736,7 +739,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let availablePanes: [ChatListSearchPaneKey]
         if self.displaySearchFilters {
-            availablePanes = defaultAvailableSearchPanes
+            availablePanes = defaultAvailableSearchPanes(hasDownloads: self.hasDownloads)
         } else {
             availablePanes = [.chats]
         }
@@ -817,9 +820,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 var items: [ContextMenuItem] = []
                 
                 if isCachedValue {
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Delete from Cache", textColor: .primary, icon: { _ in
-                        return nil
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_DeleteFromCache, textColor: .primary, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.primaryColor)
                     }, action: { _, f in
                         guard let strongSelf = self, let downloadResource = downloadResource else {
                             f(.default)
@@ -832,9 +834,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     })))
                 } else {
                     if let downloadResource = downloadResource, !downloadResource.isFirstInList {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Raise Priority", textColor: .primary, icon: { _ in
-                            return nil
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_RaisePriority, textColor: .primary, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Raise"), color: theme.contextMenu.primaryColor)
                         }, action: { _, f in
                             guard let strongSelf = self else {
                                 f(.default)
@@ -849,9 +850,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         })))
                     }
                     
-                    //TODO:localize
-                    items.append(.action(ContextMenuActionItem(text: "Cancel Downloading", textColor: .primary, icon: { _ in
-                        return nil
+                    items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_CancelDownloading, textColor: .primary, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.primaryColor)
                     }, action: { _, f in
                         guard let strongSelf = self, let downloadResource = downloadResource else {
                             f(.default)
@@ -1097,20 +1097,13 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     let title: String
                     let text: String
                     
-                    //TODO:localize
-                    if messageIds.count == 1 {
-                        title = "Remove Document?"
-                        text = "Are you sure you want to remove this\ndocument from Downloads?\nIt will be deleted from your disk, but\nwill remain accessible in the cloud.";
-                    } else {
-                        title = "Remove \(messages.count) Documents?"
-                        text = "Do you want to remove these\n\(messages.count) documents from Downloads?\nThey will be deleted from your disk,\nbut will remain accessible\nin the cloud."
-                    }
+                    title = strongSelf.presentationData.strings.DownloadList_RemoveFileAlertTitle(Int32(messages.count))
+                    text = strongSelf.presentationData.strings.DownloadList_RemoveFileAlertText(Int32(messages.count))
                     
                     strongSelf.present?(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [
                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                         }),
-                        //TODO:localize
-                        TextAlertAction(type: .defaultAction, title: "Remove", action: {
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.DownloadList_RemoveFileAlertRemove, action: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -1447,5 +1440,119 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     
     func animatedIn() {
         self.controller.didAppearInContextPreview()
+    }
+}
+
+final class ActionSheetAnimationAndTextItem: ActionSheetItem {
+    public let title: String
+    public let text: String
+    
+    public init(title: String, text: String) {
+        self.title = title
+        self.text = text
+    }
+    
+    public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+        let node = ActionSheetAnimationAndTextItemNode(theme: theme)
+        node.setItem(self)
+        return node
+    }
+    
+    public func updateNode(_ node: ActionSheetItemNode) {
+        guard let node = node as? ActionSheetAnimationAndTextItemNode else {
+            assertionFailure()
+            return
+        }
+        
+        node.setItem(self)
+        node.requestLayoutUpdate()
+    }
+}
+
+final class ActionSheetAnimationAndTextItemNode: ActionSheetItemNode {
+    private let defaultFont: UIFont
+    
+    private let theme: ActionSheetControllerTheme
+    
+    private var item: ActionSheetAnimationAndTextItem?
+    
+    private let animationNode: AnimatedStickerNode
+    private let textLabel: ImmediateTextNode
+    private let titleLabel: ImmediateTextNode
+    
+    private let accessibilityArea: AccessibilityAreaNode
+    
+    override public init(theme: ActionSheetControllerTheme) {
+        self.theme = theme
+        self.defaultFont = Font.regular(floor(theme.baseFontSize * 13.0 / 17.0))
+        
+        self.animationNode = AnimatedStickerNode()
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ClearDownloadList"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
+        
+        self.titleLabel = ImmediateTextNode()
+        self.titleLabel.isUserInteractionEnabled = false
+        self.titleLabel.maximumNumberOfLines = 0
+        self.titleLabel.displaysAsynchronously = false
+        self.titleLabel.truncationType = .end
+        self.titleLabel.isAccessibilityElement = false
+        
+        self.textLabel = ImmediateTextNode()
+        self.textLabel.isUserInteractionEnabled = false
+        self.textLabel.maximumNumberOfLines = 0
+        self.textLabel.displaysAsynchronously = false
+        self.textLabel.truncationType = .end
+        self.textLabel.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
+        self.accessibilityArea.accessibilityTraits = .staticText
+        
+        super.init(theme: theme)
+        
+        self.addSubnode(self.animationNode)
+        
+        self.titleLabel.isUserInteractionEnabled = false
+        self.textLabel.isUserInteractionEnabled = false
+        
+        self.addSubnode(self.titleLabel)
+        self.addSubnode(self.textLabel)
+        
+        self.addSubnode(self.accessibilityArea)
+    }
+    
+    func setItem(_ item: ActionSheetAnimationAndTextItem) {
+        self.item = item
+        
+        let defaultTitleFont = Font.semibold(floor(theme.baseFontSize * 17.0 / 17.0))
+        let defaultFont = Font.regular(floor(theme.baseFontSize * 16.0 / 17.0))
+        
+        self.titleLabel.attributedText = NSAttributedString(string: item.title, font: defaultTitleFont, textColor: self.theme.primaryTextColor, paragraphAlignment: .center)
+        self.textLabel.attributedText = NSAttributedString(string: item.text, font: defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
+        self.accessibilityArea.accessibilityLabel = item.title
+    }
+    
+    public override func updateLayout(constrainedSize: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let topInset: CGFloat = 20.0
+        let textSpacing: CGFloat = 10.0
+        let bottomInset: CGFloat = 16.0
+        let imageInset: CGFloat = 6.0
+        
+        let titleSize = self.titleLabel.updateLayout(CGSize(width: max(1.0, constrainedSize.width - 20.0), height: constrainedSize.height))
+        let textSize = self.textLabel.updateLayout(CGSize(width: max(1.0, constrainedSize.width - 20.0), height: constrainedSize.height))
+        var size = CGSize(width: constrainedSize.width, height: max(57.0, titleSize.height + textSpacing + textSize.height + bottomInset))
+        
+        let imageSize = CGSize(width: 140.0, height: 140.0)
+        size.height += topInset + 160.0 + imageInset
+        
+        self.animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: topInset), size: imageSize)
+        self.animationNode.updateLayout(size: imageSize)
+       
+        self.titleLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - textSize.height - textSpacing - bottomInset), size: titleSize)
+        self.textLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: size.height - textSize.height - bottomInset), size: textSize)
+        
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.updateInternalLayout(size, constrainedSize: constrainedSize)
+        return size
     }
 }
