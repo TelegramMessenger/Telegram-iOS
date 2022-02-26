@@ -24,6 +24,7 @@ public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
+    var cancelPanGesture: () -> Void { get set }
     
     func resetForReuse()
     func prepareForReuse()
@@ -281,6 +282,11 @@ public class AttachmentController: ViewController {
                         controller.updateTabBarAlpha = { [weak self, weak controller] alpha, transition in
                             if let strongSelf = self, strongSelf.currentControllers.contains(where: { $0 === controller }) {
                                 strongSelf.panel.updateBackgroundAlpha(alpha, transition: transition)
+                            }
+                        }
+                        controller.cancelPanGesture = { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.container.cancelPanGesture()
                             }
                         }
                         let previousController = strongSelf.currentControllers.last

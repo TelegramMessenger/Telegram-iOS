@@ -101,8 +101,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
     
-    private class Node: ViewControllerTracingNode {
+    private class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         enum DisplayMode {
             case all
             case selected
@@ -164,9 +165,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.gridNode = GridNode()
 
             super.init()
-            
-//            self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            
+                        
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.backgroundNode)
             self.containerNode.addSubnode(self.gridNode)
@@ -226,10 +225,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             })
             
             if let selectionState = self.controller?.interaction?.selectionState {
-                func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> Signal<Void, NoError> {
+                func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> Signal<Bool, NoError> {
                     return Signal { subscriber in
                         let disposable = selectionState.selectionChangedSignal()?.start(next: { next in
-                            subscriber.putNext(Void())
+                            if let next = next as? TGMediaSelectionChange {
+                                subscriber.putNext(next.animated)
+                            }
                         }, completed: {})
                         return ActionDisposable {
                             disposable?.dispose()
@@ -238,9 +239,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
                 
                 self.selectionChangedDisposable = (selectionChangedSignal(selectionState: selectionState)
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                |> deliverOnMainQueue).start(next: { [weak self] animated in
                     if let strongSelf = self {
-                        strongSelf.updateSelectionState()
+                        strongSelf.updateSelectionState(animated: animated)
                     }
                 })
             }
@@ -273,6 +274,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.itemsDimensionsUpdatedDisposable?.dispose()
         }
         
+        private var selectionGesture: MediaPickerGridSelectionGesture?
         override func didLoad() {
             super.didLoad()
             
@@ -295,8 +297,32 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             } else {
                 self.containerNode.clipsToBounds = true
             }
-                        
-//            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+                    
+            self.selectionGesture = MediaPickerGridSelectionGesture(target: nil, action: nil, gridNode: self.gridNode)
+            self.selectionGesture?.delegate = self
+            self.selectionGesture?.began = { [weak self] in
+                self?.controller?.cancelPanGesture()
+            }
+            self.selectionGesture?.itemAt = { [weak self] point in
+                if let strongSelf = self, let itemNode = strongSelf.gridNode.itemNodeAtPoint(point) as? MediaPickerGridItemNode, let asset = itemNode.asset.flatMap({ TGMediaAsset(phAsset: $0) }) {
+                    return (asset, strongSelf.controller?.interaction?.selectionState?.isItemSelected(asset) ?? false)
+                } else {
+                    return nil
+                }
+            }
+            self.selectionGesture?.updateSelection = { [weak self] asset, selected in
+                if let strongSelf = self {
+                    strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
+                }
+            }
+        }
+        
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            if otherGestureRecognizer.view is UIScrollView || otherGestureRecognizer is UIPanGestureRecognizer {
+                return true
+            } else {
+                return false
+            }
         }
                 
         fileprivate func dismissInput() {
@@ -363,10 +389,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.updateNavigation(transition: .immediate)
         }
         
-        private func updateSelectionState() {
+        private func updateSelectionState(animated: Bool = false) {
             self.gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? MediaPickerGridItemNode {
-                    itemNode.updateSelectionState()
+                    itemNode.updateSelectionState(animated: animated)
                 }
             }
             self.selectionNode?.updateSelectionState()
@@ -1163,5 +1189,100 @@ private final class MediaPickerContextReferenceContentSource: ContextReferenceCo
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
+    var itemAt: (CGPoint) -> (TGMediaSelectableItem, Bool)? = { _ in return nil }
+    var updateSelection: (TGMediaSelectableItem, Bool) -> Void = { _, _ in}
+    var began: () -> Void = {}
+    
+    private weak var gridNode: GridNode?
+    
+    private var processing = false
+    private var selecting = false
+    
+    private var initialLocation: CGPoint?
+    
+    init(target: Any?, action: Selector?, gridNode: GridNode) {
+        self.gridNode = gridNode
+        
+        super.init(target: target, action: action)
+        
+        gridNode.view.addGestureRecognizer(self)
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        guard let touch = touches.first, let gridNode = self.gridNode else {
+            return
+        }
+        
+        let location = touch.location(in: gridNode.view)
+        self.initialLocation = location
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        
+        guard let touch = touches.first, let gridNode = self.gridNode, let initialLocation = self.initialLocation else {
+            self.state = .failed
+            return
+        }
+        
+        let location = touch.location(in: gridNode.view)
+        let translation = CGPoint(x: location.x - initialLocation.x, y: location.y - initialLocation.y)
+        
+        var additionalLocation: CGPoint?
+        if !self.processing {
+            if abs(translation.y) > 5.0 {
+                self.state = .failed
+            } else if abs(translation.x) > 4.0 {
+                self.processing = true
+                self.gridNode?.scrollView.isScrollEnabled = false
+                self.began()
+                
+                if let (_, selected) = self.itemAt(location) {
+                    self.selecting = !selected
+                }
+                
+                additionalLocation = self.initialLocation
+            }
+        }
+        
+        if self.processing {
+            if let additionalLocation = additionalLocation {
+                if let (item, selected) = self.itemAt(additionalLocation), selected != self.selecting {
+                    self.updateSelection(item, self.selecting)
+                }
+            }
+            
+            if let (item, selected) = self.itemAt(location), selected != self.selecting {
+                self.updateSelection(item, self.selecting)
+            }
+        }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        
+        self.state = .failed
+        self.reset()
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        
+        self.state = .failed
+        self.reset()
+    }
+    
+    override func reset() {
+        super.reset()
+        
+        self.processing = false
+        self.initialLocation = nil
+        self.gridNode?.scrollView.isScrollEnabled = true
     }
 }

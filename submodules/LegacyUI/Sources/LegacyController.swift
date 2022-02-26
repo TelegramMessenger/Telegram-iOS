@@ -408,6 +408,7 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     open var requestAttachmentMenuExpansion: () -> Void = {}
     open var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
     open var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    open var cancelPanGesture: () -> Void = { }
     
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
