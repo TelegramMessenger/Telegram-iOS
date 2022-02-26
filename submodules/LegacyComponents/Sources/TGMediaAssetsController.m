@@ -927,6 +927,11 @@
                     grouping = false;
                 }
             }
+            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
+                if (entity.animated) {
+                    grouping = true;
+                }
+            }
         }
     }
     
@@ -942,8 +947,12 @@
         
         NSAttributedString *caption = [editingContext captionForItem:asset];
         
-        if (editingContext.isForcedCaption && num > 0) {
-            caption = nil;
+        if (editingContext.isForcedCaption) {
+            if (grouping && num > 0) {
+                caption = nil;
+            } else if (!grouping && num < selectedItems.count - 1) {
+                caption = nil;
+            }
         }
         
         switch (asset.type)

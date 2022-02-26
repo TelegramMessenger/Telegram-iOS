@@ -72,7 +72,9 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     private var interaction: LocationPickerInteraction?
     
     public var requestAttachmentMenuExpansion: () -> Void = {}
-        
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, completion: @escaping (TelegramMediaMap, String?) -> Void) {
         self.context = context
         self.mode = mode
@@ -319,6 +321,8 @@ public final class LocationPickerController: ViewController, AttachmentContainab
                     break
             }
         })
+        
+        self.navigationBar?.passthroughTouches = false
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -341,5 +345,9 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         self.interaction?.updateMapMode(.map)
         self.interaction?.dismissSearch()
         self.scrollToTop?()
+    }
+    
+    public func prepareForReuse() {
+        self.updateTabBarAlpha(1.0, .animated(duration: 0.25, curve: .easeInOut))
     }
 }

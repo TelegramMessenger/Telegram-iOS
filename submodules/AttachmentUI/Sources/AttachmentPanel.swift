@@ -410,6 +410,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.showsVerticalScrollIndicator = false
     }
     
+    func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.separatorNode, alpha: alpha)
+        transition.updateAlpha(node: self.backgroundNode, alpha: alpha)
+    }
+    
     func updateCaption(_ caption: NSAttributedString) {
         if !caption.string.isEmpty {
             self.loadTextNodeIfNeeded()

@@ -362,6 +362,8 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                         if let checkNode = strongSelf.checkNode {
                             transition.updateFrame(node: checkNode, frame: checkFrame)
                             checkNode.setSelected(isSelected, animated: true)
+                            
+                            transition.updateAlpha(node: checkNode, alpha: strongSelf.textNode.textView.text.isEmpty ? 0.0 : 1.0)
                         } else {
                             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: item.presentationData.theme.list.itemSwitchColors.positiveColor, strokeColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, borderColor: item.presentationData.theme.list.itemCheckColors.strokeColor, overlayBorder: false, hasInset: false, hasShadow: false))
                             checkNode.setSelected(isSelected, animated: false)
@@ -372,6 +374,8 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                             strongSelf.containerNode.addSubnode(checkNode)
                             checkNode.frame = checkFrame
                             transition.animatePositionAdditive(node: checkNode, offset: CGPoint(x: -checkFrame.maxX, y: 0.0))
+                            
+                            transition.updateAlpha(node: checkNode, alpha: strongSelf.textNode.textView.text.isEmpty ? 0.0 : 1.0)
                         }
                     } else if let checkNode = strongSelf.checkNode {
                         strongSelf.checkNode = nil

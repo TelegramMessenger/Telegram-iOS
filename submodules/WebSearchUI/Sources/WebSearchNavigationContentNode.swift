@@ -22,7 +22,7 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         self.theme = theme
         self.strings = strings
         
-        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern)
+        self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: theme, hasSeparator: false), strings: strings, fieldStyle: .modern, displayBackground: !attachment)
         self.searchBar.hasCancelButton = attachment
         self.searchBar.placeholderString = NSAttributedString(string: attachment ? strings.Attachment_SearchWeb : strings.Common_Search, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
@@ -30,13 +30,8 @@ final class WebSearchNavigationContentNode: NavigationBarContentNode {
         
         self.addSubnode(self.searchBar)
         
-        self.searchBar.textReturned = { [weak self] query in
-            self?.queryUpdated?(query)
-        }
         self.searchBar.textUpdated = { [weak self] query, _ in
-            if query.isEmpty {
-                self?.queryUpdated?(query)
-            }
+            self?.queryUpdated?(query)
         }
         self.searchBar.cancel = { [weak self] in
             self?.cancel?()

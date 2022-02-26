@@ -26,6 +26,8 @@
     
     TGCameraPreviewView *_previewView;
     __weak PGCamera *_camera;
+    
+    UIInterfaceOrientation _innerInterfaceOrientation;
 }
 @end
 
@@ -233,9 +235,21 @@
 {
     void(^block)(void) = ^
     {
-        _wrapperView.transform = CGAffineTransformMakeRotation(-1 * TGRotationForInterfaceOrientation(orientation));
-        _wrapperView.frame = self.bounds;
+        CGAffineTransform transform = CGAffineTransformMakeRotation(-1 * TGRotationForInterfaceOrientation(orientation));
+        CGFloat scale = 1.0;
+        if (self.frame.size.width != 0.0) {
+            scale = self.frame.size.height / self.frame.size.width;
+        }
+        if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeLeft) {
+            transform = CGAffineTransformScale(transform, scale, scale);
+        } else if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeRight) {
+            transform = CGAffineTransformScale(transform, scale, scale);
+        }
+        _wrapperView.transform = transform;
+        [self layoutSubviews];
     };
+    
+    _innerInterfaceOrientation = orientation;
     
     if (animated)
         [UIView animateWithDuration:0.3f animations:block];
@@ -247,11 +261,18 @@
 {
     [super layoutSubviews];
     
-    _wrapperView.frame = self.bounds;
+    _wrapperView.bounds = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height);
+    _wrapperView.center = CGPointMake(self.bounds.size.width / 2.0, self.bounds.size.height / 2.0);
     
     TGCameraPreviewView *previewView = _previewView;
     if (previewView.superview == _wrapperView)
         previewView.frame = self.bounds;
+    
+//    if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeLeft) {
+//        _wrapperView.frame = CGRectOffset(_wrapperView.frame, 0, 100.0);
+//    } else if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeRight) {
+//        _wrapperView.frame = CGRectOffset(_wrapperView.frame, 0, -100.0);
+//    }
     
     _iconView.frame = CGRectMake(self.frame.size.width - _iconView.frame.size.width - 3.0, 3.0 - TGScreenPixel, _iconView.frame.size.width, _iconView.frame.size.height);
 }

@@ -53,7 +53,9 @@ private class MediaHeaderItemNode: ASDisplayNode {
                     let titleText: String = author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameDisplayOrder) ?? ""
                     let subtitleText: String
                     if let peer = peer {
-                        if peer is TelegramGroup || peer is TelegramChannel {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            subtitleText = strings.MusicPlayer_VoiceNote
+                        } else if peer is TelegramGroup || peer is TelegramChannel {
                             subtitleText = EnginePeer(peer).displayTitle(strings: strings, displayOrder: nameDisplayOrder)
                         } else {
                             subtitleText = strings.MusicPlayer_VoiceNote

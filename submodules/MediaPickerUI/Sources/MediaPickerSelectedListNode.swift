@@ -652,7 +652,6 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
     private let moved: (CGPoint) -> Void
     
     private var initialLocation: CGPoint?
-    private var longTapTimer: SwiftSignalKit.Timer?
     private var longPressTimer: SwiftSignalKit.Timer?
     
     private var itemNode: MediaPickerSelectedItemNode?
@@ -668,28 +667,12 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
     }
     
     deinit {
-        self.longTapTimer?.invalidate()
         self.longPressTimer?.invalidate()
-    }
-    
-    private func startLongTapTimer() {
-        self.longTapTimer?.invalidate()
-        let longTapTimer = SwiftSignalKit.Timer(timeout: 0.25, repeat: false, completion: { [weak self] in
-            self?.longTapTimerFired()
-        }, queue: Queue.mainQueue())
-        self.longTapTimer = longTapTimer
-        longTapTimer.start()
-    }
-    
-    private func stopLongTapTimer() {
-        self.itemNode = nil
-        self.longTapTimer?.invalidate()
-        self.longTapTimer = nil
     }
     
     private func startLongPressTimer() {
         self.longPressTimer?.invalidate()
-        let longPressTimer = SwiftSignalKit.Timer(timeout: 0.6, repeat: false, completion: { [weak self] in
+        let longPressTimer = SwiftSignalKit.Timer(timeout: 0.3, repeat: false, completion: { [weak self] in
             self?.longPressTimerFired()
         }, queue: Queue.mainQueue())
         self.longPressTimer = longPressTimer
@@ -706,22 +689,11 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
         super.reset()
         
         self.itemNode = nil
-        self.stopLongTapTimer()
         self.stopLongPressTimer()
         self.initialLocation = nil
     }
     
-    private func longTapTimerFired() {
-        guard let location = self.initialLocation else {
-            return
-        }
-        
-        self.longTapTimer?.invalidate()
-        self.longTapTimer = nil
-        
-        self.willBegin(location)
-    }
-    
+ 
     private func longPressTimerFired() {
         guard let _ = self.initialLocation else {
             return
@@ -730,13 +702,12 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
         self.state = .began
         self.longPressTimer?.invalidate()
         self.longPressTimer = nil
-        self.longTapTimer?.invalidate()
-        self.longTapTimer = nil
         if let itemNode = self.itemNode {
             self.began(itemNode)
         }
     }
     
+    private var currentItemNode: ASDisplayNode?
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
@@ -750,10 +721,12 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
             if let location = touches.first?.location(in: self.view) {
                 let (allowed, requiresLongPress, itemNode) = self.shouldBegin(location)
                 if allowed {
+                    if let itemNode = itemNode {
+                        itemNode.layer.animateScale(from: 1.0, to: 0.98, duration: 0.2, delay: 0.1)
+                    }
                     self.itemNode = itemNode
                     self.initialLocation = location
                     if requiresLongPress {
-                        self.startLongTapTimer()
                         self.startLongPressTimer()
                     } else {
                         self.state = .began
@@ -775,7 +748,6 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
         
         self.initialLocation = nil
         
-        self.stopLongTapTimer()
         if self.longPressTimer != nil {
             self.stopLongPressTimer()
             self.state = .failed
@@ -795,7 +767,6 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
         
         self.initialLocation = nil
         
-        self.stopLongTapTimer()
         if self.longPressTimer != nil {
             self.stopLongPressTimer()
             self.state = .failed
@@ -818,7 +789,8 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
             let dY = touchLocation.y - initialTapLocation.y
             
             if dX * dX + dY * dY > 3.0 * 3.0 {
-                self.stopLongTapTimer()
+                self.itemNode?.layer.removeAllAnimations()
+                
                 self.stopLongPressTimer()
                 self.initialLocation = nil
                 self.state = .failed
@@ -907,8 +879,8 @@ private final class ReorderingItemNode: ASDisplayNode {
         self.copyView.shadow.frame = CGRect(origin: CGPoint(x: -30.0, y: -30.0), size: CGSize(width: itemNode.bounds.size.width + 60.0, height: itemNode.bounds.size.height + 60.0))
         self.copyView.shadow.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         
-        self.copyView.snapshotView?.layer.animateScale(from: 1.0, to: 1.05, duration: 0.25, removeOnCompletion: false)
-        self.copyView.shadow.layer.animateScale(from: 1.0, to: 1.05, duration: 0.25, removeOnCompletion: false)
+        self.copyView.snapshotView?.layer.animateScale(from: 1.0, to: 1.05, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+        self.copyView.shadow.layer.animateScale(from: 1.0, to: 1.05, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
     }
     
     func updateOffset(offset: CGPoint) {

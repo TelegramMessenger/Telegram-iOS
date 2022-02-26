@@ -54,6 +54,8 @@ typedef enum {
 
 @property (nonatomic, copy) void(^recognizedQRCode)(NSString *code);
 
+@property (nonatomic, copy) void(^finishedTransitionIn)(void);
+
 @property (nonatomic, copy) CGRect(^beginTransitionOut)(void);
 @property (nonatomic, copy) void(^finishedTransitionOut)(void);
 @property (nonatomic, copy) void(^customPresentOverlayController)(TGOverlayController *(^)(id<LegacyComponentsContext>));

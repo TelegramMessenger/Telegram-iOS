@@ -38,6 +38,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
     var requestMultipleAction: ((_ silent: Bool, _ scheduleTime: Int32?) -> Void)?
     var dismiss: (() -> Void)?
+    var cancelSearch: (() -> Void)?
     
     var presentationData: PresentationData {
         didSet {
@@ -216,6 +217,9 @@ final class ContactSelectionControllerNode: ASDisplayNode {
                 }
             }
         }, contextAction: nil)
+        searchContainerNode.cancel = { [weak self] in
+            self?.cancelSearch?()
+        }
         self.insertSubnode(searchContainerNode, belowSubnode: navigationBar)
         self.searchContainerNode = searchContainerNode
         

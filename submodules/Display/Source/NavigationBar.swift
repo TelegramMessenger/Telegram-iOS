@@ -61,6 +61,10 @@ public final class NavigationBarTheme {
         self.badgeTextColor = badgeTextColor
     }
     
+    public func withUpdatedBackgroundColor(_ color: UIColor) -> NavigationBarTheme {
+        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: color, enableBackgroundBlur: false, separatorColor: self.separatorColor, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
+    }
+    
     public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, enableBackgroundBlur: self.enableBackgroundBlur, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
     }
@@ -1334,6 +1338,8 @@ open class NavigationBar: ASDisplayNode {
     
     public var intrinsicCanTransitionInline: Bool = true
     
+    public var passthroughTouches = true
+    
     public var canTransitionInline: Bool {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
             return false
@@ -1470,8 +1476,8 @@ open class NavigationBar: ASDisplayNode {
             return nil
         }
         
-        //result == self.view ||
-        if result == self.buttonsContainerNode.view {
+        
+        if self.passthroughTouches && (result == self.view || result == self.buttonsContainerNode.view) {
             return nil
         }
         
