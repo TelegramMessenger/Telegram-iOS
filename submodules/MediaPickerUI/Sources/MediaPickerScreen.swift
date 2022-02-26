@@ -769,7 +769,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 if !strongSelf.didSetReady && strongSelf.state != nil {
                     strongSelf.didSetReady = true
                     Queue.mainQueue().justDispatch {
-                        strongSelf._ready.set(.single(true))
+                        strongSelf._ready.set(.single(true)
+                        |> delay(0.05, queue: Queue.mainQueue()))
                         
                         Queue.mainQueue().after(0.5, {
                             strongSelf.preloadPromise.set(false)

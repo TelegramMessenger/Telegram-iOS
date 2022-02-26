@@ -17,12 +17,6 @@ private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let iconSize = CGSize(width: 30.0, height: 30.0)
 private let sideInset: CGFloat = 0.0
 
-private enum AttachmentButtonTransition {
-    case transitionIn
-    case selection
-}
-
-
 private final class AttachButtonComponent: CombinedComponent {
     let context: AccountContext
     let type: AttachmentButtonType
