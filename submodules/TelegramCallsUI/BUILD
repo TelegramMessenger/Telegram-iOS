@@ -97,6 +97,7 @@ swift_library(
         "//third-party/libyuv:LibYuvBinding",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/Components/ActivityIndicatorComponent:ActivityIndicatorComponent",
     ],
     visibility = [
         "//visibility:public",

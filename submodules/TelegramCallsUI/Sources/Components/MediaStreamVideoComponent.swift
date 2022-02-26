@@ -1,22 +1,28 @@
 import Foundation
 import UIKit
 import ComponentFlow
+import ActivityIndicatorComponent
 import AccountContext
 import AVKit
 
 final class MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
+    let hasVideo: Bool
     let activatePictureInPicture: ActionSlot<Action<Void>>
     let bringBackControllerForPictureInPictureDeactivation: (@escaping () -> Void) -> Void
     
-    init(call: PresentationGroupCallImpl, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
+    init(call: PresentationGroupCallImpl, hasVideo: Bool, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
         self.call = call
+        self.hasVideo = hasVideo
         self.activatePictureInPicture = activatePictureInPicture
         self.bringBackControllerForPictureInPictureDeactivation = bringBackControllerForPictureInPictureDeactivation
     }
     
     public static func ==(lhs: MediaStreamVideoComponent, rhs: MediaStreamVideoComponent) -> Bool {
         if lhs.call !== rhs.call {
+            return false
+        }
+        if lhs.hasVideo != rhs.hasVideo {
             return false
         }
         
@@ -38,6 +44,7 @@ final class MediaStreamVideoComponent: Component {
         private var videoView: VideoRenderingView?
         private let blurTintView: UIView
         private var videoBlurView: VideoRenderingView?
+        private var activityIndicatorView: ComponentHostView<Empty>?
         
         private var pictureInPictureController: AVPictureInPictureController?
         
@@ -60,7 +67,7 @@ final class MediaStreamVideoComponent: Component {
         }
         
         func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
-            if self.videoView == nil {
+            if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
@@ -83,7 +90,14 @@ final class MediaStreamVideoComponent: Component {
                         videoView.setOnOrientationUpdated { [weak state] _, _ in
                             state?.updated(transition: .immediate)
                         }
-                        videoView.setOnFirstFrameReceived { [weak state] _ in
+                        videoView.setOnFirstFrameReceived { [weak self, weak state] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.activityIndicatorView?.removeFromSuperview()
+                            strongSelf.activityIndicatorView = nil
+                            
                             state?.updated(transition: .immediate)
                         }
                     }
@@ -106,6 +120,25 @@ final class MediaStreamVideoComponent: Component {
                     videoBlurView.updateIsEnabled(true)
                     transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
                 }
+            } else {
+                var activityIndicatorTransition = transition
+                let activityIndicatorView: ComponentHostView<Empty>
+                if let current = self.activityIndicatorView {
+                    activityIndicatorView = current
+                } else {
+                    activityIndicatorTransition = transition.withAnimation(.none)
+                    activityIndicatorView = ComponentHostView<Empty>()
+                    self.activityIndicatorView = activityIndicatorView
+                    self.addSubview(activityIndicatorView)
+                }
+                
+                let activityIndicatorSize = activityIndicatorView.update(
+                    transition: transition,
+                    component: AnyComponent(ActivityIndicatorComponent()),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                activityIndicatorTransition.setFrame(view: activityIndicatorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - activityIndicatorSize.width) / 2.0), y: floor((availableSize.height - activityIndicatorSize.height) / 2.0)), size: activityIndicatorSize), completion: nil)
             }
             
             self.component = component

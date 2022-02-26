@@ -229,7 +229,14 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
         }
 
         public func leaveInBackground(engine: TelegramEngine, id: Int64, accessHash: Int64, source: UInt32) {
-            let disposable = engine.calls.leaveGroupCall(callId: id, accessHash: accessHash, source: source).start()
+            let disposable = engine.calls.leaveGroupCall(callId: id, accessHash: accessHash, source: source).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let context = strongSelf.contexts[id] {
+                    context.context.participantsContext?.removeLocalPeerId()
+                }
+            })
             self.leaveDisposables.add(disposable)
         }
     }
