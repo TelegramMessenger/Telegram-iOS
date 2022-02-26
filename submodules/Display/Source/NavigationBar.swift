@@ -90,26 +90,6 @@ public final class NavigationBarPresentationData {
     }
 }
 
-private func backArrowImage(color: UIColor) -> UIImage? {
-    var red: CGFloat = 0.0
-    var green: CGFloat = 0.0
-    var blue: CGFloat = 0.0
-    var alpha: CGFloat = 0.0
-    color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-    
-    let key = (Int32(alpha * 255.0) << 24) | (Int32(red * 255.0) << 16) | (Int32(green * 255.0) << 8) | Int32(blue * 255.0)
-    if let image = backArrowImageCache[key] {
-        return image
-    } else {
-        if let image = NavigationBarTheme.generateBackArrowImage(color: color) {
-            backArrowImageCache[key] = image
-            return image
-        } else {
-            return nil
-        }
-    }
-}
-
 enum NavigationPreviousAction: Equatable {
     case item(UINavigationItem)
     case close
@@ -281,6 +261,26 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
+    }
+    
+    static func backArrowImage(color: UIColor) -> UIImage? {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        var alpha: CGFloat = 0.0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        let key = (Int32(alpha * 255.0) << 24) | (Int32(red * 255.0) << 16) | (Int32(green * 255.0) << 8) | Int32(blue * 255.0)
+        if let image = backArrowImageCache[key] {
+            return image
+        } else {
+            if let image = NavigationBarTheme.generateBackArrowImage(color: color) {
+                backArrowImageCache[key] = image
+                return image
+            } else {
+                return nil
+            }
+        }
     }
 
     public static let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
@@ -884,7 +884,7 @@ open class NavigationBar: ASDisplayNode {
         self.rightButtonNode.color = self.presentationData.theme.buttonColor
         self.rightButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
         self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
-        self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
+        self.backButtonArrow.image = NavigationBar.backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
             self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
             self.titleNode.accessibilityLabel = title
@@ -977,7 +977,7 @@ open class NavigationBar: ASDisplayNode {
             self.rightButtonNode.color = self.presentationData.theme.buttonColor
             self.rightButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
             self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
-            self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
+            self.backButtonArrow.image = NavigationBar.backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
@@ -1314,7 +1314,7 @@ open class NavigationBar: ASDisplayNode {
     public func makeTransitionBackArrowNode(accentColor: UIColor) -> ASDisplayNode? {
         if self.backButtonArrow.supernode != nil {
             let node = ASImageNode()
-            node.image = backArrowImage(color: accentColor)
+            node.image = NavigationBar.backArrowImage(color: accentColor)
             node.frame = self.backButtonArrow.frame
             node.displayWithoutProcessing = true
             node.displaysAsynchronously = false

@@ -147,6 +147,12 @@ public struct Transition {
         return result
     }
     
+    public func withAnimation(_ animation: Animation) -> Transition {
+        var result = self
+        result.animation = animation
+        return result
+    }
+    
     public static var immediate: Transition = Transition(animation: .none)
     
     public static func easeInOut(duration: Double) -> Transition {

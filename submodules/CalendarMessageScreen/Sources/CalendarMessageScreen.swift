@@ -614,7 +614,7 @@ private final class DayComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }

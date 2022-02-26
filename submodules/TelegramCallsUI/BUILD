@@ -95,6 +95,8 @@ swift_library(
         "//submodules/Markdown:Markdown",
         "//submodules/ChatTitleActivityNode:ChatTitleActivityNode",
         "//third-party/libyuv:LibYuvBinding",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ],
     visibility = [
         "//visibility:public",
