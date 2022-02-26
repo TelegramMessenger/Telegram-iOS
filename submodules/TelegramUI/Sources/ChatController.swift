@@ -9122,7 +9122,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         var layout = layout
-        if let _ = self.attachmentController {
+        if case .compact = layout.metrics.widthClass, let _ = self.attachmentController {
             layout = layout.withUpdatedInputHeight(nil)
         }
                 

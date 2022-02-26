@@ -96,6 +96,14 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         self.wrappingNode.view.addGestureRecognizer(panRecognizer)
     }
     
+    func cancelPanGesture() {
+        if let panGestureRecognizer = self.panGestureRecognizer, panGestureRecognizer.isEnabled {
+            self.panGestureArguments = nil
+            panGestureRecognizer.isEnabled = false
+            panGestureRecognizer.isEnabled = true
+        }
+    }
+    
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let (layout, _, _) = self.validLayout {
             if case .regular = layout.metrics.widthClass {

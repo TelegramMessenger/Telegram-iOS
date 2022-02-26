@@ -105,7 +105,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         return self.asset?.localIdentifier ?? ""
     }
     
-    private var asset: PHAsset? {
+    var asset: PHAsset? {
         if let (fetchResult, index) = self.currentState {
             return fetchResult[index]
         } else {
@@ -113,7 +113,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
     }
     
-    func updateSelectionState() {
+    func updateSelectionState(animated: Bool = false) {
         if self.checkNode == nil, let _ = self.interaction?.selectionState, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
@@ -136,7 +136,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                     self.checkNode?.content = .counter(Int(index))
                 }
             }
-            self.checkNode?.setSelected(selected, animated: false)
+            self.checkNode?.setSelected(selected, animated: animated)
         }
     }
     

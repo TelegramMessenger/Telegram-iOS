@@ -167,6 +167,7 @@ private class AttachmentFileControllerImpl: ItemListController, AttachmentContai
     public var requestAttachmentMenuExpansion: () -> Void = {}
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
     
     var resetForReuseImpl: () -> Void = {}
     public func resetForReuse() {

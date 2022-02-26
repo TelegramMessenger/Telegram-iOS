@@ -24,6 +24,7 @@ public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
+    var cancelPanGesture: () -> Void { get set }
     
     func resetForReuse()
     func prepareForReuse()
@@ -57,14 +58,34 @@ private func generateShadowImage() -> UIImage? {
     return generateImage(CGSize(width: 140.0, height: 140.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
+        context.saveGState()
         context.setShadow(offset: CGSize(), blur: 60.0, color: UIColor(white: 0.0, alpha: 0.4).cgColor)
 
-        let path = UIBezierPath(roundedRect: CGRect(x: 60.0, y: 60.0, width: 20.0, height: 20.0), cornerRadius: 11.0 - UIScreenPixel).cgPath
+        let path = UIBezierPath(roundedRect: CGRect(x: 60.0, y: 60.0, width: 20.0, height: 20.0), cornerRadius: 10.0).cgPath
+        context.addPath(path)
+        context.fillPath()
+        
+        context.restoreGState()
+        
+        context.setBlendMode(.clear)
         context.addPath(path)
         context.fillPath()
     })?.stretchableImage(withLeftCapWidth: 70, topCapHeight: 70)
 }
 
+private func generateMaskImage() -> UIImage? {
+    return generateImage(CGSize(width: 390.0, height: 620.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(UIColor.white.cgColor)
+        
+        let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 609.0), cornerRadius: 10.0).cgPath
+        context.addPath(path)
+        context.fillPath()
+        
+        try? drawSvgPath(context, path: "M183.219,608.889 H206.781 C205.648,608.889 204.567,609.37 203.808,610.213 L197.23,617.522 C196.038,618.847 193.962,618.847 192.77,617.522 L186.192,610.213 C185.433,609.37 184.352,608.889 183.219,608.889 Z ")
+    })
+}
 
 public class AttachmentController: ViewController {
     private let context: AccountContext
@@ -78,6 +99,11 @@ public class AttachmentController: ViewController {
         set {
             self.node.mediaPickerContext = newValue
         }
+    }
+    
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
     }
         
     private final class Node: ASDisplayNode {
@@ -265,6 +291,7 @@ public class AttachmentController: ViewController {
                 if let strongSelf = self {
                     strongSelf.mediaPickerContext = mediaPickerContext
                     if let controller = controller  {
+                        strongSelf.controller?._ready.set(controller.ready.get())
                         controller._presentedInModal = true
                         controller.navigation_setPresenting(strongSelf.controller)
                         controller.requestAttachmentMenuExpansion = { [weak self] in
@@ -281,6 +308,11 @@ public class AttachmentController: ViewController {
                         controller.updateTabBarAlpha = { [weak self, weak controller] alpha, transition in
                             if let strongSelf = self, strongSelf.currentControllers.contains(where: { $0 === controller }) {
                                 strongSelf.panel.updateBackgroundAlpha(alpha, transition: transition)
+                            }
+                        }
+                        controller.cancelPanGesture = { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.container.cancelPanGesture()
                             }
                         }
                         let previousController = strongSelf.currentControllers.last
@@ -327,6 +359,8 @@ public class AttachmentController: ViewController {
             self.animating = true
             if case .regular = layout.metrics.widthClass {
                 self.animating = false
+                
+                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 0.1)
             } else {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
@@ -402,20 +436,23 @@ public class AttachmentController: ViewController {
             var containerLayout = layout
             let containerRect: CGRect
             if case .regular = layout.metrics.widthClass {
-                let size = CGSize(width: 390.0, height: 600.0)
-                let position: CGPoint
-                if layout.size.width > layout.size.height {
-                    position = CGPoint(x: 225.0, y: layout.size.height - size.height - layout.intrinsicInsets.bottom - 54.0)
-                } else {
-                    position = CGPoint(x: 152.0, y: layout.size.height - size.height - layout.intrinsicInsets.bottom - 54.0)
+                let size = CGSize(width: 390.0, height: 620.0)
+                
+                let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
+                var position: CGPoint = CGPoint(x: masterWidth - 174.0, y: layout.size.height - size.height - layout.intrinsicInsets.bottom - 40.0)
+                if let inputHeight = layout.inputHeight {
+                    position.y -= inputHeight
                 }
                 containerRect = CGRect(origin: position, size: size)
                 containerLayout.size = containerRect.size
-                containerLayout.intrinsicInsets.bottom = 0.0
+                containerLayout.intrinsicInsets.bottom = 12.0
+                containerLayout.inputHeight = nil
                 
-                self.wrapperNode.cornerRadius = 10.0
-                if #available(iOS 13.0, *) {
-                    self.wrapperNode.layer.cornerCurve = .continuous
+                if self.wrapperNode.view.mask == nil {
+                    let maskView = UIImageView()
+                    maskView.image = generateMaskImage()
+                    maskView.frame = CGRect(origin: CGPoint(), size: maskView.image?.size ?? CGSize())
+                    self.wrapperNode.view.mask = maskView
                 }
                 
                 self.shadowNode.alpha = 1.0
@@ -427,6 +464,8 @@ public class AttachmentController: ViewController {
                 
                 self.wrapperNode.cornerRadius = 0.0
                 self.shadowNode.alpha = 0.0
+                
+                self.wrapperNode.view.mask = nil
             }
             
             
@@ -438,7 +477,9 @@ public class AttachmentController: ViewController {
             }
             panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: containerRect.height - panelHeight), size: CGSize(width: containerRect.width, height: panelHeight)))
             
-            transition.updateFrame(node: self.shadowNode, frame: containerRect.insetBy(dx: -60.0, dy: -60.0))
+            var shadowFrame = containerRect.insetBy(dx: -60.0, dy: -60.0)
+            shadowFrame.size.height -= 12.0
+            transition.updateFrame(node: self.shadowNode, frame: shadowFrame)
             transition.updateFrame(node: self.wrapperNode, frame: containerRect)
             
             if !self.isUpdatingContainer && !self.isDismissing {

@@ -1902,6 +1902,7 @@ webrtc_sources = [
     "modules/audio_coding/neteq/timestamp_scaler.h",
     "modules/audio_device/audio_device_buffer.h",
     "modules/audio_device/audio_device_generic.h",
+    "modules/audio_device/audio_device_impl.h",
     "modules/audio_device/dummy/audio_device_dummy.h",
     "modules/audio_device/dummy/file_audio_device.h",
     "modules/audio_device/dummy/file_audio_device_factory.h",
@@ -2973,6 +2974,7 @@ ios_objc_sources = [
 ]
 
 ios_sources = [
+    "objc/native/api/audio_device_module.h",
     "objc/native/src/audio/audio_session_observer.h",
     "objc/native/src/audio/helpers.h",
     "objc/native/src/audio/helpers.mm",
