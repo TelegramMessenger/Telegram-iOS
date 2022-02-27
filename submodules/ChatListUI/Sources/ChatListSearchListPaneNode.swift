@@ -1708,8 +1708,10 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     })
                 })
                 strongSelf.currentEntries = newEntries
-                if key == .downloads, !firstTime, !"".isEmpty {
-                    transition.animated = true
+                if strongSelf.key == .downloads {
+                    if !firstTime, !"".isEmpty {
+                        transition.animated = true
+                    }
                 }
                 strongSelf.enqueueTransition(transition, firstTime: firstTime)
                 
@@ -1959,9 +1961,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.recentDisposable.dispose()
         self.updatedRecentPeersDisposable.dispose()
         self.deletedMessagesDisposable?.dispose()
-        if self.key == .downloads {
-            print("downloads")
-        }
     }
     
     override func didLoad() {
@@ -2414,6 +2413,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 options.insert(.PreferSynchronousResourceLoading)
             } else if transition.animated {
                 options.insert(.AnimateInsertion)
+            }
+            
+            if self.key == .downloads {
+                options.insert(.PreferSynchronousDrawing)
+                options.insert(.PreferSynchronousResourceLoading)
             }
             
             self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { [weak self] _ in
