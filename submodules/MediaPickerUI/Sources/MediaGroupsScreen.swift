@@ -321,11 +321,11 @@ public final class MediaGroupsScreen: ViewController {
             let firstTime = self.validLayout == nil
             self.validLayout = (layout, navigationBarHeight)
             
-            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 2.0), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - 2.0)))
+            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 12.0), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - 12.0)))
             
             let size = layout.size
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 7.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + 50.0, right: layout.safeInsets.right), headerInsets: UIEdgeInsets(), scrollIndicatorInsets: UIEdgeInsets(), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + 50.0, right: layout.safeInsets.right), headerInsets: UIEdgeInsets(), scrollIndicatorInsets: UIEdgeInsets(), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
             
             if firstTime {

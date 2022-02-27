@@ -341,7 +341,7 @@ private class MediaGroupsAlbumGridItemNode: ListViewItemNode {
                         for collection in item.collections {
                             let result = PHAsset.fetchAssets(in: collection, options: nil)
                             let firstItem: PHAsset?
-                            if collection.assetCollectionSubtype == .smartAlbumUserLibrary {
+                            if [.smartAlbumUserLibrary, .smartAlbumFavorites].contains(collection.assetCollectionSubtype) {
                                 firstItem = result.lastObject
                             } else {
                                 firstItem = result.firstObject

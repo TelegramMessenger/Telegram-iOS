@@ -338,6 +338,7 @@ public final class WebSearchController: ViewController {
         }
     }
     
+    private var didActivateSearch = false
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
@@ -349,7 +350,10 @@ public final class WebSearchController: ViewController {
             self.didPlayPresentationAnimation = true
             self.controllerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
-        self.navigationContentNode?.activate(select: select)
+        if !self.didActivateSearch {
+            self.didActivateSearch = true
+            self.navigationContentNode?.activate(select: select)
+        }
     }
     
     override public func loadDisplayNode() {
