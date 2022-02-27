@@ -237,6 +237,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
         
         self.displayNodeDidLoad()
+        
+        self.updateTabBarAlpha(1.0, .immediate)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -341,6 +343,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     public var mediaPickerContext: AttachmentMediaPickerContext {
         return ContactsPickerContext(controller: self)
+    }
+    
+    public func prepareForReuse() {
+        self.updateTabBarAlpha(1.0, .immediate)
     }
 }
 

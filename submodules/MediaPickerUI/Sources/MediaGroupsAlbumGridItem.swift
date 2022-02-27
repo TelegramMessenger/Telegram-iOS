@@ -120,6 +120,7 @@ private final class MediaGroupsGridAlbumItemNode : ListViewItemNode {
         self.imageNode = ImageNode()
         self.imageNode.clipsToBounds = true
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
+        self.imageNode.contentMode = .scaleAspectFill
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -332,13 +333,19 @@ private class MediaGroupsAlbumGridItemNode: ListViewItemNode {
                         let listInsets = UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0)
                         strongSelf.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: contentSize.height, height: contentSize.width - params.leftInset - params.rightInset)
                         strongSelf.listNode.position = CGPoint(x: contentSize.width / 2.0, y: contentSize.height / 2.0)
-                        strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: CGSize(width: contentSize.height, height: contentSize.width - params.leftInset - params.rightInset), insets: listInsets, duration: 0.0, curve: .Default(duration: nil)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                         
                         var entries: [MediaGroupsGridAlbumEntry] = []
                         var index: Int = 0
                         for collection in item.collections {
                             let result = PHAsset.fetchAssets(in: collection, options: nil)
-                            if let firstItem = result.firstObject {
+                            let firstItem: PHAsset?
+                            if collection.assetCollectionSubtype == .smartAlbumUserLibrary {
+                                firstItem = result.lastObject
+                            } else {
+                                firstItem = result.firstObject
+                            }
+                            if let firstItem = firstItem {
                                 entries.append(MediaGroupsGridAlbumEntry(theme: item.presentationData.theme, index: index, collection: collection, firstItem: firstItem, count: presentationStringsFormattedNumber(Int32(result.count))))
                                 index += 1
                             }

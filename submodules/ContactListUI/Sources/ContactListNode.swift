@@ -1499,7 +1499,10 @@ public final class ContactListNode: ASDisplayNode {
             self.indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
         }
         
-        self.authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
+        let permissionSize = CGSize(width: layout.size.width, height: layout.size.height - 160.0)
+        var permissionInsets = insets
+        permissionInsets.bottom += 100.0
+        self.authorizationNode.updateLayout(size: permissionSize, insets: permissionInsets, transition: transition)
         transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
             
         if !hadValidLayout {

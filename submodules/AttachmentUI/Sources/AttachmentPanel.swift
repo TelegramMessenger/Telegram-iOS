@@ -169,7 +169,6 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
-    private(set) var isCollapsed: Bool = false
     private(set) var isSelecting: Bool = false
     
     private var validLayout: ContainerViewLayout?
@@ -383,7 +382,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
                 if let layout = strongSelf.validLayout {
-                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isCollapsed: strongSelf.isCollapsed, isSelecting: strongSelf.isSelecting, transition: .immediate)
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, transition: .immediate)
                 }
             }
         })
@@ -551,12 +550,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isCollapsed: Bool, isSelecting: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
-        
-        let isCollapsedUpdated = self.isCollapsed != isCollapsed
-        self.isCollapsed = isCollapsed
                 
         let isSelectingUpdated = self.isSelecting != isSelecting
         self.isSelecting = isSelecting
@@ -605,7 +601,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             containerFrame = bounds
         }
         let containerBounds = CGRect(origin: CGPoint(), size: containerFrame.size)
-        if isCollapsedUpdated || isSelectingUpdated {
+        if isSelectingUpdated {
             containerTransition = .animated(duration: 0.25, curve: .easeInOut)
         } else {
             containerTransition = transition
@@ -635,13 +631,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundNode.update(size: containerBounds.size, transition: transition)
         containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
                 
-        let _ = self.updateScrollLayoutIfNeeded(force: isCollapsedUpdated || isSelectingUpdated, transition: containerTransition)
+        let _ = self.updateScrollLayoutIfNeeded(force: isSelectingUpdated, transition: containerTransition)
 
-        var buttonTransition: Transition = .immediate
-        if isCollapsedUpdated {
-            buttonTransition = .easeInOut(duration: 0.25)
-        }
-        self.updateViews(transition: buttonTransition)
+        self.updateViews(transition: .immediate)
         
         return containerFrame.height
     }

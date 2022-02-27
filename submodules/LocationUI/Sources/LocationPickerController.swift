@@ -294,7 +294,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             return
         }
         
-        self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
+        self.displayNode = LocationPickerControllerNode(controller: self, context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
         self.controllerNode.beganInteractiveDragging = { [weak self] in
             self?.requestAttachmentMenuExpansion()
@@ -324,6 +324,8 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         })
         
         self.navigationBar?.passthroughTouches = false
+        
+        self.updateTabBarAlpha(1.0, .immediate)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -349,6 +351,6 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     }
     
     public func prepareForReuse() {
-        self.updateTabBarAlpha(1.0, .animated(duration: 0.25, curve: .easeInOut))
+        self.updateTabBarAlpha(1.0, .immediate)
     }
 }

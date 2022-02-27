@@ -189,7 +189,7 @@ public final class PermissionContentNode: ASDisplayNode {
     public func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, insets)
         
-        let sidePadding: CGFloat
+        var sidePadding: CGFloat
         let fontSize: CGFloat
         if min(size.width, size.height) > 330.0 {
             fontSize = 24.0
@@ -198,8 +198,9 @@ public final class PermissionContentNode: ASDisplayNode {
             fontSize = 20.0
             sidePadding = 20.0
         }
+        sidePadding += insets.left
         
-        let smallerSidePadding: CGFloat = 20.0
+        let smallerSidePadding: CGFloat = 20.0 + insets.left
         
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.bold(fontSize), textColor: self.theme.list.itemPrimaryTextColor)
         
@@ -207,7 +208,7 @@ public final class PermissionContentNode: ASDisplayNode {
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let buttonInset: CGFloat = 16.0
-        let buttonWidth = min(size.width, size.height) - buttonInset * 2.0
+        let buttonWidth = min(size.width, size.height) - buttonInset * 2.0 - insets.left - insets.right
         let buttonHeight = self.actionButton.updateLayout(width: buttonWidth, transition: transition)
         let footerSize = self.footerNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))
         let privacyButtonSize = self.privacyPolicyButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
