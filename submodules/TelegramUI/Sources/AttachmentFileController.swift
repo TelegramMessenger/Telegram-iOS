@@ -310,7 +310,7 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
             case let .known(value):
             let backgroundAlpha: CGFloat = min(30.0, max(0.0, value)) / 30.0
                 if backgroundAlpha.isZero && controller?.delayDisappear == true {
-                    Queue.mainQueue().after(0.2, {
+                    Queue.mainQueue().after(0.25, {
                         controller?.updateTabBarAlpha(backgroundAlpha, .animated(duration: 0.1, curve: .easeInOut))
                     })
                 } else {

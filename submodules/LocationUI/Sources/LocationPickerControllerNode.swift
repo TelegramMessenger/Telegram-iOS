@@ -953,7 +953,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
         
         if self.locationAccessDenied {
             self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
-            Queue.mainQueue().after(0.2) {
+            Queue.mainQueue().after(0.25) {
                 self.controller?.updateTabBarAlpha(0.0, .immediate)
             }
             
@@ -989,10 +989,14 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             let placeholderFrame = CGRect(origin: CGPoint(), size: layout.size)
             backgroundNode.update(size: placeholderFrame.size, transition: placeholderTransition)
             placeholderTransition.updateFrame(node: placeholderNode, frame: placeholderFrame)
-        } else if let placeholderNode = self.placeholderNode {
-            self.placeholderNode = nil
-            placeholderNode.removeFromSupernode()
+        } else {
+            if let placeholderNode = self.placeholderNode {
+                self.placeholderNode = nil
+                placeholderNode.removeFromSupernode()
+            }
+            self.controller?.updateTabBarAlpha(1.0, .immediate)
         }
+        
     }
     
     func updateSendActionHighlight(_ highlighted: Bool) {

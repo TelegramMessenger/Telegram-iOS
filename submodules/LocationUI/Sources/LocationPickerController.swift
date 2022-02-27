@@ -324,8 +324,6 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         })
         
         self.navigationBar?.passthroughTouches = false
-        
-        self.updateTabBarAlpha(1.0, .immediate)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -348,9 +346,5 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         self.interaction?.updateMapMode(.map)
         self.interaction?.dismissSearch()
         self.scrollToTop?()
-    }
-    
-    public func prepareForReuse() {
-        self.updateTabBarAlpha(1.0, .immediate)
     }
 }

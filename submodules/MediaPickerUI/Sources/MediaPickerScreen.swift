@@ -630,7 +630,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
                 
                 if delayDisappear {
-                    Queue.mainQueue().after(0.2) {
+                    Queue.mainQueue().after(0.25) {
                         self.controller?.updateTabBarAlpha(0.0, transition)
                     }
                 } else {
