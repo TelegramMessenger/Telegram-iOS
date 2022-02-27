@@ -298,7 +298,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     
     private var placeholderBackgroundNode: NavigationBackgroundNode?
     private var placeholderNode: LocationPlaceholderNode?
-    private var locationAccessDenied = true
+    private var locationAccessDenied = false
     
     private var enqueuedTransitions: [LocationPickerTransaction] = []
     
@@ -993,6 +993,10 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
             if let placeholderNode = self.placeholderNode {
                 self.placeholderNode = nil
                 placeholderNode.removeFromSupernode()
+            }
+            if let placeholderBackgroundNode = self.placeholderBackgroundNode {
+                self.placeholderBackgroundNode = nil
+                placeholderBackgroundNode.removeFromSupernode()
             }
             self.controller?.updateTabBarAlpha(1.0, .immediate)
         }

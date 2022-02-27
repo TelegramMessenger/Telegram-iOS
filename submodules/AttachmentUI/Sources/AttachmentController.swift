@@ -22,7 +22,7 @@ public enum AttachmentButtonType: Equatable {
 
 public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
-    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void { get set }
+    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
     
@@ -298,7 +298,9 @@ public class AttachmentController: ViewController {
                         }
                         controller.updateNavigationStack = { [weak self] f in
                             if let strongSelf = self {
-                                strongSelf.currentControllers = f(strongSelf.currentControllers)                                
+                                let (controllers, mediaPickerContext) = f(strongSelf.currentControllers)
+                                strongSelf.currentControllers = controllers
+                                strongSelf.mediaPickerContext = mediaPickerContext
                                 if let layout = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                                 }

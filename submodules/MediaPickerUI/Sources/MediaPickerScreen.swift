@@ -101,9 +101,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?) -> Void = { _, _, _ in }
     
     public var requestAttachmentMenuExpansion: () -> Void = { }
-    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    
+    var dismissAll: () -> Void = { }
     
     private class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         enum DisplayMode {
@@ -165,9 +167,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
             self.backgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.gridNode = GridNode()
-
+            
             super.init()
-                        
+            
+            if controller.collection != nil {
+                self.preloadPromise.set(false)
+            }
+            
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.backgroundNode)
             self.containerNode.addSubnode(self.gridNode)
@@ -492,8 +498,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
-            }, finishedTransitionIn: {
-                self.openingMedia = false
+            }, finishedTransitionIn: { [weak self] in
+                self?.openingMedia = false
+            }, dismissAll: { [weak self] in
+                self?.controller?.dismissAll()
             })
         }
         
@@ -523,8 +531,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-            }, finishedTransitionIn: {
-                self.openingMedia = false
+            }, finishedTransitionIn: { [weak self] in
+                self?.openingMedia = false
+            }, dismissAll: { [weak self] in
+                self?.controller?.dismissAll()
             })
         }
         
@@ -986,6 +996,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }, selectionState: selectionContext ?? TGMediaSelectionContext(), editingState: editingContext ?? TGMediaEditingContext())
         self.interaction?.selectionState?.grouping = true
+        
+        self.updateSelectionState(count: Int32(selectionContext?.count() ?? 0))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -1032,7 +1044,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     @objc private func backPressed() {
         self.updateNavigationStack { current in
-            return current.filter { $0 !== self }
+            var mediaPickerContext: AttachmentMediaPickerContext?
+            if let first = current.first as? MediaPickerScreen {
+                mediaPickerContext = first.webSearchController?.mediaPickerContext ?? first.mediaPickerContext
+            }
+            return (current.filter { $0 !== self }, mediaPickerContext)
         }
     }
     
@@ -1079,9 +1095,19 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     if collection.assetCollectionSubtype != .smartAlbumUserLibrary {
                         let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, collection: collection, editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
+                        
+                        mediaPicker.presentStickers = strongSelf.presentStickers
+                        mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
+                        mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
+                        mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
+                        mediaPicker.legacyCompletion = strongSelf.legacyCompletion
+                        mediaPicker.dismissAll = { [weak self] in
+                            self?.dismiss(animated: true, completion: nil)
+                        }
+                        
                         mediaPicker._presentedInModal = true
                         mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
-                        strongSelf.updateNavigationStack({ _ in return [strongSelf, mediaPicker]})
+                        strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
                     }
                 }
             }))
