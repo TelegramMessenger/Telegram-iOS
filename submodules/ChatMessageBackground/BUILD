@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     	"//submodules/Display:Display",
+        "//submodules/Postbox:Postbox",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
     	"//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
     ],
