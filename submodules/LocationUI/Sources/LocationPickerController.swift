@@ -72,7 +72,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     private var interaction: LocationPickerInteraction?
     
     public var requestAttachmentMenuExpansion: () -> Void = {}
-    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     
@@ -294,7 +294,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             return
         }
         
-        self.displayNode = LocationPickerControllerNode(context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
+        self.displayNode = LocationPickerControllerNode(controller: self, context: self.context, presentationData: self.presentationData, mode: self.mode, interaction: interaction, locationManager: self.locationManager)
         self.displayNodeDidLoad()
         self.controllerNode.beganInteractiveDragging = { [weak self] in
             self?.requestAttachmentMenuExpansion()
@@ -346,9 +346,5 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         self.interaction?.updateMapMode(.map)
         self.interaction?.dismissSearch()
         self.scrollToTop?()
-    }
-    
-    public func prepareForReuse() {
-        self.updateTabBarAlpha(1.0, .animated(duration: 0.25, curve: .easeInOut))
     }
 }

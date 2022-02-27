@@ -1056,7 +1056,7 @@ open class NavigationBar: ASDisplayNode {
         var rightTitleInset: CGFloat = rightInset + 1.0
         if self.backButtonNode.supernode != nil {
             let backButtonSize = self.backButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
-            leftTitleInset += backButtonSize.width + backButtonInset + 1.0
+            leftTitleInset = backButtonSize.width + backButtonInset + 1.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
             self.backButtonNode.hitTestSlop = UIEdgeInsets(top: -topHitTestSlop, left: -27.0, bottom: -topHitTestSlop, right: -8.0)

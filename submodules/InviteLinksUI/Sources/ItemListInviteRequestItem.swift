@@ -177,7 +177,9 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.extractedBackgroundImageNode = ASImageNode()
         self.extractedBackgroundImageNode.displaysAsynchronously = false
@@ -671,7 +673,7 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.topStripeNode.removeFromSupernode()
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                             }
                             if strongSelf.maskNode.supernode != nil {
                                 strongSelf.maskNode.removeFromSupernode()
@@ -693,10 +695,10 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                                 strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
                             }
                             if strongSelf.bottomStripeNode.supernode == nil {
-                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
+                                strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
                             if strongSelf.maskNode.supernode == nil {
-                                strongSelf.addSubnode(strongSelf.maskNode)
+                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                             }
                             
                             let hasCorners = itemListHasRoundedBlockLayout(params)
@@ -765,6 +767,8 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                             shimmerNode = ShimmerEffectNode()
                             strongSelf.placeholderNode = shimmerNode
                             if strongSelf.bottomStripeNode.supernode != nil {
+                                strongSelf.bottomStripeNode.removeFromSupernode()
+                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
                                 strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.bottomStripeNode)
                             } else {
                                 strongSelf.addSubnode(shimmerNode)

@@ -22,7 +22,7 @@ public enum AttachmentButtonType: Equatable {
 
 public protocol AttachmentContainable: ViewController {
     var requestAttachmentMenuExpansion: () -> Void { get set }
-    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void { get set }
+    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
     
@@ -289,7 +289,6 @@ public class AttachmentController: ViewController {
             self.currentType = type
             self.controller?.requestController(type, { [weak self] controller, mediaPickerContext in
                 if let strongSelf = self {
-                    strongSelf.mediaPickerContext = mediaPickerContext
                     if let controller = controller  {
                         strongSelf.controller?._ready.set(controller.ready.get())
                         controller._presentedInModal = true
@@ -299,7 +298,9 @@ public class AttachmentController: ViewController {
                         }
                         controller.updateNavigationStack = { [weak self] f in
                             if let strongSelf = self {
-                                strongSelf.currentControllers = f(strongSelf.currentControllers)                                
+                                let (controllers, mediaPickerContext) = f(strongSelf.currentControllers)
+                                strongSelf.currentControllers = controllers
+                                strongSelf.mediaPickerContext = mediaPickerContext
                                 if let layout = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                                 }
@@ -346,6 +347,7 @@ public class AttachmentController: ViewController {
                             strongSelf.switchingController = false
                         }
                     }
+                    strongSelf.mediaPickerContext = mediaPickerContext
                 }
             })
         }
@@ -419,7 +421,6 @@ public class AttachmentController: ViewController {
             }
         }
         
-        private var isCollapsed: Bool = false
         private var isUpdatingContainer = false
         private var switchingController = false
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -427,22 +428,15 @@ public class AttachmentController: ViewController {
             
             transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
                           
-            if self.modalProgress < 0.5 {
-                self.isCollapsed = false
-            } else if self.modalProgress == 1.0 {
-                self.isCollapsed = true
-            }
-                        
             var containerLayout = layout
             let containerRect: CGRect
             if case .regular = layout.metrics.widthClass {
                 let size = CGSize(width: 390.0, height: 620.0)
                 
+                let insets = layout.insets(options: [.input])
                 let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
-                var position: CGPoint = CGPoint(x: masterWidth - 174.0, y: layout.size.height - size.height - layout.intrinsicInsets.bottom - 40.0)
-                if let inputHeight = layout.inputHeight {
-                    position.y -= inputHeight
-                }
+                let position: CGPoint = CGPoint(x: masterWidth - 174.0, y: layout.size.height - size.height - insets.bottom - 40.0)
+                
                 containerRect = CGRect(origin: position, size: size)
                 containerLayout.size = containerRect.size
                 containerLayout.intrinsicInsets.bottom = 12.0
@@ -469,8 +463,8 @@ public class AttachmentController: ViewController {
             }
             
             
-            let isEffecitvelyCollapsedUpdated = (self.isCollapsed || self.selectionCount > 0) != (self.panel.isCollapsed || self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isCollapsed: self.isCollapsed, isSelecting: self.selectionCount > 0, transition: transition)
+            let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
             var panelTransition = transition
             if isEffecitvelyCollapsedUpdated {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)

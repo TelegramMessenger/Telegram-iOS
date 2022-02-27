@@ -76,7 +76,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     var requestAttachmentMenuExpansion: () -> Void = {}
-    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     var cancelPanGesture: () -> Void = { }
     
@@ -237,6 +237,8 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
         
         self.displayNodeDidLoad()
+        
+        self.updateTabBarAlpha(1.0, .immediate)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -341,6 +343,10 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     public var mediaPickerContext: AttachmentMediaPickerContext {
         return ContactsPickerContext(controller: self)
+    }
+    
+    public func prepareForReuse() {
+        self.updateTabBarAlpha(1.0, .immediate)
     }
 }
 

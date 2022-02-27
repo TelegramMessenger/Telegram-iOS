@@ -165,9 +165,11 @@ private func attachmentFileControllerEntries(presentationData: PresentationData,
 
 private class AttachmentFileControllerImpl: ItemListController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = {}
-    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    
+    var delayDisappear = false
     
     var resetForReuseImpl: () -> Void = {}
     public func resetForReuse() {
@@ -176,7 +178,9 @@ private class AttachmentFileControllerImpl: ItemListController, AttachmentContai
     }
     
     public func prepareForReuse() {
+        self.delayDisappear = true
         self.visibleBottomContentOffsetChanged?(self.visibleBottomContentOffset)
+        self.delayDisappear = false
     }
 }
 
@@ -300,13 +304,21 @@ public func attachmentFileController(context: AccountContext, updatedPresentatio
     }
     
     let controller = AttachmentFileControllerImpl(context: context, state: signal)
+    controller.delayDisappear = true
     controller.visibleBottomContentOffsetChanged = { [weak controller] offset in
         switch offset {
             case let .known(value):
-                let backgroundAlpha: CGFloat = min(30.0, value) / 30.0
-                controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
+            let backgroundAlpha: CGFloat = min(30.0, max(0.0, value)) / 30.0
+                if backgroundAlpha.isZero && controller?.delayDisappear == true {
+                    Queue.mainQueue().after(0.25, {
+                        controller?.updateTabBarAlpha(backgroundAlpha, .animated(duration: 0.1, curve: .easeInOut))
+                    })
+                } else {
+                    controller?.updateTabBarAlpha(backgroundAlpha, .immediate)
+                }
             case .unknown, .none:
                 controller?.updateTabBarAlpha(1.0, .immediate)
+            controller?.delayDisappear = false
         }
     }
     controller.resetForReuseImpl = {

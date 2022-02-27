@@ -81,9 +81,11 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: JoinLinkPreviewPeerContentNode.Content) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ASTextNode()
+        self.titleNode.textAlignment = .center
         self.countNode = ASTextNode()
         self.aboutNode = ASTextNode()
         self.aboutNode.maximumNumberOfLines = 8
+        self.aboutNode.textAlignment = .center
         self.descriptionNode = ASTextNode()
         self.descriptionNode.maximumNumberOfLines = 3
         self.descriptionNode.textAlignment = .center
@@ -153,7 +155,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         if case let .request(isGroup, _, _, about, _) = content {
             if let about = about, !about.isEmpty {
-                self.aboutNode.attributedText = NSAttributedString(string: about, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)
+                self.aboutNode.attributedText = NSAttributedString(string: about, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
                 self.addSubnode(self.aboutNode)
             }
             

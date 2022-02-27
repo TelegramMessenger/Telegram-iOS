@@ -406,7 +406,7 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     public var disposables = DisposableSet()
     
     open var requestAttachmentMenuExpansion: () -> Void = {}
-    open var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    open var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     open var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     open var cancelPanGesture: () -> Void = { }
     

@@ -900,7 +900,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: leftInset + leftOffset, y: nodeLayout.contentSize.height - UIScreenPixel), size: CGSize(width: params.width - leftInset - leftOffset, height: UIScreenPixel)))
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top - UIScreenPixel), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel - nodeLayout.insets.bottom))
                     
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -nodeLayout.insets.top), size: CGSize(width: params.width, height: nodeLayout.size.height - nodeLayout.insets.bottom))

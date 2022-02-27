@@ -7307,25 +7307,13 @@ Sorry for the inconvenience.";
 "Attachment.OpenCamera" = "Open Camera";
 
 "Attachment.DeselectedPhotos_1" = "%@ photo deselected";
-"Attachment.DeselectedPhotos_2" = "%@ photos deselected";
-"Attachment.DeselectedPhotos_3_10" = "%@ photos deselected";
 "Attachment.DeselectedPhotos_any" = "%@ photos deselected";
-"Attachment.DeselectedPhotos_many" = "%@ photos deselected";
-"Attachment.DeselectedPhotos_0" = "%@ photos deselected";
 
 "Attachment.DeselectedVideos_1" = "%@ video deselected";
-"Attachment.DeselectedVideos_2" = "%@ videos deselected";
-"Attachment.DeselectedVideos_3_10" = "%@ videos deselected";
 "Attachment.DeselectedVideos_any" = "%@ videos deselected";
-"Attachment.DeselectedVideos_many" = "%@ videos deselected";
-"Attachment.DeselectedVideos_0" = "%@ videos deselected";
 
 "Attachment.DeselectedItems_1" = "%@ item deselected";
-"Attachment.DeselectedItems_2" = "%@ items deselected";
-"Attachment.DeselectedItems_3_10" = "%@ items deselected";
 "Attachment.DeselectedItems_any" = "%@ items deselected";
-"Attachment.DeselectedItems_many" = "%@ items deselected";
-"Attachment.DeselectedItems_0" = "%@ items deselected";
 
 "PrivacyPhoneNumberSettings.CustomPublicLink" = "Users who have your number saved in their contacts will also see it on Telegram.\n\nThis public link opens a chat with you:\n[https://t.me/%@]()";
 
@@ -7357,3 +7345,6 @@ Sorry for the inconvenience.";
 
 "Attachment.MyAlbums" = "My Albums";
 "Attachment.MediaTypes" = "Media Types";
+
+"Attachment.LocationAccessTitle" = "Access Your Location";
+"Attachment.LocationAccessText" = "Share places or your live location.";

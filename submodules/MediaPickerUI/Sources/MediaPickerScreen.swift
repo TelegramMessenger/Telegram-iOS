@@ -18,6 +18,8 @@ import AttachmentUI
 import ContextUI
 import WebSearchUI
 
+let overflowInset: CGFloat = 70.0
+
 final class MediaPickerInteraction {
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void
     let openSelectedMedia: (TGMediaSelectableItem, UIImage?) -> Void
@@ -99,9 +101,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?) -> Void = { _, _, _ in }
     
     public var requestAttachmentMenuExpansion: () -> Void = { }
-    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> [AttachmentContainable]) -> Void = { _ in }
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    
+    var dismissAll: () -> Void = { }
     
     private class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         enum DisplayMode {
@@ -163,9 +167,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
             self.backgroundNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             self.gridNode = GridNode()
-
+            
             super.init()
-                        
+            
+            if controller.collection != nil {
+                self.preloadPromise.set(false)
+            }
+            
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.backgroundNode)
             self.containerNode.addSubnode(self.gridNode)
@@ -281,6 +289,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.gridNode.scrollView.alwaysBounceVertical = true
             self.gridNode.scrollView.showsVerticalScrollIndicator = false
             
+            if self.controller?.collection != nil {
+                self.gridNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
+                    return point.x > 44.0 + overflowInset
+                }
+            }
+            
             if self.controller?.collection == nil {
                 let cameraView = TGAttachmentCameraView(forSelfPortrait: false)!
                 cameraView.clipsToBounds = true
@@ -315,6 +329,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     strongSelf.controller?.interaction?.selectionState?.setItem(asset, selected: selected, animated: true, sender: nil)
                 }
             }
+            if self.controller?.collection != nil {
+                self.selectionGesture?.sideInset = 44.0 + overflowInset
+            }
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -324,7 +341,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 return false
             }
         }
-                
+                        
         fileprivate func dismissInput() {
             self.view.window?.endEditing(true)
         }
@@ -481,8 +498,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a)
-            }, finishedTransitionIn: {
-                self.openingMedia = false
+            }, finishedTransitionIn: { [weak self] in
+                self?.openingMedia = false
+            }, dismissAll: { [weak self] in
+                self?.controller?.dismissAll()
             })
         }
         
@@ -512,8 +531,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }, presentStickers: controller.presentStickers, presentSchedulePicker: controller.presentSchedulePicker, presentTimerPicker: controller.presentTimerPicker, getCaptionPanelView: controller.getCaptionPanelView, present: { [weak self] c, a in
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-            }, finishedTransitionIn: {
-                self.openingMedia = false
+            }, finishedTransitionIn: { [weak self] in
+                self?.openingMedia = false
+            }, dismissAll: { [weak self] in
+                self?.controller?.dismissAll()
             })
         }
         
@@ -611,13 +632,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         
         private var previousContentOffset: GridNodeVisibleContentOffset?
         
-        func updateNavigation(transition: ContainedViewLayoutTransition) {
+        func updateNavigation(delayDisappear: Bool = false, transition: ContainedViewLayoutTransition) {
             if let selectionNode = self.selectionNode, selectionNode.alpha > 0.0 {
                 self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                 self.controller?.updateTabBarAlpha(1.0, transition)
             } else if self.placeholderNode != nil {
                 self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
-                self.controller?.updateTabBarAlpha(0.0, transition)
+                
+                if delayDisappear {
+                    Queue.mainQueue().after(0.25) {
+                        self.controller?.updateTabBarAlpha(0.0, transition)
+                    }
+                } else {
+                    self.controller?.updateTabBarAlpha(0.0, transition)
+                }
             } else {
                 var previousContentOffsetValue: CGFloat?
                 if let previousContentOffset = self.previousContentOffset, case let .known(value) = previousContentOffset {
@@ -637,6 +665,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     case .unknown, .none:
                         self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
                 }
+                self.controller?.updateTabBarAlpha(1.0, transition)
             }
             
             let count = Int32(self.controller?.interaction?.selectionState?.count() ?? 0)
@@ -652,7 +681,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             var insets = layout.insets(options: [])
             insets.top += navigationBarHeight
             
-            let overflowInset: CGFloat = 70.0
             let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height))
             let innerBounds = CGRect(origin: CGPoint(x: -overflowInset, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
             
@@ -968,6 +996,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
         }, selectionState: selectionContext ?? TGMediaSelectionContext(), editingState: editingContext ?? TGMediaEditingContext())
         self.interaction?.selectionState?.grouping = true
+        
+        self.updateSelectionState(count: Int32(selectionContext?.count() ?? 0))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -1014,7 +1044,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     @objc private func backPressed() {
         self.updateNavigationStack { current in
-            return current.filter { $0 !== self }
+            var mediaPickerContext: AttachmentMediaPickerContext?
+            if let first = current.first as? MediaPickerScreen {
+                mediaPickerContext = first.webSearchController?.mediaPickerContext ?? first.mediaPickerContext
+            }
+            return (current.filter { $0 !== self }, mediaPickerContext)
         }
     }
     
@@ -1039,9 +1073,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public func prepareForReuse() {
         self.controllerNode.cameraView?.resumePreview()
         
-        Queue.mainQueue().after(0.2, {
-            self.controllerNode.updateNavigation(transition: .animated(duration: 0.15, curve: .easeInOut))
-        })
+        self.controllerNode.updateNavigation(delayDisappear: true, transition: .immediate)
     }
     
     @objc private func searchOrMorePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
@@ -1051,20 +1083,31 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
                 if let strongSelf = self {
                     if let webSearchController = strongSelf.webSearchController {
-                        strongSelf.webSearchController = nil
                         if collection.assetCollectionSubtype != .smartAlbumUserLibrary {
-                            Queue.mainQueue().after(0.5) {
-                                webSearchController.cancel()
-                            }
+//                            strongSelf.webSearchController = nil
+//                            Queue.mainQueue().after(0.5) {
+//                                webSearchController.cancel()
+//                            }
                         } else {
+                            strongSelf.webSearchController = nil
                             webSearchController.cancel()
                         }
                     }
                     if collection.assetCollectionSubtype != .smartAlbumUserLibrary {
                         let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, collection: collection, editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
+                        
+                        mediaPicker.presentStickers = strongSelf.presentStickers
+                        mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
+                        mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
+                        mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
+                        mediaPicker.legacyCompletion = strongSelf.legacyCompletion
+                        mediaPicker.dismissAll = { [weak self] in
+                            self?.dismiss(animated: true, completion: nil)
+                        }
+                        
                         mediaPicker._presentedInModal = true
                         mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
-                        strongSelf.updateNavigationStack({ _ in return [strongSelf, mediaPicker]})
+                        strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
                     }
                 }
             }))
@@ -1205,6 +1248,8 @@ private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
     
     private var initialLocation: CGPoint?
     
+    var sideInset: CGFloat = 0.0
+    
     init(target: Any?, action: Selector?, gridNode: GridNode) {
         self.gridNode = gridNode
         
@@ -1216,12 +1261,17 @@ private class MediaPickerGridSelectionGesture: UIPanGestureRecognizer {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
-        guard let touch = touches.first, let gridNode = self.gridNode else {
+        guard let touch = touches.first, self.numberOfTouches == 1, let gridNode = self.gridNode else {
             return
         }
         
         let location = touch.location(in: gridNode.view)
-        self.initialLocation = location
+        
+        if location.x > self.sideInset {
+            self.initialLocation = location
+        } else {
+            self.state = .failed
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
