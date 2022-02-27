@@ -8,12 +8,14 @@ import AVKit
 final class MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
     let hasVideo: Bool
+    let isVisible: Bool
     let activatePictureInPicture: ActionSlot<Action<Void>>
     let bringBackControllerForPictureInPictureDeactivation: (@escaping () -> Void) -> Void
     
-    init(call: PresentationGroupCallImpl, hasVideo: Bool, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
+    init(call: PresentationGroupCallImpl, hasVideo: Bool, isVisible: Bool, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
         self.call = call
         self.hasVideo = hasVideo
+        self.isVisible = isVisible
         self.activatePictureInPicture = activatePictureInPicture
         self.bringBackControllerForPictureInPictureDeactivation = bringBackControllerForPictureInPictureDeactivation
     }
@@ -23,6 +25,9 @@ final class MediaStreamVideoComponent: Component {
             return false
         }
         if lhs.hasVideo != rhs.hasVideo {
+            return false
+        }
+        if lhs.isVisible != rhs.isVisible {
             return false
         }
         
@@ -54,6 +59,8 @@ final class MediaStreamVideoComponent: Component {
         private var component: MediaStreamVideoComponent?
         private var hadVideo: Bool = false
         
+        private weak var state: State?
+        
         override init(frame: CGRect) {
             self.blurTintView = UIView()
             self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
@@ -82,6 +89,8 @@ final class MediaStreamVideoComponent: Component {
         }
         
         func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
+            self.state = state
+            
             if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
@@ -122,7 +131,15 @@ final class MediaStreamVideoComponent: Component {
             }
             
             if let videoView = self.videoView {
-                videoView.updateIsEnabled(true)
+                var isVideoVisible = component.isVisible
+                if let pictureInPictureController = self.pictureInPictureController {
+                    if pictureInPictureController.isPictureInPictureActive {
+                        isVideoVisible = true
+                    }
+                }
+                
+                videoView.updateIsEnabled(isVideoVisible)
+                
                 var aspect = videoView.getAspect()
                 if aspect <= 0.01 {
                     aspect = 3.0 / 4.0
@@ -134,7 +151,8 @@ final class MediaStreamVideoComponent: Component {
                 transition.withAnimation(.none).setFrame(view: videoView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize), completion: nil)
                 
                 if let videoBlurView = self.videoBlurView {
-                    videoBlurView.updateIsEnabled(true)
+                    videoBlurView.updateIsEnabled(component.isVisible)
+                    
                     transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
                 }
             }
@@ -206,6 +224,14 @@ final class MediaStreamVideoComponent: Component {
             component.bringBackControllerForPictureInPictureDeactivation {
                 completionHandler(true)
             }
+        }
+        
+        func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+            self.state?.updated(transition: .immediate)
+        }
+        
+        func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+            self.state?.updated(transition: .immediate)
         }
     }
     
