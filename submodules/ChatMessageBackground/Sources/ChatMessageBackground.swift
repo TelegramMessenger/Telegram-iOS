@@ -5,10 +5,10 @@ import Display
 import TelegramPresentationData
 import WallpaperBackgroundNode
 
-enum ChatMessageBackgroundMergeType: Equatable {
+public enum ChatMessageBackgroundMergeType: Equatable {
     case None, Side, Top(side: Bool), Bottom, Both, Extracted
     
-    init(top: Bool, bottom: Bool, side: Bool) {
+    public init(top: Bool, bottom: Bool, side: Bool) {
         if top && bottom {
             self = .Both
         } else if top {
@@ -29,12 +29,12 @@ enum ChatMessageBackgroundMergeType: Equatable {
     }
 }
 
-enum ChatMessageBackgroundType: Equatable {
+public enum ChatMessageBackgroundType: Equatable {
     case none
     case incoming(ChatMessageBackgroundMergeType)
     case outgoing(ChatMessageBackgroundMergeType)
 
-    static func ==(lhs: ChatMessageBackgroundType, rhs: ChatMessageBackgroundType) -> Bool {
+    public static func ==(lhs: ChatMessageBackgroundType, rhs: ChatMessageBackgroundType) -> Bool {
         switch lhs {
             case .none:
                 if case .none = rhs {
@@ -58,8 +58,8 @@ enum ChatMessageBackgroundType: Equatable {
     }
 }
 
-class ChatMessageBackground: ASDisplayNode {
-    private(set) var type: ChatMessageBackgroundType?
+public class ChatMessageBackground: ASDisplayNode {
+    public private(set) var type: ChatMessageBackgroundType?
     private var currentHighlighted: Bool?
     private var hasWallpaper: Bool?
     private var graphics: PrincipalThemeEssentialGraphics?
@@ -68,11 +68,11 @@ class ChatMessageBackground: ASDisplayNode {
     private let outlineImageNode: ASImageNode
     private weak var backgroundNode: WallpaperBackgroundNode?
     
-    var hasImage: Bool {
+    public var hasImage: Bool {
         self.imageNode.image != nil
     }
     
-    override init() {
+    public override init() {
         self.imageNode = ASImageNode()
         self.imageNode.displaysAsynchronously = false
         self.imageNode.displayWithoutProcessing = true
@@ -88,23 +88,23 @@ class ChatMessageBackground: ASDisplayNode {
         self.addSubnode(self.imageNode)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
         transition.updateFrame(node: self.outlineImageNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
     }
     
-    func updateLayout(size: CGSize, transition: ListViewItemUpdateAnimation) {
+    public func updateLayout(size: CGSize, transition: ListViewItemUpdateAnimation) {
         transition.animator.updateFrame(layer: self.imageNode.layer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0), completion: nil)
         transition.animator.updateFrame(layer: self.outlineImageNode.layer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0), completion: nil)
     }
     
-    func setMaskMode(_ maskMode: Bool) {
+    public func setMaskMode(_ maskMode: Bool) {
         if let type = self.type, let hasWallpaper = self.hasWallpaper, let highlighted = self.currentHighlighted, let graphics = self.graphics, let backgroundNode = self.backgroundNode {
             self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, hasWallpaper: hasWallpaper, transition: .immediate, backgroundNode: backgroundNode)
         }
     }
     
-    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
+    public func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
         if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
             return
@@ -244,7 +244,7 @@ class ChatMessageBackground: ASDisplayNode {
         self.outlineImageNode.image = outlineImage
     }
 
-    func animateFrom(sourceView: UIView, transition: CombinedTransition) {
+    public func animateFrom(sourceView: UIView, transition: CombinedTransition) {
         if transition.isAnimated {
             self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             self.outlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
@@ -262,11 +262,11 @@ class ChatMessageBackground: ASDisplayNode {
     }
 }
 
-final class ChatMessageShadowNode: ASDisplayNode {
+public final class ChatMessageShadowNode: ASDisplayNode {
     private let contentNode: ASImageNode
     private var graphics: PrincipalThemeEssentialGraphics?
     
-    override init() {
+    public override init() {
         self.contentNode = ASImageNode()
         self.contentNode.isLayerBacked = true
         self.contentNode.displaysAsynchronously = false
@@ -281,7 +281,7 @@ final class ChatMessageShadowNode: ASDisplayNode {
         self.addSubnode(self.contentNode)
     }
     
-    func setType(type: ChatMessageBackgroundType, hasWallpaper: Bool, graphics: PrincipalThemeEssentialGraphics) {
+    public func setType(type: ChatMessageBackgroundType, hasWallpaper: Bool, graphics: PrincipalThemeEssentialGraphics) {
         let shadowImage: UIImage?
         
         if hasWallpaper {
@@ -334,7 +334,8 @@ final class ChatMessageShadowNode: ASDisplayNode {
         self.contentNode.image = shadowImage
     }
     
-    func updateLayout(backgroundFrame: CGRect, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(backgroundFrame: CGRect, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX - 10.0, y: backgroundFrame.minY - 10.0), size: CGSize(width: backgroundFrame.width + 20.0, height: backgroundFrame.height + 20.0)))
     }
 }
+

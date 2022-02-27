@@ -37,6 +37,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/WebSearchUI:WebSearchUI",
+        "//submodules/ChatMessageBackground:ChatMessageBackground",
     ],
     visibility = [
         "//visibility:public",

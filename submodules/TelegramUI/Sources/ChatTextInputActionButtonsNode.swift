@@ -6,6 +6,7 @@ import TelegramCore
 import TelegramPresentationData
 import ContextUI
 import ChatPresentationInterfaceState
+import ChatMessageBackground
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
     private let presentationContext: ChatPresentationContext?

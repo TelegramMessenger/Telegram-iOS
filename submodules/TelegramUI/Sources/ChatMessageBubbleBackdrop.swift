@@ -4,6 +4,7 @@ import Display
 import Postbox
 import TelegramPresentationData
 import WallpaperBackgroundNode
+import ChatMessageBackground
 
 private let maskInset: CGFloat = 1.0
 
