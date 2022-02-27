@@ -44,7 +44,7 @@ final class MediaStreamVideoComponent: Component {
         return State()
     }
     
-    public final class View: UIView, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate, ComponentTaggedView {
+    public final class View: UIView, AVPictureInPictureControllerDelegate, ComponentTaggedView {
         public final class Tag {
         }
         
@@ -103,7 +103,32 @@ final class MediaStreamVideoComponent: Component {
                         self.addSubview(videoView)
                         
                         if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
-                            let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: self))
+                            final class PlaybackDelegateImpl: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
+                                func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
+                                    
+                                }
+
+                                func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+                                    return CMTimeRange(start: .zero, duration: .positiveInfinity)
+                                }
+
+                                func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+                                    return false
+                                }
+
+                                func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+                                }
+
+                                func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
+                                    completionHandler()
+                                }
+
+                                public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+                                    return false
+                                }
+                            }
+                            
+                            let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: PlaybackDelegateImpl()))
                             
                             pictureInPictureController.delegate = self
                             pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = true
@@ -193,28 +218,6 @@ final class MediaStreamVideoComponent: Component {
             return availableSize
         }
         
-        public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
-        }
-
-        public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
-            return CMTimeRange(start: .zero, duration: .positiveInfinity)
-        }
-
-        public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
-            return false
-        }
-
-        public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
-        }
-
-        public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
-            completionHandler()
-        }
-
-        public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
-            return false
-        }
-        
         public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
             guard let component = self.component else {
                 completionHandler(false)
@@ -226,7 +229,7 @@ final class MediaStreamVideoComponent: Component {
             }
         }
         
-        func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
             self.state?.updated(transition: .immediate)
         }
         
