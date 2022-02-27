@@ -493,6 +493,9 @@ public final class MediaStreamComponent: CombinedComponent {
         
         let isPictureInPictureSupported: Bool
         
+        private(set) var isVisibleInHierarchy: Bool = false
+        private var isVisibleInHierarchyDisposable: Disposable?
+        
         private var scheduledDismissUITimer: SwiftSignalKit.Timer?
         
         init(call: PresentationGroupCallImpl) {
@@ -543,11 +546,23 @@ public final class MediaStreamComponent: CombinedComponent {
             })
             
             let _ = call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false).start()
+            
+            self.isVisibleInHierarchyDisposable = (call.accountContext.sharedContext.applicationBindings.applicationInForeground
+            |> deliverOnMainQueue).start(next: { [weak self] inForeground in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.isVisibleInHierarchy != inForeground {
+                    strongSelf.isVisibleInHierarchy = inForeground
+                    strongSelf.updated(transition: .immediate)
+                }
+            })
         }
         
         deinit {
             self.stateDisposable?.dispose()
             self.infoDisposable?.dispose()
+            self.isVisibleInHierarchyDisposable?.dispose()
         }
         
         func toggleDisplayUI() {
@@ -617,6 +632,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
                     hasVideo: context.state.hasVideo,
+                    isVisible: environment.isVisible && context.state.isVisibleInHierarchy,
                     activatePictureInPicture: activatePictureInPicture,
                     bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
                         guard let call = call else {
