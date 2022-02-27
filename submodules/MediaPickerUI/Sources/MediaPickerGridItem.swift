@@ -84,6 +84,7 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.imageNode.clipsToBounds = true
         self.imageNode.contentMode = .scaleAspectFill
         self.imageNode.isLayerBacked = false
+        self.imageNode.animateFirstTransition = false
         
         self.gradientNode = ASImageNode()
         self.gradientNode.displaysAsynchronously = false

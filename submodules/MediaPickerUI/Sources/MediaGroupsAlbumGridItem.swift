@@ -121,6 +121,7 @@ private final class MediaGroupsGridAlbumItemNode : ListViewItemNode {
         self.imageNode.clipsToBounds = true
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 62.0, height: 62.0))
         self.imageNode.contentMode = .scaleAspectFill
+        self.imageNode.animateFirstTransition = false
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
