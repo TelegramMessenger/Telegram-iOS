@@ -1,22 +1,28 @@
 import Foundation
 import UIKit
 import ComponentFlow
+import ActivityIndicatorComponent
 import AccountContext
 import AVKit
 
 final class MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
+    let hasVideo: Bool
     let activatePictureInPicture: ActionSlot<Action<Void>>
     let bringBackControllerForPictureInPictureDeactivation: (@escaping () -> Void) -> Void
     
-    init(call: PresentationGroupCallImpl, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
+    init(call: PresentationGroupCallImpl, hasVideo: Bool, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
         self.call = call
+        self.hasVideo = hasVideo
         self.activatePictureInPicture = activatePictureInPicture
         self.bringBackControllerForPictureInPictureDeactivation = bringBackControllerForPictureInPictureDeactivation
     }
     
     public static func ==(lhs: MediaStreamVideoComponent, rhs: MediaStreamVideoComponent) -> Bool {
         if lhs.call !== rhs.call {
+            return false
+        }
+        if lhs.hasVideo != rhs.hasVideo {
             return false
         }
         
@@ -33,19 +39,24 @@ final class MediaStreamVideoComponent: Component {
         return State()
     }
     
-    public final class View: UIView, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate {
+    public final class View: UIView, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate, ComponentTaggedView {
+        public final class Tag {
+        }
+        
         private let videoRenderingContext = VideoRenderingContext()
         private var videoView: VideoRenderingView?
         private let blurTintView: UIView
         private var videoBlurView: VideoRenderingView?
+        private var activityIndicatorView: ComponentHostView<Empty>?
         
         private var pictureInPictureController: AVPictureInPictureController?
         
         private var component: MediaStreamVideoComponent?
+        private var hadVideo: Bool = false
         
         override init(frame: CGRect) {
             self.blurTintView = UIView()
-            self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+            self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
             
             super.init(frame: frame)
             
@@ -59,8 +70,19 @@ final class MediaStreamVideoComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        public func matches(tag: Any) -> Bool {
+            if let _ = tag as? Tag {
+                return true
+            }
+            return false
+        }
+        
+        func expandFromPictureInPicture() {
+            self.pictureInPictureController?.stopPictureInPicture()
+        }
+        
         func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
-            if self.videoView == nil {
+            if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
@@ -73,17 +95,26 @@ final class MediaStreamVideoComponent: Component {
                         
                         if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported(), let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
                             let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: self))
-                            self.pictureInPictureController = pictureInPictureController
                             
+                            pictureInPictureController.delegate = self
                             pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = true
                             pictureInPictureController.requiresLinearPlayback = true
-                            pictureInPictureController.delegate = self
+                            
+                            self.pictureInPictureController = pictureInPictureController
                         }
                         
                         videoView.setOnOrientationUpdated { [weak state] _, _ in
                             state?.updated(transition: .immediate)
                         }
-                        videoView.setOnFirstFrameReceived { [weak state] _ in
+                        videoView.setOnFirstFrameReceived { [weak self, weak state] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.hadVideo = true
+                            strongSelf.activityIndicatorView?.removeFromSuperview()
+                            strongSelf.activityIndicatorView = nil
+                            
                             state?.updated(transition: .immediate)
                         }
                     }
@@ -106,6 +137,27 @@ final class MediaStreamVideoComponent: Component {
                     videoBlurView.updateIsEnabled(true)
                     transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
                 }
+            }
+            
+            if !self.hadVideo {
+                var activityIndicatorTransition = transition
+                let activityIndicatorView: ComponentHostView<Empty>
+                if let current = self.activityIndicatorView {
+                    activityIndicatorView = current
+                } else {
+                    activityIndicatorTransition = transition.withAnimation(.none)
+                    activityIndicatorView = ComponentHostView<Empty>()
+                    self.activityIndicatorView = activityIndicatorView
+                    self.addSubview(activityIndicatorView)
+                }
+                
+                let activityIndicatorSize = activityIndicatorView.update(
+                    transition: transition,
+                    component: AnyComponent(ActivityIndicatorComponent()),
+                    environment: {},
+                    containerSize: CGSize(width: 100.0, height: 100.0)
+                )
+                activityIndicatorTransition.setFrame(view: activityIndicatorView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - activityIndicatorSize.width) / 2.0), y: floor((availableSize.height - activityIndicatorSize.height) / 2.0)), size: activityIndicatorSize), completion: nil)
             }
             
             self.component = component

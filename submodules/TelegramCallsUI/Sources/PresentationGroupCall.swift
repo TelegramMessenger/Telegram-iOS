@@ -86,13 +86,14 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
     var disposable: Disposable?
     public var participantsContext: GroupCallParticipantsContext?
     
-    private let panelDataPromise = Promise<GroupCallPanelData>()
-    public var panelData: Signal<GroupCallPanelData, NoError> {
+    private let panelDataPromise = Promise<GroupCallPanelData?>()
+    public var panelData: Signal<GroupCallPanelData?, NoError> {
         return self.panelDataPromise.get()
     }
     
     public init(account: Account, engine: TelegramEngine, peerId: PeerId, isChannel: Bool, call: EngineGroupCallDescription) {
-        self.panelDataPromise.set(.single(GroupCallPanelData(
+        self.panelDataPromise.set(.single(nil))
+        /*self.panelDataPromise.set(.single(GroupCallPanelData(
             peerId: peerId,
             isChannel: isChannel,
             info: GroupCallInfo(
@@ -114,7 +115,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
             participantCount: 0,
             activeSpeakers: Set(),
             groupCall: nil
-        )))
+        )))*/
 
         let state = engine.calls.getGroupCallParticipants(callId: call.id, accessHash: call.accessHash, offset: "", ssrcs: [], limit: 100, sortAscending: nil)
             |> map(Optional.init)
@@ -161,7 +162,7 @@ public final class AccountGroupCallContextImpl: AccountGroupCallContext {
                 return GroupCallPanelData(
                     peerId: peerId,
                     isChannel: isChannel,
-                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit, isStream: call.isStream),
+                    info: GroupCallInfo(id: call.id, accessHash: call.accessHash, participantCount: state.totalCount, streamDcId: nil, title: state.title, scheduleTimestamp: state.scheduleTimestamp, subscribedToScheduled: state.subscribedToScheduled, recordingStartTimestamp: nil, sortAscending: state.sortAscending, defaultParticipantsAreMuted: state.defaultParticipantsAreMuted, isVideoEnabled: state.isVideoEnabled, unmutedVideoLimit: state.unmutedVideoLimit, isStream: state.isStream),
                     topParticipants: topParticipants,
                     participantCount: state.totalCount,
                     activeSpeakers: activeSpeakers,
@@ -229,7 +230,14 @@ public final class AccountGroupCallContextCacheImpl: AccountGroupCallContextCach
         }
 
         public func leaveInBackground(engine: TelegramEngine, id: Int64, accessHash: Int64, source: UInt32) {
-            let disposable = engine.calls.leaveGroupCall(callId: id, accessHash: accessHash, source: source).start()
+            let disposable = engine.calls.leaveGroupCall(callId: id, accessHash: accessHash, source: source).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let context = strongSelf.contexts[id] {
+                    context.context.participantsContext?.removeLocalPeerId()
+                }
+            })
             self.leaveDisposables.add(disposable)
         }
     }
@@ -630,7 +638,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var screencastAudioDataDisposable: Disposable?
     private var screencastStateDisposable: Disposable?
     
-    public var isStream = false
+    public let isStream: Bool
     
     init(
         accountContext: AccountContext,
@@ -642,7 +650,8 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         peerId: PeerId,
         isChannel: Bool,
         invite: String?,
-        joinAsPeerId: PeerId?
+        joinAsPeerId: PeerId?,
+        isStream: Bool
     ) {
         self.account = accountContext.account
         self.accountContext = accountContext
@@ -659,10 +668,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.schedulePending = initialCall == nil
         self.isScheduled = initialCall == nil || initialCall?.scheduleTimestamp != nil
         
-        if let initialCall = initialCall {
-            self.isStream = initialCall.isStream
-        }
-        
         self.stateValue = PresentationGroupCallState.initialValue(myPeerId: self.joinAsPeerId, title: initialCall?.title, scheduleTimestamp: initialCall?.scheduleTimestamp, subscribedToScheduled: initialCall?.subscribedToScheduled ?? false)
         self.statePromise = ValuePromise(self.stateValue)
         
@@ -671,6 +676,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.isVideoEnabled = true
         self.hasVideo = false
         self.hasScreencast = false
+        self.isStream = isStream
         
         var didReceiveAudioOutputs = false
         
@@ -1228,6 +1234,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 totalCount: 0,
                 isVideoEnabled: callInfo.isVideoEnabled,
                 unmutedVideoLimit: callInfo.unmutedVideoLimit,
+                isStream: callInfo.isStream,
                 version: 0
             ),
             previousServiceState: nil
@@ -1677,7 +1684,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 strongSelf.processMyAudioLevel(level: mappedLevel, hasVoice: myLevelHasVoice)
                 strongSelf.isSpeakingPromise.set(orignalMyLevelHasVoice)
                 
-                if !missingSsrcs.isEmpty {
+                if !missingSsrcs.isEmpty && !strongSelf.isStream {
                     strongSelf.participantsContext?.ensureHaveParticipants(ssrcs: missingSsrcs)
                 }
             }))
@@ -2228,6 +2235,14 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func beginTone(tone: PresentationCallTone) {
+        if self.isStream {
+            switch tone {
+            case .groupJoined, .groupLeft:
+                return
+            default:
+                break
+            }
+        }
         var completed: (() -> Void)?
         let toneRenderer = PresentationCallToneRenderer(tone: tone, completed: {
             completed?()
@@ -2995,7 +3010,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             
             if let value = value {
                 strongSelf.initialCall = EngineGroupCallDescription(id: value.id, accessHash: value.accessHash, title: value.title, scheduleTimestamp: nil, subscribedToScheduled: false, isStream: value.isStream)
-                strongSelf.isStream = value.isStream
                 
                 strongSelf.updateSessionState(internalState: .active(value), audioSessionControl: strongSelf.audioSessionControl)
             } else {

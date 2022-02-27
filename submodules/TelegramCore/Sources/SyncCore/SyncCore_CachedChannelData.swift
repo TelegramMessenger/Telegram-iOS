@@ -161,7 +161,7 @@ public final class CachedChannelData: CachedPeerData {
         public var title: String?
         public var scheduleTimestamp: Int32?
         public var subscribedToScheduled: Bool
-        public var isStream: Bool
+        public var isStream: Bool?
         
         public init(
             id: Int64,
@@ -169,7 +169,7 @@ public final class CachedChannelData: CachedPeerData {
             title: String?,
             scheduleTimestamp: Int32?,
             subscribedToScheduled: Bool,
-            isStream: Bool
+            isStream: Bool?
         ) {
             self.id = id
             self.accessHash = accessHash
@@ -185,7 +185,7 @@ public final class CachedChannelData: CachedPeerData {
             self.title = decoder.decodeOptionalStringForKey("title")
             self.scheduleTimestamp = decoder.decodeOptionalInt32ForKey("scheduleTimestamp")
             self.subscribedToScheduled = decoder.decodeBoolForKey("subscribed", orElse: false)
-            self.isStream = decoder.decodeBoolForKey("isStream", orElse: false)
+            self.isStream = decoder.decodeOptionalBoolForKey("isStream_v2")
         }
         
         public func encode(_ encoder: PostboxEncoder) {
@@ -202,7 +202,11 @@ public final class CachedChannelData: CachedPeerData {
                 encoder.encodeNil(forKey: "scheduleTimestamp")
             }
             encoder.encodeBool(self.subscribedToScheduled, forKey: "subscribed")
-            encoder.encodeBool(self.isStream, forKey: "isStream")
+            if let isStream = self.isStream {
+                encoder.encodeBool(isStream, forKey: "isStream")
+            } else {
+                encoder.encodeNil(forKey: "isStream")
+            }
         }
     }
     

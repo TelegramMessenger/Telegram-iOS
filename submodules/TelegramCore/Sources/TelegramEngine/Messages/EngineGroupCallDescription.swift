@@ -6,7 +6,7 @@ public final class EngineGroupCallDescription {
     public let title: String?
     public let scheduleTimestamp: Int32?
     public let subscribedToScheduled: Bool
-    public let isStream: Bool
+    public let isStream: Bool?
 
     public init(
         id: Int64,
@@ -14,7 +14,7 @@ public final class EngineGroupCallDescription {
         title: String?,
         scheduleTimestamp: Int32?,
         subscribedToScheduled: Bool,
-        isStream: Bool
+        isStream: Bool?
     ) {
         self.id = id
         self.accessHash = accessHash

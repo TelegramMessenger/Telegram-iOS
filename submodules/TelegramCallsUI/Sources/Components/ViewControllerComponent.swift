@@ -78,12 +78,12 @@ open class ViewControllerComponentContainer: ViewController {
         }
     }
     
-    private final class Node: ViewControllerTracingNode {
+    final class Node: ViewControllerTracingNode {
         private var presentationData: PresentationData
         private weak var controller: ViewControllerComponentContainer?
         
         private let component: AnyComponent<ViewControllerComponentContainer.Environment>
-        private let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
+        let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
         private var currentIsVisible: Bool = false
         private var currentLayout: ContainerViewLayout?
@@ -137,7 +137,7 @@ open class ViewControllerComponentContainer: ViewController {
         }
     }
     
-    private var node: Node {
+    var node: Node {
         return self.displayNode as! Node
     }
     

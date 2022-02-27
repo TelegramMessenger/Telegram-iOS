@@ -55,7 +55,28 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
 
     func requestTime(completion: @escaping (Int64) -> Void) -> Disposable {
         if self.isExternalStream {
-            return self.engine.calls.requestStreamState(callId: self.callId, accessHash: self.accessHash).start(next: { result in
+            let dataSource: Signal<AudioBroadcastDataSource?, NoError>
+            if let dataSourceValue = self.dataSource {
+                dataSource = .single(dataSourceValue)
+            } else {
+                dataSource = self.engine.calls.getAudioBroadcastDataSource(callId: self.callId, accessHash: self.accessHash)
+            }
+            
+            let engine = self.engine
+            let callId = self.callId
+            let accessHash = self.accessHash
+            
+            return (dataSource
+            |> deliverOn(self.queue)
+            |> mapToSignal { [weak self] dataSource -> Signal<EngineCallStreamState?, NoError> in
+                if let dataSource = dataSource {
+                    self?.dataSource = dataSource
+                    return engine.calls.requestStreamState(dataSource: dataSource, callId: callId, accessHash: accessHash)
+                } else {
+                    return .single(nil)
+                }
+            }
+            |> deliverOn(self.queue)).start(next: { result in
                 if let channel = result?.channels.first {
                     completion(channel.latestTimestamp)
                 } else {

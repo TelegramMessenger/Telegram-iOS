@@ -489,7 +489,11 @@ public final class MediaStreamComponent: CombinedComponent {
         private(set) var displayUI: Bool = true
         var dismissOffset: CGFloat = 0.0
         
+        var storedIsLandscape: Bool?
+        
         let isPictureInPictureSupported: Bool
+        
+        private var scheduledDismissUITimer: SwiftSignalKit.Timer?
         
         init(call: PresentationGroupCallImpl) {
             self.call = call
@@ -551,6 +555,26 @@ public final class MediaStreamComponent: CombinedComponent {
             self.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .easeInOut)))
         }
         
+        func cancelScheduledDismissUI() {
+            self.scheduledDismissUITimer?.invalidate()
+            self.scheduledDismissUITimer = nil
+        }
+        
+        func scheduleDismissUI() {
+            if self.scheduledDismissUITimer == nil {
+                self.scheduledDismissUITimer = SwiftSignalKit.Timer(timeout: 3.0, repeat: false, completion: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.scheduledDismissUITimer = nil
+                    if strongSelf.displayUI {
+                        strongSelf.toggleDisplayUI()
+                    }
+                }, queue: .mainQueue())
+                self.scheduledDismissUITimer?.start()
+            }
+        }
+        
         func updateDismissOffset(value: CGFloat, interactive: Bool) {
             self.dismissOffset = value
             if interactive {
@@ -575,7 +599,8 @@ public final class MediaStreamComponent: CombinedComponent {
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
-            if !environment.isVisible {
+            if environment.isVisible {
+            } else {
                 context.state.dismissOffset = 0.0
             }
             
@@ -588,29 +613,28 @@ public final class MediaStreamComponent: CombinedComponent {
             let call = context.component.call
             let controller = environment.controller
             
-            let video = Condition(context.state.hasVideo) {
-                return video.update(
-                    component: MediaStreamVideoComponent(
-                        call: context.component.call,
-                        activatePictureInPicture: activatePictureInPicture,
-                        bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
-                            guard let call = call else {
-                                completed()
-                                return
-                            }
-                            
-                            call.accountContext.sharedContext.mainWindow?.inCallNavigate?()
-                            
+            let video = video.update(
+                component: MediaStreamVideoComponent(
+                    call: context.component.call,
+                    hasVideo: context.state.hasVideo,
+                    activatePictureInPicture: activatePictureInPicture,
+                    bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
+                        guard let call = call else {
                             completed()
+                            return
                         }
-                    ),
-                    availableSize: context.availableSize,
-                    transition: context.transition
-                )
-            }
+                        
+                        call.accountContext.sharedContext.mainWindow?.inCallNavigate?()
+                        
+                        completed()
+                    }
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
             
             var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
-            if context.state.isPictureInPictureSupported, let _ = video {
+            if context.state.isPictureInPictureSupported, context.state.hasVideo {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Media Gallery/PictureInPictureButton",
@@ -663,7 +687,7 @@ public final class MediaStreamComponent: CombinedComponent {
                     topInset: environment.statusBarHeight,
                     sideInset: environment.safeInsets.left,
                     leftItem: AnyComponent(Button(
-                        content: AnyComponent(NavigationBackButtonComponent(text: environment.strings.Common_Back, color: .white)),
+                        content: AnyComponent(NavigationBackButtonComponent(text: environment.strings.Common_Close, color: .white)),
                         action: { [weak call] in
                             let _ = call?.leave(terminateIfPossible: false)
                         })
@@ -676,6 +700,14 @@ public final class MediaStreamComponent: CombinedComponent {
             )
             
             let isLandscape = context.availableSize.width > context.availableSize.height
+            if context.state.storedIsLandscape != isLandscape {
+                context.state.storedIsLandscape = isLandscape
+                if isLandscape {
+                    context.state.scheduleDismissUI()
+                } else {
+                    context.state.cancelScheduledDismissUI()
+                }
+            }
             
             var infoItem: AnyComponent<Empty>?
             if let originInfo = context.state.originInfo {
@@ -754,11 +786,9 @@ public final class MediaStreamComponent: CombinedComponent {
                 })
             )
             
-            if let video = video {
-                context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0 + context.state.dismissOffset))
-                )
-            }
+            context.add(video
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0 + context.state.dismissOffset))
+            )
             
             context.add(navigationBar
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
@@ -776,6 +806,7 @@ public final class MediaStreamComponent: CombinedComponent {
 }
 
 public final class MediaStreamComponentController: ViewControllerComponentContainer, VoiceChatController {
+    private let context: AccountContext
     public let call: PresentationGroupCall
     public private(set) var currentOverlayController: VoiceChatOverlayController? = nil
     public var parentNavigationController: NavigationController?
@@ -785,13 +816,19 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
     
     private var initialOrientation: UIInterfaceOrientation?
     
+    private let inviteLinksPromise = Promise<GroupCallInviteLinks?>(nil)
+    
     public init(call: PresentationGroupCall) {
+        self.context = call.accountContext
         self.call = call
         
         super.init(context: call.accountContext, component: MediaStreamComponent(call: call as! PresentationGroupCallImpl))
         
         self.statusBar.statusBarStyle = .White
         self.view.disablesInteractiveModalDismiss = true
+        
+        self.inviteLinksPromise.set(.single(nil)
+        |> then(call.inviteLinks))
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -809,6 +846,10 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         
         DispatchQueue.main.async {
             self.onViewDidAppear?()
+        }
+        
+        if let view = self.node.hostView.findTaggedView(tag: MediaStreamVideoComponent.View.Tag()) as? MediaStreamVideoComponent.View {
+            view.expandFromPictureInPicture()
         }
         
         self.view.layer.allowsGroupOpacity = true
@@ -858,6 +899,41 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
     }
     
     func presentShare() {
+        let _ = (self.inviteLinksPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] inviteLinks in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let callPeerId = strongSelf.call.peerId
+            let _ = (strongSelf.call.accountContext.account.postbox.transaction { transaction -> GroupCallInviteLinks? in
+                if let inviteLinks = inviteLinks {
+                    return inviteLinks
+                } else if let peer = transaction.getPeer(callPeerId), let addressName = peer.addressName, !addressName.isEmpty {
+                    return GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)?voicechat", speakerLink: nil)
+                } else if let cachedData = transaction.getPeerCachedData(peerId: callPeerId) {
+                    if let cachedData = cachedData as? CachedChannelData, let link = cachedData.exportedInvitation?.link {
+                        return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
+                    } else if let cachedData = cachedData as? CachedGroupData, let link = cachedData.exportedInvitation?.link {
+                        return GroupCallInviteLinks(listenerLink: link, speakerLink: nil)
+                    }
+                }
+                return nil
+            }
+            |> deliverOnMainQueue).start(next: { links in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if let links = links {
+                    strongSelf.presentShare(links: links)
+                }
+            })
+        })
+    }
+        
+    func presentShare(links inviteLinks: GroupCallInviteLinks) {
         let formatSendTitle: (String) -> String = { string in
             var string = string
             if string.contains("[") && string.contains("]") {
@@ -869,34 +945,29 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             }
             return string
         }
+        let _ = formatSendTitle
         
-        let _ = (combineLatest(self.call.accountContext.account.postbox.loadedPeerWithId(self.call.peerId), self.call.state |> take(1))
+        let _ = (combineLatest(queue: .mainQueue(), self.context.account.postbox.loadedPeerWithId(self.call.peerId), self.call.state |> take(1))
         |> deliverOnMainQueue).start(next: { [weak self] peer, callState in
             if let strongSelf = self {
-                var maybeInviteLinks: GroupCallInviteLinks? = nil
+                var inviteLinks = inviteLinks
                 
-                if let peer = peer as? TelegramChannel, let addressName = peer.addressName {
-                    maybeInviteLinks = GroupCallInviteLinks(listenerLink: "https://t.me/\(addressName)", speakerLink: nil)
+                if let peer = peer as? TelegramChannel, case .group = peer.info, !peer.flags.contains(.isGigagroup), !(peer.addressName ?? "").isEmpty, let defaultParticipantMuteState = callState.defaultParticipantMuteState {
+                    let isMuted = defaultParticipantMuteState == .muted
+                    
+                    if !isMuted {
+                        inviteLinks = GroupCallInviteLinks(listenerLink: inviteLinks.listenerLink, speakerLink: nil)
+                    }
                 }
                 
-                guard let inviteLinks = maybeInviteLinks else {
-                    return
-                }
-                
-                let presentationData = strongSelf.call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                 
                 var segmentedValues: [ShareControllerSegmentedValue]?
-                if let speakerLink = inviteLinks.speakerLink {
-                    segmentedValues = [ShareControllerSegmentedValue(title: presentationData.strings.VoiceChat_InviteLink_Speaker, subject: .url(speakerLink), actionTitle: presentationData.strings.VoiceChat_InviteLink_CopySpeakerLink, formatSendTitle: { count in
-                        return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteSpeakers(Int32(count)))
-                    }), ShareControllerSegmentedValue(title: presentationData.strings.VoiceChat_InviteLink_Listener, subject: .url(inviteLinks.listenerLink), actionTitle: presentationData.strings.VoiceChat_InviteLink_CopyListenerLink, formatSendTitle: { count in
-                        return formatSendTitle(presentationData.strings.VoiceChat_InviteLink_InviteListeners(Int32(count)))
-                    })]
-                }
-                let shareController = ShareController(context: strongSelf.call.accountContext, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: defaultDarkColorPresentationTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
+                segmentedValues = nil
+                let shareController = ShareController(context: strongSelf.context, subject: .url(inviteLinks.listenerLink), segmentedValues: segmentedValues, forceTheme: defaultDarkPresentationTheme, forcedActionTitle: presentationData.strings.VoiceChat_CopyInviteLink)
                 shareController.completed = { [weak self] peerIds in
                     if let strongSelf = self {
-                        let _ = (strongSelf.call.accountContext.account.postbox.transaction { transaction -> [Peer] in
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
                             var peers: [Peer] = []
                             for peerId in peerIds {
                                 if let peer = transaction.getPeer(peerId) {
@@ -904,19 +975,19 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
                                 }
                             }
                             return peers
-                        } |> deliverOnMainQueue).start(next: { peers in
+                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
                             if let strongSelf = self {
-                                let presentationData = strongSelf.call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 
                                 let text: String
                                 var isSavedMessages = false
                                 if peers.count == 1, let peer = peers.first {
-                                    isSavedMessages = peer.id == strongSelf.call.accountContext.account.peerId
-                                    let peerName = peer.id == strongSelf.call.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    isSavedMessages = peer.id == strongSelf.context.account.peerId
+                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.VoiceChat_ForwardTooltip_Chat(peerName).string
                                 } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
-                                    let firstPeerName = firstPeer.id == strongSelf.call.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                    let secondPeerName = secondPeer.id == strongSelf.call.accountContext.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                     text = presentationData.strings.VoiceChat_ForwardTooltip_TwoChats(firstPeerName, secondPeerName).string
                                 } else if let peer = peers.first {
                                     let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
@@ -932,7 +1003,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
                 }
                 shareController.actionCompleted = {
                     if let strongSelf = self {
-                        let presentationData = strongSelf.call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.VoiceChat_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                     }
                 }
