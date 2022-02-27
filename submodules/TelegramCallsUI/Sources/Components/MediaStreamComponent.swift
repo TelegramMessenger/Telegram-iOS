@@ -851,12 +851,6 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         fatalError("init(coder:) has not been implemented")
     }
     
-    deinit {
-        if let initialOrientation = self.initialOrientation {
-            self.call.accountContext.sharedContext.applicationBindings.forceOrientation(initialOrientation)
-        }
-    }
-    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
@@ -882,6 +876,11 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         
         DispatchQueue.main.async {
             self.onViewDidDisappear?()
+        }
+        
+        if let initialOrientation = self.initialOrientation {
+            self.initialOrientation = nil
+            self.call.accountContext.sharedContext.applicationBindings.forceOrientation(initialOrientation)
         }
     }
     

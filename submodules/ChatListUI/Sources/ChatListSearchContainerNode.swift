@@ -583,7 +583,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         if let suggestedFilters = self.suggestedFilters, !suggestedFilters.isEmpty {
             filters = suggestedFilters
         } else {
-            filters = [.chats, .media, .downloads, .links, .files, .music, .voice]
+            filters = defaultAvailableSearchPanes(hasDownloads: self.hasDownloads).map(\.filter)
         }
         
         let overflowInset: CGFloat = 20.0
@@ -844,7 +844,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             
                             strongSelf.context.fetchManager.raisePriority(resourceId: downloadResource.id)
                             
-                            Queue.mainQueue().after(0.1, {
+                            Queue.mainQueue().after(0.2, {
                                 f(.default)
                             })
                         })))
@@ -860,7 +860,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         
                         strongSelf.context.fetchManager.cancelInteractiveFetches(resourceId: downloadResource.id)
                         
-                        f(.default)
+                        f(.dismissWithoutContent)
                     })))
                 }
                 
