@@ -301,6 +301,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 cameraView.removeCorners()
                 cameraView.pressed = { [weak self] in
                     if let strongSelf = self, !strongSelf.openingMedia {
+                        strongSelf.dismissInput()
                         strongSelf.controller?.openCamera?(strongSelf.cameraView)
                     }
                 }
