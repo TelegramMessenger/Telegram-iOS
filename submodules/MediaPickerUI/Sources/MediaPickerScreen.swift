@@ -301,6 +301,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 cameraView.removeCorners()
                 cameraView.pressed = { [weak self] in
                     if let strongSelf = self, !strongSelf.openingMedia {
+                        strongSelf.dismissInput()
                         strongSelf.controller?.openCamera?(strongSelf.cameraView)
                     }
                 }
@@ -500,6 +501,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
+                self?.cameraView?.pausePreview()
+            }, willTransitionOut: { [weak self] in
+                self?.cameraView?.resumePreview()
             }, dismissAll: { [weak self] in
                 self?.controller?.dismissAll()
             })
@@ -533,6 +537,9 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self?.controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
             }, finishedTransitionIn: { [weak self] in
                 self?.openingMedia = false
+                self?.cameraView?.pausePreview()
+            }, willTransitionOut: { [weak self] in
+                self?.cameraView?.resumePreview()
             }, dismissAll: { [weak self] in
                 self?.controller?.dismissAll()
             })
@@ -848,6 +855,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         self?.controller?.context.sharedContext.applicationBindings.openSettings()
                     }
                     placeholderNode.cameraPressed = { [weak self] in
+                        self?.dismissInput()
                         self?.controller?.openCamera?(nil)
                     }
                     self.containerNode.insertSubnode(placeholderNode, aboveSubnode: self.gridNode)

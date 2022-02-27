@@ -11,6 +11,8 @@ import CheckNode
 import MosaicLayout
 import WallpaperBackgroundNode
 import AccountContext
+import ChatMessageBackground
+
 
 private class MediaPickerSelectedItemNode: ASDisplayNode {
     let asset: TGMediaAsset
@@ -189,12 +191,56 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     }
 }
 
+private class MessageBackgroundNode: ASDisplayNode {
+    private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
+    private let backgroundNode: ChatMessageBackground
+    private let shadowNode: ChatMessageShadowNode
+    
+    override init() {
+        self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
+        self.backgroundNode = ChatMessageBackground()
+        self.shadowNode = ChatMessageShadowNode()
+
+        super.init()
+        
+        self.addSubnode(self.backgroundWallpaperNode)
+        self.addSubnode(self.backgroundNode)
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    
+    func update(size: CGSize, theme: PresentationTheme, wallpaper: TelegramWallpaper, graphics: PrincipalThemeEssentialGraphics, wallpaperBackgroundNode: WallpaperBackgroundNode, transition: ContainedViewLayoutTransition) {
+        
+        self.backgroundNode.setType(type: .outgoing(.Extracted), highlighted: false, graphics: graphics, maskMode: false, hasWallpaper: wallpaper.hasWallpaper, transition: transition, backgroundNode: wallpaperBackgroundNode)
+        self.backgroundWallpaperNode.setType(type: .outgoing(.Extracted), theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), essentialGraphics: graphics, maskMode: true, backgroundNode: wallpaperBackgroundNode)
+        self.shadowNode.setType(type: .outgoing(.Extracted), hasWallpaper: wallpaper.hasWallpaper, graphics: graphics)
+        
+        let backgroundFrame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: transition)
+        self.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition)
+        self.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: transition)
+        
+        if let (rect, size) = self.absoluteRect {
+            self.updateAbsoluteRect(rect, within: size)
+        }
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absoluteRect = (rect, containerSize)
+        
+        var backgroundWallpaperFrame = self.backgroundWallpaperNode.frame
+        backgroundWallpaperFrame.origin.x += rect.minX
+        backgroundWallpaperFrame.origin.y += rect.minY
+        self.backgroundWallpaperNode.update(rect: backgroundWallpaperFrame, within: containerSize)
+    }
+}
+
 final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let context: AccountContext
     
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
     private let scrollNode: ASScrollNode
-    private var backgroundNodes: [Int: ASImageNode] = [:]
+    private var backgroundNodes: [Int: MessageBackgroundNode] = [:]
     private var itemNodes: [String: MediaPickerSelectedItemNode] = [:]
     
     private var reorderFeedback: HapticFeedback?
@@ -210,6 +256,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
     init(context: AccountContext) {
         self.context = context
         self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        self.wallpaperBackgroundNode.backgroundColor = .black
         self.scrollNode = ASScrollNode()
         
         super.init()
@@ -230,7 +277,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         self.scrollNode.view.showsVerticalScrollIndicator = false
         
         self.view.addGestureRecognizer(ReorderingGestureRecognizer(shouldBegin: { [weak self] point in
-            if let strongSelf = self, !strongSelf.scrollNode.view.isDragging {
+            if let strongSelf = self, !strongSelf.scrollNode.view.isDragging && strongSelf.itemNodes.count > 1 {
                 let point = strongSelf.view.convert(point, to: strongSelf.scrollNode.view)
                 for (_, itemNode) in strongSelf.itemNodes {
                     if itemNode.frame.contains(point) {
@@ -284,6 +331,15 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         }
         
         for itemNode in messageNodes {
+            var absoluteRect = itemNode.frame
+            if let supernode = self.supernode {
+                absoluteRect = supernode.convert(itemNode.bounds, from: itemNode)
+            }
+            absoluteRect.origin.y = size.height - absoluteRect.origin.y - absoluteRect.size.height
+            itemNode.updateAbsoluteRect(absoluteRect, within: self.bounds.size)
+        }
+        
+        for (_, itemNode) in self.backgroundNodes {
             var absoluteRect = itemNode.frame
             if let supernode = self.supernode {
                 absoluteRect = supernode.convert(itemNode.bounds, from: itemNode)
@@ -485,21 +541,24 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             previewNode.updateFrame(previewNodeFrame, within: size, updateFrame: false)
         }
         
+        let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+        
         var groupIndex = 0
         for (items, groupSize) in groupLayouts {
             let groupRect = CGRect(origin: CGPoint(x: insets.left + floorToScreenPixels((size.width - insets.left - insets.right - groupSize.width) / 2.0), y: insets.top + contentHeight), size: groupSize)
             
-            let groupBackgroundNode: ASImageNode
+            let groupBackgroundNode: MessageBackgroundNode
             if let current = self.backgroundNodes[groupIndex] {
                 groupBackgroundNode = current
             } else {
-                groupBackgroundNode = ASImageNode()
+                groupBackgroundNode = MessageBackgroundNode()
                 groupBackgroundNode.displaysAsynchronously = false
                 self.backgroundNodes[groupIndex] = groupBackgroundNode
                 self.scrollNode.insertSubnode(groupBackgroundNode, at: 0)
             }
-            groupBackgroundNode.image = self.graphics?.chatMessageBackgroundOutgoingExtractedImage
-            transition.updateFrame(node: groupBackgroundNode, frame: groupRect.insetBy(dx: -6.0, dy: -3.0).offsetBy(dx: 3.0, dy: 0.0))
+
+            transition.updateFrame(node: groupBackgroundNode, frame: groupRect.insetBy(dx: -5.0, dy: -2.0).offsetBy(dx: 3.0, dy: 0.0))
+            groupBackgroundNode.update(size: groupBackgroundNode.frame.size, theme: theme, wallpaper: wallpaper, graphics: graphics, wallpaperBackgroundNode: self.wallpaperBackgroundNode, transition: transition)
             
             for (item, itemRect, itemPosition) in items {
                 if let identifier = item.uniqueIdentifier, let itemNode = self.itemNodes[identifier] {

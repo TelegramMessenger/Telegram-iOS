@@ -222,13 +222,21 @@
     _currentEdgeInsets = edgeInsets;
     
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
-    _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
+    
+    CGFloat y = 0.0;
+    if (frame.size.width > frame.size.height) {
+        y = edgeInsets.top + frame.size.height;
+    } else {
+        y = edgeInsets.top + frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight);
+    }
+    
+    _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
     
     CGFloat backgroundHeight = panelHeight;
     if (_keyboardHeight > 0.0) {
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
-    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, backgroundHeight);
+    _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
 }
 
 @end

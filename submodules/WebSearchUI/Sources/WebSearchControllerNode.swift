@@ -374,7 +374,7 @@ class WebSearchControllerNode: ASDisplayNode {
         
         if themeUpdated {
             self.gridNode.backgroundColor = self.theme.list.plainBackgroundColor
-            self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
+            self.segmentedBackgroundNode.backgroundColor = self.theme.list.plainBackgroundColor
             self.segmentedSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))
             self.toolbarBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.opaqueBackgroundColor
