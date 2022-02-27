@@ -854,6 +854,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         self?.controller?.context.sharedContext.applicationBindings.openSettings()
                     }
                     placeholderNode.cameraPressed = { [weak self] in
+                        self?.dismissInput()
                         self?.controller?.openCamera?(nil)
                     }
                     self.containerNode.insertSubnode(placeholderNode, aboveSubnode: self.gridNode)
