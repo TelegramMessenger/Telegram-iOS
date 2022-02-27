@@ -3,6 +3,27 @@ import ComponentFlow
 import Lottie
 import AppBundle
 
+private final class NullActionClass: NSObject, CAAction {
+    @objc public func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+    }
+}
+
+private let nullAction = NullActionClass()
+
+private final class HierarchyTrackingLayer: CALayer {
+    var didEnterHierarchy: (() -> Void)?
+    var didExitHierarchy: (() -> Void)?
+    
+    override func action(forKey event: String) -> CAAction? {
+        if event == kCAOnOrderIn {
+            self.didEnterHierarchy?()
+        } else if event == kCAOnOrderOut {
+            self.didExitHierarchy?()
+        }
+        return nullAction
+    }
+}
+
 public final class LottieAnimationComponent: Component {
     public struct Animation: Equatable {
         public var name: String
@@ -39,6 +60,28 @@ public final class LottieAnimationComponent: Component {
         
         private var colorCallbacks: [LOTColorValueCallback] = []
         private var animationView: LOTAnimationView?
+        
+        private let hierarchyTrackingLayer: HierarchyTrackingLayer
+        
+        override init(frame: CGRect) {
+            self.hierarchyTrackingLayer = HierarchyTrackingLayer()
+            
+            super.init(frame: frame)
+            
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
+            self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+                guard let strongSelf = self, let animationView = strongSelf.animationView else {
+                    return
+                }
+                if animationView.loopAnimation {
+                    animationView.play()
+                }
+            }
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
         
         func update(component: LottieAnimationComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             if self.currentAnimation != component.animation {
@@ -98,7 +141,7 @@ public final class LottieAnimationComponent: Component {
     }
     
     public func makeView() -> View {
-        return View()
+        return View(frame: CGRect())
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {

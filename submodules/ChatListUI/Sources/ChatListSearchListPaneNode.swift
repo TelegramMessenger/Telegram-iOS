@@ -925,6 +925,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let downloadItems: Signal<(inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]), NoError>
         if key == .downloads {
+            var firstTime = true
             downloadItems = combineLatest(queue: .mainQueue(), (context.fetchManager as! FetchManagerImpl).entriesSummary, recentDownloadItems(postbox: context.account.postbox))
             |> mapToSignal { entries, recentDownloadItems -> Signal<(inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]), NoError> in
                 var itemSignals: [Signal<DownloadItem?, NoError>] = []
@@ -947,7 +948,15 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> map { items -> (inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]) in
                     return (items.compactMap { $0 }, recentDownloadItems)
                 }
-                |> delay(0.1, queue: .mainQueue())
+                |> mapToSignal { value -> Signal<(inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]), NoError> in
+                    if firstTime {
+                        firstTime = false
+                        return .single(value)
+                    } else {
+                        return .single(value)
+                        |> delay(0.1, queue: .mainQueue())
+                    }
+                }
             }
         } else {
             downloadItems = .single(([], []))
