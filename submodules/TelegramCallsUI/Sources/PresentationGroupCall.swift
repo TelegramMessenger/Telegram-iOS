@@ -697,6 +697,10 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if let strongSelf = self {
                         strongSelf.updateIsAudioSessionActive(false)
                         strongSelf.updateSessionState(internalState: strongSelf.internalState, audioSessionControl: nil)
+                        
+                        if strongSelf.isStream {
+                            let _ = strongSelf.leave(terminateIfPossible: false)
+                        }
                     }
                     subscriber.putCompletion()
                 }

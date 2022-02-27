@@ -703,7 +703,7 @@ public final class MediaStreamComponent: CombinedComponent {
                     topInset: environment.statusBarHeight,
                     sideInset: environment.safeInsets.left,
                     leftItem: AnyComponent(Button(
-                        content: AnyComponent(NavigationBackButtonComponent(text: environment.strings.Common_Close, color: .white)),
+                        content: AnyComponent(Text(text: environment.strings.Common_Close, font: Font.regular(17.0), color: .white)),
                         action: { [weak call] in
                             let _ = call?.leave(terminateIfPossible: false)
                         })
