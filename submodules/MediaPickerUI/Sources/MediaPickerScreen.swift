@@ -377,7 +377,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         let count = preload ? min(10, totalCount) : totalCount
                         
                         for i in 0 ..< count {
-                            entries.append(MediaPickerGridEntry(stableId: stableId, content: .asset(fetchResult, totalCount - i - 1)))
+                            let index: Int
+                            if self.controller?.collection != nil {
+                                index = i
+                            } else {
+                                index = totalCount - i - 1
+                            }
+                            entries.append(MediaPickerGridEntry(stableId: stableId, content: .asset(fetchResult, index)))
                             stableId += 1
                         }
                         
@@ -398,7 +404,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             let previousEntries = self.currentEntries
             self.currentEntries = entries
             
-            let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, account: controller.context.account, interaction: interaction, theme: self.presentationData.theme, scrollToItem: nil)
+            var scrollToItem: GridNodeScrollToItem?
+            if self.controller?.collection != nil && previousEntries.isEmpty && !entries.isEmpty {
+                scrollToItem = GridNodeScrollToItem(index: entries.count - 1, position: .bottom(0.0), transition: .immediate, directionHint: .down, adjustForSection: false)
+            }
+            
+            let transaction = MediaPickerGridTransaction(previousList: previousEntries, list: entries, account: controller.context.account, interaction: interaction, theme: self.presentationData.theme, scrollToItem: scrollToItem)
             self.enqueueTransaction(transaction)
             
             if updateLayout, let (layout, navigationBarHeight) = self.validLayout {
@@ -486,8 +497,10 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             self.openingMedia = true
-            let index = fetchResult.count - index - 1
-            presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, chatLocation: controller.chatLocation, presentationData: self.presentationData, source: .fetchResult(fetchResult: fetchResult, index: index), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState, editingContext: interaction.editingState, hasSilentPosting: true, hasSchedule: true, hasTimer: hasTimer, updateHiddenMedia: { [weak self] id in
+            
+            let reversed = controller.collection == nil
+            let index = reversed ? fetchResult.count - index - 1 : index
+            presentLegacyMediaPickerGallery(context: controller.context, peer: controller.peer, chatLocation: controller.chatLocation, presentationData: self.presentationData, source: .fetchResult(fetchResult: fetchResult, index: index, reversed: reversed), immediateThumbnail: immediateThumbnail, selectionContext: interaction.selectionState, editingContext: interaction.editingState, hasSilentPosting: true, hasSchedule: true, hasTimer: hasTimer, updateHiddenMedia: { [weak self] id in
                 self?.hiddenMediaId.set(.single(id))
             }, initialLayout: layout, transitionHostView: { [weak self] in
                 return self?.gridNode.view
@@ -1090,33 +1103,20 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 self.requestAttachmentMenuExpansion()
             self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
                 if let strongSelf = self {
-                    if let webSearchController = strongSelf.webSearchController {
-                        if collection.assetCollectionSubtype != .smartAlbumUserLibrary {
-//                            strongSelf.webSearchController = nil
-//                            Queue.mainQueue().after(0.5) {
-//                                webSearchController.cancel()
-//                            }
-                        } else {
-                            strongSelf.webSearchController = nil
-                            webSearchController.cancel()
-                        }
+                    let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, collection: collection, editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
+                    
+                    mediaPicker.presentStickers = strongSelf.presentStickers
+                    mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
+                    mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
+                    mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
+                    mediaPicker.legacyCompletion = strongSelf.legacyCompletion
+                    mediaPicker.dismissAll = { [weak self] in
+                        self?.dismiss(animated: true, completion: nil)
                     }
-                    if collection.assetCollectionSubtype != .smartAlbumUserLibrary {
-                        let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, collection: collection, editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
-                        
-                        mediaPicker.presentStickers = strongSelf.presentStickers
-                        mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
-                        mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
-                        mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
-                        mediaPicker.legacyCompletion = strongSelf.legacyCompletion
-                        mediaPicker.dismissAll = { [weak self] in
-                            self?.dismiss(animated: true, completion: nil)
-                        }
-                        
-                        mediaPicker._presentedInModal = true
-                        mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
-                        strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
-                    }
+                    
+                    mediaPicker._presentedInModal = true
+                    mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
+                    strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
                 }
             }))
             case .more:

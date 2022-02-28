@@ -12,11 +12,11 @@ import LegacyUI
 import LegacyMediaPickerUI
 import Photos
 
-private func galleryFetchResultItems(fetchResult: PHFetchResult<PHAsset>, index: Int, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, stickersContext: TGPhotoPaintStickersContext, immediateThumbnail: UIImage?) -> ([TGModernGalleryItem], TGModernGalleryItem?) {
+private func galleryFetchResultItems(fetchResult: PHFetchResult<PHAsset>, index: Int, reversed: Bool, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, stickersContext: TGPhotoPaintStickersContext, immediateThumbnail: UIImage?) -> ([TGModernGalleryItem], TGModernGalleryItem?) {
     var focusItem: TGModernGalleryItem?
     var galleryItems: [TGModernGalleryItem] = []
     
-    let legacyFetchResult = TGMediaAssetFetchResult(phFetchResult: fetchResult as? PHFetchResult<AnyObject>, reversed: true)
+    let legacyFetchResult = TGMediaAssetFetchResult(phFetchResult: fetchResult as? PHFetchResult<AnyObject>, reversed: reversed)
     
     for i in 0 ..< fetchResult.count {
         if let galleryItem = TGMediaPickerGalleryFetchResultItem(fetchResult: legacyFetchResult, index: UInt(i)) {
@@ -70,7 +70,7 @@ private func gallerySelectionItems(item: TGMediaSelectableItem, selectionContext
 }
 
 enum LegacyMediaPickerGallerySource {
-    case fetchResult(fetchResult: PHFetchResult<PHAsset>, index: Int)
+    case fetchResult(fetchResult: PHFetchResult<PHAsset>, index: Int, reversed: Bool)
     case selection(item: TGMediaSelectableItem)
 }
 
@@ -102,8 +102,8 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     
     let (items, focusItem): ([TGModernGalleryItem], TGModernGalleryItem?)
     switch source {
-        case let .fetchResult(fetchResult, index):
-            (items, focusItem) = galleryFetchResultItems(fetchResult: fetchResult, index: index, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail)
+        case let .fetchResult(fetchResult, index, reversed):
+            (items, focusItem) = galleryFetchResultItems(fetchResult: fetchResult, index: index, reversed: reversed, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail)
         case let .selection(item):
             (items, focusItem) = gallerySelectionItems(item: item, selectionContext: selectionContext, editingContext: editingContext, stickersContext: paintStickersContext, immediateThumbnail: immediateThumbnail)
     }

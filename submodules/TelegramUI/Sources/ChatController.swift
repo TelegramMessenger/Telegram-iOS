@@ -10326,7 +10326,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
         var bannedSendMedia: (Int32, Bool)?
         var canSendPolls = true
-        if peer is TelegramUser || peer is TelegramSecretChat {
+        if let peer = peer as? TelegramUser, peer.botInfo == nil {
+            canSendPolls = false
+        } else if peer is TelegramSecretChat {
             canSendPolls = false
         } else if let channel = peer as? TelegramChannel {
             if let value = channel.hasBannedPermission(.banSendMedia) {

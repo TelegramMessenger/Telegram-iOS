@@ -325,7 +325,7 @@ public final class MediaGroupsScreen: ViewController {
             
             let size = layout.size
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + 50.0, right: layout.safeInsets.right), headerInsets: UIEdgeInsets(), scrollIndicatorInsets: UIEdgeInsets(), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + 56.0, right: layout.safeInsets.right), headerInsets: UIEdgeInsets(), scrollIndicatorInsets: UIEdgeInsets(), duration: duration, curve: curve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
             transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
             
             if firstTime {
