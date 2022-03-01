@@ -79,18 +79,20 @@ final class WebSearchControllerInteraction {
     let setSearchQuery: (String) -> Void
     let deleteRecentQuery: (String) -> Void
     let toggleSelection: (ChatContextResult, Bool) -> Void
-    let sendSelected: (ChatContextResultCollection, ChatContextResult?) -> Void
+    let sendSelected: (ChatContextResult?, Bool, Int32?) -> Void
+    let schedule: () -> Void
     let avatarCompleted: (UIImage) -> Void
     let selectionState: TGMediaSelectionContext?
     let editingState: TGMediaEditingContext
     var hiddenMediaId: String?
     
-    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResultCollection, ChatContextResult?) -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
+    init(openResult: @escaping (ChatContextResult) -> Void, setSearchQuery: @escaping (String) -> Void, deleteRecentQuery: @escaping (String) -> Void, toggleSelection: @escaping (ChatContextResult, Bool) -> Void, sendSelected: @escaping (ChatContextResult?, Bool, Int32?) -> Void, schedule: @escaping () -> Void, avatarCompleted: @escaping (UIImage) -> Void, selectionState: TGMediaSelectionContext?, editingState: TGMediaEditingContext) {
         self.openResult = openResult
         self.setSearchQuery = setSearchQuery
         self.deleteRecentQuery = deleteRecentQuery
         self.toggleSelection = toggleSelection
         self.sendSelected = sendSelected
+        self.schedule = schedule
         self.avatarCompleted = avatarCompleted
         self.selectionState = selectionState
         self.editingState = editingState
@@ -161,6 +163,8 @@ public final class WebSearchController: ViewController {
             self.controllerNode.getCaptionPanelView = self.getCaptionPanelView
         }
     }
+    
+    public var presentSchedulePicker: (Bool, @escaping (Int32) -> Void) -> Void = { _, _ in }
     
     public var dismissed: () -> Void = { }
     
@@ -283,8 +287,8 @@ public final class WebSearchController: ViewController {
                 let item = LegacyWebSearchItem(result: result)
                 strongSelf.controllerInteraction?.selectionState?.setItem(item, selected: value)
             }
-        }, sendSelected: { results, current in
-            if let selectionState = selectionState {
+        }, sendSelected: { [weak self] current, silently, scheduleTime in
+            if let selectionState = selectionState, let results = self?.controllerNode.currentExternalResults {
                 if let current = current {
                     let currentItem = LegacyWebSearchItem(result: current)
                     selectionState.setItem(currentItem, selected: true)
@@ -292,6 +296,12 @@ public final class WebSearchController: ViewController {
                 if case let .media(_, sendSelected) = mode {
                     sendSelected(results, selectionState, editingState, false)
                 }
+            }
+        }, schedule: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.presentSchedulePicker(false, { [weak self] time in
+                    self?.controllerInteraction?.sendSelected(nil, false, time)
+                })
             }
         }, avatarCompleted: { result in
             if case let .avatar(_, avatarCompleted) = mode {
@@ -592,10 +602,10 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
     }
     
     public func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
-//        self.interaction?.sendSelected(nil, silently, nil, true)
+        self.interaction?.sendSelected(nil, silently, nil)
     }
     
     public func schedule() {
-//        self.interaction?.schedule()
+        self.interaction?.schedule()
     }
 }
