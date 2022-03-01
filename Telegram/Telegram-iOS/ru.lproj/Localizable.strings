@@ -5,5 +5,7 @@
 "PasscodeSettings.AddFakePasscode" = "Добавить ложный код-пароль";
 "PasscodeSettings.FakePasscodeHelp" = "Действия которые будут выполнены, когда введен ложный код-пароль";
 "PasscodeSettings.PasscodeInUse" = "Этот код-пароль уже используется";
+"PasscodeSettings.ConfirmDeletion" = "Подтверждение удаления";
+"PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Все ложные код-пароли будут удалены. Хотите продолжить?";
 
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версия %3$@";

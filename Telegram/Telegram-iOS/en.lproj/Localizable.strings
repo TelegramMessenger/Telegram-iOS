@@ -1203,6 +1203,8 @@
 "PasscodeSettings.AddFakePasscode" = "Add Fake Passcode";
 "PasscodeSettings.FakePasscodeHelp" = "When a fake passcode is entered, selected actions are performed.";
 "PasscodeSettings.PasscodeInUse" = "This passcode is already in use";
+"PasscodeSettings.ConfirmDeletion" = "Confirm deletion";
+"PasscodeSettings.AllFakePasscodesWillBeDeleted" = "All fake passcodes will be deleted. Are you sure you want to continue?";
 
 "EnterPasscode.EnterTitle" = "Enter your Telegram Passcode";
 "EnterPasscode.ChangeTitle" = "Change Passcode";

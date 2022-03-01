@@ -1,9 +1,11 @@
 "PasscodeSettings.AutoLock.IfAwayFor_1second" = "Пасля 1 секунды адсутнасцi";
 
-"PasscodeSettings.FakePasscodes" = "Фальшывыя код-паролі";
-"PasscodeSettings.FakePasscode" = "Фальшывы код-пароль %1$d";
-"PasscodeSettings.AddFakePasscode" = "Дадаць фальшывы код-пароль";
-"PasscodeSettings.FakePasscodeHelp" = "Дзеянні якія будуць выкананы, калі ўведзены фальшывы код-пароль";
-"PasscodeSettings.PasscodeInUse" = "Гэты код-пароль ужо выкарыстоўваецца";
+"PasscodeSettings.FakePasscodes" = "Несапраўдныя кады доступу";
+"PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
+"PasscodeSettings.AddFakePasscode" = "Дадаць несапраўдны код доступу";
+"PasscodeSettings.FakePasscodeHelp" = "Пры ўводзе несапраўднага кода доступу выконваюцца выбранныя дзеянні.";
+"PasscodeSettings.PasscodeInUse" = "Гэты код доступу ужо выкарыстоўваецца";
+"PasscodeSettings.ConfirmDeletion" = "Пацвердзіце выдаленне";
+"PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Усе несапраўдныя кады доступу будць выдалены. Жадаеце працягнуць?";
 
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
