@@ -17,7 +17,7 @@
 
 - (CGSize)originalSize
 {
-    AVAssetTrack *track = self.tracks.firstObject;
+    AVAssetTrack *track = [self tracksWithMediaType:AVMediaTypeVideo].firstObject;
     return CGRectApplyAffineTransform((CGRect){ CGPointZero, track.naturalSize }, track.preferredTransform).size;
 }
 
