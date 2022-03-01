@@ -20,6 +20,7 @@ class MediaGroupsAlbumItem: ListViewItem, ListViewItemWithHeader {
         case animated
         case depthEffect
         case livePhotos
+        case hidden
         
         var image: UIImage? {
             switch self {
@@ -43,6 +44,8 @@ class MediaGroupsAlbumItem: ListViewItem, ListViewItemWithHeader {
                     return UIImage(bundleImageName: "Chat/Attach Menu/Portrait")
                 case .livePhotos:
                     return UIImage(bundleImageName: "Chat/Attach Menu/LivePhoto")
+                case .hidden:
+                    return UIImage(bundleImageName: "Chat/Attach Menu/Hidden")
             }
         }
     }

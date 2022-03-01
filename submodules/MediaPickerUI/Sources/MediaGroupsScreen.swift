@@ -105,9 +105,9 @@ private enum MediaGroupsEntry: Comparable, Identifiable {
                     case .smartAlbumBursts:
                         icon = .bursts
                     case .smartAlbumDepthEffect:
-                        icon = .selfPortraits
-                    case .smartAlbumLivePhotos:
                         icon = .depthEffect
+                    case .smartAlbumLivePhotos:
+                        icon = .livePhotos
                     case .smartAlbumPanoramas:
                         icon = .panoramas
                     case .smartAlbumScreenshots:
@@ -120,6 +120,8 @@ private enum MediaGroupsEntry: Comparable, Identifiable {
                         icon = .timelapses
                     case .smartAlbumVideos:
                         icon = .videos
+                    case .smartAlbumAllHidden:
+                        icon = .hidden
                     default:
                         icon = nil
                 }
@@ -248,7 +250,8 @@ public final class MediaGroupsScreen: ViewController {
                     .smartAlbumSelfPortraits,
                     .smartAlbumSlomoVideos,
                     .smartAlbumTimelapses,
-                    .smartAlbumVideos
+                    .smartAlbumVideos,
+                    .smartAlbumAllHidden
                 ]
                 if #available(iOS 11, *) {
                     supportedAlbums.append(.smartAlbumAnimated)

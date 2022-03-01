@@ -162,7 +162,7 @@ class WebSearchControllerNode: ASDisplayNode {
     private var enqueuedTransitions: [(WebSearchTransition, Bool)] = []
     private var dequeuedInitialTransitionOnLayout = false
     
-    private var currentExternalResults: ChatContextResultCollection?
+    private(set) var currentExternalResults: ChatContextResultCollection?
     private var currentProcessedResults: ChatContextResultCollection?
     private var currentEntries: [WebSearchEntry]?
     private var hasMore = false
@@ -718,9 +718,8 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     @objc private func sendPressed() {
-        if let results = self.currentExternalResults {
-            self.controllerInteraction.sendSelected(results, nil)
-        }
+        self.controllerInteraction.sendSelected(nil, false, nil)
+        
         self.cancel?()
     }
     
@@ -741,8 +740,8 @@ class WebSearchControllerNode: ASDisplayNode {
                     }, transitionView: { [weak self] result in
                         return self?.transitionNode(for: result)?.transitionView()
                     }, completed: { [weak self] result in
-                        if let strongSelf = self, let results = strongSelf.currentExternalResults {
-                            strongSelf.controllerInteraction.sendSelected(results, result)
+                        if let strongSelf = self {
+                            strongSelf.controllerInteraction.sendSelected(result, false, nil)
                             strongSelf.cancel?()
                         }
                     }, presentStickers: self.presentStickers, getCaptionPanelView: self.getCaptionPanelView, present: present)
@@ -761,8 +760,8 @@ class WebSearchControllerNode: ASDisplayNode {
                     let controller = WebSearchGalleryController(context: self.context, peer: self.peer, selectionState: self.controllerInteraction.selectionState, editingState: self.controllerInteraction.editingState, entries: entries, centralIndex: centralIndex, replaceRootController: { (controller, _) in
                         
                     }, baseNavigationController: nil, sendCurrent: { [weak self] result in
-                        if let strongSelf = self, let results = strongSelf.currentExternalResults {
-                            strongSelf.controllerInteraction.sendSelected(results, result)
+                        if let strongSelf = self {
+                            strongSelf.controllerInteraction.sendSelected(result, false, nil)
                             strongSelf.cancel?()
                         }
                     })
