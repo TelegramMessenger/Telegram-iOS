@@ -339,7 +339,7 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 
 @end
 
-static NSMutableDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode);
+static NSDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode);
 
 @implementation _PresentationStringsComponent
 
@@ -368,7 +368,7 @@ static NSMutableDictionary<NSString *, NSString *> * _Nullable localizableDictio
 @end
 
 
-static NSMutableDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode) {
+static NSDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode) {
     NSString *lprojPath = [getAppBundle() pathForResource:languageCode ofType:@"lproj"];
     if (!lprojPath) {
         return nil;
@@ -381,7 +381,7 @@ static NSMutableDictionary<NSString *, NSString *> * _Nullable localizableDictio
     if (!stringsPath) {
         return nil;
     }
-    return [NSMutableDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:stringsPath]];
+    return [NSDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:stringsPath]];
 }
 
 static NSArray<_FormattedStringRange *> * _Nonnull extractArgumentRanges(NSString * _Nonnull string) {
@@ -481,7 +481,7 @@ static NSString * _Nonnull getSingle(_PresentationStrings * _Nullable strings, N
         dispatch_once(&onceToken, ^{
             fallbackDict = localizableDictionary(@"en");
         });
-        result = strings.primaryComponent.fallbackLocal[key] ?: fallbackDict[key];
+        result = strings.primaryComponent.fallbackLocal[key] ?: strings.secondaryComponent.fallbackLocal[key] ?: fallbackDict[key];
     }
     if (!result) {
         result = key;
