@@ -111,6 +111,11 @@ public protocol ComponentTaggedView: UIView {
     func matches(tag: Any) -> Bool
 }
 
+public final class GenericComponentViewTag {
+    public init() {
+    }
+}
+
 public protocol Component: _TypeErasedComponent, Equatable {
     associatedtype EnvironmentType = Empty
     associatedtype View: UIView = UIView

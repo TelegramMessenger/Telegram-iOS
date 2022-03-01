@@ -4,6 +4,7 @@ import UIKit
 public final class Button: Component {
     public let content: AnyComponent<Empty>
     public let minSize: CGSize?
+    public let tag: AnyObject?
     public let action: () -> Void
 
     convenience public init(
@@ -13,6 +14,7 @@ public final class Button: Component {
         self.init(
             content: content,
             minSize: nil,
+            tag: nil,
             action: action
         )
     }
@@ -20,10 +22,12 @@ public final class Button: Component {
     private init(
         content: AnyComponent<Empty>,
         minSize: CGSize?,
+        tag: AnyObject? = nil,
         action: @escaping () -> Void
     ) {
         self.content = content
         self.minSize = nil
+        self.tag = tag
         self.action = action
     }
     
@@ -31,6 +35,16 @@ public final class Button: Component {
         return Button(
             content: self.content,
             minSize: minSize,
+            tag: self.tag,
+            action: self.action
+        )
+    }
+    
+    public func tagged(_ tag: AnyObject) -> Button {
+        return Button(
+            content: self.content,
+            minSize: self.minSize,
+            tag: tag,
             action: self.action
         )
     }
@@ -42,10 +56,13 @@ public final class Button: Component {
         if lhs.minSize != rhs.minSize {
             return false
         }
+        if lhs.tag !== rhs.tag {
+            return false
+        }
         return true
     }
     
-    public final class View: UIButton {
+    public final class View: UIButton, ComponentTaggedView {
         private let contentView: ComponentHostView<Empty>
         
         private var component: Button?
@@ -70,6 +87,16 @@ public final class Button: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
         }
         
         @objc private func pressed() {

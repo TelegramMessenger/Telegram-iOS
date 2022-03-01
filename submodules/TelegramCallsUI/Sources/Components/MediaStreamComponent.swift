@@ -11,6 +11,7 @@ import ShareController
 import UndoUI
 import TelegramPresentationData
 import LottieAnimationComponent
+import ContextUI
 
 final class NavigationBackButtonComponent: Component {
     let text: String
@@ -258,8 +259,8 @@ private final class NavigationBarComponent: CombinedComponent {
                 context.add(item
                     .position(CGPoint(x: rightItemX - item.size.width / 2.0, y: context.component.topInset + contentHeight / 2.0))
                 )
-                rightItemX -= item.size.width + 4.0
-                centerRightInset += item.size.width + 4.0
+                rightItemX -= item.size.width + 8.0
+                centerRightInset += item.size.width + 8.0
             }
             
             let maxCenterInset = max(centerLeftInset, centerRightInset)
@@ -491,6 +492,7 @@ public final class MediaStreamComponent: CombinedComponent {
         
         var storedIsLandscape: Bool?
         
+        private(set) var canManageCall: Bool = false
         let isPictureInPictureSupported: Bool
         
         private(set) var isVisibleInHierarchy: Bool = false
@@ -532,20 +534,30 @@ public final class MediaStreamComponent: CombinedComponent {
                 return transaction.getPeer(peerId)
             }
             
-            self.infoDisposable = (combineLatest(queue: .mainQueue(), call.members, callPeer)
-            |> deliverOnMainQueue).start(next: { [weak self] members, callPeer in
+            self.infoDisposable = (combineLatest(queue: .mainQueue(), call.state, call.members, callPeer)
+            |> deliverOnMainQueue).start(next: { [weak self] state, members, callPeer in
                 guard let strongSelf = self, let members = members, let callPeer = callPeer else {
                     return
+                }
+                
+                var updated = false
+                if state.canManageCall != strongSelf.canManageCall {
+                    strongSelf.canManageCall = state.canManageCall
+                    updated = true
                 }
                 
                 let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: members.totalCount)
                 if strongSelf.originInfo != originInfo {
                     strongSelf.originInfo = originInfo
+                    updated = true
+                }
+                
+                if updated {
                     strongSelf.updated(transition: .immediate)
                 }
             })
             
-            let _ = call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false).start()
+            //let _ = call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false).start()
             
             self.isVisibleInHierarchyDisposable = (call.accountContext.sharedContext.applicationBindings.applicationInForeground
             |> deliverOnMainQueue).start(next: { [weak self] inForeground in
@@ -611,6 +623,8 @@ public final class MediaStreamComponent: CombinedComponent {
         let toolbar = Child(ToolbarComponent.self)
         
         let activatePictureInPicture = StoredActionSlot(Action<Void>.self)
+        let moreButtonTag = GenericComponentViewTag()
+        let moreAnimationTag = GenericComponentViewTag()
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -667,36 +681,108 @@ public final class MediaStreamComponent: CombinedComponent {
                 ).minSize(CGSize(width: 44.0, height: 44.0)))))
             }
             
-            /*let whiteColor = UIColor(white: 1.0, alpha: 1.0)
-            navigationRightItems.append(AnyComponentWithIdentity(id: "more", component: AnyComponent(Button(
-                content: AnyComponent(ZStack([
-                    AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
-                        color: .white,
-                        size: CGSize(width: 22.0, height: 22.0),
-                        width: 1.5
-                    ))),
-                    AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
-                        animation: LottieAnimationComponent.Animation(
-                            name: "anim_profilemore",
-                            colors: [
-                                "Point 2.Group 1.Fill 1": whiteColor,
-                                "Point 3.Group 1.Fill 1": whiteColor,
-                                "Point 1.Group 1.Fill 1": whiteColor
-                            ],
-                            loop: true
-                        ),
-                        size: CGSize(width: 22.0, height: 22.0)
-                    ))),
-                ])),
-                action: {
-                    activatePictureInPicture.invoke(Action {
+            if context.state.canManageCall {
+                let whiteColor = UIColor(white: 1.0, alpha: 1.0)
+                navigationRightItems.append(AnyComponentWithIdentity(id: "more", component: AnyComponent(Button(
+                    content: AnyComponent(ZStack([
+                        AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
+                            color: .white,
+                            size: CGSize(width: 22.0, height: 22.0),
+                            width: 1.5
+                        ))),
+                        AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
+                            animation: LottieAnimationComponent.Animation(
+                                name: "anim_profilemore",
+                                colors: [
+                                    "Point 2.Group 1.Fill 1": whiteColor,
+                                    "Point 3.Group 1.Fill 1": whiteColor,
+                                    "Point 1.Group 1.Fill 1": whiteColor
+                                ],
+                                loop: false,
+                                isAnimating: false
+                            ),
+                            size: CGSize(width: 22.0, height: 22.0)
+                        ).tagged(moreAnimationTag))),
+                    ])),
+                    action: { [weak call] in
+                        guard let call = call else {
+                            return
+                        }
                         guard let controller = controller() as? MediaStreamComponentController else {
                             return
                         }
-                        controller.dismiss(closing: false, manual: true)
-                    })
-                }
-            ).minSize(CGSize(width: 44.0, height: 44.0)))))*/
+                        guard let anchorView = controller.node.hostView.findTaggedView(tag: moreButtonTag) else {
+                            return
+                        }
+                        
+                        if let animationView = controller.node.hostView.findTaggedView(tag: moreAnimationTag) as? LottieAnimationComponent.View {
+                            animationView.playOnce()
+                        }
+                        
+                        let presentationData = call.accountContext.sharedContext.currentPresentationData.with { $0 }
+                        
+                        var items: [ContextMenuItem] = []
+                        items.append(.action(ContextMenuActionItem(id: nil, text: presentationData.strings.VoiceChat_StopRecordingStop, textColor: .primary, textLayout: .singleLine, textFont: .regular, badge: nil, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.primaryColor, backgroundColor: nil)
+                        }, action: { [weak call] _, a in
+                            guard let call = call else {
+                                return
+                            }
+                            
+                            let _ = call.leave(terminateIfPossible: true).start()
+                            
+                            a(.default)
+                        })))
+                        
+                        final class ReferenceContentSource: ContextReferenceContentSource {
+                            private let sourceView: UIView
+                            
+                            init(sourceView: UIView) {
+                                self.sourceView = sourceView
+                            }
+                            
+                            func transitionInfo() -> ContextControllerReferenceViewInfo? {
+                                return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
+                            }
+                        }
+                        
+                        let contextController = ContextController(account: call.accountContext.account, presentationData: presentationData.withUpdated(theme: defaultDarkPresentationTheme), source: .reference(ReferenceContentSource(sourceView: anchorView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+                        /*contextController.passthroughTouchEvent = { sourceView, point in
+                            guard let strongSelf = self else {
+                                return .ignore
+                            }
+
+                            let localPoint = strongSelf.view.convert(sourceView.convert(point, to: nil), from: nil)
+                            guard let localResult = strongSelf.hitTest(localPoint, with: nil) else {
+                                return .dismiss(consume: true, result: nil)
+                            }
+
+                            var testView: UIView? = localResult
+                            while true {
+                                if let testViewValue = testView {
+                                    if let node = testViewValue.asyncdisplaykit_node as? PeerInfoHeaderNavigationButton {
+                                        node.isUserInteractionEnabled = false
+                                        DispatchQueue.main.async {
+                                            node.isUserInteractionEnabled = true
+                                        }
+                                        return .dismiss(consume: false, result: nil)
+                                    } else if let node = testViewValue.asyncdisplaykit_node as? PeerInfoVisualMediaPaneNode {
+                                        node.brieflyDisableTouchActions()
+                                        return .dismiss(consume: false, result: nil)
+                                    } else {
+                                        testView = testViewValue.superview
+                                    }
+                                } else {
+                                    break
+                                }
+                            }
+
+                            return .dismiss(consume: true, result: nil)
+                        }*/
+                        controller.presentInGlobalOverlay(contextController)
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(moreButtonTag))))
+            }
             
             let navigationBar = navigationBar.update(
                 component: NavigationBarComponent(
