@@ -325,6 +325,10 @@ public final class AppLockContextImpl: AppLockContext {
             }
         }
     }
+
+    public var unlockMode: UnlockMode {
+        return self.currentStateValue.unlockMode
+    }
     
     public func lock() {
         self.updateLockState { state in
@@ -334,7 +338,7 @@ public final class AppLockContextImpl: AppLockContext {
         }
     }
     
-    public func unlock() {
+    public func unlock(_ mode: UnlockMode) {
         self.updateLockState { state in
             var state = state
             
@@ -346,6 +350,8 @@ public final class AppLockContextImpl: AppLockContext {
             let uptime = getDeviceUptimeSeconds(&bootTimestamp)
             let timestamp = MonotonicTimestamp(bootTimestamp: bootTimestamp, uptime: uptime)
             state.applicationActivityTimestamp = timestamp
+
+            state.unlockMode = mode
             
             return state
         }

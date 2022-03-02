@@ -9,7 +9,7 @@ import TelegramPresentationData
 import AccountContext
 
 public enum PasscodeSetupControllerMode {
-    case setup(change: Bool, PasscodeEntryFieldType)
+    case setup(change: Bool, allowChangeType: Bool, PasscodeEntryFieldType)
     case entry(PostboxAccessChallengeData)
 }
 
@@ -23,6 +23,7 @@ public final class PasscodeSetupController: ViewController {
     
     public var complete: ((String, Bool) -> Void)?
     public var check: ((String) -> Bool)?
+    public var validate: ((String) -> String?)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -54,9 +55,10 @@ public final class PasscodeSetupController: ViewController {
         self.displayNodeDidLoad()
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.controllerNode.updateMode(self.mode)
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
-            guard let strongSelf = self, case let .setup(change, type) = strongSelf.mode else {
+            guard let strongSelf = self, case let .setup(change, allowChange, type) = strongSelf.mode else {
                 return
             }
             
@@ -71,7 +73,7 @@ public final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_6DigitCode, action: { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(change: change, .digits6)
+                        strongSelf.mode = .setup(change: change, allowChangeType: allowChange, .digits6)
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -81,7 +83,7 @@ public final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_4DigitCode, action: {
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(change: change, .digits4)
+                        strongSelf.mode = .setup(change: change, allowChangeType: allowChange, .digits4)
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -91,7 +93,7 @@ public final class PasscodeSetupController: ViewController {
             } else {
                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.PasscodeSettings_AlphanumericCode, action: {
                     if let strongSelf = self {
-                        strongSelf.mode = .setup(change: change, .alphanumeric)
+                        strongSelf.mode = .setup(change: change, allowChangeType: allowChange, .alphanumeric)
                         strongSelf.controllerNode.updateMode(strongSelf.mode)
                     }
                     dismissAction()
@@ -125,6 +127,9 @@ public final class PasscodeSetupController: ViewController {
         }
         self.controllerNode.checkPasscode = { [weak self] passcode in
             return self?.check?(passcode) ?? false
+        }
+        self.controllerNode.validatePasscode = { [weak self] passcode in
+            return self?.validate?(passcode)
         }
     }
     

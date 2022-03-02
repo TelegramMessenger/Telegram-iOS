@@ -280,6 +280,7 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 @property (nonatomic, strong, readonly) NSString * _Nonnull localizedName;
 @property (nonatomic, strong, readonly) NSString * _Nullable pluralizationRulesCode;
 @property (nonatomic, strong, readonly) NSDictionary<NSString *, NSString *> * _Nonnull dict;
+@property (nonatomic, strong, readonly) NSDictionary<NSString *, NSString *> * _Nullable fallbackLocal;
 
 - (instancetype _Nonnull)initWithLanguageCode:(NSString * _Nonnull)languageCode
     localizedName:(NSString * _Nonnull)localizedName
@@ -338,6 +339,8 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 
 @end
 
+static NSDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode);
+
 @implementation _PresentationStringsComponent
 
 - (instancetype _Nonnull)initWithLanguageCode:(NSString * _Nonnull)languageCode
@@ -350,6 +353,7 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
         _localizedName = localizedName;
         _pluralizationRulesCode = pluralizationRulesCode;
         _dict = dict;
+        _fallbackLocal = localizableDictionary(self.languageCode);
     }
     return self;
 }
@@ -362,6 +366,23 @@ static _FormattedString * _Nonnull getFormatted{num_arguments}(_PresentationStri
 }
 
 @end
+
+
+static NSDictionary<NSString *, NSString *> * _Nullable localizableDictionary(NSString * _Nonnull languageCode) {
+    NSString *lprojPath = [getAppBundle() pathForResource:languageCode ofType:@"lproj"];
+    if (!lprojPath) {
+        return nil;
+    }
+    NSBundle *bundle = [NSBundle bundleWithPath:lprojPath];
+    if (!bundle) {
+        return nil;
+    }
+    NSString *stringsPath = [bundle pathForResource:@"Localizable" ofType:@"strings"];
+    if (!stringsPath) {
+        return nil;
+    }
+    return [NSDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:stringsPath]];
+}
 
 static NSArray<_FormattedStringRange *> * _Nonnull extractArgumentRanges(NSString * _Nonnull string) {
     static NSRegularExpression *argumentRegex = nil;
@@ -458,21 +479,9 @@ static NSString * _Nonnull getSingle(_PresentationStrings * _Nullable strings, N
         static NSDictionary<NSString *, NSString *> *fallbackDict = nil;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
-            NSString *lprojPath = [getAppBundle() pathForResource:@"en" ofType:@"lproj"];
-            if (!lprojPath) {
-                return;
-            }
-            NSBundle *bundle = [NSBundle bundleWithPath:lprojPath];
-            if (!bundle) {
-                return;
-            }
-            NSString *stringsPath = [bundle pathForResource:@"Localizable" ofType:@"strings"];
-            if (!stringsPath) {
-                return;
-            }
-            fallbackDict = [NSDictionary dictionaryWithContentsOfURL:[NSURL fileURLWithPath:stringsPath]];
+            fallbackDict = localizableDictionary(@"en");
         });
-        result = fallbackDict[key]; 
+        result = strings.primaryComponent.fallbackLocal[key] ?: strings.secondaryComponent.fallbackLocal[key] ?: fallbackDict[key];
     }
     if (!result) {
         result = key;

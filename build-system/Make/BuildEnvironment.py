@@ -111,6 +111,10 @@ class BuildEnvironment:
                 raise Exception('Missing app version in {}'.format(configuration_path))
             else:
                 self.app_version = configuration_dict['app']
+            if configuration_dict['partisan'] is None:
+                raise Exception('Missing partisan version in {}'.format(configuration_path))
+            else:
+                self.partisan_version = configuration_dict['partisan']
             if configuration_dict['bazel'] is None:
                 raise Exception('Missing bazel version in {}'.format(configuration_path))
             else:

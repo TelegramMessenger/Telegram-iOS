@@ -17,7 +17,3 @@ static id<LegacyComponentsGlobalsProvider> _provider;
 }
 
 @end
-
-NSString *PTLocalized(NSString *s) {
-    return TGLocalized(s);
-}
