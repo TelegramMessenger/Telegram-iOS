@@ -115,12 +115,13 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 self.modeButtonNode.isHidden = true
                 self.modeButtonNode.isAccessibilityElement = false
                 text = self.presentationData.strings.EnterPasscode_EnterPasscode
-            case let .setup(change, _):
+            case let .setup(change, allowChangeMode, _):
                 if change {
                     text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange
                 } else {
                     text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew
                 }
+                self.modeButtonNode.isHidden = !allowChangeMode
         }
         self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         
@@ -170,7 +171,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.mode = mode
         self.inputFieldNode.reset()
         
-        if case let .setup(_, type) = mode {
+        if case let .setup(_, _, type) = mode {
             self.inputFieldNode.updateFieldType(type, animated: true)
             
             let fieldBackgroundAlpha: CGFloat
@@ -203,7 +204,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 if let previousPasscode = self.previousPasscode {
                     if self.currentPasscode == previousPasscode {
                         var numerical = false
-                        if case let .setup(_, type) = mode {
+                        if case let .setup(_, _, type) = mode {
                             if case .alphanumeric = type {
                             } else {
                                 numerical = true
@@ -266,7 +267,11 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             if let subtitle = subtitle {
                 self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             }
-            self.modeButtonNode.isHidden = success
+            if case let .setup(_, allowChange, _) = self.mode, allowChange {
+                self.modeButtonNode.isHidden = success
+            } else {
+                self.modeButtonNode.isHidden = true
+            }
             self.modeButtonNode.isAccessibilityElement = !success
 
             UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: subtitle ?? text)
