@@ -7225,3 +7225,9 @@ Sorry for the inconvenience.";
 "Chat.OutgoingContextReactionCount_1" = "1 reacted";
 "Chat.OutgoingContextReactionCount_any" = "%@ reacted";
 "Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";
+
+"PasscodeSettings.BadAttempts" = "Bad Passcode Attempts";
+"PasscodeSettings.BadAttempts.AppLogin" = "App Login";
+"PasscodeSettings.BadAttempts.SettingsLogin" = "Settings Login";
+"PasscodeSettings.BadAttempts.Clear" = "Clear";
+"PasscodeSettings.BadAttempts.ClearConfiramtion" = "Clear Bad Passcode Attempts?";

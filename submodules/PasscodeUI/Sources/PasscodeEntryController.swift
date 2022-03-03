@@ -185,6 +185,12 @@ public final class PasscodeEntryController: ViewController {
             } else {
                 strongSelf.appLockContext.failedUnlockAttempt()
                 strongSelf.controllerNode.animateError()
+                
+                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { passcodeSettings in
+                    var badPasscodeAttempts = passcodeSettings.badPasscodeAttempts ?? []
+                    badPasscodeAttempts.append(BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
+                    return passcodeSettings.withUpdatedBadPasscodeAttempts(badPasscodeAttempts)
+                }).start()
             }
         }
         self.controllerNode.requestBiometrics = { [weak self] in

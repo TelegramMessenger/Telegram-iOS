@@ -22,17 +22,22 @@ private final class PasscodeOptionsControllerArguments {
     let changePasscodeTimeout: () -> Void
     let changeTouchId: (Bool) -> Void
     
-    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void) {
+    let openBadPasscodeAttempts: () -> Void
+    
+    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, openBadPasscodeAttempts: @escaping () -> Void) {
         self.turnPasscodeOff = turnPasscodeOff
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout
         self.changeTouchId = changeTouchId
+        
+        self.openBadPasscodeAttempts = openBadPasscodeAttempts
     }
 }
 
 private enum PasscodeOptionsSection: Int32 {
     case setting
     case options
+    case partisan
 }
 
 private enum PasscodeOptionsEntry: ItemListNodeEntry {
@@ -43,12 +48,16 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     case autoLock(PresentationTheme, String, String)
     case touchId(PresentationTheme, String, Bool)
     
+    case badPasscodeAttempts(PresentationTheme, String, Int)
+    
     var section: ItemListSectionId {
         switch self {
             case .togglePasscode, .changePasscode, .settingInfo:
                 return PasscodeOptionsSection.setting.rawValue
             case .autoLock, .touchId:
                 return PasscodeOptionsSection.options.rawValue
+            case .badPasscodeAttempts:
+                return PasscodeOptionsSection.partisan.rawValue
         }
     }
     
@@ -64,6 +73,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return 3
             case .touchId:
                 return 4
+            case .badPasscodeAttempts:
+                return 5
         }
     }
     
@@ -99,6 +110,12 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .badPasscodeAttempts(lhsTheme, lhsText, lhsValue):
+                if case let .badPasscodeAttempts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -128,6 +145,10 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
             case let .touchId(_, title, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
+                })
+            case let .badPasscodeAttempts(_, title, value):
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, enabled: value > 0, label: "\(value)", sectionId: self.section, style: .blocks, action: {
+                    arguments.openBadPasscodeAttempts()
                 })
         }
     }
@@ -203,6 +224,8 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
                         entries.append(.touchId(presentationData.theme, presentationData.strings.PasscodeSettings_UnlockWithFaceId, passcodeOptionsData.presentationSettings.enableBiometrics))
                 }
             }
+        
+        entries.append(.badPasscodeAttempts(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts, passcodeOptionsData.presentationSettings.badPasscodeAttempts?.count ?? 0))
     }
     
     return entries
@@ -359,6 +382,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 return current.withUpdatedEnableBiometrics(value)
             }).start()
         })
+    }, openBadPasscodeAttempts: {
+        
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
@@ -435,6 +460,12 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                 }
                 if succeed {
                     completion(true)
+                } else {
+                    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { passcodeSettings in
+                        var badPasscodeAttempts = passcodeSettings.badPasscodeAttempts ?? []
+                        badPasscodeAttempts.append(BadPasscodeAttempt(type: BadPasscodeAttempt.PasscodeSettingsType, isFakePasscode: false))
+                        return passcodeSettings.withUpdatedBadPasscodeAttempts(badPasscodeAttempts)
+                    }).start()
                 }
                 return succeed
             }
