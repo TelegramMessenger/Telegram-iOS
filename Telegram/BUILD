@@ -553,6 +553,8 @@ plist_fragment(
     """
     <key>CFBundleShortVersionString</key>
     <string>{telegramVersion}</string>
+    <key>PTelegramVersion</key>
+    <string>{partisanVersion}</string>
     """
 )
 

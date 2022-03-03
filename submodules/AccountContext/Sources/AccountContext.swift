@@ -546,9 +546,10 @@ public enum CreateGroupMode {
 public protocol AppLockContext: AnyObject {
     var invalidAttempts: Signal<AccessChallengeAttempts?, NoError> { get }
     var autolockDeadline: Signal<Int32?, NoError> { get }
-    
+    var unlockMode: UnlockMode { get }
+
     func lock()
-    func unlock()
+    func unlock(_ mode: UnlockMode)
     func failedUnlockAttempt()
 }
 

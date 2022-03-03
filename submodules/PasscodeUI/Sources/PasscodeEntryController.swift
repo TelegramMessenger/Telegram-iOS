@@ -118,7 +118,7 @@ public final class PasscodeEntryController: ViewController {
     override public func loadDisplayNode() {
         let passcodeType: PasscodeEntryFieldType
         switch self.challengeData {
-            case let .numericalPassword(value):
+            case let .numericalPassword(value, _):
                 passcodeType = value.count == 6 ? .digits6 : .digits4
             default:
                 passcodeType = .alphanumeric
@@ -157,21 +157,13 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
     
-            var succeed = false
-            switch strongSelf.challengeData {
-                case .none:
-                    succeed = true
-                case let .numericalPassword(code):
-                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code):
-                    succeed = passcode == code
-            }
+            let result = strongSelf.challengeData.check(passcode: passcode) { code in normalizeArabicNumeralString(code, type: .western) }
             
-            if succeed {
+            if result.succeed() {
                 if let completed = strongSelf.completed {
                     completed()
                 } else {
-                    strongSelf.appLockContext.unlock()
+                    strongSelf.appLockContext.unlock(result)
                 }
                 
                 let isMainApp = strongSelf.applicationBindings.isMainApp
@@ -273,7 +265,7 @@ public final class PasscodeEntryController: ViewController {
                     }
                     strongSelf.hasOngoingBiometricsRequest = false
                 } else {
-                    strongSelf.appLockContext.unlock()
+                    strongSelf.appLockContext.unlock(.full) // TODO revisit
                     strongSelf.hasOngoingBiometricsRequest = false
                 }
             } else {
