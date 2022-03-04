@@ -28,25 +28,40 @@ public final class LottieAnimationComponent: Component {
     public struct Animation: Equatable {
         public var name: String
         public var loop: Bool
+        public var isAnimating: Bool
         public var colors: [String: UIColor]
         
-        public init(name: String, colors: [String: UIColor], loop: Bool) {
+        public init(name: String, colors: [String: UIColor], loop: Bool, isAnimating: Bool = true) {
             self.name = name
             self.colors = colors
             self.loop = loop
+            self.isAnimating = isAnimating
         }
     }
     
     public let animation: Animation
+    public let tag: AnyObject?
     public let size: CGSize?
     
-    public init(animation: Animation, size: CGSize?) {
+    public init(animation: Animation, tag: AnyObject? = nil, size: CGSize?) {
         self.animation = animation
+        self.tag = tag
         self.size = size
+    }
+    
+    public func tagged(_ tag: AnyObject?) -> LottieAnimationComponent {
+        return LottieAnimationComponent(
+            animation: self.animation,
+            tag: tag,
+            size: self.size
+        )
     }
 
     public static func ==(lhs: LottieAnimationComponent, rhs: LottieAnimationComponent) -> Bool {
         if lhs.animation != rhs.animation {
+            return false
+        }
+        if lhs.tag !== rhs.tag {
             return false
         }
         if lhs.size != rhs.size {
@@ -55,8 +70,8 @@ public final class LottieAnimationComponent: Component {
         return true
     }
     
-    public final class View: UIView {
-        private var currentAnimation: Animation?
+    public final class View: UIView, ComponentTaggedView {
+        private var component: LottieAnimationComponent?
         
         private var colorCallbacks: [LOTColorValueCallback] = []
         private var animationView: LOTAnimationView?
@@ -83,8 +98,29 @@ public final class LottieAnimationComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        public func playOnce() {
+            guard let animationView = self.animationView else {
+                return
+            }
+
+            animationView.stop()
+            animationView.loopAnimation = false
+            animationView.play { _ in
+            }
+        }
+        
         func update(component: LottieAnimationComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            if self.currentAnimation != component.animation {
+            if self.component?.animation != component.animation {
                 if let animationView = self.animationView, animationView.isAnimationPlaying {
                     animationView.completionBlock = { [weak self] _ in
                         guard let strongSelf = self else {
@@ -94,7 +130,7 @@ public final class LottieAnimationComponent: Component {
                     }
                     animationView.loopAnimation = false
                 } else {
-                    self.currentAnimation = component.animation
+                    self.component = component
                     
                     self.animationView?.removeFromSuperview()
                     
@@ -130,8 +166,14 @@ public final class LottieAnimationComponent: Component {
             if let animationView = self.animationView {
                 animationView.frame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
                 
-                if !animationView.isAnimationPlaying {
-                    animationView.play { _ in
+                if component.animation.isAnimating {
+                    if !animationView.isAnimationPlaying {
+                        animationView.play { _ in
+                        }
+                    }
+                } else {
+                    if animationView.isAnimationPlaying {
+                        animationView.stop()
                     }
                 }
             }
