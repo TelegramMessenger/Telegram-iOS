@@ -532,7 +532,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     |> map { challenge -> ViewController? in
         if case .none = challenge {
             let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, allowChangeType: false, .digits6))
+                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, allowChangeType: true, .digits6))
                 setupController.complete = { passcode, numerical in
                     let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()
