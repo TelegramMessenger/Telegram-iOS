@@ -8,4 +8,28 @@
 "PasscodeSettings.ConfirmDeletion" = "Пацвердзіце выдаленне";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Усе несапраўдныя кады доступу будць выдалены. Жадаеце працягнуць?";
 
+"PasscodeSettings.FakePasscodeChangeName" = "Змяніць назву";
+"PasscodeSettings.FakePasscodeChange" = "Змяніць несапраўдны код блакіроўкі";
+"PasscodeSettings.FakePasscodeChangeHelp" = "Вы можаце змяніць несапраўдны код блакіроўкі, не выдаляя яго.";
+"PasscodeSettings.FakePasscodeAllowLogin" = "Уваходзіць з несапраўдным кодам блакіроўкі";
+"PasscodeSettings.FakePasscodeAllowLoginHelp" = "Вы можаце забараніць уваход з гэтым несапраўдным кодам блакіроўкі. У такім выпадку зламыснік не атрымае доступ да акаунтаў, але зазначанныя дзеянні будуць выкананы.";
+"PasscodeSettings.FakePasscodeClearAfterActivation" = "Чысціць налады код-пароля";
+"PasscodeSettings.FakePasscodeClearAfterActivationHelp" = "Усе налады несапраўднага код-пароля пасля актывацыі будуць выдаляцца і зламыснік не зможа атрымаць да іх доступ.";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivation" = "Выдаляць іншыя код-паролі";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivationHelp" = "Усе астатнія несапраўдныя код-паролі пасля актывацыі будуць выдалены і зламыснік не зможа атрымаць да іх доступ.";
+"PasscodeSettings.FakePasscodeActivationMessage" = "Паведамленне-актыватар";
+"PasscodeSettings.FakePasscodeActivationMessageHelp" = "Дзеянні з несапраўдным кодам блакіроўкі будуць выкананы пры атрыманні паведамлення-актыватара ў любым чаце.";
+"PasscodeSettings.BadPasscodeTriesToActivate" = "Ліміт спроб уваходу для актывацыі";
+"PasscodeSettings.BadPasscodeTriesToActivateHelp" = "Дзеянні з несапраўдным кодам блакіроўкі будуць выкананы пасля адзначанай колькасці няўдалых спроб уводу кода блакіроўкі.";
+"PasscodeSettings.FakePasscodeActionsTitle" = "Дзеянні";
+"PasscodeSettings.FakePasscodeSmsActionTitle" = "СМС";
+"PasscodeSettings.ClearTelegramCache" = "Ачышчаць кэш Telegram";
+"PasscodeSettings.ClearProxiesOnFakeLogin" = "Ачышчаць спіс проксі";
+"PasscodeSettings.FakePasscodeActionsHelp" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";
+"PasscodeSettings.FakePasscodeAccountsTitle" = "Дзеянні для акаўнтаў";
+"PasscodeSettings.FakePasscodeAccountsHelp" = "Наладзьце дзеянні для акаўнтаў.";
+"PasscodeSettings.FakePasscodeDelete" = "Выдаліць несапраўдны код блакіроўкі";
+"PasscodeSettings.FakePasscodeDeleteHelp" = "Калі Вы выдаліце несапраўдны код блакіроўкі, усе дзеянні будуць ачышчаны. Вы можаце змяніць код блакіроўкі, калі не хочаце выдаляць яго.";
+
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
+

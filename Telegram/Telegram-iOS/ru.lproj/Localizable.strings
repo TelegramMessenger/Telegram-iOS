@@ -8,4 +8,27 @@
 "PasscodeSettings.ConfirmDeletion" = "Подтверждение удаления";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Все ложные код-пароли будут удалены. Хотите продолжить?";
 
+"PasscodeSettings.FakePasscodeChangeName" = "Изменить название";
+"PasscodeSettings.FakePasscodeChange" = "Сменить ложный код-пароль";
+"PasscodeSettings.FakePasscodeChangeHelp" = "Вы можете изменить ложный код-пароль, не удаляя его.";
+"PasscodeSettings.FakePasscodeAllowLogin" = "Разрешить вход c ложным паролем";
+"PasscodeSettings.FakePasscodeAllowLoginHelp" = "Вы можете запретить вход с этим ложным код-паролем. В таком случае злоумышленник не получит доступ к аккаунтам, но указанные действия будут выполнены.";
+"PasscodeSettings.FakePasscodeClearAfterActivation" = "Очищать настройки код-пароля";
+"PasscodeSettings.FakePasscodeClearAfterActivationHelp" = "Все настройки ложного код-пароля будут очищены после активации и злоумышленник не сможет получить к ним доступ.";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivation" = "Удалять другие код-пароли";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivationHelp" = "Все остальные ложные код-пароли после активации будут удалены и злоумышленник не сможет получить к ним доступ.";
+"PasscodeSettings.FakePasscodeActivationMessage" = "Сообщение-активатор";
+"PasscodeSettings.FakePasscodeActivationMessageHelp" = "Действия с ложным паролем будут выполнены при получении сообщения активатора в любом чате.";
+"PasscodeSettings.BadPasscodeTriesToActivate" = "Лимит попыток входа для активации";
+"PasscodeSettings.BadPasscodeTriesToActivateHelp" = "Действия с ложным паролем будут выполнены после указанного количества неудачных попыток ввода код-пароля.";
+"PasscodeSettings.FakePasscodeActionsTitle" = "Действия";
+"PasscodeSettings.FakePasscodeSmsActionTitle" = "СМС";
+"PasscodeSettings.ClearTelegramCache" = "Очищать кэш Telegram";
+"PasscodeSettings.ClearProxiesOnFakeLogin" = "Очищать список прокси";
+"PasscodeSettings.FakePasscodeActionsHelp" = "При вводе ложного код-пароля выполняются выбранные действия.";
+"PasscodeSettings.FakePasscodeAccountsTitle" = "Действия для аккаунтов";
+"PasscodeSettings.FakePasscodeAccountsHelp" = "Настройте действия для аккаунтов.";
+"PasscodeSettings.FakePasscodeDelete" = "Удалить ложный код-пароль";
+"PasscodeSettings.FakePasscodeDeleteHelp" = "Если Вы удалите ложный код-пароль, все действия будут очищены. Вы можете изменить код-пароль, если не хотите удалять его.";
+
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версия %3$@";

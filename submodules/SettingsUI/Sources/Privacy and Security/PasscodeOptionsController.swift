@@ -15,6 +15,7 @@ import LocalAuth
 import PasscodeUI
 import TelegramStringFormatting
 import TelegramIntents
+import FakePasscodeUI
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void
@@ -463,33 +464,28 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }).start()
         })
     }, changeFakePasscode: { index in
-        passcodeSetupController(context: context, optsPromise: passcodeOptionsDataPromise, pushController: pushControllerImpl, popController: popControllerImpl) { oldChallengeData, newPasscode, numerical in
-            switch oldChallengeData {
-                case .none:
-                    assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
-                    return oldChallengeData
-                case .numericalPassword(let code, var fakes), .plaintextPassword(let code, var fakes):
-                    fakes[index] = newPasscode
-                    if numerical {
-                        return PostboxAccessChallengeData.numericalPassword(value: code, fakeValue: fakes)
-                    } else {
-                        return PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
-                    }
-            }
-        }
+        let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index)
+        pushControllerImpl?(fakeOptionsController)
     }, addFakePasscode: {
-        passcodeSetupController(context: context, optsPromise: passcodeOptionsDataPromise, pushController: pushControllerImpl, popController: popControllerImpl) { oldChallengeData, newPasscode, numerical in
+        fakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { oldChallengeData, newPasscode, numerical in
             switch oldChallengeData {
                 case .none:
                     assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
                     return oldChallengeData
                 case .numericalPassword(let code, var fakes), .plaintextPassword(let code, var fakes):
                     fakes.append(newPasscode)
+                    let updatedData : PostboxAccessChallengeData
                     if numerical {
-                        return PostboxAccessChallengeData.numericalPassword(value: code, fakeValue: fakes)
+                        updatedData = PostboxAccessChallengeData.numericalPassword(value: code, fakeValue: fakes)
                     } else {
-                        return PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
+                        updatedData = PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
                     }
+
+                    let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                        passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData)))
+                    })
+
+                    return updatedData
             }
         }
     })
@@ -610,44 +606,4 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             return controller
         }
     }
-}
-
-private func passcodeSetupController(context: AccountContext, optsPromise: Promise<PasscodeOptionsData>, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping (PostboxAccessChallengeData, String, Bool) -> PostboxAccessChallengeData) {
-    let _ = (context.sharedContext.accountManager.transaction({ transaction -> (PasscodeEntryFieldType, [String]) in
-        let data = transaction.getAccessChallengeData()
-        switch data {
-            case .none:
-                assertionFailure()
-                return (.alphanumeric, [])
-            case .numericalPassword(let passcode, let fakePasscodes):
-                return (passcode.count == 6 ? .digits6 : .digits4, fakePasscodes + [passcode])
-            case .plaintextPassword(let passcode, let fakePasscodes):
-                return (.alphanumeric, fakePasscodes + [passcode])
-        }
-    })
-    |> deliverOnMainQueue).start(next: { (fieldType, reserved) in
-        let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, allowChangeType: false, fieldType))
-        setupController.validate = { newPasscode in
-            if reserved.contains(newPasscode) {
-                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                return presentationData.strings.PasscodeSettings_PasscodeInUse
-            }
-            return nil
-        }
-        setupController.complete = { newPasscode, numerical in
-            let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
-                let data = transaction.getAccessChallengeData()
-                let updatedData = challengeDataUpdate(data, newPasscode, numerical)
-                transaction.setAccessChallengeData(updatedData)
-                let _ = (optsPromise.get() |> take(1)).start(next: { [weak optsPromise] data in
-                    optsPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData)))
-                })
-            }) |> deliverOnMainQueue).start(next: { _ in
-            }, error: { _ in
-            }, completed: {
-                popController?()
-            })
-        }
-        pushController?(setupController)
-    })
 }
