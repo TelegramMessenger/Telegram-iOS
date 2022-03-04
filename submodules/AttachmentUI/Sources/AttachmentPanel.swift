@@ -174,7 +174,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var validLayout: ContainerViewLayout?
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
-    var selectionChanged: (AttachmentButtonType, Bool) -> Void = { _, _ in }
+    var selectionChanged: (AttachmentButtonType, Bool) -> Bool = { _, _ in return false }
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
     var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
@@ -481,9 +481,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     action: { [weak self] in
                         if let strongSelf = self {
                             let ascending = i > strongSelf.selectedIndex
-                            strongSelf.selectedIndex = i
-                            strongSelf.selectionChanged(type, ascending)
-                            strongSelf.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+                            if strongSelf.selectionChanged(type, ascending) {
+                                strongSelf.selectedIndex = i
+                                strongSelf.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+                            }
                         }
                     })
                 ),
