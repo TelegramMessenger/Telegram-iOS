@@ -74,17 +74,17 @@ private func generateShadowImage() -> UIImage? {
 }
 
 private func generateMaskImage() -> UIImage? {
-    return generateImage(CGSize(width: 390.0, height: 620.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 390.0, height: 220.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setFillColor(UIColor.white.cgColor)
         
-        let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 609.0), cornerRadius: 10.0).cgPath
+        let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 209.0), cornerRadius: 10.0).cgPath
         context.addPath(path)
         context.fillPath()
         
-        try? drawSvgPath(context, path: "M183.219,608.889 H206.781 C205.648,608.889 204.567,609.37 203.808,610.213 L197.23,617.522 C196.038,618.847 193.962,618.847 192.77,617.522 L186.192,610.213 C185.433,609.37 184.352,608.889 183.219,608.889 Z ")
-    })
+        try? drawSvgPath(context, path: "M183.219,208.89 H206.781 C205.648,208.89 204.567,209.371 203.808,210.214 L197.23,217.523 C196.038,218.848 193.962,218.848 192.77,217.523 L186.192,210.214 C185.433,209.371 184.352,208.89 183.219,208.89 Z ")
+    })?.stretchableImage(withLeftCapWidth: 195, topCapHeight: 110)
 }
 
 public class AttachmentController: ViewController {
@@ -368,6 +368,8 @@ public class AttachmentController: ViewController {
                             })
                         }
                     })
+                } else {
+                    strongSelf.animating = false
                 }
                 
                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -457,7 +459,9 @@ public class AttachmentController: ViewController {
             var containerLayout = layout
             let containerRect: CGRect
             if case .regular = layout.metrics.widthClass {
-                let size = CGSize(width: 390.0, height: 620.0)
+                let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0) - 60.0
+                
+                let size = CGSize(width: 390.0, height: min(620.0, availableHeight))
                 
                 let insets = layout.insets(options: [.input])
                 let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
@@ -471,8 +475,11 @@ public class AttachmentController: ViewController {
                 if self.wrapperNode.view.mask == nil {
                     let maskView = UIImageView()
                     maskView.image = generateMaskImage()
-                    maskView.frame = CGRect(origin: CGPoint(), size: maskView.image?.size ?? CGSize())
+                    maskView.contentMode = .scaleToFill
                     self.wrapperNode.view.mask = maskView
+                }
+                if let maskView = self.wrapperNode.view.mask {
+                    transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(), size: size))
                 }
                 
                 self.shadowNode.alpha = 1.0
