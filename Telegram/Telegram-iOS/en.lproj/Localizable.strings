@@ -1206,6 +1206,29 @@
 "PasscodeSettings.ConfirmDeletion" = "Confirm deletion";
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "All fake passcodes will be deleted. Are you sure you want to continue?";
 
+"PasscodeSettings.FakePasscodeChangeName" = "Change Name";
+"PasscodeSettings.FakePasscodeChange" = "Change Fake Passcode";
+"PasscodeSettings.FakePasscodeChangeHelp" = "You can change the fake passcode without deleting it.";
+"PasscodeSettings.FakePasscodeAllowLogin" = "Allow login using Fake Passcode";
+"PasscodeSettings.FakePasscodeAllowLoginHelp" = "You can deny login with this fake passcode. In this case, the attacker will not gain access to the accounts, but the actions will be performed.";
+"PasscodeSettings.FakePasscodeClearAfterActivation" = "Clear Passcode Settings After Activation";
+"PasscodeSettings.FakePasscodeClearAfterActivationHelp" = "All fake passcode settings will be cleared after activation and an attacker will not be able to access them.";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivation" = "Delete Other Passcodes After Activation";
+"PasscodeSettings.DeleteOtherPasscodesAfterActivationHelp" = "All other fake passwords will be deleted after activation and an attacker will not be able to access them.";
+"PasscodeSettings.FakePasscodeActivationMessage" = "Activation Message";
+"PasscodeSettings.FakePasscodeActivationMessageHelp" = "Fake passcode actions will be executed upon receipt of the activation message in any chat.";
+"PasscodeSettings.BadPasscodeTriesToActivate" = "Bad Login Tries for Activation";
+"PasscodeSettings.BadPasscodeTriesToActivateHelp" = "After this number of bad attempts to enter the password code, the fake passcode actions will be executed.";
+"PasscodeSettings.FakePasscodeActionsTitle" = "Actions";
+"PasscodeSettings.FakePasscodeSmsActionTitle" = "SMS";
+"PasscodeSettings.ClearTelegramCache" = "Clear Telegram Cache";
+"PasscodeSettings.ClearProxiesOnFakeLogin" = "Clear Proxies";
+"PasscodeSettings.FakePasscodeActionsHelp" = "When a fake passcode is entered, selected actions are performed.";
+"PasscodeSettings.FakePasscodeAccountsTitle" = "Account-specific Actions";
+"PasscodeSettings.FakePasscodeAccountsHelp" = "Configure actions for accounts.";
+"PasscodeSettings.FakePasscodeDelete" = "Delete Fake Passcode";
+"PasscodeSettings.FakePasscodeDeleteHelp" = "If you delete the fake passcode, all actions will be cleared. You can change the passcode if you don't want to delete it.";
+
 "EnterPasscode.EnterTitle" = "Enter your Telegram Passcode";
 "EnterPasscode.ChangeTitle" = "Change Passcode";
 "EnterPasscode.EnterPasscode" = "Enter your Telegram Passcode";

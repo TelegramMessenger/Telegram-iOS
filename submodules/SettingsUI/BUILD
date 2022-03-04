@@ -94,6 +94,7 @@ swift_library(
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/Translate:Translate",
         "//submodules/QrCodeUI:QrCodeUI",
+        "//submodules/FakePasscodeUI:FakePasscodeUI",
     ],
     visibility = [
         "//visibility:public",
