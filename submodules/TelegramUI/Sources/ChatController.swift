@@ -10353,7 +10353,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
         
-        let currentMediaController = Atomic<AttachmentContainable?>(value: nil)
+        let currentMediaController = Atomic<MediaPickerScreen?>(value: nil)
         let currentFilesController = Atomic<AttachmentContainable?>(value: nil)
         let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
         
@@ -10367,7 +10367,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.controllerNavigationDisposable.set(nil)
                 let existingController = currentMediaController.with { $0 }
                 if let controller = existingController {
-                    completion(controller, nil)
+                    completion(controller, controller.mediaPickerContext)
                     controller.prepareForReuse()
                     return
                 }
@@ -11023,7 +11023,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(bannedSendMedia: (Int32, Bool)?, present: @escaping (AttachmentContainable, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?) -> Void) {
+    private func presentMediaPicker(bannedSendMedia: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }

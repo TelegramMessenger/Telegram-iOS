@@ -24,6 +24,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let timerTextNode: ImmediateTextNode
     private let avatarNode: AvatarNode?
     private let iconNode: ASImageNode?
+    private var iconImageSize: CGSize?
     private let iconCheckNode: RadialStatusNode?
     private let animationNode: AnimationNode?
     private var animatedStickerNode: AnimatedStickerNode?
@@ -41,7 +42,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let action: (UndoOverlayAction) -> Bool
     private let dismiss: () -> Void
     
-    private let content: UndoOverlayContent
+    private var content: UndoOverlayContent
     
     private let effectView: UIView
     
@@ -752,7 +753,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case let .image(image, text):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()
+                self.iconNode?.clipsToBounds = true
+                self.iconNode?.contentMode = .scaleAspectFill
                 self.iconNode?.image = image
+                self.iconNode?.cornerRadius = 4.0
+                self.iconImageSize = CGSize(width: 32.0, height: 32.0)
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
@@ -892,6 +897,24 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.checkTimer()
     }
     
+    func updateContent(_ content: UndoOverlayContent) {
+        self.content = content
+        
+        switch content {
+            case let .image(image, text):
+                self.iconNode?.image = image
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
+            default:
+                break
+        }
+        
+        self.renewWithCurrentContent()
+        
+        if let validLayout = self.validLayout {
+            self.containerLayoutUpdated(layout: validLayout, transition: .immediate)
+        }
+    }
+    
     func containerLayoutUpdated(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = layout
@@ -979,7 +1002,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin), size: titleSize))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: textContentOrigin + textOffset), size: textSize))
         
-        if let iconNode = self.iconNode, let iconSize = iconNode.image?.size {
+        if let iconNode = self.iconNode {
+            let iconSize: CGSize
+            if let size = self.iconImageSize {
+                iconSize = size
+            } else if let size = iconNode.image?.size {
+                iconSize = size
+            } else {
+                iconSize = CGSize()
+            }
+            
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0) + verticalOffset), size: iconSize)
             transition.updateFrame(node: iconNode, frame: iconFrame)
             

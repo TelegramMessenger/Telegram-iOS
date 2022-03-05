@@ -9,6 +9,8 @@
 
 @interface TGMediaSelectionContext ()
 {
+    NSMutableArray *_savedSelectedIdentifiers;
+    
     NSMutableArray *_selectedIdentifiers;
     NSMutableDictionary *_selectionMap;
     
@@ -74,9 +76,6 @@
     NSString *identifier = item.uniqueIdentifier;
     if (selected)
     {
-        if (_selectionMap[identifier] != nil)
-            return false;
-        
         if (_selectedIdentifiers.count >= _selectionLimit) {
             if (_selectionLimitExceeded) {
                 _selectionLimitExceeded();
@@ -92,7 +91,6 @@
         if (_selectionMap[identifier] == nil)
             return false;
         
-        [_selectionMap removeObjectForKey:identifier];
         [_selectedIdentifiers removeObject:identifier];
     }
     
@@ -186,9 +184,13 @@
     if (enumerationBlock == nil)
         return;
     
-    NSArray *items = [_selectionMap allValues];
-    for (id<TGMediaSelectableItem> item in items)
-        enumerationBlock(item);
+    for (NSArray *identifier in _selectedIdentifiers)
+    {
+        NSObject<TGMediaSelectableItem> *item = _selectionMap[identifier];
+        if (item != nil) {
+            enumerationBlock(item);
+        }
+    }
 }
 
 - (NSOrderedSet *)selectedItemsIdentifiers
@@ -211,6 +213,31 @@
 - (NSUInteger)count
 {
     return _selectedIdentifiers.count;
+}
+
+- (void)saveState {
+    if (_savedSelectedIdentifiers == nil) {
+        _savedSelectedIdentifiers = [_selectedIdentifiers mutableCopy];
+    }
+}
+
+- (void)restoreState {
+    _selectedIdentifiers = _savedSelectedIdentifiers;
+    _savedSelectedIdentifiers = nil;
+    
+    _pipe.sink([TGMediaSelectionChange changeWithItem:nil selected:false animated:false sender:nil]);
+}
+
+- (void)clearSavedState {
+    _savedSelectedIdentifiers = nil;
+}
+
+- (NSUInteger)savedStateDifference {
+    if (_savedSelectedIdentifiers != nil) {
+        return _savedSelectedIdentifiers.count - _selectedIdentifiers.count;
+    } else {
+        return 0;
+    }
 }
 
 #pragma mark - 

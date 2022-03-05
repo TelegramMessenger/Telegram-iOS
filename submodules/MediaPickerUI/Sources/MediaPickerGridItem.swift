@@ -114,13 +114,26 @@ final class MediaPickerGridItemNode: GridItemNode {
         }
     }
     
+    var _cachedTag: Int32?
+    var tag: Int32? {
+        if let tag = self._cachedTag {
+            return tag
+        } else if let asset = self.asset, let localTimestamp = asset.creationDate?.timeIntervalSince1970 {
+            let tag = Month(localTimestamp: Int32(localTimestamp)).packedValue
+            self._cachedTag = tag
+            return tag
+        } else {
+            return nil
+        }
+    }
+    
     func updateSelectionState(animated: Bool = false) {
         if self.checkNode == nil, let _ = self.interaction?.selectionState, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
                 if let strongSelf = self, let asset = strongSelf.asset, let interaction = strongSelf.interaction {
                     if let legacyAsset = TGMediaAsset(phAsset: asset) {
-                        interaction.toggleSelection(legacyAsset, value)
+                        interaction.toggleSelection(legacyAsset, value, false)
                     }
                 }
             }
@@ -163,6 +176,8 @@ final class MediaPickerGridItemNode: GridItemNode {
     func setup(interaction: MediaPickerInteraction, fetchResult: PHFetchResult<PHAsset>, index: Int, theme: PresentationTheme) {
         self.interaction = interaction
         self.theme = theme
+        
+        self.backgroundColor = theme.list.mediaPlaceholderColor
         
         if self.currentState == nil || self.currentState!.0 !== fetchResult || self.currentState!.1 != index {
             let editingContext = interaction.editingState

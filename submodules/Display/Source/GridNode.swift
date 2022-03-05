@@ -208,7 +208,7 @@ private struct WrappedGridItemNode: Hashable {
 }
 
 open class GridNode: GridNodeScroller, UIScrollViewDelegate {
-    private var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil))
+    public private(set) var gridLayout = GridNodeLayout(size: CGSize(), insets: UIEdgeInsets(), preloadSize: 0.0, type: .fixed(itemSize: CGSize(), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil))
     private var firstIndexInSectionOffset: Int = 0
     public private(set) var items: [GridItem] = []
     private var itemNodes: [Int: GridItemNode] = [:]
@@ -244,7 +244,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
             self.scrollView.indicatorStyle = self.indicatorStyle
         }
     }
-    
+        
     public private(set) var opaqueState: Any?
     
     public override init() {

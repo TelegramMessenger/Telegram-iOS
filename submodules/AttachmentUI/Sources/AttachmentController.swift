@@ -74,17 +74,17 @@ private func generateShadowImage() -> UIImage? {
 }
 
 private func generateMaskImage() -> UIImage? {
-    return generateImage(CGSize(width: 390.0, height: 620.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: 390.0, height: 220.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setFillColor(UIColor.white.cgColor)
         
-        let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 609.0), cornerRadius: 10.0).cgPath
+        let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: 390.0, height: 209.0), cornerRadius: 10.0).cgPath
         context.addPath(path)
         context.fillPath()
         
-        try? drawSvgPath(context, path: "M183.219,608.889 H206.781 C205.648,608.889 204.567,609.37 203.808,610.213 L197.23,617.522 C196.038,618.847 193.962,618.847 192.77,617.522 L186.192,610.213 C185.433,609.37 184.352,608.889 183.219,608.889 Z ")
-    })
+        try? drawSvgPath(context, path: "M183.219,208.89 H206.781 C205.648,208.89 204.567,209.371 203.808,210.214 L197.23,217.523 C196.038,218.848 193.962,218.848 192.77,217.523 L186.192,210.214 C185.433,209.371 184.352,208.89 183.219,208.89 Z ")
+    })?.stretchableImage(withLeftCapWidth: 195, topCapHeight: 110)
 }
 
 public class AttachmentController: ViewController {
@@ -157,6 +157,7 @@ public class AttachmentController: ViewController {
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             
             self.shadowNode = ASImageNode()
+            self.shadowNode.isUserInteractionEnabled = false
             
             self.wrapperNode = ASDisplayNode()
             self.wrapperNode.clipsToBounds = true
@@ -200,7 +201,9 @@ public class AttachmentController: ViewController {
             
             self.panel.selectionChanged = { [weak self] type, ascending in
                 if let strongSelf = self {
-                    strongSelf.switchToController(type, ascending)
+                    return strongSelf.switchToController(type, ascending)
+                } else {
+                    return false
                 }
             }
             
@@ -258,7 +261,7 @@ public class AttachmentController: ViewController {
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
-            self.switchToController(.gallery, false)
+            let _ = self.switchToController(.gallery, false)
         }
         
         private func updateSelectionCount(_ count: Int) {
@@ -274,16 +277,16 @@ public class AttachmentController: ViewController {
             }
         }
         
-        func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) {
+        func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) -> Bool {
+            guard !self.animating else {
+                return false
+            }
             guard self.currentType != type else {
-                if self.animating {
-                    return
-                }
                 if let controller = self.currentControllers.last {
                     controller.scrollToTopWithTabBar?()
                     controller.requestAttachmentMenuExpansion()
                 }
-                return
+                return true
             }
             let previousType = self.currentType
             self.currentType = type
@@ -317,28 +320,10 @@ public class AttachmentController: ViewController {
                             }
                         }
                         let previousController = strongSelf.currentControllers.last
-                        let animateTransition = previousType != nil
                         strongSelf.currentControllers = [controller]
                         
-                        if animateTransition, let snapshotView = strongSelf.container.container.view.snapshotView(afterScreenUpdates: false) {
-                            snapshotView.frame = strongSelf.container.container.frame
-                            strongSelf.container.clipNode.view.addSubview(snapshotView)
-                            
-                            let _ = (controller.ready.get()
-                            |> filter {
-                                $0
-                            }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(next: { [weak self, weak snapshotView] _ in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.container.container.view.layer.animatePosition(from: CGPoint(x: ascending ? 70.0 : -70.0, y: 0.0), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                                    snapshotView?.removeFromSuperview()
-                                    previousController?.resetForReuse()
-                                })
-                            })
+                        if previousType != nil {
+                            strongSelf.animateSwitchTransition(controller, previousController: previousController)
                         }
                         
                         if let layout = strongSelf.validLayout {
@@ -349,6 +334,48 @@ public class AttachmentController: ViewController {
                     }
                     strongSelf.mediaPickerContext = mediaPickerContext
                 }
+            })
+            return true
+        }
+        
+        private func animateSwitchTransition(_ controller: AttachmentContainable, previousController: AttachmentContainable?) {
+            guard let snapshotView = self.container.container.view.snapshotView(afterScreenUpdates: false) else {
+                return
+            }
+            
+            snapshotView.frame = self.container.container.frame
+            self.container.clipNode.view.addSubview(snapshotView)
+            
+            self.animating = true
+            
+            let _ = (controller.ready.get()
+            |> filter {
+                $0
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self, weak snapshotView] _ in
+                guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                    return
+                }
+                
+                if case .compact = layout.metrics.widthClass {
+                    let offset = strongSelf.container.isExpanded ? 10.0 : 24.0
+                    strongSelf.container.clipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -offset), duration: 0.18, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+                        if let strongSelf = self {
+                            strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0)), to: NSValue(cgPoint: CGPoint(x: 0.0, y: offset)), keyPath: "position", duration: 0.55, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+                                self?.container.clipNode.layer.removeAllAnimations()
+                                self?.animating = false
+                            })
+                        }
+                    })
+                } else {
+                    strongSelf.animating = false
+                }
+                
+                snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                    previousController?.resetForReuse()
+                })
             })
         }
         
@@ -432,7 +459,9 @@ public class AttachmentController: ViewController {
             var containerLayout = layout
             let containerRect: CGRect
             if case .regular = layout.metrics.widthClass {
-                let size = CGSize(width: 390.0, height: 620.0)
+                let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0) - 60.0
+                
+                let size = CGSize(width: 390.0, height: min(620.0, availableHeight))
                 
                 let insets = layout.insets(options: [.input])
                 let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
@@ -446,8 +475,11 @@ public class AttachmentController: ViewController {
                 if self.wrapperNode.view.mask == nil {
                     let maskView = UIImageView()
                     maskView.image = generateMaskImage()
-                    maskView.frame = CGRect(origin: CGPoint(), size: maskView.image?.size ?? CGSize())
+                    maskView.contentMode = .scaleToFill
                     self.wrapperNode.view.mask = maskView
+                }
+                if let maskView = self.wrapperNode.view.mask {
+                    transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(), size: size))
                 }
                 
                 self.shadowNode.alpha = 1.0

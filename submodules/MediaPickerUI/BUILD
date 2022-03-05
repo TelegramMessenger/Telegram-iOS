@@ -38,6 +38,8 @@ swift_library(
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/WebSearchUI:WebSearchUI",
         "//submodules/ChatMessageBackground:ChatMessageBackground",
+        "//submodules/SparseItemGrid:SparseItemGrid",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

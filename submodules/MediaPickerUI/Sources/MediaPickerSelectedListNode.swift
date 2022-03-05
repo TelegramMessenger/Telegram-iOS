@@ -118,7 +118,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
                 if let strongSelf = self, let interaction = strongSelf.interaction {
-                    interaction.toggleSelection(strongSelf.asset, value)
+                    interaction.toggleSelection(strongSelf.asset, value, true)
                 }
             }
             self.addSubnode(checkNode)
@@ -188,6 +188,41 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         }
         view.frame = self.convert(self.bounds, to: nil)
         return view
+    }
+    
+    func animateFrom(_ view: UIView) {
+        view.alpha = 0.0
+        
+        let frame = view.convert(view.bounds, to: self.supernode?.view)
+        let targetFrame = self.frame
+        
+        self.updateLayout(size: frame.size, transition: .immediate)
+        self.updateLayout(size: targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
+        self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak view] _ in
+            view?.alpha = 1.0
+        })
+    }
+    
+    func animateTo(_ view: UIView) {
+        view.alpha = 0.0
+        
+        let frame = self.frame
+        let targetFrame = view.convert(view.bounds, to: self.supernode?.view)
+        
+        let corners = self.corners
+        
+        self.corners = []
+        self.updateLayout(size: targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
+        self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak view, weak self] _ in
+            view?.alpha = 1.0
+            
+            self?.corners = corners
+            self?.updateLayout(size: frame.size, transition: .immediate)
+            
+            Queue.mainQueue().after(0.01) {
+                self?.layer.removeAllAnimations()
+            }
+        })
     }
 }
 
@@ -288,7 +323,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             }
             return (false, false, nil)
         }, willBegin: { _ in
-//            self?.willBeginReorder(point)
+
         }, began: { [weak self] itemNode in
             self?.beginReordering(itemNode: itemNode)
         }, ended: { [weak self] point in
@@ -307,6 +342,74 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         Queue.mainQueue().after(0.1, {
             self.updateAbsoluteRects()
         })
+    }
+    
+    var getTransitionView: (String) -> UIView? = { _ in return nil }
+    
+    func animateIn(completion: @escaping () -> Void = {}) {
+        self.wallpaperBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+            completion()
+        })
+        self.wallpaperBackgroundNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        for (_, backgroundNode) in self.backgroundNodes {
+            backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+        }
+        
+        for (identifier, itemNode) in self.itemNodes {
+            if let transitionView = self.getTransitionView(identifier) {
+                itemNode.animateFrom(transitionView)
+            } else {
+                itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            }
+        }
+        
+        if let topNode = self.messageNodes?.first, !topNode.alpha.isZero {
+            topNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+            topNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -30.0), to: CGPoint(), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
+        
+        if let bottomNode = self.messageNodes?.last, !bottomNode.alpha.isZero {
+            bottomNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+            bottomNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 30.0), to: CGPoint(), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
+    }
+    
+    func animateOut(completion: @escaping () -> Void = {}) {
+        self.wallpaperBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+            completion()
+            
+            if let strongSelf = self {
+                Queue.mainQueue().after(0.01) {
+                    for (_, backgroundNode) in strongSelf.backgroundNodes {
+                        backgroundNode.layer.removeAllAnimations()
+                    }
+                    
+                    strongSelf.messageNodes?.first?.layer.removeAllAnimations()
+                    strongSelf.messageNodes?.last?.layer.removeAllAnimations()
+                    
+                    strongSelf.wallpaperBackgroundNode.layer.removeAllAnimations()
+                }
+            }
+        })
+        
+        self.wallpaperBackgroundNode.layer.animateScale(from: 1.0, to: 1.2, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+        
+        for (_, backgroundNode) in self.backgroundNodes {
+            backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
+        }
+        
+        for (identifier, itemNode) in self.itemNodes {
+            if let transitionView = self.getTransitionView(identifier) {
+                itemNode.animateTo(transitionView)
+            }
+        }
+        
+        self.messageNodes?.first?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        self.messageNodes?.first?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        
+        self.messageNodes?.last?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+        self.messageNodes?.last?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -556,9 +659,14 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
                 self.backgroundNodes[groupIndex] = groupBackgroundNode
                 self.scrollNode.insertSubnode(groupBackgroundNode, at: 0)
             }
+            
+            var itemTransition = transition
+            if groupBackgroundNode.frame.width.isZero {
+                itemTransition = .immediate
+            }
 
-            transition.updateFrame(node: groupBackgroundNode, frame: groupRect.insetBy(dx: -5.0, dy: -2.0).offsetBy(dx: 3.0, dy: 0.0))
-            groupBackgroundNode.update(size: groupBackgroundNode.frame.size, theme: theme, wallpaper: wallpaper, graphics: graphics, wallpaperBackgroundNode: self.wallpaperBackgroundNode, transition: transition)
+            itemTransition.updateFrame(node: groupBackgroundNode, frame: groupRect.insetBy(dx: -5.0, dy: -2.0).offsetBy(dx: 3.0, dy: 0.0))
+            groupBackgroundNode.update(size: groupBackgroundNode.frame.size, theme: theme, wallpaper: wallpaper, graphics: graphics, wallpaperBackgroundNode: self.wallpaperBackgroundNode, transition: itemTransition)
             
             for (item, itemRect, itemPosition) in items {
                 if let identifier = item.uniqueIdentifier, let itemNode = self.itemNodes[identifier] {
@@ -578,8 +686,18 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
                     itemNode.corners = corners
                     itemNode.radius = bubbleCorners.mainRadius
                     
-                    itemNode.updateLayout(size: itemRect.size, transition: transition)
-                    transition.updateFrame(node: itemNode, frame: itemRect.offsetBy(dx: groupRect.minX, dy: groupRect.minY))
+                    var itemTransition = itemTransition
+                    if itemNode.frame.width.isZero {
+                        itemTransition = .immediate
+                    }
+                    
+                    itemNode.updateLayout(size: itemRect.size, transition: itemTransition)
+                    itemTransition.updateFrame(node: itemNode, frame: itemRect.offsetBy(dx: groupRect.minX, dy: groupRect.minY))
+                    
+                    if case .immediate = itemTransition, case .animated = transition {
+                        transition.animateTransformScale(node: itemNode, from: 0.01)
+                        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
                 }
             }
             

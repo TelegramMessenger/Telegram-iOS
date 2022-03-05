@@ -49,7 +49,11 @@ public enum UndoOverlayAction {
 
 public final class UndoOverlayController: ViewController {
     private let presentationData: PresentationData
-    public let content: UndoOverlayContent
+    public var content: UndoOverlayContent {
+        didSet {
+            (self.displayNode as! UndoOverlayControllerNode).updateContent(self.content)
+        }
+    }
     private let elevatedLayout: Bool
     private let animateInAsReplacement: Bool
     private var action: (UndoOverlayAction) -> Bool

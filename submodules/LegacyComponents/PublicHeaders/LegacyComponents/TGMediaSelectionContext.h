@@ -45,6 +45,12 @@
 - (NSOrderedSet *)selectedItemsIdentifiers;
 - (NSArray *)selectedItems;
 
+- (void)saveState;
+- (void)restoreState;
+- (void)clearSavedState;
+
+- (NSUInteger)savedStateDifference;
+
 - (NSUInteger)count;
 
 + (SSignal *)combinedSelectionChangedSignalForContexts:(NSArray *)contexts;

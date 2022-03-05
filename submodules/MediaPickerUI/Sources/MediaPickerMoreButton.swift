@@ -119,7 +119,7 @@ final class MediaPickerMoreButtonNode: ASDisplayNode {
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let animationSize = CGSize(width: 30.0, height: 30.0)
         let inset: CGFloat = 0.0
-        self.iconNode.frame = CGRect(origin: CGPoint(x: inset + 4.0, y: floor((constrainedSize.height - animationSize.height) / 2.0)), size: animationSize)
+        self.iconNode.frame = CGRect(origin: CGPoint(x: inset + 6.0, y: floor((constrainedSize.height - animationSize.height) / 2.0) + 1.0), size: animationSize)
         
         let size = CGSize(width: animationSize.width + inset * 2.0, height: constrainedSize.height)
         let bounds = CGRect(origin: CGPoint(), size: size)
