@@ -10373,7 +10373,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.presentMediaPicker(bannedSendMedia: bannedSendMedia, present: { controller, mediaPickerContext in
                     let _ = currentMediaController.swap(controller)
-                    mediaPickerContext?.setCaption(inputText)
+                    if !inputText.string.isEmpty {
+                        mediaPickerContext?.setCaption(inputText)
+                    }
                     completion(controller, mediaPickerContext)
                 }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                     attachmentController?.mediaPickerContext = mediaPickerContext
