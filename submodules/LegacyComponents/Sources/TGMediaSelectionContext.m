@@ -76,6 +76,10 @@
     NSString *identifier = item.uniqueIdentifier;
     if (selected)
     {
+        if ([_selectedIdentifiers containsObject:identifier]) {
+            return false;
+        }
+        
         if (_selectedIdentifiers.count >= _selectionLimit) {
             if (_selectionLimitExceeded) {
                 _selectionLimitExceeded();
