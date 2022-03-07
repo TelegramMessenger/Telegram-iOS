@@ -7,9 +7,9 @@ public struct BadPasscodeAttempt: Codable, Equatable {
     public static let AppUnlockType: Int32 = 0
     public static let PasscodeSettingsType: Int32 = 1
     
-    public var type: Int32
-    public var isFakePasscode: Bool
-    public var date: CFAbsoluteTime
+    public let type: Int32
+    public let isFakePasscode: Bool
+    public let date: CFAbsoluteTime
     
     public init(type: Int32, isFakePasscode: Bool, date: CFAbsoluteTime = CFAbsoluteTimeGetCurrent()) {
         self.type = type
@@ -24,13 +24,13 @@ public struct PresentationPasscodeSettings: Codable, Equatable {
     public var biometricsDomainState: Data?
     public var shareBiometricsDomainState: Data?
     
-    public var badPasscodeAttempts: [BadPasscodeAttempt]?
+    public var badPasscodeAttempts: [BadPasscodeAttempt]
     
     public static var defaultSettings: PresentationPasscodeSettings {
-        return PresentationPasscodeSettings(enableBiometrics: false, autolockTimeout: nil, biometricsDomainState: nil, shareBiometricsDomainState: nil, badPasscodeAttempts: nil)
+        return PresentationPasscodeSettings(enableBiometrics: false, autolockTimeout: nil, biometricsDomainState: nil, shareBiometricsDomainState: nil, badPasscodeAttempts: [])
     }
     
-    public init(enableBiometrics: Bool, autolockTimeout: Int32?, biometricsDomainState: Data?, shareBiometricsDomainState: Data?, badPasscodeAttempts: [BadPasscodeAttempt]?) {
+    public init(enableBiometrics: Bool, autolockTimeout: Int32?, biometricsDomainState: Data?, shareBiometricsDomainState: Data?, badPasscodeAttempts: [BadPasscodeAttempt]) {
         self.enableBiometrics = enableBiometrics
         self.autolockTimeout = autolockTimeout
         self.biometricsDomainState = biometricsDomainState
@@ -47,7 +47,7 @@ public struct PresentationPasscodeSettings: Codable, Equatable {
         self.biometricsDomainState = try container.decodeIfPresent(Data.self, forKey: "ds")
         self.shareBiometricsDomainState = try container.decodeIfPresent(Data.self, forKey: "sds")
         
-        self.badPasscodeAttempts = try container.decodeIfPresent([BadPasscodeAttempt].self, forKey: "pt_bpa")
+        self.badPasscodeAttempts = try container.decodeIfPresent([BadPasscodeAttempt].self, forKey: "pt_bpa") ?? []
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -58,7 +58,7 @@ public struct PresentationPasscodeSettings: Codable, Equatable {
         try container.encodeIfPresent(self.biometricsDomainState, forKey: "ds")
         try container.encodeIfPresent(self.shareBiometricsDomainState, forKey: "sds")
         
-        try container.encodeIfPresent(self.badPasscodeAttempts, forKey: "pt_bpa")
+        try container.encode(self.badPasscodeAttempts, forKey: "pt_bpa")
     }
     
     public static func ==(lhs: PresentationPasscodeSettings, rhs: PresentationPasscodeSettings) -> Bool {
@@ -81,7 +81,7 @@ public struct PresentationPasscodeSettings: Codable, Equatable {
         return PresentationPasscodeSettings(enableBiometrics: self.enableBiometrics, autolockTimeout: autolockTimeout, biometricsDomainState: self.biometricsDomainState, shareBiometricsDomainState: shareBiometricsDomainState, badPasscodeAttempts: self.badPasscodeAttempts)
     }
     
-    public func withUpdatedBadPasscodeAttempts(_ badPasscodeAttempts: [BadPasscodeAttempt]?) -> PresentationPasscodeSettings {
+    public func withUpdatedBadPasscodeAttempts(_ badPasscodeAttempts: [BadPasscodeAttempt]) -> PresentationPasscodeSettings {
         return PresentationPasscodeSettings(enableBiometrics: self.enableBiometrics, autolockTimeout: self.autolockTimeout, biometricsDomainState: self.biometricsDomainState, shareBiometricsDomainState: self.shareBiometricsDomainState, badPasscodeAttempts: badPasscodeAttempts)
     }
 }

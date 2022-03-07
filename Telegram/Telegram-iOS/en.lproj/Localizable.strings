@@ -7237,7 +7237,7 @@ Sorry for the inconvenience.";
 "Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
 
 "PasscodeSettings.BadAttempts" = "Bad Passcode Attempts";
-"PasscodeSettings.BadAttempts.Info" = "See all bad passcode attempts";
+"PasscodeSettings.BadAttempts.Help" = "See all bad passcode attempts";
 "PasscodeSettings.BadAttempts.AppLogin" = "App Login";
 "PasscodeSettings.BadAttempts.SettingsLogin" = "Settings Login";
 "PasscodeSettings.BadAttempts.FakePasscode" = "Fake Passcode";

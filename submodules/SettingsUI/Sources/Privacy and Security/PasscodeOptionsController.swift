@@ -332,8 +332,8 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
             entries.append(.addFakePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_AddFakePasscode))
             entries.append(.fakePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeHelp))
             
-            entries.append(.badPasscodeAttempts(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts, passcodeOptionsData.presentationSettings.badPasscodeAttempts?.count ?? 0))
-            entries.append(.badPasscodeAttemptsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts_Info))
+            entries.append(.badPasscodeAttempts(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts, passcodeOptionsData.presentationSettings.badPasscodeAttempts.count))
+            entries.append(.badPasscodeAttemptsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts_Help))
     }
     
     return entries
@@ -535,10 +535,10 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         let bpaController = BadPasscodeAttemptsController(context: context)
         bpaController.clear = {
             let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedBadPasscodeAttempts(nil))))
+                passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedBadPasscodeAttempts([]))))
                 
                 let _ = updatePresentationPasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
-                    return current.withUpdatedBadPasscodeAttempts(nil)
+                    return current.withUpdatedBadPasscodeAttempts([])
                 }).start()
             })
             
@@ -615,11 +615,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                 if succeed {
                     completion(true)
                 } else {
-                    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { passcodeSettings in
-                        var badPasscodeAttempts = passcodeSettings.badPasscodeAttempts ?? []
-                        badPasscodeAttempts.append(BadPasscodeAttempt(type: BadPasscodeAttempt.PasscodeSettingsType, isFakePasscode: false))
-                        return passcodeSettings.withUpdatedBadPasscodeAttempts(badPasscodeAttempts)
-                    }).start()
+                    addBadPasscodeAttempt(accountManager: context.sharedContext.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.PasscodeSettingsType, isFakePasscode: false))
                 }
                 return succeed
             }
