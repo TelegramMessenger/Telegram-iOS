@@ -1207,7 +1207,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 needsShareButton = false
             }
         }
-        
+                
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
