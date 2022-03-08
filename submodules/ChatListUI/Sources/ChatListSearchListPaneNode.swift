@@ -1664,7 +1664,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                     var items: [ActionSheetItem] = []
                     
-                    //TODO:localize
                     items.append(ActionSheetAnimationAndTextItem(title: strongSelf.presentationData.strings.DownloadList_ClearAlertTitle, text: strongSelf.presentationData.strings.DownloadList_ClearAlertText))
                     
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DownloadList_OptionManageDeviceStorage, color: .accent, action: { [weak actionSheet] in

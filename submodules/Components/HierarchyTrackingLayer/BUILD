@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "SolidRoundedButtonNode",
-    module_name = "SolidRoundedButtonNode",
+    name = "HierarchyTrackingLayer",
+    module_name = "HierarchyTrackingLayer",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,9 +10,6 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
-        "//submodules/Display:Display",
-        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

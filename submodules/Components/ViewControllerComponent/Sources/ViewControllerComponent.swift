@@ -35,23 +35,35 @@ public extension Transition {
 }
 
 open class ViewControllerComponentContainer: ViewController {
+    public enum NavigationBarAppearance {
+        case none
+        case transparent
+        case `default`
+    }
+    
     public final class Environment: Equatable {
         public let statusBarHeight: CGFloat
+        public let navigationHeight: CGFloat
         public let safeInsets: UIEdgeInsets
         public let isVisible: Bool
+        public let theme: PresentationTheme
         public let strings: PresentationStrings
         public let controller: () -> ViewController?
         
         public init(
             statusBarHeight: CGFloat,
+            navigationHeight: CGFloat,
             safeInsets: UIEdgeInsets,
             isVisible: Bool,
+            theme: PresentationTheme,
             strings: PresentationStrings,
             controller: @escaping () -> ViewController?
         ) {
             self.statusBarHeight = statusBarHeight
+            self.navigationHeight = navigationHeight
             self.safeInsets = safeInsets
             self.isVisible = isVisible
+            self.theme = theme
             self.strings = strings
             self.controller = controller
         }
@@ -64,10 +76,16 @@ open class ViewControllerComponentContainer: ViewController {
             if lhs.statusBarHeight != rhs.statusBarHeight {
                 return false
             }
+            if lhs.navigationHeight != rhs.navigationHeight {
+                return false
+            }
             if lhs.safeInsets != rhs.safeInsets {
                 return false
             }
             if lhs.isVisible != rhs.isVisible {
+                return false
+            }
+            if lhs.theme !== rhs.theme {
                 return false
             }
             if lhs.strings !== rhs.strings {
@@ -78,15 +96,15 @@ open class ViewControllerComponentContainer: ViewController {
         }
     }
     
-    final class Node: ViewControllerTracingNode {
+    public final class Node: ViewControllerTracingNode {
         private var presentationData: PresentationData
         private weak var controller: ViewControllerComponentContainer?
         
         private let component: AnyComponent<ViewControllerComponentContainer.Environment>
-        let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
+        public let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
         private var currentIsVisible: Bool = false
-        private var currentLayout: ContainerViewLayout?
+        private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         
         init(context: AccountContext, controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -101,13 +119,15 @@ open class ViewControllerComponentContainer: ViewController {
             self.view.addSubview(self.hostView)
         }
         
-        func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: Transition) {
-            self.currentLayout = layout
+        func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
+            self.currentLayout = (layout, navigationHeight)
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
+                navigationHeight: navigationHeight,
                 safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.intrinsicInsets.left + layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.intrinsicInsets.right + layout.safeInsets.right),
                 isVisible: self.currentIsVisible,
+                theme: self.presentationData.theme,
                 strings: self.presentationData.strings,
                 controller: { [weak self] in
                     return self?.controller
@@ -133,22 +153,31 @@ open class ViewControllerComponentContainer: ViewController {
             guard let currentLayout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(currentLayout, transition: .immediate)
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: .immediate)
         }
     }
     
-    var node: Node {
+    public var node: Node {
         return self.displayNode as! Node
     }
     
     private let context: AccountContext
     private let component: AnyComponent<ViewControllerComponentContainer.Environment>
     
-    public init<C: Component>(context: AccountContext, component: C) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
         
-        super.init(navigationBarPresentationData: nil)
+        let navigationBarPresentationData: NavigationBarPresentationData?
+        switch navigationBarAppearance {
+        case .none:
+            navigationBarPresentationData = nil
+        case .transparent:
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }, hideBackground: true, hideBadge: false, hideSeparator: true)
+        case .default:
+            navigationBarPresentationData = NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 })
+        }
+        super.init(navigationBarPresentationData: navigationBarPresentationData)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -176,6 +205,8 @@ open class ViewControllerComponentContainer: ViewController {
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
-        self.node.containerLayoutUpdated(layout, transition: Transition(transition))
+        let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+        
+        self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
     }
 }

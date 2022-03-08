@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "LottieAnimationComponent",
-    module_name = "LottieAnimationComponent",
+    name = "BundleIconComponent",
+    module_name = "BundleIconComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,9 +11,8 @@ swift_library(
     ],
     deps = [
         "//submodules/ComponentFlow:ComponentFlow",
-        "//submodules/lottie-ios:Lottie",
         "//submodules/AppBundle:AppBundle",
-        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/Display:Display",
     ],
     visibility = [
         "//visibility:public",

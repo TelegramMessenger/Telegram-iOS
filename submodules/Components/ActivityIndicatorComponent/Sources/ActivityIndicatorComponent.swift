@@ -3,11 +3,18 @@ import UIKit
 import ComponentFlow
 
 public final class ActivityIndicatorComponent: Component {
+    public let color: UIColor
+    
     public init(
+        color: UIColor
     ) {
+        self.color = color
     }
 
     public static func ==(lhs: ActivityIndicatorComponent, rhs: ActivityIndicatorComponent) -> Bool {
+        if lhs.color != rhs.color {
+            return false
+        }
         return true
     }
     
@@ -21,6 +28,10 @@ public final class ActivityIndicatorComponent: Component {
         }
         
         func update(component: ActivityIndicatorComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            if component.color != self.color {
+                self.color = component.color
+            }
+            
             if !self.isAnimating {
                 self.startAnimating()
             }

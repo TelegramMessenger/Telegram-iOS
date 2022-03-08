@@ -7343,8 +7343,20 @@ Sorry for the inconvenience.";
 "LiveStream.ViewerCount_1" = "1 viewer";
 "LiveStream.ViewerCount_any" = "%@ viewers";
 
+"LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
+"LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";
+
 "Attachment.MyAlbums" = "My Albums";
 "Attachment.MediaTypes" = "Media Types";
 
 "Attachment.LocationAccessTitle" = "Access Your Location";
 "Attachment.LocationAccessText" = "Share places or your live location.";
+
+"ChannelInfo.CreateExternalStream" = "Stream With...";
+
+"CreateExternalStream.Title" = "Stream With...";
+"CreateExternalStream.Text" = "To stream video with a another app, enter\nthese Server URL and Stream Key in your\nsteaming app.";
+"CreateExternalStream.ServerUrl" = "server URL";
+"CreateExternalStream.StreamKey" = "stream key";
+"CreateExternalStream.StartStreamingInfo" = "Once you start broadcasting in your streaming\napp, tap Start Streaming below.";
+"CreateExternalStream.StartStreaming" = "Start Streaming";

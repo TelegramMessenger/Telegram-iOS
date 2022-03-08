@@ -98,6 +98,9 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/ActivityIndicatorComponent:ActivityIndicatorComponent",
+        "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
+        "//submodules/Components/BundleIconComponent:BundleIconComponent",
+        "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
     ],
     visibility = [
         "//visibility:public",
