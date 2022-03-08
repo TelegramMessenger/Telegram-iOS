@@ -273,6 +273,168 @@ private extension PresentationGroupCallState {
     }
 }
 
+private enum CurrentImpl {
+    case call(OngoingGroupCallContext)
+    case mediaStream(WrappedMediaStreamingContext)
+}
+
+private extension CurrentImpl {
+    var joinPayload: Signal<(String, UInt32), NoError> {
+        switch self {
+        case let .call(callContext):
+            return callContext.joinPayload
+        case .mediaStream:
+            let ssrcId = UInt32.random(in: 0 ..< UInt32(Int32.max - 1))
+            let dict: [String: Any] = [
+                "fingerprints": [],
+                "ufrag": "",
+                "pwd": "",
+                "ssrc": Int32(bitPattern: ssrcId),
+                "ssrc-groups": []
+            ]
+            guard let jsonString = (try? JSONSerialization.data(withJSONObject: dict, options: [])).flatMap({ String(data: $0, encoding: .utf8) }) else {
+                return .never()
+            }
+            return .single((jsonString, ssrcId))
+        }
+    }
+    
+    var networkState: Signal<OngoingGroupCallContext.NetworkState, NoError> {
+        switch self {
+        case let .call(callContext):
+            return callContext.networkState
+        case .mediaStream:
+            return .single(OngoingGroupCallContext.NetworkState(isConnected: true, isTransitioningFromBroadcastToRtc: false))
+        }
+    }
+    
+    var audioLevels: Signal<[(OngoingGroupCallContext.AudioLevelKey, Float, Bool)], NoError> {
+        switch self {
+        case let .call(callContext):
+            return callContext.audioLevels
+        case .mediaStream:
+            return .single([])
+        }
+    }
+    
+    var isMuted: Signal<Bool, NoError> {
+        switch self {
+        case let .call(callContext):
+            return callContext.isMuted
+        case .mediaStream:
+            return .single(true)
+        }
+    }
+
+    var isNoiseSuppressionEnabled: Signal<Bool, NoError> {
+        switch self {
+        case let .call(callContext):
+            return callContext.isNoiseSuppressionEnabled
+        case .mediaStream:
+            return .single(false)
+        }
+    }
+    
+    func stop() {
+        switch self {
+        case let .call(callContext):
+            callContext.stop()
+        case .mediaStream:
+            break
+        }
+    }
+    
+    func setIsMuted(_ isMuted: Bool) {
+        switch self {
+        case let .call(callContext):
+            callContext.setIsMuted(isMuted)
+        case .mediaStream:
+            break
+        }
+    }
+
+    func setIsNoiseSuppressionEnabled(_ isNoiseSuppressionEnabled: Bool) {
+        switch self {
+        case let .call(callContext):
+            callContext.setIsNoiseSuppressionEnabled(isNoiseSuppressionEnabled)
+        case .mediaStream:
+            break
+        }
+    }
+    
+    func requestVideo(_ capturer: OngoingCallVideoCapturer?) {
+        switch self {
+        case let .call(callContext):
+            callContext.requestVideo(capturer)
+        case .mediaStream:
+            break
+        }
+    }
+    
+    func disableVideo() {
+        switch self {
+        case let .call(callContext):
+            callContext.disableVideo()
+        case .mediaStream:
+            break
+        }
+    }
+    
+    func setVolume(ssrc: UInt32, volume: Double) {
+        switch self {
+        case let .call(callContext):
+            callContext.setVolume(ssrc: ssrc, volume: volume)
+        case .mediaStream:
+            break
+        }
+    }
+
+    func setRequestedVideoChannels(_ channels: [OngoingGroupCallContext.VideoChannel]) {
+        switch self {
+        case let .call(callContext):
+            callContext.setRequestedVideoChannels(channels)
+        case .mediaStream:
+            break
+        }
+    }
+    
+    func makeIncomingVideoView(endpointId: String, requestClone: Bool, completion: @escaping (OngoingCallContextPresentationCallVideoView?, OngoingCallContextPresentationCallVideoView?) -> Void) {
+        switch self {
+        case let .call(callContext):
+            callContext.makeIncomingVideoView(endpointId: endpointId, requestClone: requestClone, completion: completion)
+        case .mediaStream:
+            break
+        }
+    }
+
+    func video(endpointId: String) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError> {
+        switch self {
+        case let .call(callContext):
+            return callContext.video(endpointId: endpointId)
+        case let .mediaStream(mediaStreamContext):
+            return mediaStreamContext.video()
+        }
+    }
+
+    func addExternalAudioData(data: Data) {
+        switch self {
+        case let .call(callContext):
+            callContext.addExternalAudioData(data: data)
+        case .mediaStream:
+            break
+        }
+    }
+
+    func getStats(completion: @escaping (OngoingGroupCallContext.Stats) -> Void) {
+        switch self {
+        case let .call(callContext):
+            callContext.getStats(completion: completion)
+        case .mediaStream:
+            break
+        }
+    }
+}
+
 public final class PresentationGroupCallImpl: PresentationGroupCall {
     private enum InternalState {
         case requesting
@@ -430,7 +592,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private var currentLocalSsrc: UInt32?
     private var currentLocalEndpointId: String?
     
-    private var genericCallContext: OngoingGroupCallContext?
+    private var genericCallContext: CurrentImpl?
     private var currentConnectionMode: OngoingGroupCallContext.ConnectionMode = .none
     private var didInitializeConnectionMode: Bool = false
 
@@ -827,7 +989,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     }
                 }
                 if !removedSsrc.isEmpty {
-                    strongSelf.genericCallContext?.removeSsrcs(ssrcs: removedSsrc)
+                    if case let .call(callContext) = strongSelf.genericCallContext {
+                        callContext.removeSsrcs(ssrcs: removedSsrc)
+                    }
                 }
             }
         })
@@ -1411,39 +1575,57 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
         
         if shouldJoin, let callInfo = activeCallInfo {
-            let genericCallContext: OngoingGroupCallContext
+            let genericCallContext: CurrentImpl
             if let current = self.genericCallContext {
                 genericCallContext = current
             } else {
-                var outgoingAudioBitrateKbit: Int32?
-                let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
-                if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Double {
-                    outgoingAudioBitrateKbit = Int32(value)
-                }
+                if self.isStream {
+                    genericCallContext = .mediaStream(WrappedMediaStreamingContext(rejoinNeeded: { [weak self] in
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if strongSelf.leaving {
+                                return
+                            }
+                            if case .established = strongSelf.internalState {
+                                strongSelf.requestCall(movingFromBroadcastToRtc: false)
+                            }
+                        }
+                    }))
+                } else {
+                    var outgoingAudioBitrateKbit: Int32?
+                    let appConfiguration = self.accountContext.currentAppConfiguration.with({ $0 })
+                    if let data = appConfiguration.data, let value = data["voice_chat_send_bitrate"] as? Double {
+                        outgoingAudioBitrateKbit = Int32(value)
+                    }
 
-                genericCallContext = OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
-                    let disposable = MetaDisposable()
-                    Queue.mainQueue().async {
-                        guard let strongSelf = self else {
-                            return
+                    genericCallContext = .call(OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
+                        let disposable = MetaDisposable()
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            disposable.set(strongSelf.requestMediaChannelDescriptions(ssrcs: ssrcs, completion: completion))
                         }
-                        disposable.set(strongSelf.requestMediaChannelDescriptions(ssrcs: ssrcs, completion: completion))
-                    }
-                    return disposable
-                }, rejoinNeeded: { [weak self] in
-                    Queue.mainQueue().async {
-                        guard let strongSelf = self else {
-                            return
+                        return disposable
+                    }, rejoinNeeded: { [weak self] in
+                        Queue.mainQueue().async {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if case .established = strongSelf.internalState {
+                                strongSelf.requestCall(movingFromBroadcastToRtc: false)
+                            }
                         }
-                        if case .established = strongSelf.internalState {
-                            strongSelf.requestCall(movingFromBroadcastToRtc: false)
-                        }
-                    }
-                }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264")
+                    }, outgoingAudioBitrateKbit: outgoingAudioBitrateKbit, videoContentType: self.isVideoEnabled ? .generic : .none, enableNoiseSuppression: false, disableAudioInput: self.isStream, preferX264: self.accountContext.sharedContext.immediateExperimentalUISettings.preferredVideoCodec == "H264"
+                    ))
+                }
 
                 self.genericCallContext = genericCallContext
                 self.stateVersionValue += 1
             }
+            
             self.joinDisposable.set((genericCallContext.joinPayload
             |> distinctUntilChanged(isEqual: { lhs, rhs in
                 if lhs.0 != rhs.0 {
@@ -1528,15 +1710,28 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         }
                     }
 
-                    switch joinCallResult.connectionMode {
-                    case .rtc:
-                        strongSelf.currentConnectionMode = .rtc
-                        strongSelf.genericCallContext?.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
-                        strongSelf.genericCallContext?.setJoinResponse(payload: clientParams)
-                    case .broadcast:
-                        strongSelf.currentConnectionMode = .broadcast
-                        strongSelf.genericCallContext?.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
-                        strongSelf.genericCallContext?.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: callInfo.isStream)
+                    if let genericCallContext = strongSelf.genericCallContext {
+                        switch genericCallContext {
+                        case let .call(callContext):
+                            switch joinCallResult.connectionMode {
+                            case .rtc:
+                                strongSelf.currentConnectionMode = .rtc
+                                callContext.setConnectionMode(.rtc, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: false)
+                                callContext.setJoinResponse(payload: clientParams)
+                            case .broadcast:
+                                strongSelf.currentConnectionMode = .broadcast
+                                callContext.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
+                                callContext.setConnectionMode(.broadcast, keepBroadcastConnectedIfWasEnabled: false, isUnifiedBroadcast: callInfo.isStream)
+                            }
+                        case let .mediaStream(mediaStreamContext):
+                            switch joinCallResult.connectionMode {
+                            case .rtc:
+                                strongSelf.currentConnectionMode = .rtc
+                            case .broadcast:
+                                strongSelf.currentConnectionMode = .broadcast
+                                mediaStreamContext.setAudioStreamData(audioStreamData: OngoingGroupCallContext.AudioStreamData(engine: strongSelf.accountContext.engine, callId: callInfo.id, accessHash: callInfo.accessHash, isExternalStream: callInfo.isStream))
+                            }
+                        }
                     }
 
                     strongSelf.updateSessionState(internalState: .established(info: joinCallResult.callInfo, connectionMode: joinCallResult.connectionMode, clientParams: clientParams, localSsrc: ssrc, initialState: joinCallResult.state), audioSessionControl: strongSelf.audioSessionControl)
@@ -2952,7 +3147,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         if !self.didInitializeConnectionMode || self.currentConnectionMode != .none {
             self.didInitializeConnectionMode = true
             self.currentConnectionMode = .none
-            self.genericCallContext?.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc, isUnifiedBroadcast: false)
+            if let genericCallContext = self.genericCallContext {
+                switch genericCallContext {
+                case let .call(callContext):
+                    callContext.setConnectionMode(.none, keepBroadcastConnectedIfWasEnabled: movingFromBroadcastToRtc, isUnifiedBroadcast: false)
+                case .mediaStream:
+                    assertionFailure()
+                    break
+                }
+            }
         }
         
         self.internalState = .requesting

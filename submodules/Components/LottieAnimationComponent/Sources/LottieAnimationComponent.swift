@@ -2,27 +2,7 @@ import Foundation
 import ComponentFlow
 import Lottie
 import AppBundle
-
-private final class NullActionClass: NSObject, CAAction {
-    @objc public func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
-private final class HierarchyTrackingLayer: CALayer {
-    var didEnterHierarchy: (() -> Void)?
-    var didExitHierarchy: (() -> Void)?
-    
-    override func action(forKey event: String) -> CAAction? {
-        if event == kCAOnOrderIn {
-            self.didEnterHierarchy?()
-        } else if event == kCAOnOrderOut {
-            self.didExitHierarchy?()
-        }
-        return nullAction
-    }
-}
+import HierarchyTrackingLayer
 
 public final class LottieAnimationComponent: Component {
     public struct Animation: Equatable {

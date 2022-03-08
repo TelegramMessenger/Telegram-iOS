@@ -112,6 +112,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @interface GroupCallDisposable : NSObject
 
+- (instancetype _Nonnull)initWithBlock:(dispatch_block_t _Nonnull)block;
 - (void)dispose;
 
 @end

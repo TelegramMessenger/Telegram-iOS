@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "LottieAnimationComponent",
-    module_name = "LottieAnimationComponent",
+    name = "ViewControllerComponent",
+    module_name = "ViewControllerComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,10 +10,11 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
-        "//submodules/lottie-ios:Lottie",
-        "//submodules/AppBundle:AppBundle",
-        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",

@@ -12,6 +12,8 @@ import UndoUI
 import TelegramPresentationData
 import LottieAnimationComponent
 import ContextUI
+import ViewControllerComponent
+import BundleIconComponent
 
 final class NavigationBackButtonComponent: Component {
     let text: String
@@ -97,61 +99,6 @@ final class NavigationBackButtonComponent: Component {
     }
 }
 
-final class BundleIconComponent: Component {
-    let name: String
-    let tintColor: UIColor?
-    
-    init(name: String, tintColor: UIColor?) {
-        self.name = name
-        self.tintColor = tintColor
-    }
-    
-    static func ==(lhs: BundleIconComponent, rhs: BundleIconComponent) -> Bool {
-        if lhs.name != rhs.name {
-            return false
-        }
-        if lhs.tintColor != rhs.tintColor {
-            return false
-        }
-        return false
-    }
-    
-    public final class View: UIImageView {
-        private var component: BundleIconComponent?
-        
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        func update(component: BundleIconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            if self.component?.name != component.name || self.component?.tintColor != component.tintColor {
-                if let tintColor = component.tintColor {
-                    self.image = generateTintedImage(image: UIImage(bundleImageName: component.name), color: tintColor, backgroundColor: nil)
-                } else {
-                    self.image = UIImage(bundleImageName: component.name)
-                }
-            }
-            self.component = component
-            
-            let imageSize = self.image?.size ?? CGSize()
-            
-            return CGSize(width: min(imageSize.width, availableSize.width), height: min(imageSize.height, availableSize.height))
-        }
-    }
-    
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
 private final class NavigationBarComponent: CombinedComponent {
     let topInset: CGFloat
     let sideInset: CGFloat
@@ -206,7 +153,7 @@ private final class NavigationBarComponent: CombinedComponent {
             let contentHeight: CGFloat = 44.0
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
             
-            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.0)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
+            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
@@ -389,7 +336,7 @@ private final class ToolbarComponent: CombinedComponent {
             let contentHeight: CGFloat = 44.0
             let size = CGSize(width: context.availableSize.width, height: contentHeight + context.component.bottomInset)
             
-            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.0)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
+            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
@@ -495,6 +442,8 @@ public final class MediaStreamComponent: CombinedComponent {
         private(set) var canManageCall: Bool = false
         let isPictureInPictureSupported: Bool
         
+        private(set) var peerTitle: String = ""
+        
         private(set) var isVisibleInHierarchy: Bool = false
         private var isVisibleInHierarchyDisposable: Disposable?
         
@@ -543,6 +492,10 @@ public final class MediaStreamComponent: CombinedComponent {
                 var updated = false
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
+                    updated = true
+                }
+                if strongSelf.peerTitle != callPeer.debugDisplayTitle {
+                    strongSelf.peerTitle = callPeer.debugDisplayTitle
                     updated = true
                 }
                 
@@ -647,6 +600,8 @@ public final class MediaStreamComponent: CombinedComponent {
                     call: context.component.call,
                     hasVideo: context.state.hasVideo,
                     isVisible: environment.isVisible && context.state.isVisibleInHierarchy,
+                    isAdmin: context.state.canManageCall,
+                    peerTitle: context.state.peerTitle,
                     activatePictureInPicture: activatePictureInPicture,
                     bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
                         guard let call = call else {
@@ -924,7 +879,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         self.context = call.accountContext
         self.call = call
         
-        super.init(context: call.accountContext, component: MediaStreamComponent(call: call as! PresentationGroupCallImpl))
+        super.init(context: call.accountContext, component: MediaStreamComponent(call: call as! PresentationGroupCallImpl), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .White
         self.view.disablesInteractiveModalDismiss = true

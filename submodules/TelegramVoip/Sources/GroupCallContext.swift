@@ -2,8 +2,9 @@ import Foundation
 import SwiftSignalKit
 import TgVoipWebrtc
 import TelegramCore
+import Postbox
 
-private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
+final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQueueWebrtc {
     private let queue: Queue
     
     init(queue: Queue) {
@@ -27,23 +28,27 @@ private final class ContextQueueImpl: NSObject, OngoingCallThreadLocalContextQue
     }
 }
 
-private enum BroadcastPartSubject {
+enum BroadcastPartSubject {
     case audio
     case video(channelId: Int32, quality: OngoingGroupCallContext.VideoChannel.Quality)
 }
 
-private protocol BroadcastPartSource: AnyObject {
+protocol BroadcastPartSource: AnyObject {
     func requestTime(completion: @escaping (Int64) -> Void) -> Disposable
     func requestPart(timestampMilliseconds: Int64, durationMilliseconds: Int64, subject: BroadcastPartSubject, completion: @escaping (OngoingGroupCallBroadcastPart) -> Void, rejoinNeeded: @escaping () -> Void) -> Disposable
 }
 
-private final class NetworkBroadcastPartSource: BroadcastPartSource {
+final class NetworkBroadcastPartSource: BroadcastPartSource {
     private let queue: Queue
     private let engine: TelegramEngine
     private let callId: Int64
     private let accessHash: Int64
     private let isExternalStream: Bool
     private var dataSource: AudioBroadcastDataSource?
+    
+    #if DEBUG
+    private let debugDumpDirectory = TempBox.shared.tempDirectory()
+    #endif
     
     init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, isExternalStream: Bool) {
         self.queue = queue
@@ -139,6 +144,9 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
         }
         |> deliverOn(self.queue)
             
+        #if DEBUG
+        let debugDumpDirectory = self.debugDumpDirectory
+        #endif
         return signal.start(next: { result in
             guard let result = result else {
                 completion(OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: Double(timestampIdMilliseconds), status: .notReady, oggData: Data()))
@@ -147,11 +155,11 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
-                /*#if DEBUG
-                let tempFile = EngineTempBox.shared.tempFile(fileName: "part.mp4")
-                let _ = try? dataValue.write(to: URL(fileURLWithPath: tempFile.path))
-                print("Dump stream part: \(tempFile.path)")
-                #endif*/
+                #if DEBUG
+                let tempFilePath = debugDumpDirectory.path + "/\(timestampMilliseconds).mp4"
+                let _ = try? dataValue.subdata(in: 32 ..< dataValue.count).write(to: URL(fileURLWithPath: tempFilePath))
+                print("Dump stream part: \(tempFilePath)")
+                #endif
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
@@ -167,7 +175,7 @@ private final class NetworkBroadcastPartSource: BroadcastPartSource {
     }
 }
 
-private final class OngoingGroupCallBroadcastPartTaskImpl : NSObject, OngoingGroupCallBroadcastPartTask {
+final class OngoingGroupCallBroadcastPartTaskImpl: NSObject, OngoingGroupCallBroadcastPartTask {
     private let disposable: Disposable?
     
     init(disposable: Disposable?) {
@@ -209,6 +217,11 @@ public final class OngoingGroupCallContext {
     public struct NetworkState: Equatable {
         public var isConnected: Bool
         public var isTransitioningFromBroadcastToRtc: Bool
+        
+        public init(isConnected: Bool, isTransitioningFromBroadcastToRtc: Bool) {
+            self.isConnected = isConnected
+            self.isTransitioningFromBroadcastToRtc = isTransitioningFromBroadcastToRtc
+        }
     }
     
     public enum AudioLevelKey: Hashable {

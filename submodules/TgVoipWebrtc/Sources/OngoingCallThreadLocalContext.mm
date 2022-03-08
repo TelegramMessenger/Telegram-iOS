@@ -1,5 +1,6 @@
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
 
+#import "MediaUtils.h"
 
 #import "Instance.h"
 #import "InstanceImpl.h"

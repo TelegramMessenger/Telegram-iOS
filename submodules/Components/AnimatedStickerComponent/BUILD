@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "LottieAnimationComponent",
-    module_name = "LottieAnimationComponent",
+    name = "AnimatedStickerComponent",
+    module_name = "AnimatedStickerComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,9 +11,10 @@ swift_library(
     ],
     deps = [
         "//submodules/ComponentFlow:ComponentFlow",
-        "//submodules/lottie-ios:Lottie",
-        "//submodules/AppBundle:AppBundle",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+
     ],
     visibility = [
         "//visibility:public",

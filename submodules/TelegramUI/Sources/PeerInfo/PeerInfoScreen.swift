@@ -65,6 +65,7 @@ import TooltipUI
 import QrCodeUI
 import Translate
 import ChatPresentationInterfaceState
+import CreateExternalMediaStreamScreen
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -4106,18 +4107,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context.scheduleGroupCall(peerId: self.peerId)
     }
     
+    private func createExternalStream(credentialsPromise: Promise<GroupCallStreamCredentials>?) {
+        self.controller?.push(CreateExternalMediaStreamScreen(context: self.context, peerId: self.peerId, credentialsPromise: credentialsPromise))
+    }
+    
     private func createAndJoinGroupCall(peerId: PeerId, joinAsPeerId: PeerId?) {
         if let _ = self.context.sharedContext.callManager {
             let startCall: (Bool) -> Void = { [weak self] endCurrentIfAny in
                 guard let strongSelf = self else {
                     return
                 }
-                
-                #if DEBUG
-                let isExternalStream: Bool = true
-                #else
-                let isExternalStream: Bool = false
-                #endif
                 
                 var cancelImpl: (() -> Void)?
                 let presentationData = strongSelf.presentationData
@@ -4135,7 +4134,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 |> runOn(Queue.mainQueue())
                 |> delay(0.15, queue: Queue.mainQueue())
                 let progressDisposable = progressSignal.start()
-                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil, isExternalStream: isExternalStream)
+                let createSignal = strongSelf.context.engine.calls.createGroupCall(peerId: peerId, title: nil, scheduleDate: nil, isExternalStream: false)
                 |> afterDisposed {
                     Queue.mainQueue().async {
                         progressDisposable.dispose()
@@ -4467,6 +4466,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     
     private func openVoiceChatOptions(defaultJoinAsPeerId: PeerId?, gesture: ContextGesture? = nil, contextController: ContextControllerProtocol? = nil) {
+        guard let chatPeer = self.data?.peer else {
+            return
+        }
         let context = self.context
         let peerId = self.peerId
         let defaultJoinAsPeerId = defaultJoinAsPeerId ?? self.context.account.peerId
@@ -4533,6 +4535,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 self?.scheduleGroupCall()
             })))
+            
+            var credentialsPromise: Promise<GroupCallStreamCredentials>?
+            var canCreateStream = false
+            switch chatPeer {
+            case let group as TelegramGroup:
+                if case .creator = group.role {
+                    canCreateStream = true
+                }
+            case let channel as TelegramChannel:
+                if channel.flags.contains(.isCreator) {
+                    canCreateStream = true
+                    credentialsPromise = Promise()
+                    credentialsPromise?.set(context.engine.calls.getGroupCallStreamCredentials(peerId: peerId, revokePreviousCredentials: false) |> `catch` { _ -> Signal<GroupCallStreamCredentials, NoError> in return .never() })
+                }
+            default:
+                break
+            }
+            
+            if canCreateStream {
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChannelInfo_CreateExternalStream, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VoiceChat"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    f(.dismissWithoutContent)
+                    
+                    self?.createExternalStream(credentialsPromise: credentialsPromise)
+                })))
+            }
             
             if let contextController = contextController {
                 contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
