@@ -279,9 +279,6 @@ public class AttachmentController: ViewController {
         }
         
         func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) -> Bool {
-            guard !self.animating else {
-                return false
-            }
             guard self.currentType != type else {
                 if let controller = self.currentControllers.last {
                     controller.scrollToTopWithTabBar?()
@@ -360,12 +357,22 @@ public class AttachmentController: ViewController {
                 }
                 
                 if case .compact = layout.metrics.widthClass {
-                    let offset = strongSelf.container.isExpanded ? 10.0 : 24.0
-                    strongSelf.container.clipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.18, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
-                        if let strongSelf = self {
-                            strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0)), to: NSValue(cgPoint: CGPoint(x: 0.0, y: -offset)), keyPath: "position", duration: 0.55, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
-                                self?.container.clipNode.layer.removeAllAnimations()
-                                self?.animating = false
+                    let offset = 25.0
+                    
+                    let initialPosition = strongSelf.container.clipNode.layer.position
+                    let targetPosition = initialPosition.offsetBy(dx: 0.0, dy: offset)
+                    var startPosition = initialPosition
+                    if let presentation = strongSelf.container.clipNode.layer.presentation() {
+                        startPosition = presentation.position
+                    }
+                    
+                    strongSelf.container.clipNode.layer.animatePosition(from: startPosition, to: targetPosition, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
+                        if let strongSelf = self, finished {
+                            strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: targetPosition), to: NSValue(cgPoint: initialPosition), keyPath: "position", duration: 0.4, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, completion: { [weak self] finished in
+                                if finished {
+                                    self?.container.clipNode.layer.removeAllAnimations()
+                                    self?.animating = false
+                                }
                             })
                         }
                     })
@@ -373,7 +380,7 @@ public class AttachmentController: ViewController {
                     strongSelf.animating = false
                 }
                 
-                snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.23, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                     snapshotView?.removeFromSuperview()
                     previousController?.resetForReuse()
                 })

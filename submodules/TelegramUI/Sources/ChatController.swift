@@ -8998,6 +8998,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.sendMessageActionsController?.dismiss()
         self.themeSceen?.dismiss()
         
+        self.attachmentController?.dismiss()
+        
         self.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
         
         if let _ = self.peekData {
@@ -10322,6 +10324,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
+        
+        let inputIsActive = self.presentationInterfaceState.inputMode == .text
+        
         self.chatDisplayNode.dismissInput()
                 
         var bannedSendMedia: (Int32, Bool)?
@@ -10619,9 +10624,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
         }
-        Queue.mainQueue().justDispatch {
+        let present = {
             self.present(attachmentController, in: .window(.root))
             self.attachmentController = attachmentController
+        }
+        
+        if inputIsActive {
+            Queue.mainQueue().after(0.1, {
+                present()
+            })
+        } else {
+            present()
         }
     }
     

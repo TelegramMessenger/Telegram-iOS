@@ -208,7 +208,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.backgroundNode)
             self.containerNode.addSubnode(self.gridNode)
-            self.containerNode.addSubnode(self.scrollingArea)
+//            self.containerNode.addSubnode(self.scrollingArea)
             
             let collection = controller.collection
             let preloadPromise = self.preloadPromise
@@ -533,6 +533,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             self.currentDisplayMode = displayMode
             
             self.dismissInput()
+            self.controller?.dismissAllTooltips()
             
             if case .selected = displayMode, self.selectionNode == nil, let controller = self.controller {
                 let selectionNode = MediaPickerSelectedListNode(context: controller.context)
@@ -669,6 +670,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         fileprivate func send(asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, completion: @escaping () -> Void) {
+            self.controller?.dismissAllTooltips()
+            
             var hasHeic = false
             let allItems = self.controller?.interaction?.selectionState?.selectedItems() ?? []
             for item in allItems {
@@ -1194,7 +1197,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         super.displayNodeDidLoad()
     }
     
-    private weak var undoController: UndoOverlayController?
+    private weak var undoOverlayController: UndoOverlayController?
     private func showSelectionUndo(item: TGMediaSelectableItem, count: Int32) {
         var asset: PHAsset?
         if let item = item as? TGMediaAsset {
@@ -1216,12 +1219,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             let presentationData = strongSelf.presentationData
-            if let undoController = strongSelf.undoController {
+            if let undoOverlayController = strongSelf.undoOverlayController {
                 let text = presentationData.strings.Attachment_DeselectedItems(count)
-                undoController.content = .image(image: image ?? UIImage(), text: text)
+                undoOverlayController.content = .image(image: image ?? UIImage(), text: text)
             } else {
                 let text = presentationData.strings.Attachment_DeselectedItems(count)
-                let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), text: text), elevatedLayout: true, action: { [weak self] action in
+                let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), text: text), elevatedLayout: true, action: { [weak self] action in
                     guard let strongSelf = self else {
                         return true
                     }
@@ -1233,8 +1236,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     }
                     return true
                 })
-                strongSelf.present(undoController, in: .window(.root))
-                strongSelf.undoController = undoController
+                strongSelf.present(undoOverlayController, in: .window(.root))
+                strongSelf.undoOverlayController = undoOverlayController
             }
         })
     }
@@ -1275,7 +1278,12 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
     }
     
+    func dismissAllTooltips() {
+        self.undoOverlayController?.dismissWithCommitAction()
+    }
+    
     @objc private func cancelPressed() {
+        self.dismissAllTooltips()
         self.dismiss()
     }
     
