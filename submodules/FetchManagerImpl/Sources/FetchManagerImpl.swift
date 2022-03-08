@@ -597,6 +597,9 @@ private func filterDownloadStatsEntry(entry: FetchManagerLocationEntry) -> Bool 
                     return false
                 }
             }
+            if file.isInstantVideo {
+                return false
+            }
             if file.isSticker {
                 return false
             }
