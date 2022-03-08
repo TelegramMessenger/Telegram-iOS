@@ -159,12 +159,18 @@ final class MediaPickerGridItemNode: GridItemNode {
             let wasHidden = self.isHidden
             self.isHidden = self.interaction?.hiddenMediaId == asset.localIdentifier
             if !self.isHidden && wasHidden {
-                self.checkNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.animateFadeIn(animateCheckNode: true)
             }
         }
+    }
+    
+    func animateFadeIn(animateCheckNode: Bool) {
+        if animateCheckNode {
+            self.checkNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
+        self.gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
         
     override func didLoad() {

@@ -224,7 +224,7 @@
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
     
     CGFloat y = 0.0;
-    if (frame.size.width > frame.size.height) {
+    if (frame.size.width > frame.size.height && !TGIsPad()) {
         y = edgeInsets.top + frame.size.height;
     } else {
         y = edgeInsets.top + frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight);

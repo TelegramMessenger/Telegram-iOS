@@ -10357,7 +10357,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let currentFilesController = Atomic<AttachmentContainable?>(value: nil)
         let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
         
-        let attachmentController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, buttons: availableTabs)
+        let attachmentController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, chatLocation: self.chatLocation, buttons: availableTabs)
         attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
             guard let strongSelf = self else {
                 return
@@ -10373,15 +10373,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 strongSelf.presentMediaPicker(bannedSendMedia: bannedSendMedia, present: { controller, mediaPickerContext in
                     let _ = currentMediaController.swap(controller)
-                    mediaPickerContext?.setCaption(inputText)
+                    if !inputText.string.isEmpty {
+                        mediaPickerContext?.setCaption(inputText)
+                    }
                     completion(controller, mediaPickerContext)
                 }, updateMediaPickerContext: { [weak attachmentController] mediaPickerContext in
                     attachmentController?.mediaPickerContext = mediaPickerContext
-                }, completion: { [weak self] signals, silentPosting, scheduleTime in
+                }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
                     if !inputText.string.isEmpty {
                         self?.clearInputText()
                     }
-                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime)
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
                 })
             case .file:
                 strongSelf.controllerNavigationDisposable.set(nil)
@@ -10617,8 +10619,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
         }
-        self.present(attachmentController, in: .window(.root))
-        self.attachmentController = attachmentController
+        Queue.mainQueue().justDispatch {
+            self.present(attachmentController, in: .window(.root))
+            self.attachmentController = attachmentController
+        }
     }
     
     private func oldPresentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?) {
@@ -11023,7 +11027,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(bannedSendMedia: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?) -> Void) {
+    private func presentMediaPicker(bannedSendMedia: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -11086,8 +11090,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         controller.getCaptionPanelView = { [weak self] in
             return self?.getCaptionPanelView()
         }
-        controller.legacyCompletion = { signals, silently, scheduleTime in
-            completion(signals, silently, scheduleTime)
+        controller.legacyCompletion = { signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion in
+            completion(signals, silently, scheduleTime, getAnimatedTransitionSource, sendCompletion)
         }
         present(controller, mediaPickerContext)
     }
@@ -11925,25 +11929,80 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var usedCorrelationId: Int64?
 
                 var mappedMessages: [EnqueueMessage] = []
+                var addedTransitions: [(Int64, [String], () -> Void)] = []
+                
+                var groupedCorrelationIds: [Int64: Int64] = [:]
+                
                 for item in items {
                     var message = item.message
                     if let uniqueId = item.uniqueId {
-                        let correlationId = Int64.random(in: 0 ..< Int64.max)
+                        let correlationId: Int64
+                        var addTransition = true
+                        if let groupingKey = message.groupingKey {
+                            if let existing = groupedCorrelationIds[groupingKey] {
+                                correlationId = existing
+                                addTransition = false
+                            } else {
+                                correlationId = Int64.random(in: 0 ..< Int64.max)
+                                groupedCorrelationIds[groupingKey] = correlationId
+                            }
+                        } else {
+                            correlationId = Int64.random(in: 0 ..< Int64.max)
+                        }
                         message = message.withUpdatedCorrelationId(correlationId)
 
-                        if items.count == 1, let getAnimatedTransitionSource = getAnimatedTransitionSource {
-                            usedCorrelationId = correlationId
-                            completionImpl = nil
-                            strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
-                                return getAnimatedTransitionSource(uniqueId)
-                            })), initiated: {
-                                completion()
-                            })
+                        if addTransition {
+                            addedTransitions.append((correlationId, [uniqueId], addedTransitions.isEmpty ? completion : {}))
+                        } else {
+                            if let index = addedTransitions.firstIndex(where: { $0.0 == correlationId }) {
+                                var (correlationId, uniqueIds, completion) = addedTransitions[index]
+                                uniqueIds.append(uniqueId)
+                                addedTransitions[index] = (correlationId, uniqueIds, completion)
+                            }
                         }
+                        
+                        usedCorrelationId = correlationId
+                        completionImpl = nil
                     }
                     mappedMessages.append(message)
                 }
-
+                        
+                if addedTransitions.count > 1 {
+                    var transitions: [(Int64, ChatMessageTransitionNode.Source, () -> Void)] = []
+                    for (correlationId, uniqueIds, initiated) in addedTransitions {
+                        var source: ChatMessageTransitionNode.Source?
+                        if uniqueIds.count > 1 {
+                            source = .groupedMediaInput(ChatMessageTransitionNode.Source.GroupedMediaInput(extractSnapshots: {
+                                return uniqueIds.compactMap({ getAnimatedTransitionSource?($0) })
+                            }))
+                        } else if let uniqueId = uniqueIds.first {
+                            source = .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
+                                return getAnimatedTransitionSource?(uniqueId)
+                            }))
+                        }
+                        if let source = source {
+                            transitions.append((correlationId, source, initiated))
+                        }
+                    }
+                    strongSelf.chatDisplayNode.messageTransitionNode.add(grouped: transitions)
+                } else if let (correlationId, uniqueIds, initiated) = addedTransitions.first {
+                    var source: ChatMessageTransitionNode.Source?
+                    if uniqueIds.count > 1 {
+                        source = .groupedMediaInput(ChatMessageTransitionNode.Source.GroupedMediaInput(extractSnapshots: {
+                            return uniqueIds.compactMap({ getAnimatedTransitionSource?($0) })
+                        }))
+                    } else if let uniqueId = uniqueIds.first {
+                        source = .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
+                            return getAnimatedTransitionSource?(uniqueId)
+                        }))
+                    }
+                    if let source = source {
+                        strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: source, initiated: {
+                            initiated()
+                        })
+                    }
+                }
+                                                    
                 let messages = strongSelf.transformEnqueueMessages(mappedMessages, silentPosting: silentPosting, scheduleTime: scheduleTime)
                 let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                 strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({

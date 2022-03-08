@@ -2595,15 +2595,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     self?.scrolledToSomeIndex?()
                 }
 
-                if let currentSendAnimationCorrelationId = strongSelf.currentSendAnimationCorrelationId {
-                    var foundItemNode: ChatMessageItemView?
+                if let currentSendAnimationCorrelationIds = strongSelf.currentSendAnimationCorrelationIds {
+                    var foundItemNodes: [Int64: ChatMessageItemView] = [:]
                     strongSelf.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                             for (message, _) in item.content {
                                 for attribute in message.attributes {
-                                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
-                                        if attribute.correlationId == currentSendAnimationCorrelationId {
-                                            foundItemNode = itemNode
+                                    if let attribute = attribute as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
+                                        if currentSendAnimationCorrelationIds.contains(correlationId) {
+                                            foundItemNodes[correlationId] = itemNode
                                         }
                                     }
                                 }
@@ -2611,9 +2611,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
 
-                    if let foundItemNode = foundItemNode {
-                        strongSelf.currentSendAnimationCorrelationId = nil
-                        strongSelf.animationCorrelationMessageFound?(foundItemNode, currentSendAnimationCorrelationId)
+                    if !foundItemNodes.isEmpty {
+                        strongSelf.currentSendAnimationCorrelationIds = nil
+                        strongSelf.animationCorrelationMessagesFound?(foundItemNodes)
                     }
                 }
                 
@@ -3225,12 +3225,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
 
-    private var currentSendAnimationCorrelationId: Int64?
-    func setCurrentSendAnimationCorrelationId(_ value: Int64?) {
-        self.currentSendAnimationCorrelationId = value
+    private var currentSendAnimationCorrelationIds: Set<Int64>?
+    func setCurrentSendAnimationCorrelationIds(_ value: Set<Int64>?) {
+        self.currentSendAnimationCorrelationIds = value
     }
 
-    var animationCorrelationMessageFound: ((ChatMessageItemView, Int64?) -> Void)?
+    var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?
 
     final class SnapshotState {
         fileprivate let snapshotTopInset: CGFloat

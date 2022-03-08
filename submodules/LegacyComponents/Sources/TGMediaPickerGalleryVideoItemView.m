@@ -876,6 +876,14 @@
     return [_imageView convertRect:_imageView.bounds toView:[self transitionView]];
 }
 
+- (UIView *)transitionContentView {
+    if (_videoView != nil) {
+        return _videoView;
+    } else {
+        return _imageView;
+    }
+}
+
 - (UIImage *)screenImage
 {
     if (_videoView != nil)
