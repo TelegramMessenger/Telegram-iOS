@@ -61,6 +61,8 @@ final class MediaStreamVideoComponent: Component {
         }
         
         private let videoRenderingContext = VideoRenderingContext()
+        private let blurTintView: UIView
+        private var videoBlurView: VideoRenderingView?
         private var videoView: VideoRenderingView?
         private var activityIndicatorView: ComponentHostView<Empty>?
         private var noSignalView: ComponentHostView<Empty>?
@@ -76,10 +78,15 @@ final class MediaStreamVideoComponent: Component {
         private weak var state: State?
         
         override init(frame: CGRect) {
+            self.blurTintView = UIView()
+            self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
+
             super.init(frame: frame)
             
             self.isUserInteractionEnabled = false
             self.clipsToBounds = true
+            
+            self.addSubview(self.blurTintView)
         }
         
         required init?(coder: NSCoder) {
@@ -102,6 +109,12 @@ final class MediaStreamVideoComponent: Component {
             
             if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
+                    if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
+                        self.videoBlurView = videoBlurView
+                        self.insertSubview(videoBlurView, belowSubview: self.blurTintView)
+                    }
+
+                    
                     if let videoView = self.videoRenderingContext.makeView(input: input, blur: false, forceSampleBufferDisplayLayer: true) {
                         self.videoView = videoView
                         self.addSubview(videoView)
@@ -191,8 +204,15 @@ final class MediaStreamVideoComponent: Component {
                 }
                 
                 let videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(availableSize)
+                let blurredVideoSize = videoSize.aspectFilled(availableSize)
                 
                 transition.withAnimation(.none).setFrame(view: videoView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize), completion: nil)
+                
+                if let videoBlurView = self.videoBlurView {
+                    videoBlurView.updateIsEnabled(component.isVisible)
+                    
+                    transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
+                }
             }
             
             if !self.hadVideo {
