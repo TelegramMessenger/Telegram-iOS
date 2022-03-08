@@ -74,8 +74,9 @@ enum LegacyMediaPickerGallerySource {
     case selection(item: TGMediaSelectableItem)
 }
 
-func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?, chatLocation: ChatLocation?, presentationData: PresentationData, source: LegacyMediaPickerGallerySource, immediateThumbnail: UIImage?, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, hasSilentPosting: Bool, hasSchedule: Bool, hasTimer: Bool, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (String) -> UIView?, completed: @escaping (TGMediaSelectableItem & TGMediaEditableItem, Bool, Int32?) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void, finishedTransitionIn: @escaping () -> Void, willTransitionOut: @escaping () -> Void, dismissAll: @escaping () -> Void) {
+func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?, chatLocation: ChatLocation?, presentationData: PresentationData, source: LegacyMediaPickerGallerySource, immediateThumbnail: UIImage?, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, hasSilentPosting: Bool, hasSchedule: Bool, hasTimer: Bool, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (String) -> UIView?, completed: @escaping (TGMediaSelectableItem & TGMediaEditableItem, Bool, Int32?, @escaping () -> Void) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void, finishedTransitionIn: @escaping () -> Void, willTransitionOut: @escaping () -> Void, dismissAll: @escaping () -> Void) -> TGModernGalleryController {
     let reminder = peer?.id == context.account.peerId
+    let hasSilentPosting = hasSilentPosting && peer?.id != context.account.peerId
     
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
     legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
@@ -191,9 +192,10 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
 
     model.interfaceView.donePressed = { [weak controller] item in
         if let item = item as? TGMediaPickerGalleryItem {
-            controller?.dismissWhenReady(animated: true)
-            completed(item.asset, false, nil)  
-            dismissAll()
+            completed(item.asset, false, nil, {
+                controller?.dismissWhenReady(animated: true)
+                dismissAll()
+            })
         }
     }
     model.interfaceView.doneLongPressed = { [weak selectionContext, weak editingContext, weak legacyController, weak model] item in
@@ -215,23 +217,24 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                 model?.dismiss(true, false)
             }
             controller.send = {
-                dismissImpl()
-                completed(item.asset, false, nil)
+                completed(item.asset, false, nil, {
+                    dismissImpl()
+                })
             }
             controller.sendSilently = {
-                dismissImpl()
-                completed(item.asset, true, nil)
+                completed(item.asset, true, nil, {
+                    dismissImpl()
+                })
             }
             controller.schedule = {
                 presentSchedulePicker(true, { time in
-                    dismissImpl()
-                    completed(item.asset, false, time)
+                    completed(item.asset, false, time, {
+                        dismissImpl()
+                    })
                 })
             }
             controller.sendWithTimer = {
                 presentTimerPicker { time in
-                    dismissImpl()
-                    
                     var items = selectionContext.selectedItems() ?? []
                     items.append(item.asset as Any)
                     
@@ -239,7 +242,9 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                         editingContext?.setTimer(time as NSNumber, for: item)
                     }
                     
-                    completed(item.asset, false, nil)
+                    completed(item.asset, false, nil, {
+                        dismissImpl()
+                    })
                 }
             }
             controller.customDismissBlock = { [weak legacySheetController] in
@@ -288,4 +293,6 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
         }
     }
     present(legacyController, nil)
+    
+    return controller
 }

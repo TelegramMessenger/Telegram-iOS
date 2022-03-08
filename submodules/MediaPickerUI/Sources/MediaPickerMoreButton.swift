@@ -105,7 +105,9 @@ final class MediaPickerMoreButtonNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.action?(strongSelf.contextSourceNode, gesture)
+            if case .more = strongSelf.iconNode.iconState {
+                strongSelf.action?(strongSelf.contextSourceNode, gesture)
+            }
         }
     }
     

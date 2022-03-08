@@ -156,7 +156,10 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let point = recognizer.location(in: self.view)
                 let currentHitView = self.hitTest(point, with: nil)
                 
-                let scrollViewAndListNode = self.findScrollView(view: currentHitView)
+                var scrollViewAndListNode = self.findScrollView(view: currentHitView)
+                if scrollViewAndListNode?.0.frame.height == self.frame.width {
+                    scrollViewAndListNode = nil
+                }
                 let scrollView = scrollViewAndListNode?.0
                 let listNode = scrollViewAndListNode?.1
             

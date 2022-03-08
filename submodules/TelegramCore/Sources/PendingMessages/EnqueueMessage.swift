@@ -47,6 +47,14 @@ public enum EnqueueMessage {
                 return .forward(source: source, grouping: grouping, attributes: attributes, correlationId: value)
         }
     }
+    
+    public var groupingKey: Int64? {
+        if case let .message(_, _, _, _, localGroupingKey, _) = self {
+            return localGroupingKey
+        } else {
+            return nil
+        }
+    }
 }
 
 private extension EnqueueMessage {

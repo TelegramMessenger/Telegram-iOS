@@ -90,6 +90,7 @@ private func generateMaskImage() -> UIImage? {
 public class AttachmentController: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
+    private let chatLocation: ChatLocation
     private let buttons: [AttachmentButtonType]
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
@@ -164,7 +165,7 @@ public class AttachmentController: ViewController {
             
             self.container = AttachmentContainer()
             self.container.canHaveKeyboardFocus = true
-            self.panel = AttachmentPanel(context: controller.context, updatedPresentationData: controller.updatedPresentationData)
+            self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, updatedPresentationData: controller.updatedPresentationData)
                         
             super.init()
             
@@ -360,9 +361,9 @@ public class AttachmentController: ViewController {
                 
                 if case .compact = layout.metrics.widthClass {
                     let offset = strongSelf.container.isExpanded ? 10.0 : 24.0
-                    strongSelf.container.clipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -offset), duration: 0.18, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+                    strongSelf.container.clipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.18, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
                         if let strongSelf = self {
-                            strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0)), to: NSValue(cgPoint: CGPoint(x: 0.0, y: offset)), keyPath: "position", duration: 0.55, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
+                            strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0)), to: NSValue(cgPoint: CGPoint(x: 0.0, y: -offset)), keyPath: "position", duration: 0.55, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
                                 self?.container.clipNode.layer.removeAllAnimations()
                                 self?.animating = false
                             })
@@ -544,10 +545,11 @@ public class AttachmentController: ViewController {
         completion(nil, nil)
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, buttons: [AttachmentButtonType]) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType]) {
         self.context = context
-        self.buttons = buttons
         self.updatedPresentationData = updatedPresentationData
+        self.chatLocation = chatLocation
+        self.buttons = buttons
         
         super.init(navigationBarPresentationData: nil)
         

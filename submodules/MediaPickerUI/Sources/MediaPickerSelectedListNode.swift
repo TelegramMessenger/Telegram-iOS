@@ -44,10 +44,16 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         }
     }
     
+    private var readyPromise = Promise<Bool>()
+    fileprivate var ready: Signal<Bool, NoError> {
+        return self.readyPromise.get()
+    }
+    
     init(asset: TGMediaAsset, interaction: MediaPickerInteraction?) {
         self.imageNode = ImageNode()
         self.imageNode.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
+        self.imageNode.animateFirstTransition = false
         
         self.asset = asset
         self.interaction = interaction
@@ -111,6 +117,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             }
         }
         self.imageNode.setSignal(imageSignal)
+        self.readyPromise.set(self.imageNode.contentReady)
     }
     
     func updateSelectionState() {
@@ -203,7 +210,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         })
     }
     
-    func animateTo(_ view: UIView) {
+    func animateTo(_ view: UIView, completion: @escaping (Bool) -> Void) {
         view.alpha = 0.0
         
         let frame = self.frame
@@ -216,6 +223,12 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak view, weak self] _ in
             view?.alpha = 1.0
             
+            var animateCheckNode = false
+            if let strongSelf = self, let checkNode = strongSelf.checkNode, checkNode.alpha.isZero {
+                animateCheckNode = true
+            }
+            completion(animateCheckNode)
+                
             self?.corners = corners
             self?.updateLayout(size: frame.size, transition: .immediate)
             
@@ -288,6 +301,9 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
     
     private var validLayout: (size: CGSize, insets: UIEdgeInsets, items: [TGMediaSelectableItem], grouped: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners)?
     
+    private var didSetReady = false
+    private var ready = Promise<Bool>()
+    
     init(context: AccountContext) {
         self.context = context
         self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
@@ -344,35 +360,46 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         })
     }
     
-    var getTransitionView: (String) -> UIView? = { _ in return nil }
+    var getTransitionView: (String ) -> (UIView, (Bool) -> Void)? = { _ in return nil }
     
-    func animateIn(completion: @escaping () -> Void = {}) {
-        self.wallpaperBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
-            completion()
-        })
-        self.wallpaperBackgroundNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-        
-        for (_, backgroundNode) in self.backgroundNodes {
-            backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
-        }
-        
-        for (identifier, itemNode) in self.itemNodes {
-            if let transitionView = self.getTransitionView(identifier) {
-                itemNode.animateFrom(transitionView)
-            } else {
-                itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+    func animateIn(initiated: @escaping () -> Void, completion: @escaping () -> Void = {}) {
+        let _ = (self.ready.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let strongSelf = self else {
+                return
             }
-        }
-        
-        if let topNode = self.messageNodes?.first, !topNode.alpha.isZero {
-            topNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
-            topNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -30.0), to: CGPoint(), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-        }
-        
-        if let bottomNode = self.messageNodes?.last, !bottomNode.alpha.isZero {
-            bottomNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
-            bottomNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 30.0), to: CGPoint(), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-        }
+            
+            strongSelf.alpha = 1.0
+            initiated()
+            
+            strongSelf.wallpaperBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                completion()
+            })
+            strongSelf.wallpaperBackgroundNode.layer.animateScale(from: 1.2, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            for (_, backgroundNode) in strongSelf.backgroundNodes {
+                backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+            }
+            
+            for (identifier, itemNode) in strongSelf.itemNodes {
+                if let (transitionView, _) = strongSelf.getTransitionView(identifier) {
+                    itemNode.animateFrom(transitionView)
+                } else {
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                }
+            }
+            
+            if let topNode = strongSelf.messageNodes?.first, !topNode.alpha.isZero {
+                topNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+                topNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -30.0), to: CGPoint(), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            }
+            
+            if let bottomNode = strongSelf.messageNodes?.last, !bottomNode.alpha.isZero {
+                bottomNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.1)
+                bottomNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 30.0), to: CGPoint(), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            }
+        })
     }
     
     func animateOut(completion: @escaping () -> Void = {}) {
@@ -400,8 +427,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         }
         
         for (identifier, itemNode) in self.itemNodes {
-            if let transitionView = self.getTransitionView(identifier) {
-                itemNode.animateTo(transitionView)
+            if let (transitionView, completion) = self.getTransitionView(identifier) {
+                itemNode.animateTo(transitionView, completion: completion)
             }
         }
         
@@ -592,6 +619,19 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             } else {
                 itemSizes.append(asset.dimensions)
             }
+        }
+        
+        if !self.didSetReady {
+            self.didSetReady = true
+            
+            var signals: [Signal<Bool, NoError>] = []
+            for (_, itemNode) in self.itemNodes {
+                signals.append(itemNode.ready)
+            }
+            self.ready.set(combineLatest(queue: Queue.mainQueue(), signals)
+            |> map { _ in
+                return true
+            })
         }
                 
         let boundingSize = CGSize(width: boundingWidth, height: boundingWidth)
@@ -812,9 +852,17 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         transition.updateFrame(node: self.scrollNode, frame: bounds)
     }
     
-    func transitionView(for identifier: String) -> UIView? {
+    func transitionView(for identifier: String, hideSource: Bool) -> UIView? {
+        if hideSource {
+            for (_, node) in self.backgroundNodes {
+                node.alpha = 0.01
+            }
+        }
         for (_, itemNode) in self.itemNodes {
             if itemNode.asset.uniqueIdentifier == identifier {
+                if hideSource {
+                    itemNode.alpha = 0.01
+                }
                 return itemNode.transitionView()
             }
         }

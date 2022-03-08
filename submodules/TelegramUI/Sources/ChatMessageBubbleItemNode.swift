@@ -799,6 +799,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
+    func animateContentFromGroupedMediaInput(transition: CombinedTransition) -> [CGRect] {
+        self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        
+        var rects: [CGRect] = []
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageMediaBubbleContentNode {
+                rects.append(contentNode.frame.offsetBy(dx: -76.0, dy: 0.0))
+            }
+        }
+        return rects
+    }
+    
     override func didLoad() {
         super.didLoad()
         
