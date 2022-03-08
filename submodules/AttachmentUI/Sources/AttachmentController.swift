@@ -344,7 +344,6 @@ public class AttachmentController: ViewController {
             snapshotView.frame = self.container.container.frame
             self.container.clipNode.view.addSubview(snapshotView)
             
-            let alreadyAnimating = self.animating
             self.animating = true
             
             let _ = (controller.ready.get()
@@ -358,19 +357,25 @@ public class AttachmentController: ViewController {
                 }
                 
                 if case .compact = layout.metrics.widthClass {
-                    if !alreadyAnimating {
-                        let offset = 25.0
-                        strongSelf.container.clipNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: offset), duration: 0.15, removeOnCompletion: false, additive: true, completion: { [weak self] finished in
-                            if let strongSelf = self, finished {
-                                strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0)), to: NSValue(cgPoint: CGPoint(x: 0.0, y: -offset)), keyPath: "position", duration: 0.45, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, additive: true, completion: { [weak self] finished in
-                                    if finished {
-                                        self?.container.clipNode.layer.removeAllAnimations()
-                                        self?.animating = false
-                                    }
-                                })
-                            }
-                        })
+                    let offset = 25.0
+                    
+                    let initialPosition = strongSelf.container.clipNode.layer.position
+                    let targetPosition = initialPosition.offsetBy(dx: 0.0, dy: offset)
+                    var startPosition = initialPosition
+                    if let presentation = strongSelf.container.clipNode.layer.presentation() {
+                        startPosition = presentation.position
                     }
+                    
+                    strongSelf.container.clipNode.layer.animatePosition(from: startPosition, to: targetPosition, duration: 0.2, removeOnCompletion: false, completion: { [weak self] finished in
+                        if let strongSelf = self, finished {
+                            strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: targetPosition), to: NSValue(cgPoint: initialPosition), keyPath: "position", duration: 0.4, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, completion: { [weak self] finished in
+                                if finished {
+                                    self?.container.clipNode.layer.removeAllAnimations()
+                                    self?.animating = false
+                                }
+                            })
+                        }
+                    })
                 } else {
                     strongSelf.animating = false
                 }
