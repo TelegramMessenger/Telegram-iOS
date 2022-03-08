@@ -7284,6 +7284,7 @@ Sorry for the inconvenience.";
 "Attachment.Ungrouped" = "Ungrouped";
 
 "Attachment.MessagePreview" = "Message Preview";
+"Attachment.MessagesPreview" = "Messages Preview";
 "Attachment.DragToReorder" = "Drag media to reorder";
 
 "Attachment.SearchWeb" = "Search Web";
