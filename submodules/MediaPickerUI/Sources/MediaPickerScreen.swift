@@ -19,6 +19,7 @@ import ContextUI
 import WebSearchUI
 import SparseItemGrid
 import UndoUI
+import PresentationDataUtils
 
 let overflowInset: CGFloat = 0.0
 
@@ -1282,8 +1283,22 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.undoOverlayController?.dismissWithCommitAction()
     }
     
+    public func requestDismiss(completion: @escaping () -> Void) {
+        if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
+            let controller = textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Attachment_CancelSelectionAlertText, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
+                
+            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertYes, action: {
+                completion()
+            })])
+            self.present(controller, in: .window(.root))
+        } else {
+            completion()
+        }
+    }
+    
     @objc private func cancelPressed() {
         self.dismissAllTooltips()
+        
         self.dismiss()
     }
     

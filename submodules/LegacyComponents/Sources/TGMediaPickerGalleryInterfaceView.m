@@ -140,6 +140,10 @@
             if (strongSelf == nil)
                 return;
             
+            strongSelf->_ignoreSelectionUpdates = true;
+            [strongSelf->_selectionChangedDisposable dispose];
+            [strongSelf->_itemSelectedDisposable dispose];
+            
             [strongSelf.window endEditing:true];
             strongSelf->_portraitToolbarView.doneButton.userInteractionEnabled = false;
             strongSelf->_landscapeToolbarView.doneButton.userInteractionEnabled = false;

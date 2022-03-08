@@ -191,7 +191,6 @@
             UIView *contentView = [itemView transitionContentView];
             UIView *snapshotView = [contentView snapshotViewAfterScreenUpdates:true];
             snapshotView.frame = [contentView convertRect:contentView.bounds toView:nil];
-//            snapshotView.frame = CGRectOffset([contentView convertRect:contentView.bounds toView:nil], 0.0, -self.view.frame.size.height);
             return snapshotView;
         }
     }
