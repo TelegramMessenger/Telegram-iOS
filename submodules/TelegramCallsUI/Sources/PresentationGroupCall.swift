@@ -1579,7 +1579,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
             if let current = self.genericCallContext {
                 genericCallContext = current
             } else {
-                if self.isStream {
+                if self.isStream, !"".isEmpty {
                     genericCallContext = .mediaStream(WrappedMediaStreamingContext(rejoinNeeded: { [weak self] in
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
