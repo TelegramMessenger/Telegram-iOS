@@ -1156,7 +1156,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 selectionState.setItem(item, selected: value)
                 
                 if showUndo {
-                    strongSelf.showSelectionUndo(item: item, count: Int32(selectionState.savedStateDifference()))
+                    strongSelf.showSelectionUndo(item: item)
                 }
             }
         }, sendSelected: { [weak self] currentItem, silently, scheduleTime, animated, completion in
@@ -1199,7 +1199,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     private weak var undoOverlayController: UndoOverlayController?
-    private func showSelectionUndo(item: TGMediaSelectableItem, count: Int32) {
+    private func showSelectionUndo(item: TGMediaSelectableItem) {
         var asset: PHAsset?
         if let item = item as? TGMediaAsset {
             asset = item.backingAsset
@@ -1219,12 +1219,36 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 return
             }
             
+            var photosCount = 0
+            var videosCount = 0
+            strongSelf.interaction?.selectionState?.enumerateDeselectedItems({ item in
+                if let item = item as? TGMediaAsset {
+                    if item.isVideo {
+                        videosCount += 1
+                    } else {
+                        photosCount += 1
+                    }
+                } else if let _ = item as? TGCameraCapturedVideo {
+                    videosCount += 1
+                }
+            })
+            let totalCount = Int32(photosCount + videosCount)
+            
             let presentationData = strongSelf.presentationData
+            let text: String
+            if photosCount > 0 && videosCount > 0 {
+                text = presentationData.strings.Attachment_DeselectedItems(totalCount)
+            } else if photosCount > 0 {
+                text = presentationData.strings.Attachment_DeselectedPhotos(totalCount)
+            } else if videosCount > 0 {
+                text = presentationData.strings.Attachment_DeselectedVideos(totalCount)
+            } else {
+                text = presentationData.strings.Attachment_DeselectedItems(totalCount)
+            }
+            
             if let undoOverlayController = strongSelf.undoOverlayController {
-                let text = presentationData.strings.Attachment_DeselectedItems(count)
                 undoOverlayController.content = .image(image: image ?? UIImage(), text: text)
             } else {
-                let text = presentationData.strings.Attachment_DeselectedItems(count)
                 let undoOverlayController = UndoOverlayController(presentationData: presentationData, content: .image(image: image ?? UIImage(), text: text), elevatedLayout: true, action: { [weak self] action in
                     guard let strongSelf = self else {
                         return true
@@ -1287,7 +1311,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
             let controller = textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Attachment_CancelSelectionAlertText, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
                 
-            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertYes, action: {
+            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertYes, action: { [weak self] in
+                self?.dismissAllTooltips()
                 completion()
             })])
             self.present(controller, in: .window(.root))
