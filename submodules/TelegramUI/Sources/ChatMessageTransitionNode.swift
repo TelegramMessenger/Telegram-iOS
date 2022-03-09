@@ -574,83 +574,85 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
                     self.endAnimation()
                     return
                 }
-                if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                    itemNode.cancelInsertionAnimations()
-
-                    self.contextSourceNode.isExtractedToContextPreview = true
-                    self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
-
-                    self.containerNode.addSubnode(self.contextSourceNode.contentNode)
-
-                    let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNode.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNode.verticalAnimationCurve))
-
-                    var targetContentRects: [CGRect] = []
+                Queue.mainQueue().justDispatch {
                     if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                        targetContentRects = itemNode.animateContentFromGroupedMediaInput(transition: combinedTransition)
-                    }
-                    
-                    let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                        itemNode.cancelInsertionAnimations()
 
-                    func boundingRect(for views: [UIView]) -> CGRect {
-                        var minX: CGFloat = .greatestFiniteMagnitude
-                        var minY: CGFloat = .greatestFiniteMagnitude
-                        var maxX: CGFloat = .leastNonzeroMagnitude
-                        var maxY: CGFloat = .leastNonzeroMagnitude
+                        self.contextSourceNode.isExtractedToContextPreview = true
+                        self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
 
-                        for view in views {
-                            let rect = view.frame
-                            if rect.minX < minX {
-                                minX = rect.minX
-                            }
-                            if rect.minY < minY {
-                                minY = rect.minY
-                            }
-                            if rect.maxX > maxX {
-                                maxX = rect.maxX
-                            }
-                            if rect.maxY > maxY {
-                                maxY = rect.maxY
-                            }
+                        self.containerNode.addSubnode(self.contextSourceNode.contentNode)
+
+                        let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNode.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNode.verticalAnimationCurve))
+
+                        var targetContentRects: [CGRect] = []
+                        if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
+                            targetContentRects = itemNode.animateContentFromGroupedMediaInput(transition: combinedTransition)
                         }
-                        return CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
-                    }
+                        
+                        let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
 
-                    let sourceBackgroundAbsoluteRect = boundingRect(for: snapshotViews)
-                    let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
+                        func boundingRect(for views: [UIView]) -> CGRect {
+                            var minX: CGFloat = .greatestFiniteMagnitude
+                            var minY: CGFloat = .greatestFiniteMagnitude
+                            var maxX: CGFloat = .leastNonzeroMagnitude
+                            var maxY: CGFloat = .leastNonzeroMagnitude
 
-                    self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
-
-                    self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
-
-                    self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
-                    self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
-                        guard let strongSelf = self else {
-                            return
+                            for view in views {
+                                let rect = view.frame
+                                if rect.minX < minX {
+                                    minX = rect.minX
+                                }
+                                if rect.minY < minY {
+                                    minY = rect.minY
+                                }
+                                if rect.maxX > maxX {
+                                    maxX = rect.maxX
+                                }
+                                if rect.maxY > maxY {
+                                    maxY = rect.maxY
+                                }
+                            }
+                            return CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
                         }
-                        strongSelf.endAnimation()
-                    })
 
-                    combinedTransition.horizontal.animateTransformScale(node: self.contextSourceNode.contentNode, from: CGPoint(x: sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width, y: sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height))
+                        let sourceBackgroundAbsoluteRect = boundingRect(for: snapshotViews)
+                        let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
 
-                    var index = 0
-                    for snapshotView in snapshotViews {
-                        let targetContentRect = targetContentRects[index]
-                        let targetAbsoluteContentRect = targetContentRect.offsetBy(dx: targetAbsoluteRect.minX, dy: targetAbsoluteRect.minY)
-                        
-                        snapshotView.center = targetAbsoluteContentRect.center.offsetBy(dx: -self.containerNode.frame.minX, dy: -self.containerNode.frame.minY)
-                        self.containerNode.view.addSubview(snapshotView)
-                    
-                        combinedTransition.horizontal.updateTransformScale(layer: snapshotView.layer, scale: CGPoint(x: 1.0 / (snapshotView.frame.width / targetContentRect.width), y: 1.0 / (snapshotView.frame.height / targetContentRect.height)))
-                        
-                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                            snapshotView?.removeFromSuperview()
+                        self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
+
+                        self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
+
+                        self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
+                        self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.endAnimation()
                         })
+
+                        combinedTransition.horizontal.animateTransformScale(node: self.contextSourceNode.contentNode, from: CGPoint(x: sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width, y: sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height))
+
+                        var index = 0
+                        for snapshotView in snapshotViews {
+                            let targetContentRect = targetContentRects[index]
+                            let targetAbsoluteContentRect = targetContentRect.offsetBy(dx: targetAbsoluteRect.minX, dy: targetAbsoluteRect.minY)
+                            
+                            snapshotView.center = targetAbsoluteContentRect.center.offsetBy(dx: -self.containerNode.frame.minX, dy: -self.containerNode.frame.minY)
+                            self.containerNode.view.addSubview(snapshotView)
                         
-                        index += 1
+                            combinedTransition.horizontal.updateTransformScale(layer: snapshotView.layer, scale: CGPoint(x: 1.0 / (snapshotView.frame.width / targetContentRect.width), y: 1.0 / (snapshotView.frame.height / targetContentRect.height)))
+                            
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                            
+                            index += 1
+                        }
+                        
+                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), ChatMessageTransitionNode.horizontalAnimationCurve, horizontalDuration)
+                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), ChatMessageTransitionNode.verticalAnimationCurve, verticalDuration)
                     }
-                    
-                    self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), ChatMessageTransitionNode.horizontalAnimationCurve, horizontalDuration)
-                    self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), ChatMessageTransitionNode.verticalAnimationCurve, verticalDuration)
                 }
             }
         }

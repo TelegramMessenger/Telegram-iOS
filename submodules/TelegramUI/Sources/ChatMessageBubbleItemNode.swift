@@ -805,7 +805,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var rects: [CGRect] = []
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageMediaBubbleContentNode {
-                rects.append(contentNode.frame.offsetBy(dx: -76.0, dy: 0.0))
+                rects.append(contentNode.frame.offsetBy(dx: -self.clippingNode.frame.minX, dy: 0.0))
             }
         }
         return rects
