@@ -688,7 +688,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     return
                 }
                 self.controller?.legacyCompletion(signals, silently, scheduleTime, { [weak self] identifier in
-                    return self?.getItemSnapshot(identifier)
+                    return !asFile ? self?.getItemSnapshot(identifier) : nil
                 }, { [weak self] in
                     completion()
                     self?.controller?.dismiss(animated: animated)
