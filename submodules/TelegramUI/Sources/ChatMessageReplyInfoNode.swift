@@ -46,7 +46,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     }
     
     class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContext, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
-        
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
@@ -57,7 +56,13 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleFont = Font.medium(fontSize)
             let textFont = Font.regular(fontSize)
             
-            var titleString = message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
+            var author: Peer?
+            if let forwardAuthor = message.forwardInfo?.author {
+                author = forwardAuthor
+            } else {
+                author = message.effectiveAuthor
+            }
+            var titleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             
             if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                 if let author = forwardInfo.author {
