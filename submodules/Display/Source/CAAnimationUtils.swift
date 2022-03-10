@@ -147,15 +147,19 @@ public extension CALayer {
         self.add(animation, forKey: additive ? nil : keyPath)
     }
     
-    func animateGroup(_ animations: [CAAnimation], key: String) {
+    func animateGroup(_ animations: [CAAnimation], key: String, completion: ((Bool) -> Void)? = nil) {
         let animationGroup = CAAnimationGroup()
         var timeOffset = 0.0
         for animation in animations {
-            animation.beginTime = animation.beginTime + timeOffset
+            animation.beginTime = self.convertTime(animation.beginTime, from: nil) + timeOffset
             timeOffset += animation.duration / Double(animation.speed)
         }
         animationGroup.animations = animations
         animationGroup.duration = timeOffset
+        if let completion = completion {
+            animationGroup.delegate = CALayerAnimationDelegate(animation: animationGroup, completion: completion)
+        }
+        
         self.add(animationGroup, forKey: key)
     }
     
@@ -194,6 +198,35 @@ public extension CALayer {
         
         self.add(animation, forKey: keyPath)
     }
+    
+    func springAnimation(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double = 0.0, initialVelocity: CGFloat = 0.0, damping: CGFloat = 88.0, removeOnCompletion: Bool = true, additive: Bool = false) -> CABasicAnimation {
+        let animation: CABasicAnimation
+        if #available(iOS 9.0, *) {
+            animation = makeSpringBounceAnimation(keyPath, initialVelocity, damping)
+        } else {
+            animation = makeSpringAnimation(keyPath)
+        }
+        animation.fromValue = from
+        animation.toValue = to
+        animation.isRemovedOnCompletion = removeOnCompletion
+        animation.fillMode = .forwards
+        
+        let k = Float(UIView.animationDurationFactor())
+        var speed: Float = 1.0
+        if k != 0 && k != 1 {
+            speed = Float(1.0) / k
+        }
+        
+        if !delay.isZero {
+            animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
+            animation.fillMode = .both
+        }
+        
+        animation.speed = speed * Float(animation.duration / duration)
+        animation.isAdditive = additive
+        
+        return animation
+    }
 
     func animateSpring(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double = 0.0, initialVelocity: CGFloat = 0.0, damping: CGFloat = 88.0, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let animation: CABasicAnimation
@@ -217,7 +250,7 @@ public extension CALayer {
         }
         
         if !delay.isZero {
-            animation.beginTime = CACurrentMediaTime() + delay * UIView.animationDurationFactor()
+            animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * UIView.animationDurationFactor()
             animation.fillMode = .both
         }
         

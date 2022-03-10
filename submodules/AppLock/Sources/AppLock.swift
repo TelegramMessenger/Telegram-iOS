@@ -184,7 +184,7 @@ public final class AppLockContextImpl: AppLockContext {
                 return
             }
             
-            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings] as? PresentationPasscodeSettings ?? .defaultSettings
+            let passcodeSettings: PresentationPasscodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? .defaultSettings
             
             let timestamp = CFAbsoluteTimeGetCurrent()
             var becameActiveRecently = false

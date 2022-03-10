@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -14,7 +13,7 @@ private enum MessageGroupType {
     case generic
 }
 
-private func singleMessageType(message: Message) -> MessageGroupType {
+private func singleMessageType(message: EngineMessage) -> MessageGroupType {
     for media in message.media {
         if let _ = media as? TelegramMediaImage {
             return .photos
@@ -31,7 +30,7 @@ private func singleMessageType(message: Message) -> MessageGroupType {
     return .generic
 }
 
-private func messageGroupType(messages: [Message]) -> MessageGroupType {
+private func messageGroupType(messages: [EngineMessage]) -> MessageGroupType {
     if messages.isEmpty {
         return .generic
     }
@@ -45,13 +44,14 @@ private func messageGroupType(messages: [Message]) -> MessageGroupType {
     return currentType
 }
 
-public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], chatPeer: RenderedPeer, accountPeerId: PeerId, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: Peer?, hideAuthor: Bool, messageText: String) {
-    let peer: Peer?
+public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, messages: [EngineMessage], chatPeer: EngineRenderedPeer, accountPeerId: EnginePeer.Id, enableMediaEmoji: Bool = true, isPeerGroup: Bool = false) -> (peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?) {
+    let peer: EnginePeer?
     
     let message = messages.last
     
     var hideAuthor = false
     var messageText: String
+    var spoilers: [NSRange]?
     if let message = message {
         if let messageMain = messageMainPeer(message) {
             peer = messageMain
@@ -269,12 +269,13 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                 }
                             default:
                                 hideAuthor = true
-                                if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                                if let (text, textSpoilers) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
+                                    spoilers = textSpoilers
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let text = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                        if let (text, _) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:
@@ -290,7 +291,7 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         peer = chatPeer.chatMainPeer
         messageText = ""
         if chatPeer.peerId.namespace == Namespaces.Peer.SecretChat {
-            if let secretChat = chatPeer.peers[chatPeer.peerId] as? TelegramSecretChat {
+            if case let .secretChat(secretChat) = chatPeer.peers[chatPeer.peerId] {
                 switch secretChat.embeddedState {
                     case .active:
                         switch secretChat.role {
@@ -313,5 +314,5 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
         }
     }
     
-    return (peer, hideAuthor, messageText)
+    return (peer, hideAuthor, messageText, spoilers)
 }

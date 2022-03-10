@@ -20,6 +20,7 @@
     void (^_completion)(MTDatacenterAuthAction *, bool);
     
     bool _isCdn;
+    bool _skipBind;
     MTDatacenterAuthInfoSelector _authKeyInfoSelector;
     
     NSInteger _datacenterId;
@@ -34,11 +35,12 @@
 
 @implementation MTDatacenterAuthAction
 
-- (instancetype)initWithAuthKeyInfoSelector:(MTDatacenterAuthInfoSelector)authKeyInfoSelector isCdn:(bool)isCdn completion:(void (^)(MTDatacenterAuthAction *, bool))completion {
+- (instancetype)initWithAuthKeyInfoSelector:(MTDatacenterAuthInfoSelector)authKeyInfoSelector isCdn:(bool)isCdn skipBind:(bool)skipBind completion:(void (^)(MTDatacenterAuthAction *, bool))completion {
     self = [super init];
     if (self != nil) {
         _authKeyInfoSelector = authKeyInfoSelector;
         _isCdn = isCdn;
+        _skipBind = skipBind;
         _completion = [completion copy];
     }
     return self;
@@ -114,45 +116,53 @@
         case MTDatacenterAuthInfoSelectorEphemeralMedia: {
             MTContext *mainContext = _context;
             if (mainContext != nil) {
-                MTDatacenterAuthInfo *persistentAuthInfo = [mainContext authInfoForDatacenterWithId:_datacenterId selector:MTDatacenterAuthInfoSelectorPersistent];
-                if (persistentAuthInfo != nil) {
-                    _bindMtProto = [[MTProto alloc] initWithContext:mainContext datacenterId:_datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
-                    _bindMtProto.cdn = false;
-                    _bindMtProto.useUnauthorizedMode = false;
-                    _bindMtProto.useTempAuthKeys = true;
-                    _bindMtProto.useExplicitAuthKey = authKey;
+                if (_skipBind) {
+                    MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
                     
-                    switch (_authKeyInfoSelector) {
-                        case MTDatacenterAuthInfoSelectorEphemeralMain:
-                            _bindMtProto.media = false;
-                            break;
-                        case MTDatacenterAuthInfoSelectorEphemeralMedia:
-                            _bindMtProto.media = true;
-                            _bindMtProto.enforceMedia = true;
-                            break;
-                        default:
-                            break;
-                    }
+                    [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:authInfo selector:_authKeyInfoSelector];
                     
-                    __weak MTDatacenterAuthAction *weakSelf = self;
-                    [_bindMtProto addMessageService:[[MTBindKeyMessageService alloc] initWithPersistentKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:persistentAuthInfo.authKey authKeyId:persistentAuthInfo.authKeyId notBound:false] ephemeralKey:authKey completion:^(bool success) {
-                        __strong MTDatacenterAuthAction *strongSelf = weakSelf;
-                        if (strongSelf == nil) {
-                            return;
-                        }
-                        [strongSelf->_bindMtProto stop];
+                    [self complete];
+                } else {
+                    MTDatacenterAuthInfo *persistentAuthInfo = [mainContext authInfoForDatacenterWithId:_datacenterId selector:MTDatacenterAuthInfoSelectorPersistent];
+                    if (persistentAuthInfo != nil) {
+                        _bindMtProto = [[MTProto alloc] initWithContext:mainContext datacenterId:_datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
+                        _bindMtProto.cdn = false;
+                        _bindMtProto.useUnauthorizedMode = false;
+                        _bindMtProto.useTempAuthKeys = true;
+                        _bindMtProto.useExplicitAuthKey = authKey;
                         
-                        if (success) {
-                            MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
-                            
-                            [strongSelf->_context updateAuthInfoForDatacenterWithId:strongSelf->_datacenterId authInfo:authInfo selector:strongSelf->_authKeyInfoSelector];
-                            
-                            [strongSelf complete];
-                        } else {
-                            [strongSelf fail];
+                        switch (_authKeyInfoSelector) {
+                            case MTDatacenterAuthInfoSelectorEphemeralMain:
+                                _bindMtProto.media = false;
+                                break;
+                            case MTDatacenterAuthInfoSelectorEphemeralMedia:
+                                _bindMtProto.media = true;
+                                _bindMtProto.enforceMedia = true;
+                                break;
+                            default:
+                                break;
                         }
-                    }]];
-                    [_bindMtProto resume];
+                        
+                        __weak MTDatacenterAuthAction *weakSelf = self;
+                        [_bindMtProto addMessageService:[[MTBindKeyMessageService alloc] initWithPersistentKey:[[MTDatacenterAuthKey alloc] initWithAuthKey:persistentAuthInfo.authKey authKeyId:persistentAuthInfo.authKeyId notBound:false] ephemeralKey:authKey completion:^(bool success) {
+                            __strong MTDatacenterAuthAction *strongSelf = weakSelf;
+                            if (strongSelf == nil) {
+                                return;
+                            }
+                            [strongSelf->_bindMtProto stop];
+                            
+                            if (success) {
+                                MTDatacenterAuthInfo *authInfo = [[MTDatacenterAuthInfo alloc] initWithAuthKey:authKey.authKey authKeyId:authKey.authKeyId saltSet:@[[[MTDatacenterSaltInfo alloc] initWithSalt:0 firstValidMessageId:timestamp lastValidMessageId:timestamp + (29.0 * 60.0) * 4294967296]] authKeyAttributes:nil];
+                                
+                                [strongSelf->_context updateAuthInfoForDatacenterWithId:strongSelf->_datacenterId authInfo:authInfo selector:strongSelf->_authKeyInfoSelector];
+                                
+                                [strongSelf complete];
+                            } else {
+                                [strongSelf fail];
+                            }
+                        }]];
+                        [_bindMtProto resume];
+                    }
                 }
             }
         }

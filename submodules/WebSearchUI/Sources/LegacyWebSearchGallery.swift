@@ -3,7 +3,6 @@ import UIKit
 import LegacyComponents
 import SwiftSignalKit
 import TelegramCore
-import Postbox
 import SSignalKit
 import UIKit
 import Display
@@ -12,6 +11,7 @@ import AccountContext
 import PhotoResources
 import LegacyUI
 import LegacyMediaPickerUI
+import Postbox
 
 class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
     var isVideo: Bool {
@@ -263,7 +263,7 @@ func legacyWebSearchItem(account: Account, result: ChatContextResult) -> LegacyW
             representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil))
         }
         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(imageDimensions), resource: imageResource, progressiveSizes: [], immediateThumbnailData: nil))
-        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
+        let tmpImage = TelegramMediaImage(imageId: EngineMedia.Id(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
         thumbnailSignal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: .standalone(media: tmpImage), autoFetchFullSize: false)
         |> mapToSignal { value -> Signal<UIImage, NoError> in
             let thumbnailData = value._0
@@ -312,11 +312,14 @@ private func galleryItems(account: Account, results: [ChatContextResult], curren
     return (galleryItems, focusItem)
 }
 
-func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, chatLocation: ChatLocation?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, present: (ViewController, Any?) -> Void) {
+func presentLegacyWebSearchGallery(context: AccountContext, peer: EnginePeer?, chatLocation: ChatLocation?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: (ViewController, Any?) -> Void) {
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
     legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
+    paintStickersContext.captionPanelView = {
+        return getCaptionPanelView()
+    }
     paintStickersContext.presentStickersController = { completion in
         if let presentStickers = presentStickers {
             return presentStickers({ file, animated, view, rect in
@@ -358,9 +361,9 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, chatLoc
     model.didFinishEditingItem = { item, adjustments, result, thumbnail in
         editingContext.setImage(result, thumbnailImage: thumbnail, for: item, synchronous: true)
     }
-    model.saveItemCaption = { item, caption, entities in
-        editingContext.setCaption(caption, entities: entities, for: item)
-        if let selectionContext = selectionContext, let caption = caption, caption.count > 0, let item = item as? TGMediaSelectableItem {
+    model.saveItemCaption = { item, caption in
+        editingContext.setCaption(caption, for: item)
+        if let selectionContext = selectionContext, let caption = caption, caption.length > 0, let item = item as? TGMediaSelectableItem {
             selectionContext.setItem(item, selected: true)
         }
     }
@@ -465,7 +468,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
                                 }
                             }
                             
-                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil, nil) as Any
+                            return legacyAssetPickerItemGenerator()(dict, nil, nil, nil) as Any
                         } else {
                             return SSignal.complete()
                         }

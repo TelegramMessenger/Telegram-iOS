@@ -78,7 +78,7 @@ public struct AutomaticMediaDownloadPeers: Equatable, PostboxCoding {
     }
 }
 
-public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
+public struct AutomaticMediaDownloadSettings: PostboxCoding, Equatable {
     public var masterEnabled: Bool
     public var peers: AutomaticMediaDownloadPeers
     public var autoplayGifs: Bool
@@ -118,7 +118,7 @@ public struct AutomaticMediaDownloadSettings: PreferencesEntry, Equatable {
     public func encode(_ encoder: PostboxEncoder) {
     }
     
-    public func isEqual(to: PreferencesEntry) -> Bool {
+    public func isEqual(to: PostboxCoding) -> Bool {
         if let to = to as? AutomaticMediaDownloadSettings {
             return self == to
         } else {

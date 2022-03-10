@@ -268,6 +268,27 @@ filegroup(
     ]),
 )
 
+alternate_icon_folders = [
+    "BlackIcon",
+    "BlackClassicIcon",
+    "BlackFilledIcon",
+    "BlueIcon",
+    "BlueClassicIcon",
+    "BlueFilledIcon",
+    "WhiteFilledIcon",
+    "New1",
+    "New2",
+]
+
+[
+    filegroup(
+        name = "{}".format(name),
+        srcs = glob([
+            "Telegram-iOS/{}.alticon/*.png".format(name),
+        ]),
+    ) for name in alternate_icon_folders
+]
+
 filegroup(
     name = "LaunchScreen",
     srcs = glob([
@@ -351,14 +372,19 @@ plist_fragment(
 
 official_apple_pay_merchants = [
     "merchant.ph.telegra.Telegraph",
-    "merchant.yandex.ph.telegra.Telegraph",
     "merchant.sberbank.ph.telegra.Telegraph",
     "merchant.sberbank.test.ph.telegra.Telegraph",
     "merchant.privatbank.test.telergramios",
     "merchant.privatbank.prod.telergram",
     "merchant.paymaster.test.telegramios",
+    "merchant.paymaster.prod.telegramios",
     "merchant.smartglocal.prod.telegramios",
     "merchant.smartglocal.test.telegramios",
+    "merchant.yoomoney.test.telegramios",
+    "merchant.yoomoney.prod.telegramios",
+    "merchant.org.telegram.Best2pay.test",
+    "merchant.psbank.test.telegramios",
+    "merchant.psbank.prod.telegramios",
 ]
 
 official_bundle_ids = [
@@ -436,6 +462,11 @@ app_groups_fragment = """
     telegram_bundle_id=telegram_bundle_id
 )
 
+communication_notifications_fragment = """
+<key>com.apple.developer.usernotifications.communication</key>
+<true/>
+"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -447,7 +478,8 @@ plist_fragment(
         icloud_fragment,
         apple_pay_merchants_fragment,
         unrestricted_voip_fragment,
-        carplay_fragment
+        carplay_fragment,
+        communication_notifications_fragment,
     ])
 )
 
@@ -698,6 +730,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/MtProtoKit:MtProtoKit",
@@ -737,6 +770,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -779,6 +813,7 @@ ios_framework(
         ":SwiftSignalKitFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Postbox:Postbox",
@@ -818,6 +853,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramApi:TelegramApi",
@@ -862,6 +898,7 @@ ios_framework(
         ":PostboxFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramCore:TelegramCore",
@@ -901,6 +938,7 @@ ios_framework(
         ":VersionInfoPlist",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
@@ -987,6 +1025,7 @@ ios_framework(
         ":AsyncDisplayKitFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/Display:Display",
@@ -1034,6 +1073,7 @@ ios_framework(
         ":DisplayFramework",
     ],
     minimum_os_version = "9.0",
+    extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
         "//submodules/TelegramUI:TelegramUI",
@@ -1043,7 +1083,7 @@ ios_framework(
 plist_fragment(
     name = "ShareInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1096,6 +1136,9 @@ swift_library(
     srcs = glob([
         "Share/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI"
     ],
@@ -1130,7 +1173,7 @@ ios_extension(
 plist_fragment(
     name = "NotificationContentInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1178,6 +1221,9 @@ swift_library(
     srcs = glob([
         "NotificationContent/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         ":NotificationContentExtensionLink",
@@ -1233,7 +1279,7 @@ ios_extension(
 plist_fragment(
     name = "WidgetInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1269,6 +1315,9 @@ swift_library(
     srcs = glob([
         "WidgetKitWidget/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     data = [
         ":WidgetAssets",
     ],
@@ -1321,7 +1370,7 @@ ios_extension(
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
-    provides_main = True,
+    #provides_main = True,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Widget.mobileprovision",
@@ -1339,7 +1388,7 @@ ios_extension(
 plist_fragment(
     name = "IntentsInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1397,6 +1446,9 @@ swift_library(
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     data = glob([
         "SiriIntents/*.lproj/Intents.intentdefinition"
     ]) + [
@@ -1496,6 +1548,9 @@ swift_library(
     srcs = glob([
         "BroadcastUpload/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramUI:TelegramUI",
         "//submodules/TelegramVoip:TelegramVoip",
@@ -1556,7 +1611,7 @@ ios_extension(
 plist_fragment(
     name = "NotificationServiceInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
@@ -1572,6 +1627,13 @@ plist_fragment(
         <string>com.apple.usernotifications.service</string>
         <key>NSExtensionPrincipalClass</key>
         <string>NotificationService</string>
+        <key>NSExtensionAttributes</key>
+        <dict>
+            <key>IntentsSupported</key>
+            <array>
+                <string>INSendMessageIntent</string>
+            </array>
+        </dict>
     </dict>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
@@ -1623,13 +1685,14 @@ ios_extension(
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
+        ":TelegramCoreFramework",
     ],
 )
 
 plist_fragment(
     name = "TelegramInfoPlist",
     extension = "plist",
-    template =
+    template = 
     """
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
@@ -1818,11 +1881,14 @@ ios_application(
         ":VersionInfoPlist",
         ":UrlTypesInfoPlist",
     ],
-    ipa_post_processor = ":AddAlternateIcons",
+    alternate_icons = [
+        ":{}".format(name) for name in alternate_icon_folders
+    ],
+    #ipa_post_processor = ":AddAlternateIcons",
     resources = [
         ":LaunchScreen",
         ":DefaultAppIcon",
-        ":AdditionalIcons",
+        #":AdditionalIcons",
     ],
     frameworks = [
         ":MtProtoKitFramework",

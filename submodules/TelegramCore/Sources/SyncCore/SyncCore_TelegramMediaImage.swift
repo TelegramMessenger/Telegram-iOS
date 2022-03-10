@@ -340,7 +340,7 @@ public final class TelegramMediaImageRepresentation: PostboxCoding, Equatable, C
         if self.dimensions != other.dimensions {
             return false
         }
-        if !self.resource.id.isEqual(to: other.resource.id) {
+        if self.resource.id != other.resource.id {
             return false
         }
         if self.progressiveSizes != other.progressiveSizes {

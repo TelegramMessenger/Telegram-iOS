@@ -220,7 +220,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     
     let passcodeOptionsDataPromise = Promise<PasscodeOptionsData>()
     passcodeOptionsDataPromise.set(context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings) in
-        let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings) as? PresentationPasscodeSettings ?? PresentationPasscodeSettings.defaultSettings
+        let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings)?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
         return (transaction.getAccessChallengeData(), passcodeSettings)
     }
     |> map { accessChallenge, passcodeSettings -> PasscodeOptionsData in
@@ -396,7 +396,6 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
 }
 
 public func passcodeOptionsAccessController(context: AccountContext, animateIn: Bool = true, pushController: ((ViewController) -> Void)?, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    
     return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
@@ -456,7 +455,7 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
     }
     |> mapToSignal { accessChallengeData -> Signal<(PostboxAccessChallengeData, PresentationPasscodeSettings?), NoError> in
         return context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
-            let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings) as? PresentationPasscodeSettings
+            let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings)?.get(PresentationPasscodeSettings.self)
             return (accessChallengeData, passcodeSettings)
         }
     }

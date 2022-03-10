@@ -43,6 +43,7 @@ private final class BotCheckoutNativeCardEntryScrollerNode: ASDisplayNode {
 
 final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private weak var navigationBar: NavigationBar?
     private let provider: BotCheckoutNativeCardEntryController.Provider
     
     private let present: (ViewController, Any?) -> Void
@@ -58,6 +59,8 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     
     private let scrollNode: BotCheckoutNativeCardEntryScrollerNode
     private let itemNodes: [[BotPaymentItemNode]]
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     
     private let cardItem: BotPaymentCardInputItemNode
     private let cardholderItem: BotPaymentFieldItemNode?
@@ -74,8 +77,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
 
     private var dataTask: URLSessionDataTask?
     
-    init(context: AccountContext, provider: BotCheckoutNativeCardEntryController.Provider, theme: PresentationTheme, strings: PresentationStrings, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutNativeCardEntryStatus) -> Void, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
+    init(context: AccountContext, navigationBar: NavigationBar?, provider: BotCheckoutNativeCardEntryController.Provider, theme: PresentationTheme, strings: PresentationStrings, present: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void, openCountrySelection: @escaping () -> Void, updateStatus: @escaping (BotCheckoutNativeCardEntryStatus) -> Void, completion: @escaping (BotCheckoutPaymentMethod) -> Void) {
         self.context = context
+        self.navigationBar = navigationBar
         self.provider = provider
         
         self.present = present
@@ -88,6 +92,10 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         self.strings = strings
         
         self.scrollNode = BotCheckoutNativeCardEntryScrollerNode()
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.isUserInteractionEnabled = false
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.isUserInteractionEnabled = false
         
         var itemNodes: [[BotPaymentItemNode]] = []
         
@@ -95,7 +103,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         var openCountrySelectionImpl: (() -> Void)?
         
         self.cardItem = BotPaymentCardInputItemNode()
-        cardItem.updated = { data in
+        self.cardItem.updated = { data in
             cardUpdatedImpl?(data)
         }
         itemNodes.append([BotPaymentHeaderItemNode(text: strings.Checkout_NewCard_PaymentCard), self.cardItem])
@@ -164,6 +172,9 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
         super.init()
         
         self.backgroundColor = self.theme.list.blocksBackgroundColor
+        self.leftOverlayNode.backgroundColor = self.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = self.theme.list.blocksBackgroundColor
+        
         self.scrollNode.backgroundColor = nil
         self.scrollNode.isOpaque = false
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -216,7 +227,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             }
         }
         
-        cardItem.completed = { [weak self] in
+        self.cardItem.completed = { [weak self] in
             self?.cardholderItem?.activateInput()
         }
         
@@ -226,6 +237,12 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     deinit {
         self.verifyDisposable.dispose()
         self.dataTask?.cancel()
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     func updateCountry(_ iso2: String) {
@@ -447,6 +464,12 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             }
         }
         
+        let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        var sideInset: CGFloat = 0.0
+        if layout.size.width >= 375.0 {
+            sideInset = inset
+        }
+        
         for items in self.itemNodes {
             if !items.isEmpty && items[0] is BotPaymentHeaderItemNode {
                 contentHeight += 24.0
@@ -456,7 +479,7 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             
             for i in 0 ..< items.count {
                 let item = items[i]
-                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
+                let itemHeight = item.updateLayout(theme: self.theme, width: layout.size.width, sideInset: sideInset, measuredInset: commonInset, previousItemNode: i == 0 ? nil : items[i - 1], nextItemNode: i == (items.count - 1) ? nil : items[i + 1], transition: transition)
                 transition.updateFrame(node: item, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: layout.size.width, height: itemHeight)))
                 contentHeight += itemHeight
             }
@@ -481,6 +504,16 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
             self.scrollNode.view.scrollIndicatorInsets = insets
         }
         self.scrollNode.view.ignoreUpdateBounds = false
+        
+        if self.rightOverlayNode.supernode == nil {
+            self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.scrollNode)
+        }
+        if self.leftOverlayNode.supernode == nil {
+            self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.scrollNode)
+        }
+        
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: sideInset, height: layout.size.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - sideInset, y: 0.0, width: sideInset, height: layout.size.height)
         
         if let previousLayout = previousLayout {
             var previousInsets = previousLayout.0.insets(options: [.input])
@@ -514,4 +547,13 @@ final class BotCheckoutNativeCardEntryControllerNode: ViewControllerTracingNode,
     func activate() {
         self.cardItem.activateInput()
     }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard !self.scrollNode.view.ignoreUpdateBounds else {
+            return
+        }
+        let value = scrollView.contentOffset.y + scrollView.contentInset.top
+        self.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: .immediate)
+    }
+    
 }

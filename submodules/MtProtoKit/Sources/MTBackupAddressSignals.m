@@ -247,9 +247,8 @@ static NSString *makeRandomPadding() {
     }
     
     MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
-    if (address.datacenterId != 0) {
-        mtProto.useTempAuthKeys = currentContext.useTempAuthKeys;
-    }
+    mtProto.useTempAuthKeys = true;
+    mtProto.allowUnboundEphemeralKeys = true;
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     [mtProto addMessageService:requestService];
     

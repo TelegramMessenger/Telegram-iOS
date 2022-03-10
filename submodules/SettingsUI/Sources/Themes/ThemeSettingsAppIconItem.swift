@@ -212,7 +212,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 116.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -222,7 +222,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.item = item
                     strongSelf.layoutParams = params
                     
-                    strongSelf.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: params.leftInset, bottom: 0.0, right: params.rightInset)
+                    strongSelf.scrollNode.view.contentInset = UIEdgeInsets()
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
                     strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -256,6 +256,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -270,7 +271,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
-                    strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: layoutSize.width, height: layoutSize.height))
+                    strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 2.0), size: CGSize(width: layoutSize.width - params.leftInset - params.rightInset, height: layoutSize.height))
                     
                     let nodeInset: CGFloat = 4.0
                     let nodeSize = CGSize(width: 80.0, height: 112.0)
@@ -300,18 +301,18 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             var name = "Icon"
                             var bordered = true
                             switch icon.name {
-                                case "Blue":
+                                case "BlueIcon":
                                     name = item.strings.Appearance_AppIconDefault
-                                case "Black":
+                                case "BlackIcon":
                                     name = item.strings.Appearance_AppIconDefaultX
-                                case "BlueClassic":
+                                case "BlueClassicIcon":
                                     name = item.strings.Appearance_AppIconClassic
-                                case "BlackClassic":
+                                case "BlackClassicIcon":
                                     name = item.strings.Appearance_AppIconClassicX
-                                case "BlueFilled":
+                                case "BlueFilledIcon":
                                     name = item.strings.Appearance_AppIconFilled
                                     bordered = false
-                                case "BlackFilled":
+                                case "BlackFilledIcon":
                                     name = item.strings.Appearance_AppIconFilledX
                                     bordered = false
                                 case "WhiteFilled":

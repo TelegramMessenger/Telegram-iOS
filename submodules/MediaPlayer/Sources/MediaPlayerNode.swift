@@ -11,6 +11,14 @@ private final class MediaPlayerNodeLayerNullAction: NSObject, CAAction {
 }
 
 private final class MediaPlayerNodeLayer: AVSampleBufferDisplayLayer {
+    override init() {
+        super.init()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func action(forKey event: String) -> CAAction? {
         return MediaPlayerNodeLayerNullAction()
     }
@@ -53,6 +61,7 @@ private enum PollStatus: CustomStringConvertible {
 
 public final class MediaPlayerNode: ASDisplayNode {
     public var videoInHierarchy: Bool = false
+    var canPlaybackWithoutHierarchy: Bool = false
     public var updateVideoInHierarchy: ((Bool) -> Void)?
     
     private var videoNode: MediaPlayerNodeDisplayNode
@@ -109,7 +118,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     videoLayer.setAffineTransform(transform)
                 }
                 
-                if self.videoInHierarchy {
+                if self.videoInHierarchy || self.canPlaybackWithoutHierarchy {
                     if requestFrames {
                         self.startPolling()
                     }
@@ -129,7 +138,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                     switch status {
                         case let .delay(delay):
                             strongSelf.timer = SwiftSignalKit.Timer(timeout: delay, repeat: true, completion: {
-                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _, _) = strongSelf.state, requestFrames, strongSelf.videoInHierarchy {
+                                if let strongSelf = self, let videoLayer = strongSelf.videoLayer, let (_, requestFrames, _, _) = strongSelf.state, requestFrames, (strongSelf.videoInHierarchy || strongSelf.canPlaybackWithoutHierarchy) {
                                     if videoLayer.isReadyForMoreMediaData {
                                         strongSelf.timer?.invalidate()
                                         strongSelf.timer = nil
@@ -358,7 +367,7 @@ public final class MediaPlayerNode: ASDisplayNode {
         }
     }
     
-    public init(backgroundThread: Bool = false) {
+    public init(backgroundThread: Bool = false, captureProtected: Bool = false) {
         self.videoNode = MediaPlayerNodeDisplayNode()
         
         if false && backgroundThread {
@@ -377,7 +386,7 @@ public final class MediaPlayerNode: ASDisplayNode {
                         strongSelf.updateState()
                     }
                 }
-                strongSelf.updateVideoInHierarchy?(value)
+                strongSelf.updateVideoInHierarchy?(strongSelf.videoInHierarchy || strongSelf.canPlaybackWithoutHierarchy)
             }
         }
         self.addSubnode(self.videoNode)
@@ -388,6 +397,9 @@ public final class MediaPlayerNode: ASDisplayNode {
             Queue.mainQueue().async {
                 if let strongSelf = self {
                     strongSelf.videoLayer = videoLayer
+                    if #available(iOS 13.0, *) {
+                        videoLayer.preventsCapture = captureProtected
+                    }
                     strongSelf.updateLayout()
                     
                     strongSelf.layer.addSublayer(videoLayer)
@@ -449,5 +461,15 @@ public final class MediaPlayerNode: ASDisplayNode {
     
     public func reset() {
         self.videoLayer?.flush()
+    }
+
+    public func setCanPlaybackWithoutHierarchy(_ canPlaybackWithoutHierarchy: Bool) {
+        if self.canPlaybackWithoutHierarchy != canPlaybackWithoutHierarchy {
+            self.canPlaybackWithoutHierarchy = canPlaybackWithoutHierarchy
+            if canPlaybackWithoutHierarchy {
+                self.updateState()
+            }
+        }
+        self.updateVideoInHierarchy?(self.videoInHierarchy || self.canPlaybackWithoutHierarchy)
     }
 }

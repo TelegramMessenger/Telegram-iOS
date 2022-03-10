@@ -3,6 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import NetworkLogging
+import ManagedFile
 
 private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
 
@@ -198,7 +199,9 @@ public final class Logger {
                     var fileEvents: [(Double, String)] = []
                     if let data = try? Data(contentsOf: URL(fileURLWithPath: filePath), options: .mappedRead) {
                         let dataLength = data.count
-                        data.withUnsafeBytes { (bytes: UnsafePointer<Int8>) -> Void in
+                        data.withUnsafeBytes { rawBytes -> Void in
+                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int8.self)
+
                             var offset = 0
                             while offset < dataLength {
                                 let remainingLength = dataLength - offset
@@ -341,7 +344,9 @@ public final class Logger {
                 
                 if let currentFile = currentFile {
                     if let data = content.data(using: .utf8) {
-                        data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                        data.withUnsafeBytes { rawBytes -> Void in
+                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
                             let _ = currentFile.write(bytes, count: data.count)
                         }
                         var newline: UInt8 = 0x0a
@@ -448,7 +453,9 @@ public final class Logger {
             
             if let currentFile = currentFile {
                 let contentDataCount = contentData.count
-                contentData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                contentData.withUnsafeBytes { rawBytes -> Void in
+                    let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                    
                     let _ = currentFile.write(bytes, count: contentDataCount)
                 }
                 if let shortFile = self.shortFile {

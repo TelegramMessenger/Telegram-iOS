@@ -10,10 +10,10 @@ final class GlobalMessageIdsTable: Table {
     private let sharedKey = ValueBoxKey(length: 8)
     private let sharedBuffer = WriteBuffer()
     
-    init(valueBox: ValueBox, table: ValueBoxTable, seedConfiguration: SeedConfiguration) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration) {
         self.seedConfiguration = seedConfiguration
         
-        super.init(valueBox: valueBox, table: table)
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(_ id: Int32) -> ValueBoxKey {

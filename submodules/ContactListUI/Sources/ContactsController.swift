@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
@@ -18,21 +17,95 @@ import SearchUI
 import TelegramPermissionsUI
 import AppBundle
 import StickerResources
+import ContextUI
+import QrCodeUI
+
+private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class SortHeaderButton: HighlightableButtonNode {
+    let referenceNode: ContextReferenceContentNode
+    let containerNode: ContextControllerSourceNode
+    private let textNode: ImmediateTextNode
+    
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+
+    init(presentationData: PresentationData) {
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+
+        super.init()
+
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.textNode)
+        self.addSubnode(self.containerNode)
+
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self, let _ = strongSelf.contextAction else {
+                return false
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
+
+        self.update(theme: presentationData.theme, strings: presentationData.strings)
+    }
+
+    override func didLoad() {
+        super.didLoad()
+        self.view.isOpaque = false
+    }
+
+    func update(theme: PresentationTheme, strings: PresentationStrings) {
+        self.textNode.attributedText = NSAttributedString(string: strings.Contacts_Sort, font: Font.regular(17.0), textColor: theme.rootController.navigationBar.accentTextColor)
+        let size = self.textNode.updateLayout(CGSize(width: 100.0, height: 44.0))
+        self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((44.0 - size.height) / 2.0)), size: size)
+        
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 44.0))
+        self.referenceNode.frame = self.containerNode.bounds
+    }
+    
+    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        let size = self.textNode.updateLayout(CGSize(width: 100.0, height: 44.0))
+        
+        return CGSize(width: size.width, height: 44.0)
+    }
+
+    func onLayout() {
+    }
+}
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
+    if listNode.scroller.isDragging {
+        return false
+    }
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {
-        let scrollToItem: ListViewScrollToItem
-        let targetProgress: CGFloat
+        let offset: CGFloat
         if searchNode.expansionProgress < 0.6 {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(-navigationBarSearchContentHeight), animated: true, curve: .Default(duration: nil), directionHint: .Up)
-            targetProgress = 0.0
+            offset = navigationBarSearchContentHeight
         } else {
-            scrollToItem = ListViewScrollToItem(index: 1, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up)
-            targetProgress = 1.0
+            offset = 0.0
         }
-        searchNode.updateExpansionProgress(targetProgress, animated: true)
-        
-        listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        let _ = listNode.scrollToOffsetFromTop(offset)
         return true
     } else if searchNode.expansionProgress == 1.0 {
         var sortItemNode: ListViewItemNode?
@@ -46,14 +119,14 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
             }
         })
         
-        if let sortItemNode = sortItemNode {
+        if false, let sortItemNode = sortItemNode {
             let itemFrame = sortItemNode.apparentFrame
             if itemFrame.contains(CGPoint(x: 0.0, y: listNode.insets.top)) {
                 var scrollToItem: ListViewScrollToItem?
                 if itemFrame.minY + itemFrame.height * 0.6 < listNode.insets.top {
-                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(-50), animated: true, curve: .Default(duration: nil), directionHint: .Up)
+                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(-76.0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
                 } else {
-                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(0), animated: true, curve: .Default(duration: nil), directionHint: .Up)
+                    scrollToItem = ListViewScrollToItem(index: 0, position: .top(0), animated: true, curve: .Default(duration: 0.3), directionHint: .Up)
                 }
                 listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: ListViewDeleteAndInsertOptions(), scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                 return true
@@ -71,7 +144,7 @@ public class ContactsController: ViewController {
     }
     private var validLayout: ContainerViewLayout?
     
-    private let index: PeerNameIndex = .lastNameFirst
+    private let index: PresentationPersonNameOrder = .lastFirst
     
     private var _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -94,12 +167,18 @@ public class ContactsController: ViewController {
         }
     }
     
+    private let sortButton: SortHeaderButton
+    
     public init(context: AccountContext) {
         self.context = context
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
+        self.sortButton = SortHeaderButton(presentationData: self.presentationData)
+        
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        
+        self.tabBarItemContextActionType = .always
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
@@ -115,8 +194,13 @@ public class ContactsController: ViewController {
         
         self.tabBarItem.image = icon
         self.tabBarItem.selectedImage = icon
+        if !self.presentationData.reduceMotion {
+            self.tabBarItem.animationName = "TabContacts"
+        }
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.sortButton)
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
         self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Contacts_VoiceOver_AddContact
         
@@ -146,10 +230,10 @@ public class ContactsController: ViewController {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.authorizationDisposable = (combineLatest(DeviceAccess.authorizationStatus(subject: .contacts), combineLatest(context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.permissionWarningKey(permission: .contacts)!), context.account.postbox.preferencesView(keys: [PreferencesKeys.contactsSettings]), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]))
             |> map { noticeView, preferences, sharedData -> (Bool, ContactsSortOrder) in
-                let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
+                let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                 let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
                 
-                let contactsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
+                let contactsSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]?.get(ContactSynchronizationSettings.self)
                 
                 let sortOrder: ContactsSortOrder = contactsSettings?.sortOrder ?? .presence
                 if !synchronizeDeviceContacts {
@@ -172,7 +256,7 @@ public class ContactsController: ViewController {
         } else {
             self.sortOrderPromise.set(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
             |> map { sharedData -> ContactsSortOrder in
-                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings] as? ContactSynchronizationSettings
+                let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]?.get(ContactSynchronizationSettings.self)
                 return settings?.sortOrder ?? .presence
             })
         }
@@ -181,6 +265,8 @@ public class ContactsController: ViewController {
             self?.activateSearch()
         })
         self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
+        
+        self.sortButton.addTarget(self, action: #selector(self.sortPressed), forControlEvents: .touchUpInside)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -193,11 +279,17 @@ public class ContactsController: ViewController {
     }
     
     private func updateThemeAndStrings() {
+        self.sortButton.update(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Common_Search)
         self.title = self.presentationData.strings.Contacts_Title
         self.tabBarItem.title = self.presentationData.strings.Contacts_Title
+        if !self.presentationData.reduceMotion {
+            self.tabBarItem.animationName = "TabContacts"
+        } else {
+            self.tabBarItem.animationName = nil
+        }
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         if self.navigationItem.rightBarButtonItem != nil {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationAddIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.addPressed))
@@ -312,11 +404,13 @@ public class ContactsController: ViewController {
                 let presentPeersNearby = {
                     let controller = strongSelf.context.sharedContext.makePeersNearbyController(context: strongSelf.context)
                     controller.navigationPresentation = .master
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, animated: true, completion: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                        }
-                    })
+                    if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                        navigationController.pushViewController(controller, animated: true, completion: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                            }
+                        })
+                    }
                 }
                 
                 switch status {
@@ -333,11 +427,13 @@ public class ContactsController: ViewController {
                                 let _ = (strongSelf.navigationController as? NavigationController)?.popViewController(animated: true)
                             }
                         }
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                            }
-                        })
+                        if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                            navigationController.pushViewController(controller, completion: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                                }
+                            })
+                        }
                 }
             })
         }
@@ -369,22 +465,50 @@ public class ContactsController: ViewController {
             })
         }
         
-        self.contactsNode.contactListNode.openSortMenu = { [weak self] in
-            self?.presentSortMenu()
+        self.contactsNode.openQrScan = { [weak self] in
+            if let strongSelf = self {
+                let context = strongSelf.context
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                DeviceAccess.authorizeAccess(to: .camera(.qrCode), presentationData: presentationData, present: { c, a in
+                    c.presentationArguments = a
+                    context.sharedContext.mainWindow?.present(c, on: .root)
+                }, openSettings: {
+                    context.sharedContext.applicationBindings.openSettings()
+                }, { [weak self] granted in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    guard granted else {
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                        return
+                    }
+                    let controller = QrCodeScanScreen(context: strongSelf.context, subject: .peer)
+                    controller.showMyCode = { [weak self, weak controller] in
+                        if let strongSelf = self {
+                            let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId)
+                            |> deliverOnMainQueue).start(next: { [weak self, weak controller] peer in
+                                if let strongSelf = self, let controller = controller {
+                                    controller.present(strongSelf.context.sharedContext.makeChatQrCodeScreen(context: strongSelf.context, peer: peer), in: .window(.root))
+                                }
+                            })
+                        }
+                    }
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: {
+                        if let strongSelf = self {
+                            strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
+                        }
+                    })
+                })
+            }
         }
         
         self.contactsNode.contactListNode.contentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
-                var progress: CGFloat = 0.0
-                switch offset {
-                    case let .known(offset):
-                        progress = max(0.0, (searchContentNode.nominalHeight - max(0.0, offset - 50.0))) / searchContentNode.nominalHeight
-                    case .none:
-                        progress = 1.0
-                    default:
-                        break
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
+                var offset = offset
+                if validLayout.inVoiceOver {
+                    offset = .known(0.0)
                 }
-                searchContentNode.updateExpansionProgress(progress)
+                searchContentNode.updateListVisibleContentOffset(offset)
             }
         }
         
@@ -394,6 +518,10 @@ public class ContactsController: ViewController {
             } else {
                 return false
             }
+        }
+        
+        self.sortButton.contextAction = { [weak self] sourceNode, gesture in
+            self?.presentSortMenu(sourceNode: sourceNode, gesture: gesture)
         }
         
         self.displayNodeDidLoad()
@@ -421,6 +549,10 @@ public class ContactsController: ViewController {
         self.contactsNode.containerLayoutUpdated(layout, navigationBarHeight: self.cleanNavigationHeight, actualNavigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
+    @objc private func sortPressed() {
+        self.sortButton.contextAction?(self.sortButton.containerNode, nil)
+    }
+    
     private func activateSearch() {
         if self.displayNavigationBar {
             if let searchContentNode = self.searchContentNode {
@@ -439,7 +571,7 @@ public class ContactsController: ViewController {
         }
     }
     
-    private func presentSortMenu() {
+    private func presentSortMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
         let updateSortOrder: (ContactsSortOrder) -> Void = { [weak self] sortOrder in
             if let strongSelf = self {
                 strongSelf.sortOrderPromise.set(.single(sortOrder))
@@ -451,23 +583,31 @@ public class ContactsController: ViewController {
             }
         }
         
-        let actionSheet = ActionSheetController(presentationData: self.presentationData)
-        var items: [ActionSheetItem] = []
-        items.append(ActionSheetTextItem(title: self.presentationData.strings.Contacts_SortBy))
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByName, color: .accent, action: { [weak actionSheet] in
-            actionSheet?.dismissAnimated()
-            updateSortOrder(.natural)
-        }))
-        items.append(ActionSheetButtonItem(title: self.presentationData.strings.Contacts_SortByPresence, color: .accent, action: { [weak actionSheet] in
-            actionSheet?.dismissAnimated()
-            updateSortOrder(.presence)
-        }))
-        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
-            })
-        ])])
-        self.present(actionSheet, in: .window(.root))
+        let presentationData = self.presentationData
+        let items: Signal<[ContextMenuItem], NoError> = self.context.sharedContext.accountManager.transaction { transaction in
+            return transaction.getSharedData(ApplicationSpecificSharedDataKeys.contactSynchronizationSettings)
+        }
+        |> map { entry -> [ContextMenuItem] in
+            let currentSettings: ContactSynchronizationSettings
+            if let entry = entry?.get(ContactSynchronizationSettings.self) {
+                currentSettings = entry
+            } else {
+                currentSettings = .defaultSettings
+            }
+            
+            var items: [ContextMenuItem] = []
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Contacts_Sort_ByLastSeen, icon: { theme in return currentSettings.sortOrder == .presence ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil }, action: { _, f in
+                f(.default)
+                updateSortOrder(.presence)
+            })))
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Contacts_Sort_ByName, icon: { theme in return currentSettings.sortOrder == .natural ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil }, action: { _, f in
+                f(.default)
+                updateSortOrder(.natural)
+            })))
+            return items
+        }
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceNode: self.sortButton.referenceNode)), items: items |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+        self.presentInGlobalOverlay(contextController)
     }
     
     @objc func addPressed() {
@@ -481,28 +621,87 @@ public class ContactsController: ViewController {
             switch status {
                 case .allowed:
                     let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: "", lastName: "", phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: "+")]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        if let peer = peer {
-                            DispatchQueue.main.async {
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false) {
-                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                    if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                        navigationController.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            if let peer = peer {
+                                DispatchQueue.main.async {
+                                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                        if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                                            navigationController.pushViewController(infoController)
+                                        }
+                                    }
+                                }
+                            } else {
+                                if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
+                                    navigationController.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))
                                 }
                             }
-                        } else {
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))
-                        }
-                    }), completed: nil, cancelled: nil))
+                        }), completed: nil, cancelled: nil))
+                    }
                 case .notDetermined:
                     DeviceAccess.authorizeAccess(to: .contacts)
                 default:
                     let presentationData = strongSelf.presentationData
-                    strongSelf.present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
-                        self?.context.sharedContext.applicationBindings.openSettings()
-                    })]), in: .window(.root))
+                    if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController, let topController = navigationController.topViewController as? ViewController {
+                        topController.present(textAlertController(context: strongSelf.context, title: presentationData.strings.AccessDenied_Title, text: presentationData.strings.Contacts_AccessDeniedError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_NotNow, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.AccessDenied_Settings, action: {
+                            self?.context.sharedContext.applicationBindings.openSettings()
+                        })]), in: .window(.root))
+                    }
             }
         })
+    }
+    
+    override public func tabBarItemContextAction(sourceNode: ContextExtractedContentContainingNode, gesture: ContextGesture) {
+        var items: [ContextMenuItem] = []
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddContact, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] c, f in
+            c.dismiss(completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.addPressed()
+            })
+        })))
+        
+        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Contacts_AddPeopleNearby, icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/Context Menu/PeopleNearby"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] c, f in
+            c.dismiss(completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.contactsNode.openPeopleNearby?()
+            })
+        })))
+        
+        let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ContactsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
+        self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+}
+
+private final class ContactsTabBarContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = true
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    let centerActionsHorizontally: Bool = true
+    
+    private let controller: ViewController
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(controller: ViewController, sourceNode: ContextExtractedContentContainingNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

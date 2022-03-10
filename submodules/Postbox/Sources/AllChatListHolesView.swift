@@ -5,13 +5,13 @@ final class MutableAllChatListHolesView: MutablePostboxView {
     private var holes = Set<ChatListHole>()
     fileprivate var latestHole: ChatListHole?
     
-    init(postbox: Postbox, groupId: PeerGroupId) {
+    init(postbox: PostboxImpl, groupId: PeerGroupId) {
         self.groupId = groupId
         self.holes = Set(postbox.chatListTable.allHoles(groupId: groupId))
         self.latestHole = self.holes.max(by: { $0.index < $1.index })
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if let operations = transaction.chatListOperations[self.groupId] {
             var updated = false
             for operation in operations {
@@ -47,6 +47,10 @@ final class MutableAllChatListHolesView: MutablePostboxView {
         } else {
             return false
         }
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

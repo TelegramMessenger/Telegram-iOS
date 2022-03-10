@@ -1,6 +1,6 @@
 #import <ShareItemsImpl/TGItemProviderSignals.h>
 
-#import <MTProtoKit/MTProtoKit.h>
+#import <MtProtoKit/MtProtoKit.h>
 
 #import <UIKit/UIKit.h>
 #import <MobileCoreServices/MobileCoreServices.h>

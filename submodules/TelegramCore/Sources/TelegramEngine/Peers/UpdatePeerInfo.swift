@@ -42,7 +42,7 @@ func _internal_updatePeerTitle(account: Account, peerId: PeerId, title: String) 
                                     return updated
                                 })
                             }
-                        } |> mapError { _ -> UpdatePeerTitleError in return .generic }
+                        } |> mapError { _ -> UpdatePeerTitleError in }
                     }
             } else {
                 return .fail(.generic)
@@ -50,7 +50,7 @@ func _internal_updatePeerTitle(account: Account, peerId: PeerId, title: String) 
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> UpdatePeerTitleError in return .generic } |> switchToLatest
+    } |> mapError { _ -> UpdatePeerTitleError in } |> switchToLatest
 }
 
 public enum UpdatePeerDescriptionError {
@@ -79,7 +79,7 @@ func _internal_updatePeerDescription(account: Account, peerId: PeerId, descripti
                             })
                         }
                     }
-                    |> mapError { _ -> UpdatePeerDescriptionError in return .generic }
+                    |> mapError { _ -> UpdatePeerDescriptionError in }
                 }
             } else {
                 return .fail(.generic)
@@ -87,5 +87,5 @@ func _internal_updatePeerDescription(account: Account, peerId: PeerId, descripti
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> UpdatePeerDescriptionError in return .generic } |> switchToLatest
+    } |> mapError { _ -> UpdatePeerDescriptionError in } |> switchToLatest
 }

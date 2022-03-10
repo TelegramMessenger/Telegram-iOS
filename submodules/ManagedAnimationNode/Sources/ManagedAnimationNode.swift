@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import RLottieBinding
 import AppBundle
@@ -39,13 +38,15 @@ public final class ManagedAnimationState {
             guard let path = item.source.path else {
                 return nil
             }
-            guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            guard var data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
                 return nil
             }
-            guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
-                return nil
+            if path.hasSuffix(".json") {
+                
+            } else if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
+                data = unpackedData
             }
-            guard let instance = LottieInstance(data: unpackedData, cacheKey: item.source.cacheKey) else {
+            guard let instance = LottieInstance(data: data, fitzModifier: .none, cacheKey: item.source.cacheKey) else {
                 return nil
             }
             resolvedInstance = instance
@@ -79,27 +80,30 @@ public enum ManagedAnimationFrameRange: Equatable {
 
 public enum ManagedAnimationSource: Equatable {
     case local(String)
-    case resource(Account, MediaResource)
+    case resource(Account, EngineMediaResource)
     
     var cacheKey: String {
         switch self {
             case let .local(name):
                 return name
             case let .resource(_, resource):
-                return resource.id.uniqueId
+                return resource.id.stringRepresentation
         }
     }
     
     var path: String? {
         switch self {
             case let .local(name):
-                return getAppBundle().path(forResource: name, ofType: "tgs")
+                if let tgsPath = getAppBundle().path(forResource: name, ofType: "tgs") {
+                    return tgsPath
+                }
+                return getAppBundle().path(forResource: name, ofType: "json")
             case let .resource(account, resource):
-                return account.postbox.mediaBox.completedResourcePath(resource)
+                return account.postbox.mediaBox.completedResourcePath(resource._asResource())
         }
     }
     
-    public static func == (lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
+    public static func ==(lhs: ManagedAnimationSource, rhs: ManagedAnimationSource) -> Bool {
         switch lhs {
             case let .local(lhsPath):
                 if case let .local(rhsPath) = rhs, lhsPath == rhsPath {
@@ -108,7 +112,7 @@ public enum ManagedAnimationSource: Equatable {
                     return false
                 }
             case let .resource(lhsAccount, lhsResource):
-                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource.isEqual(to: rhsResource) {
+                if case let .resource(rhsAccount, rhsResource) = rhs, lhsAccount === rhsAccount, lhsResource == rhsResource {
                     return true
                 } else {
                     return false

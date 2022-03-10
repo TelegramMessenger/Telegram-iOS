@@ -20,23 +20,7 @@ There are several things we require from **all developers** for the moment.
 git clone --recursive -j8 https://github.com/TelegramMessenger/Telegram-iOS.git
 ```
 
-3. Download Bazel 4.0.0
-
-```
-mkdir -p $HOME/bazel-dist
-cd $HOME/bazel-dist
-curl -O -L https://github.com/bazelbuild/bazel/releases/download/4.0.0/bazel-4.0.0-darwin-x86_64
-mv bazel-* bazel
-```
-
-Verify that it's working
-
-```
-chmod +x bazel
-./bazel --version
-```
-
-4. Adjust configuration parameters
+3. Adjust configuration parameters
 
 ```
 mkdir -p $HOME/telegram-configuration
@@ -46,7 +30,7 @@ cp -R build-system/example-configuration/* $HOME/telegram-configuration/
 - Modify the values in `variables.bzl`
 - Replace the provisioning profiles in `provisioning` with valid files
 
-5. (Optional) Create a build cache directory to speed up rebuilds
+4. (Optional) Create a build cache directory to speed up rebuilds
 
 ```
 mkdir -p "$HOME/telegram-bazel-cache"
@@ -56,7 +40,6 @@ mkdir -p "$HOME/telegram-bazel-cache"
 
 ```
 python3 build-system/Make/Make.py \
-    --bazel="$HOME/bazel-dist/bazel" \
     --cacheDir="$HOME/telegram-bazel-cache" \
     build \
     --configurationPath="$HOME/telegram-configuration" \
@@ -68,7 +51,6 @@ python3 build-system/Make/Make.py \
 
 ```
 python3 build-system/Make/Make.py \
-    --bazel="$HOME/bazel-dist/bazel" \
     --cacheDir="$HOME/telegram-bazel-cache" \
     generateProject \
     --configurationPath="$HOME/telegram-configuration" \
@@ -78,7 +60,6 @@ python3 build-system/Make/Make.py \
 It is possible to generate a project that does not require any codesigning certificates to be installed: add `--disableProvisioningProfiles` flag:
 ```
 python3 build-system/Make/Make.py \
-    --bazel="$HOME/bazel-dist/bazel" \
     --cacheDir="$HOME/telegram-bazel-cache" \
     generateProject \
     --configurationPath="$HOME/telegram-configuration" \
@@ -99,6 +80,8 @@ python3 build-system/Make/Make.py --help
 python3 build-system/Make/Make.py build --help
 python3 build-system/Make/Make.py generateProject --help
 ```
+
+Bazel is automatically downloaded when running Make.py for the first time. If you wish to use your own build of Bazel, pass `--bazel=path-to-bazel`. If your Bazel version differs from that in `versions.json`, you may use `--overrideBazelVersion` to skip the version check.
 
 Each release is built using specific Xcode and Bazel versions (see `versions.json`). The helper script checks the versions of installed software and reports an error if they don't match the ones specified in `versions.json`. There are flags that allow to bypass these checks:
 

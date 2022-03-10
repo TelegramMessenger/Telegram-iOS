@@ -57,15 +57,6 @@ class ThemeSettingsBrightnessItem: ListViewItem, ItemListItem {
     }
 }
 
-private func generateKnobImage() -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -1.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-    })
-}
-
 class ThemeSettingsBrightnessItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -119,9 +110,9 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
         if let item = self.item, let params = self.layoutParams {
             sliderView.value = CGFloat(item.value)
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.disclosureArrowColor
+            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.theme.list.itemAccentColor
-            sliderView.knobImage = generateKnobImage()
+            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
             
             sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))
         }
@@ -150,7 +141,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 60.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -193,6 +184,7 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -224,8 +216,8 @@ class ThemeSettingsBrightnessItemNode: ListViewItemNode {
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                             sliderView.backColor = item.theme.list.itemSecondaryTextColor
-                            sliderView.trackColor = item.theme.list.itemAccentColor
-                            sliderView.knobImage = generateKnobImage()
+                            sliderView.trackColor = item.theme.list.itemAccentColor.withAlphaComponent(0.45)
+                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 38.0, y: 8.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 38.0 * 2.0, height: 44.0))

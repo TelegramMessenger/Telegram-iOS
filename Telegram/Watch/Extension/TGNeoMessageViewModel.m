@@ -144,7 +144,7 @@ NSString *const TGNeoMessageAudioAnimatedIcon = @"animatedIcon";
     }
     
     NSMutableDictionary *users = [NSMutableDictionary dictionaryWithDictionary:additionalPeers];
-    [users addEntriesFromDictionary:[[TGBridgeUserCache instance] usersWithIndexSet:[message involvedUserIds]]];
+    [users addEntriesFromDictionary:[[TGBridgeUserCache instance] usersWithIds:[message involvedUserIds]]];
     
     return [[viewModelClass alloc] initWithMessage:message type:type users:users context:context];
 }

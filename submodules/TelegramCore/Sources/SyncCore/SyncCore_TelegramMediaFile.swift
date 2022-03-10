@@ -1,4 +1,4 @@
-import Foundation
+    import Foundation
 import Postbox
 
 private let typeFileName: Int32 = 0
@@ -140,7 +140,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
     case ImageSize(size: PixelDimensions)
     case Animated
     case Video(duration: Int, size: PixelDimensions, flags: TelegramMediaVideoFlags)
-    case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: MemoryBuffer?)
+    case Audio(isVoice: Bool, duration: Int, title: String?, performer: String?, waveform: Data?)
     case HasLinkedStickers
     case hintFileIsLarge
     case hintIsValidated
@@ -160,9 +160,9 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 self = .Video(duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), size: PixelDimensions(width: decoder.decodeInt32ForKey("w", orElse: 0), height: decoder.decodeInt32ForKey("h", orElse: 0)), flags: TelegramMediaVideoFlags(rawValue: decoder.decodeInt32ForKey("f", orElse: 0)))
             case typeAudio:
                 let waveformBuffer = decoder.decodeBytesForKeyNoCopy("wf")
-                var waveform: MemoryBuffer?
+                var waveform: Data?
                 if let waveformBuffer = waveformBuffer {
-                    waveform = MemoryBuffer(copyOf: waveformBuffer)
+                    waveform = waveformBuffer.makeData()
                 }
                 self = .Audio(isVoice: decoder.decodeInt32ForKey("iv", orElse: 0) != 0, duration: Int(decoder.decodeInt32ForKey("du", orElse: 0)), title: decoder.decodeOptionalStringForKey("ti"), performer: decoder.decodeOptionalStringForKey("pe"), waveform: waveform)
             case typeHasLinkedStickers:
@@ -217,7 +217,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                     encoder.encodeString(performer, forKey: "pe")
                 }
                 if let waveform = waveform {
-                    encoder.encodeBytes(waveform, forKey: "wf")
+                    encoder.encodeBytes(MemoryBuffer(data: waveform), forKey: "wf")
                 }
             case .HasLinkedStickers:
                 encoder.encodeInt32(typeHasLinkedStickers, forKey: "t")
@@ -478,6 +478,20 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var isVideoSticker: Bool {
+        if self.mimeType == "video/webm" {
+            var hasSticker = false
+            for attribute in self.attributes {
+                if case .Sticker = attribute {
+                    hasSticker = true
+                    break
+                }
+            }
+            return hasSticker
+        }
+        return false
+    }
+    
     public var hasLinkedStickers: Bool {
         for attribute in self.attributes {
             if case .HasLinkedStickers = attribute {
@@ -554,7 +568,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
             return false
         }
         
-        if !self.resource.id.isEqual(to: other.resource.id) {
+        if self.resource.id != other.resource.id {
             return false
         }
         

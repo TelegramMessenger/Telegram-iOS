@@ -5,6 +5,7 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case sms = 1
     case call = 2
     case flashCall = 3
+    case missedCall = 4
 }
 
 public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
@@ -12,6 +13,7 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case sms(length: Int32)
     case call(length: Int32)
     case flashCall(pattern: String)
+    case missedCall(numberPrefix: String, length: Int32)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -23,6 +25,8 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 self = .call(length: decoder.decodeInt32ForKey("l", orElse: 0))
             case SentAuthorizationCodeTypeValue.flashCall.rawValue:
                 self = .flashCall(pattern: decoder.decodeStringForKey("p", orElse: ""))
+            case SentAuthorizationCodeTypeValue.missedCall.rawValue:
+                self = .missedCall(numberPrefix: decoder.decodeStringForKey("n", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
             default:
                 preconditionFailure()
         }
@@ -42,35 +46,10 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
             case let .flashCall(pattern):
                 encoder.encodeInt32(SentAuthorizationCodeTypeValue.flashCall.rawValue, forKey: "v")
                 encoder.encodeString(pattern, forKey: "p")
-        }
-    }
-    
-    public static func ==(lhs: SentAuthorizationCodeType, rhs: SentAuthorizationCodeType) -> Bool {
-        switch lhs {
-            case let .otherSession(length):
-                if case .otherSession(length) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .sms(length):
-                if case .sms(length) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .call(length):
-                if case .call(length) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .flashCall(pattern):
-                if case .flashCall(pattern) = rhs {
-                    return true
-                } else {
-                    return false
-                }
+            case let .missedCall(numberPrefix, length):
+                encoder.encodeInt32(SentAuthorizationCodeTypeValue.missedCall.rawValue, forKey: "v")
+                encoder.encodeString(numberPrefix, forKey: "n")
+                encoder.encodeInt32(length, forKey: "l")
         }
     }
 }
@@ -79,6 +58,7 @@ public enum AuthorizationCodeNextType: Int32 {
     case sms = 0
     case call = 1
     case flashCall = 2
+    case missedCall = 3
 }
 
 private enum UnauthorizedAccountStateContentsValue: Int32 {

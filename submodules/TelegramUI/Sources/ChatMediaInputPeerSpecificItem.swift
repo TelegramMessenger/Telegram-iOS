@@ -121,7 +121,7 @@ final class ChatMediaInputPeerSpecificItemNode: ListViewItemNode {
             
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
             
-            self.titleNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
+            self.titleNode.attributedText = NSAttributedString(string: EnginePeer(peer).compactDisplayTitle, font: Font.regular(11.0), textColor: theme.chat.inputPanel.primaryTextColor)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)

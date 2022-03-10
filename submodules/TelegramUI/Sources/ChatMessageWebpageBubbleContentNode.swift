@@ -63,14 +63,23 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                if let adAttribute = item.message.adAttribute, let author = item.message.author {
-                    let navigationData: ChatControllerInteractionNavigateToPeer
-                    if let bot = author as? TelegramUser, bot.botInfo != nil, let startParam = adAttribute.startParam {
-                        navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
-                    } else {
-                        navigationData = .chat(textInputState: nil, subject: nil, peekData: nil)
+                if let adAttribute = item.message.adAttribute {
+                    switch adAttribute.target {
+                    case let .peer(id, messageId, startParam):
+                        let navigationData: ChatControllerInteractionNavigateToPeer
+                        if let bot = item.message.author as? TelegramUser, bot.botInfo != nil, let startParam = startParam {
+                            navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
+                        } else {
+                            var subject: ChatControllerSubject?
+                            if let messageId = messageId {
+                                subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+                            }
+                            navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
+                        }
+                        item.controllerInteraction.openPeer(id, navigationData, nil, nil)
+                    case let .join(_, joinHash):
+                        item.controllerInteraction.openJoinLink(joinHash)
                     }
-                    item.controllerInteraction.openPeer(author.id, navigationData, nil)
                 } else {
                     var webPageContent: TelegramMediaWebpageLoadedContent?
                     for media in item.message.media {
@@ -283,6 +292,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     switch type {
+                        case "telegram_user":
+                            actionTitle = item.presentationData.strings.Conversation_UserSendMessage
+                        case "telegram_channel_request":
+                            actionTitle = item.presentationData.strings.Conversation_RequestToJoinChannel
+                        case "telegram_chat_request", "telegram_megagroup_request":
+                            actionTitle = item.presentationData.strings.Conversation_RequestToJoinGroup
                         case "telegram_channel":
                             actionTitle = item.presentationData.strings.Conversation_ViewChannel
                         case "telegram_chat", "telegram_megagroup":
@@ -313,7 +328,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             break
                     }
                 }
-            } else if let _ = item.message.adAttribute {
+            } else if let adAttribute = item.message.adAttribute {
                 title = nil
                 subtitle = nil
                 text = item.message.text
@@ -334,9 +349,17 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                 if let author = item.message.author as? TelegramUser, author.botInfo != nil {
                     actionTitle = item.presentationData.strings.Conversation_ViewBot
                 } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
-                    actionTitle = item.presentationData.strings.Conversation_ViewGroup
+                    if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
+                        actionTitle = item.presentationData.strings.Conversation_ViewPost
+                    } else {
+                        actionTitle = item.presentationData.strings.Conversation_ViewGroup
+                    }
                 } else {
-                    actionTitle = item.presentationData.strings.Conversation_ViewChannel
+                    if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
+                        actionTitle = item.presentationData.strings.Conversation_ViewMessage
+                    } else {
+                        actionTitle = item.presentationData.strings.Conversation_ViewChannel
+                    }
                 }
                 displayLine = false
             }
@@ -527,7 +550,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return self.contentNode.reactionTargetNode(value: value)
+    override func reactionTargetView(value: String) -> UIView? {
+        return self.contentNode.reactionTargetView(value: value)
     }
 }

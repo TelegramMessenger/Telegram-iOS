@@ -8,7 +8,6 @@ import Display
 import TelegramUIPreferences
 import AccountContext
 import TextSelectionNode
-import ReactionSelectionNode
 import ContextUI
 import ChatInterfaceState
 import UndoUI
@@ -45,15 +44,20 @@ struct ChatInterfacePollActionState: Equatable {
 public enum ChatControllerInteractionSwipeAction {
     case none
     case reply
-    case like
-    case unlike
+}
+
+public enum ChatControllerInteractionReaction {
+    case `default`
+    case reaction(String)
 }
 
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void
+    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
+    let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
+    let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingNode, ContextGesture?, String) -> Void
     let activateMessagePinch: (PinchSourceContainerNode) -> Void
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
@@ -81,9 +85,9 @@ public final class ChatControllerInteraction {
     let updateInputMode: ((ChatInputMode) -> ChatInputMode) -> Void
     let openMessageShareMenu: (MessageId) -> Void
     let presentController: (ViewController, Any?) -> Void
+    let presentControllerInCurrent: (ViewController, Any?) -> Void
     let navigationController: () -> NavigationController?
     let chatControllerNode: () -> ASDisplayNode?
-    let reactionContainerNode: () -> ReactionSelectionParentNode?
     let presentGlobalOverlayController: (ViewController, Any?) -> Void
     let callPeer: (PeerId, Bool) -> Void
     let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
@@ -91,7 +95,7 @@ public final class ChatControllerInteraction {
     let openSearch: () -> Void
     let setupReply: (MessageId) -> Void
     let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
-    let navigateToFirstDateMessage: (Int32) -> Void
+    let navigateToFirstDateMessage: (Int32, Bool) -> Void
     let requestRedeliveryOfFailedMessages: (MessageId) -> Void
     let addContact: (String) -> Void
     let rateCall: (Message, CallId, Bool) -> Void
@@ -104,8 +108,6 @@ public final class ChatControllerInteraction {
     let sendScheduledMessagesNow: ([MessageId]) -> Void
     let editScheduledMessagesTime: ([MessageId]) -> Void
     let performTextSelectionAction: (UInt32, NSAttributedString, TextSelectionAction) -> Void
-    let updateMessageLike: (MessageId, Bool) -> Void
-    let openMessageReactions: (MessageId) -> Void
     let displayImportedMessageTooltip: (ASDisplayNode) -> Void
     let displaySwipeToReplyHint: () -> Void
     let dismissReplyMarkupMessage: (Message) -> Void
@@ -126,6 +128,8 @@ public final class ChatControllerInteraction {
     let getMessageTransitionNode: () -> ChatMessageTransitionNode?
     let updateChoosingSticker: (Bool) -> Void
     let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
+    let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
+    let openJoinLink: (String) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -148,9 +152,11 @@ public final class ChatControllerInteraction {
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
-        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void,
+        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
+        openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingNode, ContextGesture?, String) -> Void,
+        updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,
         activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId) -> Void,
@@ -178,9 +184,9 @@ public final class ChatControllerInteraction {
         updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void,
         openMessageShareMenu: @escaping (MessageId) -> Void,
         presentController: @escaping (ViewController, Any?) -> Void,
+        presentControllerInCurrent: @escaping (ViewController, Any?) -> Void,
         navigationController: @escaping () -> NavigationController?,
         chatControllerNode: @escaping () -> ASDisplayNode?,
-        reactionContainerNode: @escaping () -> ReactionSelectionParentNode?,
         presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void,
         callPeer: @escaping (PeerId, Bool) -> Void,
         longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void,
@@ -188,7 +194,7 @@ public final class ChatControllerInteraction {
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
         canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction,
-        navigateToFirstDateMessage: @escaping(Int32) ->Void,
+        navigateToFirstDateMessage: @escaping(Int32, Bool) ->Void,
         requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void,
         addContact: @escaping (String) -> Void,
         rateCall: @escaping (Message, CallId, Bool) -> Void,
@@ -201,8 +207,6 @@ public final class ChatControllerInteraction {
         sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
         editScheduledMessagesTime: @escaping ([MessageId]) -> Void,
         performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
-        updateMessageLike: @escaping (MessageId, Bool) -> Void,
-        openMessageReactions: @escaping (MessageId) -> Void,
         displayImportedMessageTooltip: @escaping (ASDisplayNode) -> Void,
         displaySwipeToReplyHint: @escaping () -> Void,
         dismissReplyMarkupMessage: @escaping (Message) -> Void,
@@ -223,6 +227,8 @@ public final class ChatControllerInteraction {
         getMessageTransitionNode: @escaping () -> ChatMessageTransitionNode?,
         updateChoosingSticker: @escaping (Bool) -> Void,
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
+        openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
+        openJoinLink: @escaping (String) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -234,6 +240,8 @@ public final class ChatControllerInteraction {
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
         self.openMessageContextMenu = openMessageContextMenu
+        self.openMessageReactionContextMenu = openMessageReactionContextMenu
+        self.updateMessageReaction = updateMessageReaction
         self.activateMessagePinch = activateMessagePinch
         self.openMessageContextActions = openMessageContextActions
         self.navigateToMessage = navigateToMessage
@@ -261,9 +269,9 @@ public final class ChatControllerInteraction {
         self.updateInputMode = updateInputMode
         self.openMessageShareMenu = openMessageShareMenu
         self.presentController = presentController
+        self.presentControllerInCurrent = presentControllerInCurrent
         self.navigationController = navigationController
         self.chatControllerNode = chatControllerNode
-        self.reactionContainerNode = reactionContainerNode
         self.presentGlobalOverlayController = presentGlobalOverlayController
         self.callPeer = callPeer
         self.longTap = longTap
@@ -287,8 +295,6 @@ public final class ChatControllerInteraction {
         self.sendScheduledMessagesNow = sendScheduledMessagesNow
         self.editScheduledMessagesTime = editScheduledMessagesTime
         self.performTextSelectionAction = performTextSelectionAction
-        self.updateMessageLike = updateMessageLike
-        self.openMessageReactions = openMessageReactions
         self.displayImportedMessageTooltip = displayImportedMessageTooltip
         self.displaySwipeToReplyHint = displaySwipeToReplyHint
         self.dismissReplyMarkupMessage = dismissReplyMarkupMessage
@@ -306,6 +312,8 @@ public final class ChatControllerInteraction {
         self.getMessageTransitionNode = getMessageTransitionNode
         self.updateChoosingSticker = updateChoosingSticker
         self.commitEmojiInteraction = commitEmojiInteraction
+        self.openLargeEmojiInfo = openLargeEmojiInfo
+        self.openJoinLink = openJoinLink
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         
@@ -319,17 +327,16 @@ public final class ChatControllerInteraction {
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-        return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
-        }, presentController: { _, _ in }, navigationController: {
+        return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+        }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+        }, presentController: { _, _ in }, presentControllerInCurrent: { _, _ in }, navigationController: {
             return nil
         }, chatControllerNode: {
-            return nil
-        }, reactionContainerNode: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
-        }, navigateToFirstDateMessage: { _ in
+        }, navigateToFirstDateMessage: { _, _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
         }, rateCall: { _, _, _ in
@@ -342,8 +349,6 @@ public final class ChatControllerInteraction {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
-        }, updateMessageLike: { _, _ in
-        }, openMessageReactions: { _ in
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in
@@ -366,6 +371,8 @@ public final class ChatControllerInteraction {
             return nil
         }, updateChoosingSticker: { _ in
         }, commitEmojiInteraction: { _, _, _, _ in  
+        }, openLargeEmojiInfo: { _, _, _ in
+        }, openJoinLink: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

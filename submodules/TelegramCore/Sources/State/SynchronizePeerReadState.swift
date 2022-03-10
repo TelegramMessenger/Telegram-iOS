@@ -87,7 +87,7 @@ private func dialogReadState(network: Network, postbox: Postbox, peerId: PeerId)
                         let apiMarkedUnread: Bool
                         var apiChannelPts: Int32 = 0
                         switch dialog {
-                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, pts, _, _):
+                            case let .dialog(flags, _, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _, _, pts, _, _):
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
                                 apiReadOutboxMaxId = readOutboxMaxId
@@ -261,7 +261,6 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                     }
                     return pushSignal
                     |> mapError { _ -> PeerReadStateValidationError in
-                        return .retry
                     }
                     |> mapToSignal { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
                         return .complete()
@@ -301,7 +300,6 @@ private func pushPeerReadState(network: Network, postbox: Postbox, stateManager:
                     
                     return pushSignal
                     |> mapError { _ -> PeerReadStateValidationError in
-                        return .retry
                     }
                     |> mapToSignal { _ -> Signal<PeerReadState, PeerReadStateValidationError> in
                         return .complete()

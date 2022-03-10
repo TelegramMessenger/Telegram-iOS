@@ -29,9 +29,9 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
         
         if let _ = account.postbox.mediaBox.completedResourcePath(file.resource) {
             if immediate {
-                return .single(ManagedAnimationItem(source: .resource(account, file.resource), frames: .still(.end), duration: 0))
+                return .single(ManagedAnimationItem(source: .resource(account, EngineMediaResource(file.resource)), frames: .still(.end), duration: 0))
             } else {
-                return .single(ManagedAnimationItem(source: .resource(account, file.resource), loop: loop, callbacks: callbacks))
+                return .single(ManagedAnimationItem(source: .resource(account, EngineMediaResource(file.resource)), loop: loop, callbacks: callbacks))
             }
         } else {
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
@@ -44,7 +44,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
                 |> filter { data in
                     return data.complete
                 }).start(next: { next in
-                    subscriber.putNext(ManagedAnimationItem(source: .resource(account, file.resource), loop: loop, callbacks: callbacks))
+                    subscriber.putNext(ManagedAnimationItem(source: .resource(account, EngineMediaResource(file.resource)), loop: loop, callbacks: callbacks))
                     subscriber.putCompletion()
                 })
 
@@ -133,7 +133,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         
         self.configuration.set(self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { preferencesView -> InteractiveEmojiConfiguration? in
-            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
             return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
         })
         self.emojis.set(context.engine.stickers.loadedStickerPack(reference: .dice(emoji), forceActualized: false)
@@ -141,7 +141,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
             switch stickerPack {
                 case let .result(_, items, _):
                     var emojiStickers: [TelegramMediaFile] = []
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         emojiStickers.append(item.file)
                     }
                     return .single(emojiStickers)
@@ -203,7 +203,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         }
     }
     
-    func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
 
     func setFrameIndex(_ frameIndex: Int) {

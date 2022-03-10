@@ -59,21 +59,13 @@ class ChatSlowmodeItem: ListViewItem, ItemListItem {
     }
 }
 
-private func generateKnobImage() -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -2.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.35).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-    })
-}
-
 private let allowedValues: [Int32] = [0, 10, 30, 60, 300, 900, 3600]
 
 class ChatSlowmodeItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let textNodes: [TextNode]
     private var sliderView: TGPhotoEditorSliderView?
@@ -85,6 +77,8 @@ class ChatSlowmodeItemNode: ListViewItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -138,8 +132,8 @@ class ChatSlowmodeItemNode: ListViewItemNode {
         let sliderView = TGPhotoEditorSliderView()
         sliderView.limitValueChangedToLatestState = true
         sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
+        sliderView.trackCornerRadius = 2.0
+        sliderView.lineSize = 4.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = CGFloat(allowedValues.count - 1)
@@ -159,10 +153,10 @@ class ChatSlowmodeItemNode: ListViewItemNode {
             sliderView.value = CGFloat(value)
             self.reportedValue = item.value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.disclosureArrowColor
-            sliderView.startColor = item.theme.list.disclosureArrowColor
+            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
+            sliderView.startColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.theme.list.itemAccentColor
-            sliderView.knobImage = generateKnobImage()
+            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
             
             sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
             sliderView.hitTestEdgeInsets = UIEdgeInsets(top: -sliderView.frame.minX, left: 0.0, bottom: 0.0, right: -sliderView.frame.minX)
@@ -204,7 +198,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
             }
             
             contentSize = CGSize(width: params.width, height: 88.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -227,23 +221,37 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                     if strongSelf.bottomStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
+                    if strongSelf.maskNode.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                    }
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
                     switch neighbors.top {
-                    case .sameSection(false):
-                        strongSelf.topStripeNode.isHidden = true
-                    default:
-                        strongSelf.topStripeNode.isHidden = false
+                        case .sameSection(false):
+                            strongSelf.topStripeNode.isHidden = true
+                        default:
+                            hasTopCorners = true
+                            strongSelf.topStripeNode.isHidden = hasCorners
                     }
                     let bottomStripeInset: CGFloat
                     let bottomStripeOffset: CGFloat
                     switch neighbors.bottom {
-                    case .sameSection(false):
-                        bottomStripeInset = 0.0 //params.leftInset + 16.0
-                        bottomStripeOffset = -separatorHeight
-                    default:
-                        bottomStripeInset = 0.0
-                        bottomStripeOffset = 0.0
+                        case .sameSection(false):
+                            bottomStripeInset = 0.0
+                            bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
+                        default:
+                            bottomStripeInset = 0.0
+                            hasBottomCorners = true
+                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                            bottomStripeOffset = 0.0
                     }
+                    
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
@@ -273,9 +281,10 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                     if let sliderView = strongSelf.sliderView {
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.disclosureArrowColor
+                            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
+                            sliderView.startColor = item.theme.list.itemSwitchColors.frameColor
                             sliderView.trackColor = item.theme.list.itemAccentColor
-                            sliderView.knobImage = generateKnobImage()
+                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))

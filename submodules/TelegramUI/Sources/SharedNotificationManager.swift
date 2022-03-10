@@ -172,19 +172,28 @@ public final class SharedNotificationManager {
         }
         var decryptedNotifications: [(Account, Bool, [AnyHashable: Any])] = []
         for notification in self.notifications {
-            if var encryptedPayload = notification.dict["p"] as? String {
-                encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-                encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-                while encryptedPayload.count % 4 != 0 {
-                    encryptedPayload.append("=")
+            if let accountIdString = notification.dict["accountId"] as? String, let accountId = Int64(accountIdString) {
+                inner: for (account, isCurrent, _) in accountsAndKeys {
+                    if account.id.int64 == accountId {
+                        decryptedNotifications.append((account, isCurrent, notification.dict))
+                        break inner
+                    }
                 }
-                if let data = Data(base64Encoded: encryptedPayload) {
-                    inner: for (account, isCurrent, key) in accountsAndKeys {
-                        if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
-                            if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
-                                decryptedNotifications.append((account, isCurrent, decryptedDict))
+            } else {
+                if var encryptedPayload = notification.dict["p"] as? String {
+                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+                    encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+                    while encryptedPayload.count % 4 != 0 {
+                        encryptedPayload.append("=")
+                    }
+                    if let data = Data(base64Encoded: encryptedPayload) {
+                        inner: for (account, isCurrent, key) in accountsAndKeys {
+                            if let decryptedData = decryptedNotificationPayload(key: key, data: data) {
+                                if let decryptedDict = (try? JSONSerialization.jsonObject(with: decryptedData, options: [])) as? [AnyHashable: Any] {
+                                    decryptedNotifications.append((account, isCurrent, decryptedDict))
+                                }
+                                break inner
                             }
-                            break inner
                         }
                     }
                 }
@@ -429,7 +438,7 @@ public final class SharedNotificationManager {
         self.currentNotificationCall = call
         
         if let notificationCall = call {
-            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").string
+            let rawText = strings.PUSH_PHONE_CALL_REQUEST(notificationCall.peer.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: nameOrder) ?? "").string
             let title: String?
             let body: String
             if let index = rawText.firstIndex(of: "|") {

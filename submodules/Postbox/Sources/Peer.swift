@@ -166,7 +166,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
             let offsetIdHighBits = (data >> (32 + 3)) & 0xffffffff
             let idHighBits = offsetIdHighBits << 32
 
-            if idHighBits == 0 {
+            if idHighBits == 0 && namespaceBits == 3 {
                 if let uint32Value = UInt32(exactly: idLowBits) {
                     self.id = Id(rawValue: Int64(Int32(bitPattern: uint32Value)))
                 } else {
@@ -294,7 +294,7 @@ public struct PeerId: Hashable, CustomStringConvertible, Comparable, Codable {
     }
 }
 
-public protocol Peer: class, PostboxCoding {
+public protocol Peer: AnyObject, PostboxCoding {
     var id: PeerId { get }
     var indexName: PeerIndexNameRepresentation { get }
     var associatedPeerId: PeerId? { get }

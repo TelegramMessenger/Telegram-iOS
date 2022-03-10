@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct TemporaryTwoStepPasswordToken: PostboxCoding, Equatable {
+public struct TemporaryTwoStepPasswordToken: Codable, Equatable {
     public let token: Data
     public let validUntilDate: Int32
     public let requiresBiometrics: Bool
@@ -12,16 +12,20 @@ public struct TemporaryTwoStepPasswordToken: PostboxCoding, Equatable {
         self.requiresBiometrics = requiresBiometrics
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.token = decoder.decodeBytesForKey("t")!.makeData()
-        self.validUntilDate = decoder.decodeInt32ForKey("d", orElse: 0)
-        self.requiresBiometrics = decoder.decodeInt32ForKey("b", orElse: 0) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.token = try container.decode(Data.self, forKey: "t")
+        self.validUntilDate = try container.decode(Int32.self, forKey: "d")
+        self.requiresBiometrics = try container.decode(Int32.self, forKey: "b") != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeBytes(MemoryBuffer(data: self.token), forKey: "t")
-        encoder.encodeInt32(self.validUntilDate, forKey: "d")
-        encoder.encodeInt32(self.requiresBiometrics ? 1 : 0, forKey: "b")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.token, forKey: "t")
+        try container.encode(self.validUntilDate, forKey: "d")
+        try container.encode((self.requiresBiometrics ? 1 : 0) as Int32, forKey: "b")
     }
     
     public static func ==(lhs: TemporaryTwoStepPasswordToken, rhs: TemporaryTwoStepPasswordToken) -> Bool {

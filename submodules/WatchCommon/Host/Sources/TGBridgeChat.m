@@ -94,13 +94,13 @@ NSString *const TGBridgeChatsArrayKey = @"chats";
     [aCoder encodeObject:self.participants forKey:TGBridgeChatGroupParticipantsKey];
 }
 
-- (NSIndexSet *)involvedUserIds
+- (NSArray<NSNumber *> *)involvedUserIds
 {
-    NSMutableIndexSet *userIds = [[NSMutableIndexSet alloc] init];
+    NSMutableSet<NSNumber *> *userIds = [[NSMutableSet alloc] init];
     if (!self.isGroup && !self.isChannel && self.identifier != 0)
-        [userIds addIndex:(int32_t)self.identifier];
+        [userIds addObject:[NSNumber numberWithLongLong:self.identifier]];
     if ((!self.isChannel || self.isChannelGroup) && self.fromUid != self.identifier && self.fromUid != 0 && !TGPeerIdIsChannel(self.fromUid) && self.fromUid > 0)
-        [userIds addIndex:(int32_t)self.fromUid];
+        [userIds addObject:[NSNumber numberWithLongLong:self.fromUid]];
     
     for (TGBridgeMediaAttachment *attachment in self.media)
     {
@@ -108,21 +108,30 @@ NSString *const TGBridgeChatsArrayKey = @"chats";
         {
             TGBridgeActionMediaAttachment *actionAttachment = (TGBridgeActionMediaAttachment *)attachment;
             if (actionAttachment.actionData[@"uid"] != nil)
-                [userIds addIndex:[actionAttachment.actionData[@"uid"] integerValue]];
+                [userIds addObject:[NSNumber numberWithLongLong:[actionAttachment.actionData[@"uid"] longLongValue]]];
         }
     }
     
-    return userIds;
+    NSMutableArray *result = [[NSMutableArray alloc] init];
+    for (NSNumber *object in userIds) {
+        [result addObject:object];
+    }
+    return result;
 }
 
-- (NSIndexSet *)participantsUserIds
+- (NSArray<NSNumber *> *)participantsUserIds
 {
-    NSMutableIndexSet *userIds = [[NSMutableIndexSet alloc] init];
+    NSMutableSet<NSNumber *> *userIds = [[NSMutableSet alloc] init];
     
-    for (NSNumber *uid in self.participants)
-        [userIds addIndex:uid.unsignedIntegerValue];
+    for (NSNumber *uid in self.participants) {
+        [userIds addObject:[NSNumber numberWithLongLong:uid.longLongValue]];
+    }
     
-    return userIds;
+    NSMutableArray *result = [[NSMutableArray alloc] init];
+    for (NSNumber *object in userIds) {
+        [result addObject:object];
+    }
+    return result;
 }
 
 - (BOOL)isEqual:(id)object

@@ -23,11 +23,15 @@ public struct SecretChatKeySha1Fingerprint: PostboxCoding, Equatable {
         var k0: Int64 = 0
         var k1: Int64 = 0
         var k2: Int32 = 0
-        digest.withUnsafeBytes { (bytes: UnsafePointer<Int64>) -> Void in
+        digest.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int64.self)
+
             k0 = bytes.pointee
             k1 = bytes.advanced(by: 1).pointee
         }
-        digest.withUnsafeBytes { (bytes: UnsafePointer<Int32>) -> Void in
+        digest.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int32.self)
+
             k2 = bytes.advanced(by: 4).pointee
         }
         self.k0 = k0
@@ -56,11 +60,15 @@ public struct SecretChatKeySha1Fingerprint: PostboxCoding, Equatable {
     public func data() -> Data {
         var data = Data()
         data.count = 20
-        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int64>) -> Void in
+        data.withUnsafeMutableBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int64.self)
+
             bytes.pointee = self.k0
             bytes.advanced(by: 1).pointee = self.k1
         }
-        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int32>) -> Void in
+        data.withUnsafeMutableBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int32.self)
+
             bytes.advanced(by: 4).pointee = self.k2
         }
         return data
@@ -92,7 +100,9 @@ public struct SecretChatKeySha256Fingerprint: PostboxCoding, Equatable {
         var k1: Int64 = 0
         var k2: Int64 = 0
         var k3: Int64 = 0
-        digest.withUnsafeBytes { (bytes: UnsafePointer<Int64>) -> Void in
+        digest.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int64.self)
+
             k0 = bytes.pointee
             k1 = bytes.advanced(by: 1).pointee
             k2 = bytes.advanced(by: 2).pointee
@@ -128,7 +138,9 @@ public struct SecretChatKeySha256Fingerprint: PostboxCoding, Equatable {
     public func data() -> Data {
         var data = Data()
         data.count = 32
-        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<Int64>) -> Void in
+        data.withUnsafeMutableBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: Int64.self)
+
             bytes.pointee = self.k0
             bytes.advanced(by: 1).pointee = self.k1
             bytes.advanced(by: 2).pointee = self.k2

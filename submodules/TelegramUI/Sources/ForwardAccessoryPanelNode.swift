@@ -21,6 +21,9 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
             case _ as TelegramMediaImage:
                 return (strings.Message_Photo, true)
             case let file as TelegramMediaFile:
+                if file.isVideoSticker || file.isAnimatedSticker {
+                    return (strings.Message_Sticker, true)
+                }
                 var fileName: String = strings.Message_File
                 for attribute in file.attributes {
                     switch attribute {
@@ -51,9 +54,6 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
                         default:
                             break
                     }
-                }
-                if file.isAnimatedSticker {
-                    return (strings.Message_Sticker, true)
                 }
                 return (fileName, true)
             case _ as TelegramMediaContact:
@@ -164,11 +164,11 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                         if author.id == context.account.peerId {
                             authors.append(strongSelf.strings.DialogList_You)
                         } else {
-                            authors.append(author.compactDisplayTitle)
+                            authors.append(EnginePeer(author).compactDisplayTitle)
                         }
                     }
                     if let peer = message.peers[message.id.peerId] {
-                        sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, peer.displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
+                        sourcePeer = (peer.id.namespace == Namespaces.Peer.CloudUser, EnginePeer(peer).displayTitle(strings: strongSelf.strings, displayOrder: strongSelf.nameDisplayOrder))
                     }
                 }
                 
@@ -258,7 +258,6 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, forwardOptionsState: ChatInterfaceForwardOptionsState?, force: Bool = false) {
         if force || self.theme !== theme || self.strings !== strings || self.forwardOptionsState != forwardOptionsState {
-            let previousTheme = self.theme
             self.theme = theme
             self.strings = strings
             self.forwardOptionsState = forwardOptionsState

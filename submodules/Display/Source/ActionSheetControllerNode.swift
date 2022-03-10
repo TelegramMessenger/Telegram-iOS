@@ -1,5 +1,6 @@
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 
 private let containerInsets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
 
@@ -59,6 +60,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.bottomDimView.isUserInteractionEnabled = false
 
         self.itemGroupsContainerNode = ActionSheetItemGroupsContainerNode(theme: self.theme)
+        self.itemGroupsContainerNode.isUserInteractionEnabled = false
         
         super.init()
                 
@@ -128,6 +130,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.updateScrollDimViews(size: layout.size, insets: insets, transition: transition)
     }
     
+    
     func animateIn(completion: @escaping () -> Void) {
         let tempDimView = UIView()
         tempDimView.backgroundColor = self.theme.dimColor
@@ -143,6 +146,10 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.layer.animateBounds(from: self.bounds.offsetBy(dx: 0.0, dy: -self.bounds.size.height), to: self.bounds, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak tempDimView] _ in
             tempDimView?.removeFromSuperview()
             completion()
+        })
+        
+        Queue.mainQueue().after(0.3, {
+            self.itemGroupsContainerNode.isUserInteractionEnabled = true
         })
     }
     
@@ -170,7 +177,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     @objc func dimNodeTap(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
+        if case .ended = recognizer.state, self.itemGroupsContainerNode.isUserInteractionEnabled {
             self.view.window?.endEditing(true)
             self.animateOut(cancelled: true)
         }
@@ -212,7 +219,11 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.itemGroupsContainerNode.setGroups(groups)
     }
     
-    public func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
+    func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
         self.itemGroupsContainerNode.updateItem(groupIndex: groupIndex, itemIndex: itemIndex, f)
+    }
+    
+    func setItemGroupOverlayNode(groupIndex: Int, node: ActionSheetGroupOverlayNode) {
+        self.itemGroupsContainerNode.setItemGroupOverlayNode(groupIndex: groupIndex, node: node)
     }
 }

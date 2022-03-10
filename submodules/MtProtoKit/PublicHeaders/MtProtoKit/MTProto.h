@@ -47,6 +47,7 @@
 @property (nonatomic) bool media;
 @property (nonatomic) bool enforceMedia;
 @property (nonatomic) bool cdn;
+@property (nonatomic) bool allowUnboundEphemeralKeys;
 @property (nonatomic) bool checkForProxyConnectionIssues;
 @property (nonatomic) bool canResetAuthData;
 @property (nonatomic) id requiredAuthToken;

@@ -138,7 +138,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: height)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in
@@ -196,6 +196,7 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true

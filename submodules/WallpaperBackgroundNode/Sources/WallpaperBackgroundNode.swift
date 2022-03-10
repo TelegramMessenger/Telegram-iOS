@@ -8,8 +8,10 @@ import TelegramCore
 import AccountContext
 import SwiftSignalKit
 import WallpaperResources
-import Postbox
 import FastBlur
+import Svg
+import GZip
+import AppBundle
 
 private let motionAmount: CGFloat = 32.0
 
@@ -28,25 +30,49 @@ private func generateBlurredContents(image: UIImage) -> UIImage? {
     return context.generateImage()
 }
 
-public final class WallpaperBackgroundNode: ASDisplayNode {
-    public final class BubbleBackgroundNode: ASDisplayNode {
-        public enum BubbleType {
-            case incoming
-            case outgoing
-            case free
-        }
+public enum WallpaperBubbleType {
+    case incoming
+    case outgoing
+    case free
+}
 
-        private let bubbleType: BubbleType
+public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
+    var frame: CGRect { get set }
+
+    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
+    func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
+    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double)
+    func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat)
+}
+
+public protocol WallpaperBackgroundNode: ASDisplayNode {
+    var isReady: Signal<Bool, NoError> { get }
+    var rotation: CGFloat { get set }
+
+    func update(wallpaper: TelegramWallpaper)
+    func _internalUpdateIsSettingUpWallpaper()
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool)
+    func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
+    func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
+    func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode?
+    
+    func makeDimmedNode() -> ASDisplayNode?
+}
+
+final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
+    final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        private let bubbleType: WallpaperBubbleType
         private let contentNode: ASImageNode
 
         private var cleanWallpaperNode: ASDisplayNode?
         private var gradientWallpaperNode: GradientBackgroundNode.CloneNode?
-        private weak var backgroundNode: WallpaperBackgroundNode?
-        private var index: SparseBag<BubbleBackgroundNode>.Index?
+        private weak var backgroundNode: WallpaperBackgroundNodeImpl?
+        private var index: SparseBag<BubbleBackgroundNodeImpl>.Index?
 
         private var currentLayout: (rect: CGRect, containerSize: CGSize)?
 
-        public override var frame: CGRect {
+        override var frame: CGRect {
             didSet {
                 if oldValue.size != self.bounds.size {
                     self.contentNode.frame = self.bounds
@@ -60,7 +86,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        init(backgroundNode: WallpaperBackgroundNode, bubbleType: BubbleType) {
+        init(backgroundNode: WallpaperBackgroundNodeImpl, bubbleType: WallpaperBubbleType) {
             self.backgroundNode = backgroundNode
             self.bubbleType = bubbleType
 
@@ -211,7 +237,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+        func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
@@ -234,7 +260,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
+        func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
@@ -251,7 +277,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+        func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
             guard let (_, containerSize) = self.currentLayout else {
                 return
             }
@@ -268,7 +294,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             }
         }
 
-        public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+        func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
             guard let (_, containerSize) = self.currentLayout else {
                 return
             }
@@ -286,9 +312,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     private final class BubbleBackgroundNodeReference {
-        weak var node: BubbleBackgroundNode?
+        weak var node: BubbleBackgroundNodeImpl?
 
-        init(node: BubbleBackgroundNode) {
+        init(node: BubbleBackgroundNodeImpl) {
             self.node = node
         }
     }
@@ -303,6 +329,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
     private let patternImageNode: ASImageNode
     private var isGeneratingPatternImage: Bool = false
+
+    private let bakedBackgroundView: UIImageView
 
     private var validLayout: CGSize?
     private var wallpaper: TelegramWallpaper?
@@ -368,7 +396,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
     
-    public var rotation: CGFloat = 0.0 {
+    var rotation: CGFloat = 0.0 {
         didSet {
             var fromValue: CGFloat = 0.0
             if let value = (self.layer.value(forKeyPath: "transform.rotation.z") as? NSNumber)?.floatValue {
@@ -395,17 +423,17 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
     }
 
     private struct PatternKey: Equatable {
-        var mediaId: MediaId
+        var mediaId: EngineMedia.Id
         var isLight: Bool
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
 
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
-    public var isReady: Signal<Bool, NoError> {
+    var isReady: Signal<Bool, NoError> {
         return self._isReady.get()
     }
-    
-    public init(context: AccountContext, useSharedAnimationPhase: Bool = false) {
+        
+    init(context: AccountContext, useSharedAnimationPhase: Bool) {
         self.context = context
         self.useSharedAnimationPhase = useSharedAnimationPhase
         self.imageContentMode = .scaleAspectFill
@@ -414,6 +442,9 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.contentNode.contentMode = self.imageContentMode
 
         self.patternImageNode = ASImageNode()
+
+        self.bakedBackgroundView = UIImageView()
+        self.bakedBackgroundView.isHidden = true
         
         super.init()
         
@@ -421,6 +452,8 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.contentNode.frame = self.bounds
         self.addSubnode(self.contentNode)
         self.addSubnode(self.patternImageNode)
+        
+        //self.view.addSubview(self.bakedBackgroundView)
     }
 
     deinit {
@@ -429,7 +462,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         self.imageDisposable.dispose()
     }
 
-    public func update(wallpaper: TelegramWallpaper) {
+    func update(wallpaper: TelegramWallpaper) {
         if self.wallpaper == wallpaper {
             return
         }
@@ -540,7 +573,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func _internalUpdateIsSettingUpWallpaper() {
+    func _internalUpdateIsSettingUpWallpaper() {
         self.isSettingUpWallpaper = true
     }
 
@@ -623,22 +656,19 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                 self.validPatternGeneratedImage = nil
                 self.validPatternImage = nil
 
-                if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
+                if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated.wallpaper == wallpaper {
                     self.validPatternImage = ValidPatternImage(wallpaper: cachedValidPatternImage.generated.wallpaper, generate: cachedValidPatternImage.generate)
                 } else {
-                    func reference(for resource: MediaResource, media: Media, message: Message?) -> MediaResourceReference {
-                        if let message = message {
-                            return .media(media: .message(message: MessageReference(message), media: media), resource: resource)
-                        }
-                        return .wallpaper(wallpaper: .slug(file.slug), resource: resource)
+                    func reference(for resource: EngineMediaResource, media: EngineMedia) -> MediaResourceReference {
+                        return .wallpaper(wallpaper: .slug(file.slug), resource: resource._asResource())
                     }
 
                     var convertedRepresentations: [ImageRepresentationWithReference] = []
                     for representation in file.file.previewRepresentations {
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: representation.resource, media: file.file, message: nil)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: EngineMediaResource(representation.resource), media: EngineMedia(file.file))))
                     }
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: file.file.resource, media: file.file, message: nil)))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: EngineMediaResource(file.file.resource), media: EngineMedia(file.file))))
 
                     let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                     self.patternImageDisposable.set((signal
@@ -692,7 +722,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
             if self.validPatternGeneratedImage != updatedGeneratedImage {
                 self.validPatternGeneratedImage = updatedGeneratedImage
 
-                if let cachedValidPatternImage = WallpaperBackgroundNode.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
+                if let cachedValidPatternImage = WallpaperBackgroundNodeImpl.cachedValidPatternImage, cachedValidPatternImage.generated == updatedGeneratedImage {
                     self.patternImageNode.image = cachedValidPatternImage.image
                     self.updatePatternPresentation()
                 } else {
@@ -704,7 +734,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                                 self.updatePatternPresentation()
 
                                 if self.useSharedAnimationPhase {
-                                    WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                    WallpaperBackgroundNodeImpl.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
                                 }
                             } else {
                                 self.updatePatternPresentation()
@@ -725,7 +755,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                                 strongSelf.updatePatternPresentation()
 
                                 if let image = image, strongSelf.useSharedAnimationPhase {
-                                    WallpaperBackgroundNode.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
+                                    WallpaperBackgroundNodeImpl.cachedValidPatternImage = CachedValidPatternImage(generate: validPatternImage.generate, generated: updatedGeneratedImage, image: image)
                                 }
                             }
                         }
@@ -747,7 +777,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         transition.updateFrame(node: self.patternImageNode, frame: CGRect(origin: CGPoint(), size: size))
     }
     
-    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         let isFirstLayout = self.validLayout == nil
         self.validLayout = size
 
@@ -756,27 +786,27 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
 
         if let gradientBackgroundNode = self.gradientBackgroundNode {
             transition.updateFrame(node: gradientBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-            gradientBackgroundNode.updateLayout(size: size, transition: transition)
+            gradientBackgroundNode.updateLayout(size: size, transition: transition, extendAnimation: false, backwards: false, completion: {})
         }
 
         if let outgoingBubbleGradientBackgroundNode = self.outgoingBubbleGradientBackgroundNode {
             transition.updateFrame(node: outgoingBubbleGradientBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-            outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: transition)
+            outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: transition, extendAnimation: false, backwards: false, completion: {})
         }
 
         self.loadPatternForSizeIfNeeded(size: size, transition: transition)
-        
+                
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
         }
     }
 
-    public func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool = false) {
-        self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation)
-        self.outgoingBubbleGradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation)
+    func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
+        self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: {})
+        self.outgoingBubbleGradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: {})
     }
 
-    public func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
+    func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
         if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
             self.bubbleTheme = bubbleTheme
             self.bubbleCorners = bubbleCorners
@@ -786,7 +816,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
                     let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode(adjustSaturation: false)
                     if let size = self.validLayout {
                         outgoingBubbleGradientBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-                        outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: .immediate)
+                        outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
                     }
                     self.outgoingBubbleGradientBackgroundNode = outgoingBubbleGradientBackgroundNode
                 }
@@ -805,7 +835,7 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         }
     }
 
-    public func hasBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> Bool {
+    func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool {
         guard let bubbleTheme = self.bubbleTheme, let bubbleCorners = self.bubbleCorners else {
             return false
         }
@@ -850,12 +880,832 @@ public final class WallpaperBackgroundNode: ASDisplayNode {
         return false
     }
 
-    public func makeBubbleBackground(for type: WallpaperBackgroundNode.BubbleBackgroundNode.BubbleType) -> WallpaperBackgroundNode.BubbleBackgroundNode? {
+    func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
         if !self.hasBubbleBackground(for: type) {
             return nil
         }
-        let node = WallpaperBackgroundNode.BubbleBackgroundNode(backgroundNode: self, bubbleType: type)
+        let node = WallpaperBackgroundNodeImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
         node.updateContents()
         return node
     }
+    
+    func makeDimmedNode() -> ASDisplayNode? {
+        if let gradientBackgroundNode = self.gradientBackgroundNode {
+            return GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+        } else {
+            return nil
+        }
+    }
+}
+
+private protocol WallpaperComponentView: AnyObject {
+    var view: UIView { get }
+
+    func update(size: CGSize, transition: ContainedViewLayoutTransition)
+}
+
+final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroundNode {
+    final class SharedStorage {
+    }
+
+    final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        private let bubbleType: WallpaperBubbleType
+        private let contentNode: ASImageNode
+
+        private var cleanWallpaperNode: ASDisplayNode?
+        private var gradientWallpaperNode: GradientBackgroundNode.CloneNode?
+        private weak var backgroundNode: WallpaperBackgroundNodeMergedImpl?
+        private var index: SparseBag<BubbleBackgroundNodeImpl>.Index?
+
+        private var currentLayout: (rect: CGRect, containerSize: CGSize)?
+
+        override var frame: CGRect {
+            didSet {
+                if oldValue.size != self.bounds.size {
+                    self.contentNode.frame = self.bounds
+                    if let cleanWallpaperNode = self.cleanWallpaperNode {
+                        cleanWallpaperNode.frame = self.bounds
+                    }
+                    if let gradientWallpaperNode = self.gradientWallpaperNode {
+                        gradientWallpaperNode.frame = self.bounds
+                    }
+                }
+            }
+        }
+
+        init(backgroundNode: WallpaperBackgroundNodeMergedImpl, bubbleType: WallpaperBubbleType) {
+            self.backgroundNode = backgroundNode
+            self.bubbleType = bubbleType
+
+            self.contentNode = ASImageNode()
+            self.contentNode.displaysAsynchronously = false
+            self.contentNode.isUserInteractionEnabled = false
+
+            super.init()
+
+            self.addSubnode(self.contentNode)
+
+            self.index = backgroundNode.bubbleBackgroundNodeReferences.add(BubbleBackgroundNodeReference(node: self))
+        }
+
+        deinit {
+            if let index = self.index, let backgroundNode = self.backgroundNode {
+                backgroundNode.bubbleBackgroundNodeReferences.remove(index)
+            }
+        }
+
+        func updateContents() {
+            guard let backgroundNode = self.backgroundNode else {
+                return
+            }
+
+            if let bubbleTheme = backgroundNode.bubbleTheme, let bubbleCorners = backgroundNode.bubbleCorners {
+                let wallpaper = backgroundNode.wallpaper ?? bubbleTheme.chat.defaultWallpaper
+
+                let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: wallpaper, bubbleCorners: bubbleCorners)
+                var needsCleanBackground = false
+                switch self.bubbleType {
+                case .incoming:
+                    self.contentNode.image = graphics.incomingBubbleGradientImage
+                    if graphics.incomingBubbleGradientImage == nil {
+                        self.contentNode.backgroundColor = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill[0]
+                    } else {
+                        self.contentNode.backgroundColor = nil
+                    }
+                    needsCleanBackground = bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 })
+                case .outgoing:
+                    if backgroundNode.outgoingBubbleGradientBackgroundNode != nil {
+                        self.contentNode.image = nil
+                        self.contentNode.backgroundColor = nil
+                    } else {
+                        self.contentNode.image = graphics.outgoingBubbleGradientImage
+                        if graphics.outgoingBubbleGradientImage == nil {
+                            self.contentNode.backgroundColor = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill[0]
+                        } else {
+                            self.contentNode.backgroundColor = nil
+                        }
+                        needsCleanBackground = bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 })
+                    }
+                case .free:
+                    self.contentNode.image = nil
+                    self.contentNode.backgroundColor = nil
+                    needsCleanBackground = true
+                }
+
+                var isInvertedGradient = false
+                var hasComplexGradient = false
+                switch wallpaper {
+                case let .file(file):
+                    hasComplexGradient = file.settings.colors.count >= 3
+                    if let intensity = file.settings.intensity, intensity < 0 {
+                        isInvertedGradient = true
+                    }
+                case let .gradient(gradient):
+                    hasComplexGradient = gradient.colors.count >= 3
+                default:
+                    break
+                }
+
+                var needsGradientBackground = false
+                var needsWallpaperBackground = false
+
+                if isInvertedGradient {
+                    switch self.bubbleType {
+                    case .free:
+                        needsCleanBackground = false
+                    case .incoming, .outgoing:
+                        break
+                    }
+                }
+
+                if needsCleanBackground {
+                    if hasComplexGradient {
+                        needsGradientBackground = backgroundNode.gradient != nil
+                    } else {
+                        needsWallpaperBackground = true
+                    }
+                }
+
+                var gradientBackgroundSource: GradientBackgroundNode? = backgroundNode.gradient?.gradientBackground
+
+                if case .outgoing = self.bubbleType {
+                    if let outgoingBubbleGradientBackgroundNode = backgroundNode.outgoingBubbleGradientBackgroundNode {
+                        gradientBackgroundSource = outgoingBubbleGradientBackgroundNode
+                        needsWallpaperBackground = false
+                        needsGradientBackground = true
+                    }
+                }
+
+                if needsWallpaperBackground {
+                    if self.cleanWallpaperNode == nil {
+                        let cleanWallpaperNode = ASImageNode()
+                        cleanWallpaperNode.displaysAsynchronously = false
+                        self.cleanWallpaperNode = cleanWallpaperNode
+                        cleanWallpaperNode.frame = self.bounds
+                        self.insertSubnode(cleanWallpaperNode, at: 0)
+                    }
+                    if let blurredBackgroundContents = backgroundNode.blurredBackgroundContents {
+                        self.cleanWallpaperNode?.contents = blurredBackgroundContents.cgImage
+                        self.cleanWallpaperNode?.backgroundColor = backgroundNode.backgroundColor
+                    } else {
+                        self.cleanWallpaperNode?.contents = nil
+                        self.cleanWallpaperNode?.backgroundColor = backgroundNode.backgroundColor
+                    }
+                } else {
+                    if let cleanWallpaperNode = self.cleanWallpaperNode {
+                        self.cleanWallpaperNode = nil
+                        cleanWallpaperNode.removeFromSupernode()
+                    }
+                }
+
+                if needsGradientBackground, let gradientBackgroundNode = gradientBackgroundSource {
+                    if self.gradientWallpaperNode == nil {
+                        let gradientWallpaperNode = GradientBackgroundNode.CloneNode(parentNode: gradientBackgroundNode)
+                        gradientWallpaperNode.frame = self.bounds
+                        self.gradientWallpaperNode = gradientWallpaperNode
+                        self.insertSubnode(gradientWallpaperNode, at: 0)
+                    }
+                } else {
+                    if let gradientWallpaperNode = self.gradientWallpaperNode {
+                        self.gradientWallpaperNode = nil
+                        gradientWallpaperNode.removeFromSupernode()
+                    }
+                }
+            } else {
+                self.contentNode.image = nil
+                if let cleanWallpaperNode = self.cleanWallpaperNode {
+                    self.cleanWallpaperNode = nil
+                    cleanWallpaperNode.removeFromSupernode()
+                }
+            }
+
+            if let (rect, containerSize) = self.currentLayout {
+                self.update(rect: rect, within: containerSize)
+            }
+        }
+
+        func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+            self.currentLayout = (rect, containerSize)
+
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
+
+            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
+            transition.animateView {
+                self.contentNode.layer.contentsRect = shiftedContentsRect
+            }
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
+                transition.animateView {
+                    cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
+                }
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
+                transition.animateView {
+                    gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+                }
+            }
+        }
+
+        func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
+            self.currentLayout = (rect, containerSize)
+
+            let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
+
+            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
+            self.contentNode.layer.contentsRect = shiftedContentsRect
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
+                cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
+                gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
+            }
+        }
+
+        func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+            guard let (_, containerSize) = self.currentLayout else {
+                return
+            }
+            let transition: ContainedViewLayoutTransition = .animated(duration: duration, curve: animationCurve)
+
+            let scaledOffset = CGPoint(x: value.x / containerSize.width, y: value.y / containerSize.height)
+            transition.animateContentsRectPositionAdditive(layer: self.contentNode.layer, offset: scaledOffset)
+
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                transition.animateContentsRectPositionAdditive(layer: cleanWallpaperNode.layer, offset: scaledOffset)
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                transition.animateContentsRectPositionAdditive(layer: gradientWallpaperNode.layer, offset: scaledOffset)
+            }
+        }
+
+        func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+            guard let (_, containerSize) = self.currentLayout else {
+                return
+            }
+
+            let scaledOffset = CGPoint(x: 0.0, y: -value / containerSize.height)
+
+            self.contentNode.layer.animateSpring(from: NSValue(cgPoint: scaledOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "contentsRect.position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+            if let cleanWallpaperNode = self.cleanWallpaperNode {
+                cleanWallpaperNode.layer.animateSpring(from: NSValue(cgPoint: scaledOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "contentsRect.position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+            }
+            if let gradientWallpaperNode = self.gradientWallpaperNode {
+                gradientWallpaperNode.layer.animateSpring(from: NSValue(cgPoint: scaledOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "contentsRect.position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+            }
+        }
+    }
+
+    private final class BubbleBackgroundNodeReference {
+        weak var node: BubbleBackgroundNodeImpl?
+
+        init(node: BubbleBackgroundNodeImpl) {
+            self.node = node
+        }
+    }
+
+    private final class WallpaperGradiendComponentView: WallpaperComponentView {
+        struct Spec: Equatable {
+            var colors: [UInt32]
+        }
+
+        let spec: Spec
+        let gradientBackground: GradientBackgroundNode
+
+        var view: UIView {
+            return self.gradientBackground.view
+        }
+
+        init(spec: Spec, updated: @escaping () -> Void) {
+            self.spec = spec
+
+            self.gradientBackground = GradientBackgroundNode(colors: spec.colors.map(UIColor.init(rgb:)), useSharedAnimationPhase: true, adjustSaturation: false)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+            self.gradientBackground.frame = CGRect(origin: CGPoint(), size: size)
+            self.gradientBackground.updateLayout(size: size, transition: transition, extendAnimation: false, backwards: false, completion: {})
+        }
+    }
+
+    private final class WallpaperColorComponentView: WallpaperComponentView {
+        struct Spec: Equatable {
+            var color: UInt32
+        }
+
+        let spec: Spec
+        let backgroundView: UIView
+
+        var view: UIView {
+            return self.backgroundView
+        }
+
+        init(spec: Spec, updated: @escaping () -> Void) {
+            self.spec = spec
+
+            self.backgroundView = UIView()
+            self.backgroundView.backgroundColor = UIColor(rgb: spec.color)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+            self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
+        }
+    }
+
+    private final class WallpaperImageComponentView: WallpaperComponentView {
+        enum Spec: Equatable {
+            case image(
+                representation: TelegramMediaImageRepresentation,
+                isPattern: Bool,
+                intensity: CGFloat
+            )
+            case builtin
+        }
+
+        let spec: Spec
+        let updated: () -> Void
+        let imageView: UIImageView
+        var fetchDisposable: Disposable?
+        var dataDisposable: Disposable?
+
+        var imageData: Data?
+
+        private var validSize: CGSize?
+
+        var view: UIView {
+            return self.imageView
+        }
+
+        init(context: AccountContext, spec: Spec, updated: @escaping () -> Void) {
+            self.spec = spec
+            self.updated = updated
+
+            self.imageView = UIImageView()
+            self.imageView.contentMode = .scaleAspectFill
+
+            switch spec {
+            case let .image(representation, _, _):
+                self.fetchDisposable = (fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: MediaResourceReference.standalone(resource: representation.resource))
+                |> deliverOnMainQueue).start()
+                self.dataDisposable = (context.account.postbox.mediaBox.resourceData(representation.resource)
+                |> deliverOnMainQueue).start(next: { [weak self] dataValue in
+                    guard let strongSelf = self else {
+                        return
+                    }
+
+                    if dataValue.complete, let data = try? Data(contentsOf: URL(fileURLWithPath: dataValue.path)) {
+                        strongSelf.imageData = data
+                        if let size = strongSelf.validSize {
+                            strongSelf.updateImage(size: size, data: data)
+                        }
+                    }
+                })
+            case .builtin:
+                if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
+                    self.imageData = data
+                    if let size = self.validSize {
+                        self.updateImage(size: size, data: data)
+                    }
+                }
+            }
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        deinit {
+            self.fetchDisposable?.dispose()
+            self.dataDisposable?.dispose()
+        }
+
+        func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+            let sizeUpdated = self.validSize != size
+            self.validSize = size
+
+            self.imageView.frame = CGRect(origin: CGPoint(), size: size)
+
+            if sizeUpdated || self.imageView.image == nil {
+                if let imageData = self.imageData {
+                    self.updateImage(size: size, data: imageData)
+                }
+            }
+        }
+
+        private func updateImage(size: CGSize, data: Data) {
+            let scale: CGFloat
+            if UIScreenScale >= 2.9 {
+                scale = 2.5
+            } else {
+                scale = UIScreenScale
+            }
+
+            switch self.spec {
+            case let .image(_, isPattern, intensity):
+                if isPattern {
+                    let patternBackgroundColor: UIColor
+                    let patternForegroundColor: UIColor
+                    if intensity < 0.0 {
+                        patternBackgroundColor = .clear
+                        patternForegroundColor = .black
+                    } else {
+                        patternBackgroundColor = .clear
+                        patternForegroundColor = .black
+                    }
+
+                    if let unpackedData = TGGUnzipData(data, 2 * 1024 * 1024), let patternImage = drawSvgImage(unpackedData, CGSize(width: floor(size.width * scale), height: floor(size.height * scale)), patternBackgroundColor, patternForegroundColor, false) {
+                        if intensity < 0.0 {
+                            self.imageView.image = generateImage(patternImage.size, scale: patternImage.scale, rotatedContext: { size, context in
+                                context.setFillColor(UIColor.black.cgColor)
+                                context.fill(CGRect(origin: CGPoint(), size: size))
+
+                                if let cgImage = patternImage.cgImage {
+                                    context.setBlendMode(.destinationOut)
+                                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                                    context.scaleBy(x: 1.0, y: -1.0)
+                                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                                    context.draw(cgImage, in: CGRect(origin: CGPoint(), size: size))
+                                }
+                            })
+                            self.imageView.alpha = 1.0
+                            self.imageView.layer.compositingFilter = nil
+                            self.imageView.backgroundColor = UIColor(white: 0.0, alpha: 1.0 - abs(intensity))
+                        } else {
+                            self.imageView.image = patternImage
+                            self.imageView.alpha = abs(intensity)
+                            self.imageView.layer.compositingFilter = "softLightBlendMode"
+                            self.imageView.backgroundColor = nil
+                        }
+                    }
+
+                    self.updated()
+                } else if let image = UIImage(data: data) {
+                    self.imageView.image = image
+                    self.imageView.layer.compositingFilter = nil
+                    self.imageView.alpha = 1.0
+
+                    self.updated()
+                }
+            case .builtin:
+                if let image = UIImage(data: data) {
+                    self.imageView.image = image
+                    self.imageView.layer.compositingFilter = nil
+                    self.imageView.alpha = 1.0
+
+                    self.updated()
+                }
+            }
+        }
+    }
+
+    private let context: AccountContext
+    private let storage: SharedStorage
+
+    private let staticView: UIImageView
+    private let dynamicView: UIView
+    private var color: WallpaperColorComponentView?
+    private var gradient: WallpaperGradiendComponentView?
+    private var image: WallpaperImageComponentView?
+
+    private var blurredBackgroundContents: UIImage?
+
+    private var isSettingUpWallpaper: Bool = false
+
+    private var wallpaper: TelegramWallpaper?
+    private var validLayout: CGSize?
+
+    private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
+    var isReady: Signal<Bool, NoError> {
+        return self._isReady.get()
+    }
+
+    var rotation: CGFloat = 0.0 {
+        didSet {
+        }
+    }
+
+    private var isAnimating: Bool = false
+
+    private var bubbleTheme: PresentationTheme?
+    private var bubbleCorners: PresentationChatBubbleCorners?
+    private var bubbleBackgroundNodeReferences = SparseBag<BubbleBackgroundNodeReference>()
+    private var outgoingBubbleGradientBackgroundNode: GradientBackgroundNode?
+
+    init(context: AccountContext, storage: SharedStorage?) {
+        self.context = context
+        self.storage = storage ?? SharedStorage()
+
+        self.staticView = UIImageView()
+        self.dynamicView = UIView()
+
+        super.init()
+
+        self.view.addSubview(self.staticView)
+    }
+
+    func update(wallpaper: TelegramWallpaper) {
+        self.wallpaper = wallpaper
+
+        var colorSpec: WallpaperColorComponentView.Spec?
+        var gradientSpec: WallpaperGradiendComponentView.Spec?
+        var imageSpec: WallpaperImageComponentView.Spec?
+
+        switch wallpaper {
+        case .builtin:
+            imageSpec = WallpaperImageComponentView.Spec.builtin
+        case let .color(color):
+            colorSpec = WallpaperColorComponentView.Spec(color: color)
+        case let .gradient(gradient):
+            if gradient.colors.count >= 3 {
+                gradientSpec = WallpaperGradiendComponentView.Spec(colors: gradient.colors)
+            }
+        case let .image(representations, settings):
+            if let representation = representations.last {
+                imageSpec = WallpaperImageComponentView.Spec.image(representation: representation, isPattern: false, intensity: 1.0)
+            }
+            let _ = settings
+        case let .file(file):
+            if file.settings.colors.count >= 3 {
+                gradientSpec = WallpaperGradiendComponentView.Spec(colors: file.settings.colors)
+            }
+            if let dimensions = file.file.dimensions {
+                let representation = TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: file.file.immediateThumbnailData)
+                imageSpec = WallpaperImageComponentView.Spec.image(representation: representation, isPattern: file.isPattern, intensity: CGFloat(file.settings.intensity ?? 100) / 100.0)
+            }
+        }
+
+        if self.color?.spec != colorSpec {
+            if let color = self.color {
+                self.color = nil
+                color.view.removeFromSuperview()
+            }
+            if let colorSpec = colorSpec {
+                let color = WallpaperColorComponentView(spec: colorSpec, updated: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.componentsUpdated()
+                })
+                self.color = color
+                if let size = self.validLayout {
+                    color.update(size: size, transition: .immediate)
+                }
+                self.dynamicView.insertSubview(color.view, at: 0)
+
+                self.componentsUpdated()
+            }
+        }
+
+        if self.gradient?.spec != gradientSpec {
+            if let gradient = self.gradient {
+                self.gradient = nil
+                gradient.view.removeFromSuperview()
+            }
+            if let gradientSpec = gradientSpec {
+                let gradient = WallpaperGradiendComponentView(spec: gradientSpec, updated: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.componentsUpdated()
+                })
+                self.gradient = gradient
+                if let size = self.validLayout {
+                    gradient.update(size: size, transition: .immediate)
+                }
+                self.dynamicView.insertSubview(gradient.view, at: 0)
+            }
+        }
+
+        if self.image?.spec != imageSpec {
+            if let image = self.image {
+                self.image = nil
+                image.view.removeFromSuperview()
+            }
+            if let imageSpec = imageSpec {
+                let image = WallpaperImageComponentView(context: self.context, spec: imageSpec, updated: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.componentsUpdated()
+                })
+                self.image = image
+                if let size = self.validLayout {
+                    image.update(size: size, transition: .immediate)
+                }
+                if let gradient = self.gradient {
+                    self.dynamicView.insertSubview(image.view, aboveSubview: gradient.view)
+                } else {
+                    self.dynamicView.insertSubview(image.view, at: 0)
+                }
+            }
+        }
+    }
+
+    private func componentsUpdated() {
+        if self.isAnimating {
+            if self.dynamicView.superview == nil {
+                self.view.addSubview(self.dynamicView)
+                self.staticView.isHidden = true
+            }
+            self._isReady.set(true)
+        } else {
+            self.staticView.isHidden = false
+            self.dynamicView.removeFromSuperview()
+
+            if let size = self.validLayout {
+                if let color = self.color {
+                    self.staticView.image = nil
+                    self.staticView.backgroundColor = color.backgroundView.backgroundColor
+                } else {
+                    let gradientImage = self.gradient?.gradientBackground.contentView.image
+                    let gradientFrame = self.gradient?.gradientBackground.frame
+
+                    let imageImage = self.image?.imageView.image
+                    let imageBackgroundColor = self.image?.imageView.backgroundColor
+                    let imageFrame = self.image?.imageView.frame
+                    let imageAlpha = self.image?.imageView.alpha
+                    let imageFilter = self.image?.imageView.layer.compositingFilter as? String
+
+                    self.staticView.image = generateImage(size, opaque: true, scale: nil, rotatedContext: { size, context in
+                        UIGraphicsPushContext(context)
+
+                        if let gradientImage = gradientImage, let gradientFrame = gradientFrame {
+                            gradientImage.draw(in: gradientFrame)
+                        }
+
+                        if let imageImage = imageImage, let imageFrame = imageFrame, let imageAlpha = imageAlpha {
+                            if imageFilter == "softLightBlendMode" {
+                                context.setBlendMode(.softLight)
+                            }
+
+                            if let imageBackgroundColor = imageBackgroundColor {
+                                context.setFillColor(imageBackgroundColor.cgColor)
+                                context.fill(imageFrame)
+                            }
+
+                            context.setAlpha(imageAlpha)
+
+                            context.translateBy(x: imageFrame.midX, y: imageFrame.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -imageFrame.midX, y: -imageFrame.midY)
+                            if let cgImage = imageImage.cgImage {
+                                let drawingSize = imageImage.size.aspectFilled(imageFrame.size)
+                                context.draw(cgImage, in: CGRect(origin: CGPoint(x: imageFrame.minX + (imageFrame.width - drawingSize.width) / 2.0, y: imageFrame.minX + (imageFrame.height - drawingSize.height) / 2.0), size: drawingSize))
+                            }
+                            context.translateBy(x: imageFrame.midX, y: imageFrame.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -imageFrame.midX, y: -imageFrame.midY)
+
+                            context.setBlendMode(.normal)
+                            context.setAlpha(1.0)
+                        }
+
+                        UIGraphicsPopContext()
+                    })
+                }
+
+                self._isReady.set(true)
+            }
+        }
+    }
+
+    func _internalUpdateIsSettingUpWallpaper() {
+        self.isSettingUpWallpaper = true
+    }
+
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayout = size
+
+        self.staticView.frame = CGRect(origin: CGPoint(), size: size)
+
+        if let gradient = self.gradient {
+            gradient.update(size: size, transition: transition)
+        }
+        if let image = self.image {
+            image.update(size: size, transition: transition)
+        }
+    }
+
+    func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
+        if let gradient = self.gradient {
+            self.isAnimating = true
+            self.componentsUpdated()
+            gradient.gradientBackground.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.isAnimating = false
+                strongSelf.componentsUpdated()
+            })
+        } else {
+            self.isAnimating = false
+        }
+    }
+
+    func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
+        if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
+            self.bubbleTheme = bubbleTheme
+            self.bubbleCorners = bubbleCorners
+
+            if bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill.count >= 3 && bubbleTheme.chat.animateMessageColors {
+                if self.outgoingBubbleGradientBackgroundNode == nil {
+                    let outgoingBubbleGradientBackgroundNode = GradientBackgroundNode(adjustSaturation: false)
+                    if let size = self.validLayout {
+                        outgoingBubbleGradientBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+                        outgoingBubbleGradientBackgroundNode.updateLayout(size: size, transition: .immediate, extendAnimation: false, backwards: false, completion: {})
+                    }
+                    self.outgoingBubbleGradientBackgroundNode = outgoingBubbleGradientBackgroundNode
+                }
+                self.outgoingBubbleGradientBackgroundNode?.updateColors(colors: bubbleTheme.chat.message.outgoing.bubble.withoutWallpaper.fill)
+            } else if let _ = self.outgoingBubbleGradientBackgroundNode {
+                self.outgoingBubbleGradientBackgroundNode = nil
+            }
+
+            self.updateBubbles()
+        }
+    }
+
+    private func updateBubbles() {
+        for reference in self.bubbleBackgroundNodeReferences {
+            reference.node?.updateContents()
+        }
+    }
+
+    func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool {
+        guard let bubbleTheme = self.bubbleTheme, let bubbleCorners = self.bubbleCorners else {
+            return false
+        }
+        if self.wallpaper == nil && !self.isSettingUpWallpaper {
+            return false
+        }
+
+        var hasPlainWallpaper = false
+        let graphicsWallpaper: TelegramWallpaper
+        if let wallpaper = self.wallpaper {
+            switch wallpaper {
+            case .color:
+                hasPlainWallpaper = true
+            default:
+                break
+            }
+            graphicsWallpaper = wallpaper
+        } else {
+            graphicsWallpaper = bubbleTheme.chat.defaultWallpaper
+        }
+
+        let graphics = PresentationResourcesChat.principalGraphics(theme: bubbleTheme, wallpaper: graphicsWallpaper, bubbleCorners: bubbleCorners)
+        switch type {
+        case .incoming:
+            if graphics.incomingBubbleGradientImage != nil {
+                return true
+            }
+            if bubbleTheme.chat.message.incoming.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 }) {
+                return !hasPlainWallpaper
+            }
+        case .outgoing:
+            if graphics.outgoingBubbleGradientImage != nil {
+                return true
+            }
+            if bubbleTheme.chat.message.outgoing.bubble.withWallpaper.fill.contains(where: { $0.alpha <= 0.99 }) {
+                return !hasPlainWallpaper
+            }
+        case .free:
+            return true
+        }
+
+        return false
+    }
+
+    func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
+        if !self.hasBubbleBackground(for: type) {
+            return nil
+        }
+        let node = WallpaperBackgroundNodeMergedImpl.BubbleBackgroundNodeImpl(backgroundNode: self, bubbleType: type)
+        node.updateContents()
+        return node
+    }
+
+    func makeDimmedNode() -> ASDisplayNode? {
+        return nil
+    }
+}
+
+private let sharedStorage = WallpaperBackgroundNodeMergedImpl.SharedStorage()
+
+public func createWallpaperBackgroundNode(context: AccountContext, forChatDisplay: Bool, useSharedAnimationPhase: Bool = false, useExperimentalImplementation: Bool = false) -> WallpaperBackgroundNode {
+    if forChatDisplay && useExperimentalImplementation {
+        return WallpaperBackgroundNodeMergedImpl(context: context, storage: useSharedAnimationPhase ? sharedStorage : nil)
+    }
+
+    return WallpaperBackgroundNodeImpl(context: context, useSharedAnimationPhase: useSharedAnimationPhase)
 }

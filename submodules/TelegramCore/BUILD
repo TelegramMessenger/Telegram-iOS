@@ -6,6 +6,9 @@ swift_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
     deps = [
         "//submodules/TelegramApi:TelegramApi",
         "//submodules/MtProtoKit:MtProtoKit",
@@ -16,6 +19,7 @@ swift_library(
         "//submodules/CryptoUtils:CryptoUtils",
         "//submodules/NetworkLogging:NetworkLogging",
         "//submodules/Reachability:Reachability",
+        "//submodules/ManagedFile:ManagedFile",
     ],
     visibility = [
         "//visibility:public",

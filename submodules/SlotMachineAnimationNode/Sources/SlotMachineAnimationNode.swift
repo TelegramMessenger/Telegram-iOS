@@ -1,7 +1,6 @@
 import Foundation
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import StickerResources
@@ -247,7 +246,7 @@ public final class SlotMachineAnimationNode: ASDisplayNode {
         }
     }
     
-    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
 }
 
@@ -313,7 +312,7 @@ class DiceAnimatedStickerNode: ASDisplayNode {
             case let .local(animationName):
                 source = AnimatedStickerNodeLocalFileSource(name: animationName)
             case let .resource(account, resource):
-                source = AnimatedStickerResourceSource(account: account, resource: resource)
+                source = AnimatedStickerResourceSource(account: account, resource: resource._asResource())
         }
         
         let playbackMode: AnimatedStickerPlaybackMode
@@ -353,6 +352,6 @@ class DiceAnimatedStickerNode: ASDisplayNode {
         self.animationNode.frame = self.bounds
     }
     
-    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
 }

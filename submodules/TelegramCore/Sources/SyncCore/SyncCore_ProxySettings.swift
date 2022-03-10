@@ -1,43 +1,39 @@
 import Foundation
 import Postbox
 
-public enum ProxyServerConnection: Equatable, Hashable, PostboxCoding {
+public enum ProxyServerConnection: Equatable, Hashable, Codable {
     case socks5(username: String?, password: String?)
     case mtp(secret: Data)
     
-    public init(decoder: PostboxDecoder) {
-        switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        switch try container.decode(Int32.self, forKey: "_t") {
             case 0:
-                self = .socks5(username: decoder.decodeOptionalStringForKey("username"), password: decoder.decodeOptionalStringForKey("password"))
+                self = .socks5(username: try container.decodeIfPresent(String.self, forKey: "username"), password: try container.decodeIfPresent(String.self, forKey: "password"))
             case 1:
-                self = .mtp(secret: decoder.decodeBytesForKey("secret")?.makeData() ?? Data())
+                self = .mtp(secret: try container.decode(Data.self, forKey: "secret"))
             default:
                 self = .socks5(username: nil, password: nil)
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
         switch self {
             case let .socks5(username, password):
-                encoder.encodeInt32(0, forKey: "_t")
-                if let username = username {
-                    encoder.encodeString(username, forKey: "username")
-                } else {
-                    encoder.encodeNil(forKey: "username")
-                }
-                if let password = password {
-                    encoder.encodeString(password, forKey: "password")
-                } else {
-                    encoder.encodeNil(forKey: "password")
-                }
+                try container.encode(0 as Int32, forKey: "_t")
+                try container.encodeIfPresent(username, forKey: "username")
+                try container.encodeIfPresent(password, forKey: "password")
             case let .mtp(secret):
-                encoder.encodeInt32(1, forKey: "_t")
-                encoder.encodeBytes(MemoryBuffer(data: secret), forKey: "secret")
+                try container.encode(1 as Int32, forKey: "_t")
+                try container.encode(secret, forKey: "secret")
         }
     }
 }
 
-public struct ProxyServerSettings: PostboxCoding, Equatable, Hashable {
+public struct ProxyServerSettings: Codable, Equatable, Hashable {
     public let host: String
     public let port: Int32
     public let connection: ProxyServerConnection
@@ -48,31 +44,34 @@ public struct ProxyServerSettings: PostboxCoding, Equatable, Hashable {
         self.connection = connection
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.host = decoder.decodeStringForKey("host", orElse: "")
-        self.port = decoder.decodeInt32ForKey("port", orElse: 0)
-        if let username = decoder.decodeOptionalStringForKey("username") {
-            self.connection = .socks5(username: username, password: decoder.decodeOptionalStringForKey("password"))
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.host = (try? container.decode(String.self, forKey: "host")) ?? ""
+        self.port = (try? container.decode(Int32.self, forKey: "port")) ?? 0
+        if let username = try container.decodeIfPresent(String.self, forKey: "username") {
+            self.connection = .socks5(username: username, password: try container.decodeIfPresent(String.self, forKey: "password"))
         } else {
-            self.connection = decoder.decodeObjectForKey("connection", decoder: ProxyServerConnection.init(decoder:)) as? ProxyServerConnection ?? ProxyServerConnection.socks5(username: nil, password: nil)
+            self.connection = (try? container.decodeIfPresent(ProxyServerConnection.self, forKey: "connection")) ?? ProxyServerConnection.socks5(username: nil, password: nil)
         }
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.host, forKey: "host")
-        encoder.encodeInt32(self.port, forKey: "port")
-        encoder.encodeObject(self.connection, forKey: "connection")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(self.host, forKey: "host")
+        try container.encode(self.port, forKey: "port")
+        try container.encode(self.connection, forKey: "connection")
     }
-    
-    public var hashValue: Int {
-        var hash = self.host.hashValue
-        hash = hash &* 31 &+ self.port.hashValue
-        hash = hash &* 31 &+ self.connection.hashValue
-        return hash
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.host)
+        hasher.combine(self.port)
+        hasher.combine(self.connection)
     }
 }
 
-public struct ProxySettings: PreferencesEntry, Equatable {
+public struct ProxySettings: Codable, Equatable {
     public var enabled: Bool
     public var servers: [ProxyServerSettings]
     public var activeServer: ProxyServerSettings?
@@ -89,41 +88,22 @@ public struct ProxySettings: PreferencesEntry, Equatable {
         self.useForCalls = useForCalls
     }
     
-    public init(decoder: PostboxDecoder) {
-        if let _ = decoder.decodeOptionalStringForKey("host") {
-            let legacyServer = ProxyServerSettings(decoder: decoder)
-            if !legacyServer.host.isEmpty && legacyServer.port != 0 {
-                self.enabled = true
-                self.servers = [legacyServer]
-            } else {
-                self.enabled = false
-                self.servers = []
-            }
-        } else {
-            self.enabled = decoder.decodeInt32ForKey("enabled", orElse: 0) != 0
-            self.servers = decoder.decodeObjectArrayWithDecoderForKey("servers")
-        }
-        self.activeServer = decoder.decodeObjectForKey("activeServer", decoder: ProxyServerSettings.init(decoder:)) as? ProxyServerSettings
-        self.useForCalls = decoder.decodeInt32ForKey("useForCalls", orElse: 0) != 0
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.enabled = ((try? container.decode(Int32.self, forKey: "enabled")) ?? 0) != 0
+        self.servers = try container.decode([ProxyServerSettings].self, forKey: "servers")
+        self.activeServer = try container.decodeIfPresent(ProxyServerSettings.self, forKey: "activeServer")
+        self.useForCalls = ((try? container.decode(Int32.self, forKey: "useForCalls")) ?? 0) != 0
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeInt32(self.enabled ? 1 : 0, forKey: "enabled")
-        encoder.encodeObjectArray(self.servers, forKey: "servers")
-        if let activeServer = self.activeServer {
-            encoder.encodeObject(activeServer, forKey: "activeServer")
-        } else {
-            encoder.encodeNil(forKey: "activeServer")
-        }
-        encoder.encodeInt32(self.useForCalls ? 1 : 0, forKey: "useForCalls")
-    }
-    
-    public func isEqual(to: PreferencesEntry) -> Bool {
-        guard let to = to as? ProxySettings else {
-            return false
-        }
-        
-        return self == to
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode((self.enabled ? 1 : 0) as Int32, forKey: "enabled")
+        try container.encode(self.servers, forKey: "servers")
+        try container.encodeIfPresent(self.activeServer, forKey: "activeServer")
+        try container.encode((self.useForCalls ? 1 : 0) as Int32, forKey: "useForCalls")
     }
     
     public var effectiveActiveServer: ProxyServerSettings? {

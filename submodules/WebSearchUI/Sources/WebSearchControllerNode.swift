@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import SwiftSignalKit
 import Display
 import TelegramCore
@@ -118,7 +117,7 @@ private func preparedWebSearchRecentTransition(from fromEntries: [WebSearchRecen
 
 class WebSearchControllerNode: ASDisplayNode {
     private let context: AccountContext
-    private let peer: Peer?
+    private let peer: EnginePeer?
     private let chatLocation: ChatLocation?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -171,8 +170,9 @@ class WebSearchControllerNode: ASDisplayNode {
     var dismissInput: (() -> Void)?
     
     var presentStickers: ((@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?)?
+    var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
     
-    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, chatLocation: ChatLocation?, mode: WebSearchMode) {
+    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: EnginePeer?, chatLocation: ChatLocation?, mode: WebSearchMode) {
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
@@ -701,7 +701,7 @@ class WebSearchControllerNode: ASDisplayNode {
                             strongSelf.controllerInteraction.sendSelected(results, result)
                             strongSelf.cancel?()
                         }
-                    }, presentStickers: self.presentStickers, present: present)
+                    }, presentStickers: self.presentStickers, getCaptionPanelView: self.getCaptionPanelView, present: present)
                 }
             } else {
                 if let results = self.currentProcessedResults?.results {

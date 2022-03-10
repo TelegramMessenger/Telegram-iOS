@@ -11,8 +11,8 @@ class MessageHistoryThreadsTable: Table {
     
     private let sharedKey = ValueBoxKey(length: 8 + 8 + 4 + 4 + 4)
     
-    override init(valueBox: ValueBox, table: ValueBoxTable) {
-        super.init(valueBox: valueBox, table: table)
+    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
     private func key(threadId: Int64, index: MessageIndex, key: ValueBoxKey = ValueBoxKey(length: 8 + 8 + 4 + 4 + 4)) -> ValueBoxKey {

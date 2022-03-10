@@ -26,9 +26,9 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     let id: ListViewItemNode.HeaderId
     let presentationData: ChatPresentationData
     let context: AccountContext
-    let action: ((Int32) -> Void)?
+    let action: ((Int32, Bool) -> Void)?
     
-    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
+    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.timestamp = timestamp
         self.scheduled = scheduled
         self.presentationData = presentationData
@@ -117,9 +117,9 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private var flashingOnScrolling = false
     private var stickDistanceFactor: CGFloat = 0.0
-    private var action: ((Int32) -> Void)? = nil
+    private var action: ((Int32, Bool) -> Void)? = nil
     
-    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32) -> Void)? = nil) {
+    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.presentationData = presentationData
         self.context = context
         
@@ -309,7 +309,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.action?(self.localTimestamp)
+            self.action?(self.localTimestamp, self.stickDistanceFactor < 0.5)
         }
     }
 }
@@ -415,8 +415,8 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 return
             }
             var messageId: MessageId?
-            if let messageReference = messageReference, case let .message(m) = messageReference.content {
-                messageId = m.id
+            if let messageReference = messageReference, case let .message(_, id, _, _, _) = messageReference.content {
+                messageId = id
             }
             strongSelf.controllerInteraction.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
         }
@@ -498,7 +498,15 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
 
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            self.controllerInteraction.openPeer(self.peerId, .info, nil)
+            if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, id, _, _, _) = self.messageReference?.content {
+                self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
+            } else {
+                if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
+                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, nil)
+                } else {
+                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, nil)
+                }
+            }
         }
     }
 }

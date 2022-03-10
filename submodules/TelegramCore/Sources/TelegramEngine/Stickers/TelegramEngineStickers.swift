@@ -69,12 +69,12 @@ public extension TelegramEngine {
             return _internal_stickerPacksAttachedToMedia(account: self.account, media: media)
         }
         
-        public func uploadSticker(peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, isAnimated: Bool) -> Signal<UploadStickerStatus, UploadStickerError> {
-            return _internal_uploadSticker(account: self.account, peer: peer, resource: resource, alt: alt, dimensions: dimensions, isAnimated: isAnimated)
+        public func uploadSticker(peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, mimeType: String) -> Signal<UploadStickerStatus, UploadStickerError> {
+            return _internal_uploadSticker(account: self.account, peer: peer, resource: resource, alt: alt, dimensions: dimensions, mimeType: mimeType)
         }
         
-        public func createStickerSet(title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
-            return _internal_createStickerSet(account: self.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnail, isAnimated: isAnimated, software: software)
+        public func createStickerSet(title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, type: CreateStickerSetType, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
+            return _internal_createStickerSet(account: self.account, title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnail, type: type, software: software)
         }
         
         public func getStickerSetShortNameSuggestion(title: String) -> Signal<String?, NoError> {
@@ -94,6 +94,19 @@ public extension TelegramEngine {
                     }
                 )
             }
+        }
+        
+        public func availableReactions() -> Signal<AvailableReactions?, NoError> {
+            return _internal_cachedAvailableReactions(postbox: self.account.postbox)
+        }
+        
+        public func updateQuickReaction(reaction: String) -> Signal<Never, NoError> {
+            let _ = updateReactionSettingsInteractively(postbox: self.account.postbox, { settings in
+                var settings = settings
+                settings.quickReaction = reaction
+                return settings
+            }).start()
+            return _internal_updateDefaultReaction(account: self.account, reaction: reaction)
         }
     }
 }

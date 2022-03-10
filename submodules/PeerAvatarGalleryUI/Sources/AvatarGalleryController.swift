@@ -76,12 +76,12 @@ public enum AvatarGalleryEntry: Equatable {
         switch self {
         case let .topImage(representations, _, _, _, _, _):
             if let last = representations.last {
-                return .resource(last.representation.resource.id.uniqueId)
+                return .resource(last.representation.resource.id.stringRepresentation)
             }
             return .topImage
         case let .image(id, _, representations, _, _, _, _, _, _, _):
             if let last = representations.last {
-                return .resource(last.representation.resource.id.uniqueId)
+                return .resource(last.representation.resource.id.stringRepresentation)
             }
             return .image(id)
         }
@@ -332,7 +332,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
 public class AvatarGalleryController: ViewController, StandalonePresentableController {
     public enum SourceCorners {
         case none
-        case round(Bool)
+        case round
         case roundRect(CGFloat)
     }
     
@@ -382,7 +382,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     private let editDisposable = MetaDisposable ()
     
-    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round(true), remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
         self.sourceCorners = sourceCorners
@@ -579,6 +579,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
         self.galleryNode.pager.updateOnReplacement = true
         self.galleryNode.statusBar = self.statusBar
         self.galleryNode.navigationBar = self.navigationBar
+        self.galleryNode.animateAlpha = false
         
         self.galleryNode.transitionDataForCentralItem = { [weak self] in
             if let strongSelf = self {
@@ -670,7 +671,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
             self.galleryNode.setControlsHidden(false, animated: false)
             if let presentationArguments = self.presentationArguments as? AvatarGalleryControllerPresentationArguments {
                 if presentationArguments.animated {
-                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+                    self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
                 }
             }
         }

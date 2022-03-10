@@ -64,6 +64,10 @@ public enum AdminLogEventAction {
     case participantJoinedViaInvite(ExportedInvitation)
     case changeHistoryTTL(previousValue: Int32?, updatedValue: Int32?)
     case changeTheme(previous: String?, updated: String?)
+    case participantJoinByRequest(invitation: ExportedInvitation, approvedBy: PeerId)
+    case toggleCopyProtection(Bool)
+    case sendMessage(Message)
+    case changeAvailableReactions(previousValue: [String], updatedValue: [String])
 }
 
 public enum ChannelAdminLogEventError {
@@ -96,12 +100,13 @@ public struct AdminLogEventsFlags: OptionSet {
     public static let deleteMessages = AdminLogEventsFlags(rawValue: 1 << 13)
     public static let calls = AdminLogEventsFlags(rawValue: 1 << 14)
     public static let invites = AdminLogEventsFlags(rawValue: 1 << 15)
-    
+    public static let sendMessages = AdminLogEventsFlags(rawValue: 1 << 16)
+
     public static var all: AdminLogEventsFlags {
-        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
     }
     public static var flags: AdminLogEventsFlags {
-        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
+        return [.join, .leave, .invite, .ban, .unban, .kick, .unkick, .promote, .demote, .info, .settings, .sendMessages, .pinnedMessages, .editMessages, .deleteMessages, .calls, .invites]
     }
 }
 
@@ -250,8 +255,16 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         action = .groupCallUpdateParticipantVolume(peerId: parsedParticipant.peerId, volume: parsedParticipant.volume ?? 10000)
                                     case let .channelAdminLogEventActionChangeHistoryTTL(prevValue, newValue):
                                         action = .changeHistoryTTL(previousValue: prevValue, updatedValue: newValue)
-                                    case let .channelAdminLogEventActionChangeTheme(prevValue, newValue):
-                                        action = .changeTheme(previous: prevValue, updated: newValue)
+                                    case let .channelAdminLogEventActionParticipantJoinByRequest(invite, approvedBy):
+                                        action = .participantJoinByRequest(invitation: ExportedInvitation(apiExportedInvite: invite), approvedBy: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(approvedBy)))
+                                    case let .channelAdminLogEventActionToggleNoForwards(new):
+                                        action = .toggleCopyProtection(boolFromApiValue(new))
+                                    case let .channelAdminLogEventActionSendMessage(message):
+                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            action = .sendMessage(rendered)
+                                        }
+                                    case let .channelAdminLogEventActionChangeAvailableReactions(prevValue, newValue):
+                                        action = .changeAvailableReactions(previousValue: prevValue, updatedValue: newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

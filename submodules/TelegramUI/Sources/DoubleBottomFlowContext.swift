@@ -287,41 +287,42 @@ final class DoubleBottomFlow {
                 case (true, false):
                     viewController = strongSelf.mainPasscodeIntroController
                     
-                case (false, true): break
-                    
-                case (false, false): break
-                    
+                default:
+                    break
                 }
                 
-                if let viewController = viewController {
-                    viewController.poppedInteractively = { [weak strongSelf] in
-                        guard let strongSelf = self else { return }
-                        
-                        strongSelf.doubleBottomContext?.doubleBottomAddAccountFlowInProgress = false
-                        let _ = (logoutFromAccount(id: accountId, accountManager: strongSelf.context.sharedApplicationContext.sharedContext.accountManager, alreadyLoggedOutRemotely: false) |> deliverOnMainQueue).start()
-                    }
-                    viewController.backPressed = { [weak strongSelf] in
-                        guard let strongSelf = self else { return }
-                        
-                        viewController.poppedInteractively?()
-                        strongSelf.context.rootController.popViewController(animated: true)
-                    }
-                    strongSelf.context.rootController.pushViewController(viewController, animated: true) { [weak strongSelf] in
-                        guard let strongSelf = self else { return }
-                        
-                        let root = strongSelf.context.rootController
-                        
-                        guard let top = root.viewControllers.last else { return }
-                        
-                        let viewControllers = Array(root.viewControllers.prefix(4)) + [top]
-                        root.setViewControllers(viewControllers, animated: false)
-                    }
-                }
+                guard let viewController = viewController else { return }
+                strongSelf.handlerDoubleBottomSplashScreen(viewController, with: accountId)
         })
     }
 }
 
 private extension DoubleBottomFlow {
+    func handlerDoubleBottomSplashScreen(_ viewController: DoubleBottomSplashScreen, with accountId: AccountRecordId) {
+        viewController.poppedInteractively = { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.doubleBottomContext?.doubleBottomAddAccountFlowInProgress = false
+            let _ = (logoutFromAccount(id: accountId, accountManager: strongSelf.context.sharedApplicationContext.sharedContext.accountManager, alreadyLoggedOutRemotely: false) |> deliverOnMainQueue).start()
+        }
+        viewController.backPressed = { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            viewController.poppedInteractively?()
+            _ = strongSelf.context.rootController.popViewController(animated: true)
+        }
+        context.rootController.pushViewController(viewController, animated: true) { [weak self] in
+            guard let strongSelf = self else { return }
+            
+            let root = strongSelf.context.rootController
+            
+            guard let top = root.viewControllers.last else { return }
+            
+            let viewControllers = Array(root.viewControllers.prefix(4)) + [top]
+            root.setViewControllers(viewControllers, animated: false)
+        }
+    }
+
     func createDoubleBottomScreen(withMode mode: DoubleBottomSplashMode, action: (() -> Void)? = nil) -> DoubleBottomSplashScreen {
         let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
         let controller = DoubleBottomSplashScreen(presentationData: presentationData, mode: mode)

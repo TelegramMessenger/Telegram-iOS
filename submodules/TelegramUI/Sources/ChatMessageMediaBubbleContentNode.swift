@@ -51,6 +51,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
         }
+        
+        self.interactiveImageNode.updateMessageReaction = { [weak self] message, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(message, value)
+        }
 
         self.interactiveImageNode.activatePinch = { [weak self] sourceNode in
             guard let strongSelf = self, let _ = strongSelf.item else {
@@ -152,6 +159,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             var viewCount: Int?
             var dateReplies = 0
+            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     if case .mosaic = preparePosition {
@@ -167,20 +175,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
 
-            var dateReactions: [MessageReaction] = []
-            var dateReactionCount = 0
-            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                for reaction in reactionsAttribute.reactions {
-                    if reaction.isSelected {
-                        dateReactions.insert(reaction, at: 0)
-                    } else {
-                        dateReactions.append(reaction)
-                    }
-                    dateReactionCount += Int(reaction.count)
-                }
-            }
-
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
 
             let statusType: ChatMessageDateAndStatusType?
             switch preparePosition {
@@ -212,14 +207,15 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     type: statusType,
                     edited: edited,
                     viewCount: viewCount,
+                    dateReactions: dateReactionsAndPeers.reactions,
+                    dateReactionPeers: dateReactionsAndPeers.peers,
                     dateReplies: dateReplies,
-                    dateReactions: dateReactions,
                     isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     dateText: dateText
                 )
             }
             
-            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData, item.presentationData.dateTimeFormat, item.message, item.attributes, selectedMedia!, dateAndStatus, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
+            let (unboundSize, initialWidth, refineLayout) = interactiveImageLayout(item.context, item.presentationData, item.presentationData.dateTimeFormat, item.message, item.associatedData, item.attributes, selectedMedia!, dateAndStatus, automaticDownload, item.associatedData.automaticDownloadPeerType, sizeCalculation, layoutConstants, contentMode)
             
             let forceFullCorners = false
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 7.0, hidesBackground: .emptyWallpaper, forceFullCorners: forceFullCorners, forceAlignment: .none)
@@ -258,14 +254,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.automaticPlayback = automaticPlayback
                             
                             let imageFrame = CGRect(origin: CGPoint(x: bubbleInsets.left, y: bubbleInsets.top), size: imageSize)
-                            var transition: ContainedViewLayoutTransition = .immediate
-                            if case let .System(duration) = animation {
-                                transition = .animated(duration: duration, curve: .spring)
-                            }
                             
-                            transition.updateFrame(node: strongSelf.interactiveImageNode, frame: imageFrame)
+                            animation.animator.updateFrame(layer: strongSelf.interactiveImageNode.layer, frame: imageFrame, completion: nil)
                             
-                            imageApply(transition, synchronousLoads)
+                            imageApply(animation, synchronousLoads)
                             
                             if let selection = selection {
                                 if let selectionNode = strongSelf.selectionNode {
@@ -400,10 +392,10 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         return false
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        /*if !self.dateAndStatusNode.isHidden {
-            return self.dateAndStatusNode.reactionNode(value: value)
-        }*/
+    override func reactionTargetView(value: String) -> UIView? {
+        if !self.interactiveImageNode.dateAndStatusNode.isHidden {
+            return self.interactiveImageNode.dateAndStatusNode.reactionView(value: value)
+        }
         return nil
     }
 }

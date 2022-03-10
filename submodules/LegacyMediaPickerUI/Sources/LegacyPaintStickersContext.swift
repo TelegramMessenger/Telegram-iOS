@@ -94,10 +94,10 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
             self.account = account
             self.entity = entity
             self.file = file
-            self.animated = file.isAnimatedSticker
+            self.animated = file.isAnimatedSticker || file.isVideoSticker
             
-            if file.isAnimatedSticker {
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource)
+            if file.isAnimatedSticker || file.isVideoSticker {
+                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
                 if let source = self.source {
                     let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
@@ -198,7 +198,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                         }
                         return frame
                     }
-                    if let maybeFrame = maybeFrame, let frame = maybeFrame {
+                    if let frame = maybeFrame {
                         let image = render(width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type)
                         completion(image)
                         strongSelf.cachedCIImage = image
@@ -414,6 +414,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
 }
 
 public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersContext {
+    public var captionPanelView: (() -> TGCaptionPanelView?)!
     public var presentStickersController: ((((Any?, Bool, UIView?, CGRect) -> Void)?) -> TGPhotoPaintStickersScreen?)!
     
     private let context: AccountContext

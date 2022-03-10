@@ -52,7 +52,7 @@ final class BlurredRoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -166,7 +166,7 @@ final class RadialProgressComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -308,7 +308,7 @@ final class CheckComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -353,7 +353,7 @@ final class BadgeComponent: CombinedComponent {
         if lhs.withinSize != rhs.withinSize {
             return false
         }
-        if lhs.wallpaperNode != rhs.wallpaperNode {
+        if lhs.wallpaperNode !== rhs.wallpaperNode {
             return false
         }
         return true
@@ -558,13 +558,13 @@ final class AvatarComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
 
 private final class WallpaperBlurNode: ASDisplayNode {
-    private var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private var backgroundNode: WallpaperBubbleBackgroundNode?
     private let colorNode: ASDisplayNode
 
     override init() {
@@ -656,7 +656,7 @@ private final class WallpaperBlurComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }
@@ -979,7 +979,7 @@ final class OverscrollContentsComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
 }

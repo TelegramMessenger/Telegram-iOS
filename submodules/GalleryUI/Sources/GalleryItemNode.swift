@@ -24,7 +24,7 @@ open class GalleryItemNode: ASDisplayNode {
     public var updateControlsVisibility: (Bool) -> Void = { _ in }
     public var updateOrientation: (UIInterfaceOrientation) -> Void = { _ in }
     public var dismiss: () -> Void = { }
-    public var beginCustomDismiss: () -> Void = { }
+    public var beginCustomDismiss: (Bool) -> Void = { _ in }
     public var completeCustomDismiss: () -> Void = { }
     public var baseNavigationController: () -> NavigationController? = { return nil }
     public var galleryController: () -> ViewController? = { return nil }
@@ -56,6 +56,10 @@ open class GalleryItemNode: ASDisplayNode {
     
     open func rightBarButtonItems() -> Signal<[UIBarButtonItem]?, NoError> {
         return .single(nil)
+    }
+    
+    open func isPagingEnabled() -> Signal<Bool, NoError> {
+        return .single(true)
     }
     
     open func footerContent() -> Signal<(GalleryFooterContentNode?, GalleryOverlayContentNode?), NoError> {

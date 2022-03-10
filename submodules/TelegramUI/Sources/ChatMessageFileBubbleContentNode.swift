@@ -56,6 +56,22 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 let _ = item.controllerInteraction.displayImportedMessageTooltip(sourceNode)
             }
         }
+        
+        self.interactiveFileNode.dateAndStatusNode.reactionSelected = { [weak self] value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+        }
+        
+        self.interactiveFileNode.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                gesture?.cancel()
+                return
+            }
+            
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
@@ -101,7 +117,26 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             
             let automaticDownload = shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: selectedFile!)
             
-            let (initialWidth, refineLayout) = interactiveFileLayout(item.context, item.presentationData, item.message, item.associatedData, item.chatLocation, item.attributes, item.isItemPinned, item.isItemEdited, selectedFile!, automaticDownload, item.message.effectivelyIncoming(item.context.account.peerId), item.associatedData.isRecentActions, item.associatedData.forcedResourceStatus, statusType, item.message.groupingKey != nil ? selection : nil, CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
+            let (initialWidth, refineLayout) = interactiveFileLayout(ChatMessageInteractiveFileNode.Arguments(
+                context: item.context,
+                presentationData: item.presentationData,
+                message: item.message,
+                topMessage: item.topMessage,
+                associatedData: item.associatedData,
+                chatLocation: item.chatLocation,
+                attributes: item.attributes,
+                isPinned: item.isItemPinned,
+                forcedIsEdited: item.isItemEdited,
+                file: selectedFile!,
+                automaticDownload: automaticDownload,
+                incoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                isRecentActions: item.associatedData.isRecentActions,
+                forcedResourceStatus: item.associatedData.forcedResourceStatus,
+                dateAndStatusType: statusType,
+                displayReactions: true,
+                messageSelection: item.message.groupingKey != nil ? selection : nil,
+                constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height)
+            ))
             
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
@@ -123,13 +158,13 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + bottomInset), { [weak self] _, synchronousLoads in
+                    return (CGSize(width: fileSize.width + layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right, height: fileSize.height + layoutConstants.file.bubbleInsets.top + bottomInset), { [weak self] animation, synchronousLoads in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
                             strongSelf.interactiveFileNode.frame = CGRect(origin: CGPoint(x: layoutConstants.file.bubbleInsets.left, y: layoutConstants.file.bubbleInsets.top), size: fileSize)
                             
-                            fileApply(synchronousLoads)
+                            fileApply(synchronousLoads, animation)
                         }
                     })
                 })
@@ -161,7 +196,20 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         self.interactiveFileNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        return self.interactiveFileNode.reactionTargetNode(value: value)
+    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
+            return .ignore
+        }
+        if self.interactiveFileNode.hasTapAction(at: self.view.convert(point, to: self.interactiveFileNode.view)) {
+            return .ignore
+        }
+        return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)
+    }
+    
+    override func reactionTargetView(value: String) -> UIView? {
+        if !self.interactiveFileNode.dateAndStatusNode.isHidden {
+            return self.interactiveFileNode.dateAndStatusNode.reactionView(value: value)
+        }
+        return nil
     }
 }

@@ -62,6 +62,7 @@ public struct TelegramGroupFlags: OptionSet {
     public static let deactivated = TelegramGroupFlags(rawValue: 1 << 1)
     public static let hasVoiceChat = TelegramGroupFlags(rawValue: 1 << 2)
     public static let hasActiveVoiceChat = TelegramGroupFlags(rawValue: 1 << 3)
+    public static let copyProtectionEnabled = TelegramGroupFlags(rawValue: 1 << 4)
 }
 
 public struct TelegramGroupToChannelMigrationReference: Equatable {
@@ -208,5 +209,9 @@ public final class TelegramGroup: Peer, Equatable {
     
     public func updateDefaultBannedRights(_ defaultBannedRights: TelegramChatBannedRights?, version: Int) -> TelegramGroup {
         return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: self.participantCount, role: self.role, membership: self.membership, flags: self.flags, defaultBannedRights: defaultBannedRights, migrationReference: self.migrationReference, creationDate: self.creationDate, version: version)
+    }
+    
+    public func updateParticipantCount(_ participantCount: Int) -> TelegramGroup {
+        return TelegramGroup(id: self.id, title: self.title, photo: self.photo, participantCount: participantCount, role: self.role, membership: self.membership, flags: self.flags, defaultBannedRights: self.defaultBannedRights, migrationReference: self.migrationReference, creationDate: self.creationDate, version: version)
     }
 }

@@ -16,19 +16,21 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let fontSize: PresentationFontSize
     let disableLeadingInset: Bool
     let displayIcons: Bool
+    let disableDecorations: Bool
     let force: Bool
     let enabled: Bool
     let sectionId: ItemListSectionId
     let updated: (PresentationFontSize) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, fontSize: PresentationFontSize, enabled: Bool = true, disableLeadingInset: Bool = false, displayIcons: Bool = true, disableDecorations: Bool = false, force: Bool = false, sectionId: ItemListSectionId, updated: @escaping (PresentationFontSize) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.fontSize = fontSize
         self.enabled = enabled
         self.disableLeadingInset = disableLeadingInset
         self.displayIcons = displayIcons
         self.force = force
+        self.disableDecorations = disableDecorations
         self.sectionId = sectionId
         self.updated = updated
         self.tag = tag
@@ -66,15 +68,6 @@ class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
             }
         }
     }
-}
-
-private func generateKnobImage() -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -1.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.25).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-    })
 }
 
 class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
@@ -132,12 +125,13 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
         sliderView.enablePanHandling = true
         sliderView.enablePanHandling = true
         sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
-        sliderView.dotSize = 5.0
+        sliderView.lineSize = 4.0
+        sliderView.dotSize = 8.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = 6.0
         sliderView.startValue = 0.0
         sliderView.positionsCount = 7
+        sliderView.useLinesForPositions = true
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
         if let item = self.item, let params = self.layoutParams {
             sliderView.isUserInteractionEnabled = item.enabled
@@ -161,9 +155,9 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             }
             sliderView.value = value
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.disclosureArrowColor
+            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.enabled ? item.theme.list.itemAccentColor : item.theme.list.itemDisabledTextColor
-            sliderView.knobImage = generateKnobImage()
+            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
             
             let sliderInset: CGFloat = item.displayIcons ? 38.0 : 16.0
             
@@ -194,7 +188,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 60.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             if item.disableLeadingInset {
                 insets.top = 0.0
@@ -231,7 +225,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = itemListHasRoundedBlockLayout(params)
+                    let hasCorners = itemListHasRoundedBlockLayout(params) && !item.disableDecorations
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {
@@ -247,6 +241,7 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -283,8 +278,8 @@ class ThemeSettingsFontSizeItemNode: ListViewItemNode, ItemListItemNode {
                         
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.disclosureArrowColor
-                            sliderView.knobImage = generateKnobImage()
+                            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
+                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
                         }
                         
                         let value: CGFloat

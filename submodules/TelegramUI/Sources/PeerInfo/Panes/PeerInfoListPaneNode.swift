@@ -24,7 +24,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     
     private let listNode: ChatHistoryListNode
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData)?
     
     private let ready = Promise<Bool>()
     private var didSetReady: Bool = false
@@ -49,6 +49,16 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private var mediaAccessoryPanelContainer: PassthroughContainerNode
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     private var dismissingPanel: ASDisplayNode?
+
+    private let statusPromise = Promise<PeerInfoStatusData?>(nil)
+    var status: Signal<PeerInfoStatusData?, NoError> {
+        self.statusPromise.get()
+    }
+
+    var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    var tabBarOffset: CGFloat {
+        return 0.0
+    }
     
     init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, tagMask: MessageTags) {
         self.context = context
@@ -124,12 +134,35 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                         strongSelf.playlistStateAndType = nil
                     }
                     
-                    if let (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = strongSelf.currentParams {
-                        strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
+                    if let (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = strongSelf.currentParams {
+                        strongSelf.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
             })
         }
+
+        self.statusPromise.set(context.account.postbox.combinedView(keys: [PostboxViewKey.historyTagSummaryView(tag: tagMask, peerId: peerId, namespace: Namespaces.Message.Cloud)])
+        |> map { views -> PeerInfoStatusData? in
+            let count: Int32 = (views.views[PostboxViewKey.historyTagSummaryView(tag: tagMask, peerId: peerId, namespace: Namespaces.Message.Cloud)] as? MessageHistoryTagSummaryView)?.count ?? 0
+            if count == 0 {
+                return nil
+            }
+
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+
+            switch tagMask {
+            case MessageTags.file:
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(count)), isActivity: false)
+            case MessageTags.music:
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(count)), isActivity: false)
+            case MessageTags.voiceOrInstantVideo:
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(count)), isActivity: false)
+            case MessageTags.webPage:
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_LinkCount(Int32(count)), isActivity: false)
+            default:
+                return nil
+            }
+        })
     }
     
     deinit {
@@ -153,8 +186,8 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
     }
     
-    func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
-        self.currentParams = (size, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
+    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition) {
+        self.currentParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         
         var topPanelHeight: CGFloat = 0.0
         if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType {
@@ -223,10 +256,10 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                         return
                     }
                     let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> AudioPlaybackRate in
-                        let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings) as? MusicPlaybackSettings ?? MusicPlaybackSettings.defaultSettings
+                        let settings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings)?.get(MusicPlaybackSettings.self) ?? MusicPlaybackSettings.defaultSettings
                         
                         transaction.updateSharedData(ApplicationSpecificSharedDataKeys.musicPlaybackSettings, { _ in
-                            return settings.withUpdatedVoicePlaybackRate(rate)
+                            return PreferencesEntry(settings.withUpdatedVoicePlaybackRate(rate))
                         })
                         return rate
                     }
@@ -389,11 +422,11 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
             })
         }
         
-        transition.updateFrame(node: self.mediaAccessoryPanelContainer, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: MediaNavigationAccessoryHeaderNode.minimizedHeight)))
+        transition.updateFrame(node: self.mediaAccessoryPanelContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: size.width, height: MediaNavigationAccessoryHeaderNode.minimizedHeight)))
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
-        self.listNode.updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topPanelHeight, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve))
+        self.listNode.updateLayout(transition: transition, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topPanelHeight + topInset, left: sideInset, bottom: bottomInset, right: sideInset), duration: duration, curve: curve))
         if isScrollingLockedAtTop {
             switch self.listNode.visibleContentOffset() {
             case let .known(value) where value <= CGFloat.ulpOfOne:

@@ -52,6 +52,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 24)) != 0 {
             groupFlags.insert(.hasActiveVoiceChat)
         }
+        if (flags & Int32(1 << 25)) != 0 {
+            groupFlags.insert(.copyProtectionEnabled)
+        }
         return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id)), title: title, photo: imageRepresentationsForApiChatPhoto(photo), participantCount: Int(participantsCount), role: role, membership: left ? .Left : .Member, flags: groupFlags, defaultBannedRights: defaultBannedRights.flatMap(TelegramChatBannedRights.init(apiBannedRights:)), migrationReference: migrationReference, creationDate: date, version: Int(version))
     case let .chatEmpty(id):
         return TelegramGroup(id: PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id)), title: "", photo: [], participantCount: 0, role: .member, membership: .Removed, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
@@ -111,6 +114,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         }
         if (flags & Int32(1 << 26)) != 0 {
             channelFlags.insert(.isGigagroup)
+        }
+        if (flags & Int32(1 << 27)) != 0 {
+            channelFlags.insert(.copyProtectionEnabled)
         }
 
         let restrictionInfo: PeerAccessRestrictionInfo?

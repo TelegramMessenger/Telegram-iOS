@@ -44,6 +44,12 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
     }
     
+    public func pushItems(items: Signal<ContextController.Items, NoError>) {
+    }
+    
+    public func popItems() {
+    }
+    
     private var controllerNode: PeekControllerNode {
         return self.displayNode as! PeekControllerNode
     }

@@ -24,6 +24,7 @@ final class PeerInfoScreenSwitchItem: PeerInfoScreenItem {
 
 private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
+    private let maskNode: ASImageNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     private let switchNode: SwitchNode
@@ -37,6 +38,9 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.iconNode = ASImageNode()
         self.iconNode.isLayerBacked = true
@@ -61,6 +65,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
+        self.addSubnode(self.maskNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.switchNode)
         self.addSubnode(self.activateArea)
@@ -79,7 +84,7 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         }
     }
     
-    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenSwitchItem else {
             return 10.0
         }
@@ -143,6 +148,14 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
                 switchView.setOn(item.value, animated: !firstTime)
             }
         }
+        
+        let hasCorners = hasCorners && (topItem == nil || bottomItem == nil)
+        let hasTopCorners = hasCorners && topItem == nil
+        let hasBottomCorners = hasCorners && bottomItem == nil
+        
+        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
+        self.bottomSeparatorNode.isHidden = hasBottomCorners
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
         self.selectionNode.update(size: CGSize(width: width, height: height + highlightNodeOffset), theme: presentationData.theme, transition: transition)

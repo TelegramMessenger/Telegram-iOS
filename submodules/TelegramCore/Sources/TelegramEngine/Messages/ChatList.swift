@@ -6,53 +6,77 @@ public final class EngineChatList {
         case archive
     }
 
+    public typealias MessageTagSummaryInfo = ChatListMessageTagSummaryInfo
+
+    public enum PinnedItem {
+        public typealias Id = PinnedItemId
+    }
+
+    public enum RelativePosition {
+        case later(than: EngineChatList.Item.Index?)
+        case earlier(than: EngineChatList.Item.Index?)
+    }
+
     public final class Item {
         public typealias Index = ChatListIndex
 
         public let index: Index
         public let messages: [EngineMessage]
-        public let readState: EngineReadState?
+        public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
         public let draftText: String?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
+        public let hasUnseenReactions: Bool
         public let hasFailed: Bool
         public let isContact: Bool
 
         public init(
             index: Index,
             messages: [EngineMessage],
-            readState: EngineReadState?,
+            readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
             draftText: String?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
+            hasUnseenReactions: Bool,
             hasFailed: Bool,
             isContact: Bool
         ) {
             self.index = index
             self.messages = messages
-            self.readState = readState
+            self.readCounters = readCounters
             self.isMuted = isMuted
             self.draftText = draftText
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
+            self.hasUnseenReactions = hasUnseenReactions
             self.hasFailed = hasFailed
             self.isContact = isContact
         }
     }
 
-    public final class GroupItem {
-        public final class Item {
+    public final class GroupItem: Equatable {
+        public final class Item: Equatable {
             public let peer: EngineRenderedPeer
             public let isUnread: Bool
 
             public init(peer: EngineRenderedPeer, isUnread: Bool) {
                 self.peer = peer
                 self.isUnread = isUnread
+            }
+
+            public static func ==(lhs: Item, rhs: Item) -> Bool {
+                if lhs.peer != rhs.peer {
+                    return false
+                }
+                if lhs.isUnread != rhs.isUnread {
+                    return false
+                }
+                return true
             }
         }
 
@@ -72,23 +96,71 @@ public final class EngineChatList {
             self.items = items
             self.unreadCount = unreadCount
         }
+
+        public static func ==(lhs: GroupItem, rhs: GroupItem) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.topMessage?.index != rhs.topMessage?.index {
+                return false
+            }
+            if lhs.topMessage?.stableVersion != rhs.topMessage?.stableVersion {
+                return false
+            }
+            if lhs.items != rhs.items {
+                return false
+            }
+            if lhs.unreadCount != rhs.unreadCount {
+                return false
+            }
+            return true
+        }
+    }
+
+    public final class AdditionalItem {
+        public final class PromoInfo {
+            public enum Content {
+                case proxy
+                case psa(type: String, message: String?)
+            }
+
+            public let content: Content
+
+            public init(content: Content) {
+                self.content = content
+            }
+        }
+
+        public let item: Item
+        public let promoInfo: PromoInfo
+
+        public init(item: Item, promoInfo: PromoInfo) {
+            self.item = item
+            self.promoInfo = promoInfo
+        }
     }
 
     public let items: [Item]
     public let groupItems: [GroupItem]
+    public let additionalItems: [AdditionalItem]
     public let hasEarlier: Bool
     public let hasLater: Bool
+    public let isLoading: Bool
 
     init(
         items: [Item],
         groupItems: [GroupItem],
+        additionalItems: [AdditionalItem],
         hasEarlier: Bool,
-        hasLater: Bool
+        hasLater: Bool,
+        isLoading: Bool
     ) {
         self.items = items
         self.groupItems = groupItems
+        self.additionalItems = additionalItems
         self.hasEarlier = hasEarlier
         self.hasLater = hasLater
+        self.isLoading = isLoading
     }
 }
 
@@ -113,19 +185,65 @@ public extension EngineChatList.Group {
     }
 }
 
+public extension EngineChatList.RelativePosition {
+    init(_ position: ChatListRelativePosition) {
+        switch position {
+        case let .earlier(than):
+            self = .earlier(than: than)
+        case let .later(than):
+            self = .later(than: than)
+        }
+    }
+
+    func _asPosition() -> ChatListRelativePosition {
+        switch self {
+        case let .earlier(than):
+            return .earlier(than: than)
+        case let .later(than):
+            return .later(than: than)
+        }
+    }
+}
+
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedInterfaceState, renderedPeer, presence, summaryInfo, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, hasFailed, isContact):
+            var draftText: String?
+            if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
+                if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                    if let text = opaqueState.synchronizeableInputState?.text {
+                        draftText = text
+                    }
+                }
+            }
+            
+            var hasUnseenMentions = false
+            if let info = tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                tag: .unseenPersonalMessage,
+                actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+            )] {
+                hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
+            }
+            
+            var hasUnseenReactions = false
+            if let info = tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                tag: .unseenReaction,
+                actionType: PendingMessageActionType.readReaction
+            )] {
+                hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
+            }
+            
             self.init(
                 index: index,
                 messages: messages.map(EngineMessage.init),
-                readState: readState.flatMap(EngineReadState.init),
+                readCounters: readState.flatMap(EnginePeerReadCounters.init),
                 isMuted: isRemovedFromTotalUnreadCount,
-                draftText: nil,
+                draftText: draftText,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
-                hasUnseenMentions: (summaryInfo.tagSummaryCount ?? 0) > (summaryInfo.actionsSummaryCount ?? 0),
+                hasUnseenMentions: hasUnseenMentions,
+                hasUnseenReactions: hasUnseenReactions,
                 hasFailed: hasFailed,
                 isContact: isContact
             )
@@ -151,13 +269,56 @@ extension EngineChatList.GroupItem {
     }
 }
 
-extension EngineChatList {
+extension EngineChatList.AdditionalItem.PromoInfo {
+    convenience init(_ item: PromoChatListItem) {
+        let content: EngineChatList.AdditionalItem.PromoInfo.Content
+        switch item.kind {
+        case .proxy:
+            content = .proxy
+        case let .psa(type, message):
+            content = .psa(type: type, message: message)
+        }
+
+        self.init(content: content)
+    }
+}
+
+extension EngineChatList.AdditionalItem {
+    convenience init?(_ entry: ChatListAdditionalItemEntry) {
+        guard let item = EngineChatList.Item(entry.entry) else {
+            return nil
+        }
+        guard let promoInfo = (entry.info as? PromoChatListItem).flatMap(EngineChatList.AdditionalItem.PromoInfo.init) else {
+            return nil
+        }
+        self.init(item: item, promoInfo: promoInfo)
+    }
+}
+
+public extension EngineChatList {
     convenience init(_ view: ChatListView) {
+        var isLoading = false
+
+        var items: [EngineChatList.Item] = []
+        loop: for entry in view.entries {
+            switch entry {
+            case .MessageEntry:
+                if let item = EngineChatList.Item(entry) {
+                    items.append(item)
+                }
+            case .HoleEntry:
+                isLoading = true
+                break loop
+            }
+        }
+
         self.init(
-            items: view.entries.compactMap(EngineChatList.Item.init),
+            items: items,
             groupItems: view.groupEntries.map(EngineChatList.GroupItem.init),
+            additionalItems: view.additionalItemEntries.compactMap(EngineChatList.AdditionalItem.init),
             hasEarlier: view.earlierIndex != nil,
-            hasLater: view.laterIndex != nil
+            hasLater: view.laterIndex != nil,
+            isLoading: isLoading
         )
     }
 }

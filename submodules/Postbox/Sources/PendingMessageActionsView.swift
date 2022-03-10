@@ -3,12 +3,12 @@ final class MutablePendingMessageActionsView: MutablePostboxView {
     let type: PendingMessageActionType
     var entries: [PendingMessageActionsEntry]
     
-    init(postbox: Postbox, type: PendingMessageActionType) {
+    init(postbox: PostboxImpl, type: PendingMessageActionType) {
         self.type = type
         self.entries = postbox.pendingMessageActionsTable.getActions(type: type)
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         for operation in transaction.currentPendingMessageActionsOperations {
             switch operation {
@@ -37,6 +37,10 @@ final class MutablePendingMessageActionsView: MutablePostboxView {
             }
         }
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

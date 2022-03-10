@@ -13,7 +13,6 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
-        "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
@@ -23,6 +22,7 @@ swift_library(
         "//submodules/SelectablePeerNode:SelectablePeerNode",
         "//submodules/PeerInfoUI:PeerInfoUI",
         "//submodules/UndoUI:UndoUI",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     visibility = [
         "//visibility:public",

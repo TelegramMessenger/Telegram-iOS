@@ -54,6 +54,7 @@ private func updateChildAnyComponent<EnvironmentType>(
         let size = component._update(
             view: view,
             availableSize: availableSize,
+            environment: context.environment,
             transition: transition
         )
         context.layoutResult.size = size
@@ -609,7 +610,7 @@ public extension CombinedComponent {
         return UIView()
     }
 
-    func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         let context = view.getCombinedComponentContext(Self.self)
         
         let storedBody: Body

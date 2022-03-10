@@ -189,16 +189,15 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         var thumbnailItem: StickerPackThumbnailItem?
         var resourceReference: MediaResourceReference?
         if let thumbnail = info.thumbnail {
-            if info.flags.contains(.isAnimated) {
-                thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions)
-                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
+            if info.flags.contains(.isAnimated) || info.flags.contains(.isVideo) {
+                thumbnailItem = .animated(thumbnail.resource, thumbnail.dimensions, info.flags.contains(.isVideo))
             } else {
                 thumbnailItem = .still(thumbnail)
-                resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
             }
+            resourceReference = MediaResourceReference.stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource)
         } else if let item = item {
-            if item.file.isAnimatedSticker {
-                thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100))
+            if item.file.isAnimatedSticker || item.file.isVideoSticker {
+                thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker)
                 resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
             } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
                 thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
@@ -215,7 +214,6 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
         
         if self.currentThumbnailItem != thumbnailItem {
             self.currentThumbnailItem = thumbnailItem
-            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
@@ -223,7 +221,8 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 6.0), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
-                    case let .animated(resource, _):
+                    case let .animated(resource, dimensions, isVideo):
+                        imageSize = dimensions.cgSize.aspectFitted(boundingImageSize)
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: boundingImageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true, nilIfEmpty: true))
@@ -237,6 +236,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             animatedStickerNode = AnimatedStickerNode()
                             animatedStickerNode.started = { [weak self] in
                                 self?.imageNode.isHidden = true
+                                self?.removePlaceholder(animated: false)
                             }
                             self.animatedStickerNode = animatedStickerNode
                             if let placeholderNode = self.placeholderNode {
@@ -244,7 +244,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             } else {
                                 self.scalingNode.addSubnode(animatedStickerNode)
                             }
-                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
+                            animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
@@ -252,13 +252,23 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
                 }
             }
-                        
-            if let placeholderNode = self.placeholderNode {
-                let imageSize = boundingImageSize
-                placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
+                                    
+            self.updateIsHighlighted()
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            var imageSize = PixelDimensions(width: 512, height: 512)
+            var immediateThumbnailData: Data?
+            if let data = info.immediateThumbnailData {
+                if info.flags.contains(.isVideo) {
+                    imageSize = PixelDimensions(width: 100, height: 100)
+                }
+                immediateThumbnailData = data
+            } else if let data = item?.file.immediateThumbnailData {
+                immediateThumbnailData = data
             }
             
-            self.updateIsHighlighted()
+            placeholderNode.update(backgroundColor: nil, foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputPanel.panelBackgroundColor, alpha: 0.4), shimmeringColor: theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor.withMultipliedAlpha(0.2), data: immediateThumbnailData, size: boundingImageSize, imageSize: imageSize.cgSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedBoundingSize)
@@ -333,7 +343,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     }
     
     override func snapshotForReordering() -> UIView? {
-        if let account = account, let thumbnailItem = self.currentThumbnailItem {
+        if let account = self.account, let thumbnailItem = self.currentThumbnailItem {
             var imageSize = boundingImageSize
             let loopAnimatedStickers = self.inputNodeInteraction?.stickerSettings?.loopAnimatedStickers ?? false
             let containerNode = ASDisplayNode()
@@ -354,9 +364,11 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                     scalingNode.addSubnode(imageNode)
                     
                     snapshotImageNode = imageNode
-                case let .animated(resource, _):
+                case let .animated(resource, dimensions, isVideo):
+                    imageSize = dimensions.cgSize.aspectFitted(boundingImageSize)
+                
                     let animatedStickerNode = AnimatedStickerNode()
-                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource), width: 128, height: 128, mode: .cached)
+                    animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: resource, isVideo: isVideo), width: 128, height: 128, mode: .cached)
                     animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                     scalingNode.addSubnode(animatedStickerNode)
                     
@@ -383,7 +395,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 animatedStickerNode.frame = imageFrame
                 animatedStickerNode.updateLayout(size: imageFrame.size)
             }
-            
+
             let expanded = self.currentExpanded
             let scale = expanded ? 1.0 : boundingImageScale
             let boundsSize = expanded ? expandedBoundingSize : CGSize(width: boundingSize.height, height: boundingSize.height)

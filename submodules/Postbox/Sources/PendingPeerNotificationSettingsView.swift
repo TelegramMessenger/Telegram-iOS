@@ -2,7 +2,7 @@
 final class MutablePendingPeerNotificationSettingsView: MutablePostboxView {
     var entries: [PeerId: PeerNotificationSettings] = [:]
     
-    init(postbox: Postbox) {
+    init(postbox: PostboxImpl) {
         for peerId in postbox.pendingPeerNotificationSettingsIndexTable.getAll() {
             if let value = postbox.peerNotificationSettingsTable.getPending(peerId) {
                 self.entries[peerId] = value
@@ -12,7 +12,7 @@ final class MutablePendingPeerNotificationSettingsView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         for peerId in transaction.currentUpdatedPendingPeerNotificationSettings {
             if let value = postbox.peerNotificationSettingsTable.getPending(peerId) {
@@ -24,6 +24,10 @@ final class MutablePendingPeerNotificationSettingsView: MutablePostboxView {
             }
         }
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

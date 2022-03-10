@@ -195,7 +195,7 @@ final class ThemeAccentColorController: ViewController {
                         if let settings = themeSettings {
                             hasSettings = true
                             baseTheme = settings.baseTheme
-                        } else if case let .cloud(theme) = generalThemeReference, let settings = theme.theme.settings {
+                        } else if case let .cloud(theme) = generalThemeReference, let settings = theme.theme.settings?.first {
                             hasSettings = true
                             baseTheme = settings.baseTheme
                         } else if case let .builtin(theme) = generalThemeReference {
@@ -218,7 +218,7 @@ final class ThemeAccentColorController: ViewController {
                 } else if case let .colors(theme, create) = strongSelf.mode {
                     var baseTheme: TelegramBaseTheme
                     var telegramTheme: TelegramTheme?
-                    if case let .cloud(theme) = theme, let settings = theme.theme.settings {
+                    if case let .cloud(theme) = theme, let settings = theme.theme.settings?.first {
                         telegramTheme = theme.theme
                         baseTheme = settings.baseTheme
                     } else if case let .builtin(theme) = theme {
@@ -234,7 +234,7 @@ final class ThemeAccentColorController: ViewController {
                     
                     let apply: Signal<Void, CreateThemeError>
                     if create {
-                        apply = (prepareWallpaper |> then(createTheme(account: context.account, title: generateThemeName(accentColor: state.accentColor.color), resource: nil, thumbnailData: nil, settings: settings)))
+                        apply = (prepareWallpaper |> then(createTheme(account: context.account, title: generateThemeName(accentColor: state.accentColor.color), resource: nil, thumbnailData: nil, settings: [settings])))
                         |> mapToSignal { next -> Signal<Void, CreateThemeError> in
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
@@ -249,13 +249,14 @@ final class ThemeAccentColorController: ViewController {
                                         updatedTheme = themeReference
                                     }
                                     
+                                    let themePreferredBaseTheme = current.themePreferredBaseTheme
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
                                     var themeSpecificAccentColors = current.themeSpecificAccentColors
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
-                                    return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
                                 })
                                 |> castError(CreateThemeError.self)
                             } else {
@@ -263,7 +264,7 @@ final class ThemeAccentColorController: ViewController {
                             }
                         }
                     } else if let theme = telegramTheme {
-                        apply = (prepareWallpaper |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, title: theme.title, slug: theme.slug, resource: nil, settings: settings)))
+                        apply = (prepareWallpaper |> then(updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, title: theme.title, slug: theme.slug, resource: nil, settings: [settings])))
                         |> mapToSignal { next -> Signal<Void, CreateThemeError> in
                             if case let .result(resultTheme) = next {
                                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
@@ -278,13 +279,14 @@ final class ThemeAccentColorController: ViewController {
                                         updatedTheme = themeReference
                                     }
                                     
+                                    let themePreferredBaseTheme = current.themePreferredBaseTheme
                                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                     themeSpecificChatWallpapers[themeReference.index] = nil
                                     
                                     var themeSpecificAccentColors = current.themeSpecificAccentColors
                                     themeSpecificAccentColors[baseThemeReference.index] = PresentationThemeAccentColor(themeIndex: themeReference.index)
                                     
-                                    return PresentationThemeSettings(theme: updatedTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
+                                    return PresentationThemeSettings(theme: updatedTheme, themePreferredBaseTheme: themePreferredBaseTheme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, useSystemFont: current.useSystemFont, fontSize: current.fontSize, listsFontSize: current.listsFontSize, chatBubbleSettings: current.chatBubbleSettings, automaticThemeSwitchSetting: updatedAutomaticThemeSwitchSetting, largeEmoji: current.largeEmoji, reduceMotion: current.reduceMotion)
                                 })
                                 |> castError(CreateThemeError.self)
                             } else {
@@ -371,7 +373,7 @@ final class ThemeAccentColorController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
                 
             let accentColor: UIColor
             let outgoingAccentColor: UIColor?
@@ -439,7 +441,7 @@ final class ThemeAccentColorController: ViewController {
                     if let color = themeSpecificAccentColor?.color, color != .clear {
                         accentColor = color
                         customAccentColor = accentColor
-                    } else if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings {
+                    } else if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings?.first {
                         accentColor = UIColor(rgb: settings.accentColor)
                         customAccentColor = accentColor
                     } else {
@@ -457,7 +459,7 @@ final class ThemeAccentColorController: ViewController {
                         wallpaper = theme.chat.defaultWallpaper
                     }
                     
-                    if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings {
+                    if case let .cloud(cloudTheme) = initialThemeReference, let settings = cloudTheme.theme.settings?.first {
                         animateMessageColors = settings.animateMessageColors
                         outgoingAccentColor = settings.outgoingAccentColor.flatMap { UIColor(rgb: $0) }
                     } else if let referenceTheme = referenceTheme {
@@ -493,7 +495,7 @@ final class ThemeAccentColorController: ViewController {
                     }
                 } else {
                     let presentationTheme = makePresentationTheme(mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, themeReference: themeReference)!
-                    if case let .cloud(theme) = themeReference, let themeSettings = theme.theme.settings {
+                    if case let .cloud(theme) = themeReference, let themeSettings = theme.theme.settings?.first {                        
                         accentColor = UIColor(argb: themeSettings.accentColor)
                         
                         if let customWallpaper = settings.themeSpecificChatWallpapers[themeReference.index] {

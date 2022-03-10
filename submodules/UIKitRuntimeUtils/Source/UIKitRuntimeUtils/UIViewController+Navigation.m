@@ -105,22 +105,6 @@ static bool notyfyingShiftState = false;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentingViewController) newSelector:@selector(_65087dc8_presentingViewController)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentViewController:animated:completion:) newSelector:@selector(_65087dc8_presentViewController:animated:completion:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(setNeedsStatusBarAppearanceUpdate) newSelector:@selector(_65087dc8_setNeedsStatusBarAppearanceUpdate)];
-        
-        /*#pragma clang diagnostic push
-        #pragma clang diagnostic ignored "-Wundeclared-selector"
-        if (@available(iOS 13, *)) {
-            Class UIUndoGestureInteractionClass = NSClassFromString(@"UIUndoGestureInteraction");
-            SEL addGestureRecognizersSelector = @selector(_addGestureRecognizers);
-            IMP doNothing = imp_implementationWithBlock(^void(__unused id _self) {
-                return;
-            });
-            
-            method_setImplementation(class_getInstanceMethod(UIUndoGestureInteractionClass, addGestureRecognizersSelector), doNothing);
-        }
-        #pragma clang diagnostic pop*/
-        
-        //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIKeyboardImpl") currentSelector:@selector(notifyShiftState) withAnotherClass:[UIKeyboardImpl_65087dc8 class] newSelector:@selector(notifyShiftState)];
-        //[RuntimeUtils swizzleInstanceMethodOfClass:NSClassFromString(@"UIInputWindowController") currentSelector:@selector(updateViewConstraints) withAnotherClass:[UIInputWindowController_65087dc8 class] newSelector:@selector(updateViewConstraints)];
     });
 }
 
@@ -234,6 +218,24 @@ static bool notyfyingShiftState = false;
 
 - (void)state_setNeedsStatusBarAppearanceUpdate:(void (^_Nullable)())block {
     [self setAssociatedObject:[block copy] forKey:setNeedsStatusBarAppearanceUpdateKey];
+}
+
+@end
+
+@implementation UIApplication (Additions)
+
+- (void)internalSetStatusBarStyle:(UIStatusBarStyle)style animated:(BOOL)animated {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [self setStatusBarStyle:style animated:animated];
+#pragma clang diagnostic pop
+}
+
+- (void)internalSetStatusBarHidden:(BOOL)hidden animation:(UIStatusBarAnimation)animation {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [self setStatusBarHidden:hidden withAnimation:animation];
+#pragma clang diagnostic pop
 }
 
 @end

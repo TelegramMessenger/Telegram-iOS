@@ -166,6 +166,16 @@ public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerI
     |> ignoreValues
 }
 
+public func clearPeerUnseenReactionsInteractively(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Void in
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            return
+        }
+        account.viewTracker.updateMarkAllReactionsSeen(peerId: peerId)
+    }
+    |> ignoreValues
+}
+
 public func markAllChatsAsReadInteractively(transaction: Transaction, viewTracker: AccountViewTracker, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) {
     for peerId in transaction.getUnreadChatListPeerIds(groupId: groupId, filterPredicate: filterPredicate) {
         togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: viewTracker, peerId: peerId, setToValue: false)

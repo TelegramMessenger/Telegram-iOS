@@ -72,7 +72,7 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = BotCheckoutNativeCardEntryControllerNode(context: self.context, provider: self.provider, theme: self.presentationData.theme, strings: self.presentationData.strings, present: { [weak self] c, a in
+        self.displayNode = BotCheckoutNativeCardEntryControllerNode(context: self.context, navigationBar: self.navigationBar, provider: self.provider, theme: self.presentationData.theme, strings: self.presentationData.strings, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismiss: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)

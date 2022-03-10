@@ -23,14 +23,16 @@ public class InfoListItem: ListViewItem {
     let title: String
     let text: InfoListItemText
     let style: ItemListStyle
+    let hasDecorations: Bool
     let linkAction: ((InfoListItemLinkAction) -> Void)?
     let closeAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, title: String, text: InfoListItemText, style: ItemListStyle, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, title: String, text: InfoListItemText, style: ItemListStyle, hasDecorations: Bool = true, linkAction: ((InfoListItemLinkAction) -> Void)? = nil, closeAction: (() -> Void)?) {
         self.presentationData = presentationData
         self.title = title
         self.text = text
         self.style = style
+        self.hasDecorations = hasDecorations
         self.linkAction = linkAction
         self.closeAction = closeAction
     }
@@ -226,7 +228,7 @@ public class InfoItemNode: ListViewItemNode {
             
             let insets: UIEdgeInsets
             if let neighbors = neighbors {
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             } else {
                 insets = UIEdgeInsets()
             }
@@ -301,7 +303,7 @@ public class InfoItemNode: ListViewItemNode {
                                 strongSelf.topStripeNode.isHidden = true
                             default:
                                 hasTopCorners = true
-                                strongSelf.topStripeNode.isHidden = hasCorners
+                                strongSelf.topStripeNode.isHidden = hasCorners || !item.hasDecorations
                         }
                     }
                     let bottomStripeInset: CGFloat
@@ -309,13 +311,17 @@ public class InfoItemNode: ListViewItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true
-                                strongSelf.bottomStripeNode.isHidden = hasCorners
+                                strongSelf.bottomStripeNode.isHidden = hasCorners || !item.hasDecorations
                         }
                     } else {
                         bottomStripeInset = leftInset
+                        if !item.hasDecorations {
+                            strongSelf.topStripeNode.isHidden = true
+                        }
                     }
                     
                     strongSelf.closeButton.isHidden = item.closeAction == nil

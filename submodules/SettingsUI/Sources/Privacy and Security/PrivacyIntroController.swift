@@ -13,6 +13,15 @@ enum PrivacyIntroControllerMode {
     case passcode
     case twoStepVerification
     
+    var animationName: String? {
+        switch self {
+        case .passcode:
+            return "Passcode"
+        case .twoStepVerification:
+            return nil
+        }
+    }
+    
     func icon(theme: PresentationTheme) -> UIImage? {
         switch self {
             case .passcode:
@@ -148,6 +157,8 @@ final class PrivacyIntroController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PrivacyIntroControllerNode(context: self.context, mode: self.mode, proceedAction: self.proceedAction)
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     override func viewDidAppear(_ animated: Bool) {

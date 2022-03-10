@@ -4,7 +4,7 @@ final class MutableItemCollectionInfoView: MutablePostboxView {
     let id: ItemCollectionId
     var info: ItemCollectionInfo?
     
-    init(postbox: Postbox, id: ItemCollectionId) {
+    init(postbox: PostboxImpl, id: ItemCollectionId) {
         self.id = id
         let infos = postbox.itemCollectionInfoTable.getInfos(namespace: id.namespace)
         for (_, infoId, info) in infos {
@@ -15,7 +15,7 @@ final class MutableItemCollectionInfoView: MutablePostboxView {
         }
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         if transaction.currentItemCollectionInfosOperations.isEmpty {
             return false
         }
@@ -47,6 +47,10 @@ final class MutableItemCollectionInfoView: MutablePostboxView {
             }
         }
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

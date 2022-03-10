@@ -5,7 +5,7 @@ import SwiftSignalKit
 
 func currentWebDocumentsHostDatacenterId(postbox: Postbox, isTestingEnvironment: Bool) -> Signal<Int32, NoError> {
     return postbox.transaction { transaction -> Int32 in
-        if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.remoteStorageConfiguration) as? RemoteStorageConfiguration {
+        if let entry = transaction.getPreferencesEntry(key: PreferencesKeys.remoteStorageConfiguration)?.get(RemoteStorageConfiguration.self) {
             return entry.webDocumentsHostDatacenterId
         } else {
             if isTestingEnvironment {
@@ -18,10 +18,10 @@ func currentWebDocumentsHostDatacenterId(postbox: Postbox, isTestingEnvironment:
 }
 
 func updateRemoteStorageConfiguration(transaction: Transaction, configuration: RemoteStorageConfiguration) {
-    let current = transaction.getPreferencesEntry(key: PreferencesKeys.remoteStorageConfiguration) as? RemoteStorageConfiguration
-    if let current = current, current.isEqual(to: configuration) {
+    let current = transaction.getPreferencesEntry(key: PreferencesKeys.remoteStorageConfiguration)?.get(RemoteStorageConfiguration.self)
+    if let current = current, current == configuration {
         return
     }
     
-    transaction.setPreferencesEntry(key: PreferencesKeys.remoteStorageConfiguration, value: configuration)
+    transaction.setPreferencesEntry(key: PreferencesKeys.remoteStorageConfiguration, value: PreferencesEntry(configuration))
 }

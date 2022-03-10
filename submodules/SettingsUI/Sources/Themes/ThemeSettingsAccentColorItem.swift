@@ -93,7 +93,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.color
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings {
+            if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first {
                     return UIColor(argb: settings.accentColor)
                 } else {
                     return nil
@@ -115,7 +115,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.plainBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, !settings.messageColors.isEmpty {
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first, !settings.messageColors.isEmpty {
                     return settings.messageColors
                 } else {
                     return []
@@ -128,7 +128,7 @@ enum ThemeSettingsColorOption: Equatable {
             case let .accentColor(color):
                 return color.customBubbleColors
             case let .theme(reference):
-                if case let .cloud(theme) = reference, let settings = theme.theme.settings, !settings.messageColors.isEmpty {
+                if case let .cloud(theme) = reference, let settings = theme.theme.settings?.first, !settings.messageColors.isEmpty {
                     return settings.messageColors
                 } else {
                     return []
@@ -385,7 +385,7 @@ private final class ThemeSettingsAccentColorIconItemNode : ListViewItemNode {
                                 topColor = bubbleColor
                                 bottomColor = bubbleColor
                             } else {
-                                fillColor = UIColor(rgb: 0x007ee5)
+                                fillColor = UIColor(rgb: 0x007aff)
                                 strokeColor = fillColor
                                 topColor = UIColor(rgb: 0xe1ffc7)
                                 bottomColor = topColor
@@ -711,10 +711,12 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     private var item: ThemeSettingsAccentColorItem?
     private var layoutParams: ListViewItemLayoutParams?
     
+    private var tapping = false
+    
     var tag: ItemListItemTag? {
         return self.item?.tag
     }
-    
+        
     init() {
         self.containerNode = ASDisplayNode()
         
@@ -761,7 +763,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         
         let options = ListViewDeleteAndInsertOptions()
         var scrollToItem: ListViewScrollToItem?
-        if !self.initialized || transition.updatePosition {
+        if !self.initialized || transition.updatePosition || !self.tapping {
             if let index = item.colors.firstIndex(where: { $0.index == item.currentColor?.index }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
@@ -786,7 +788,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
             let separatorHeight = UIScreenPixel
             
             contentSize = CGSize(width: params.width, height: 60.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -831,6 +833,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -912,7 +915,11 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                                 }
                                 item.openColorPicker(create)
                             } else {
+                                strongSelf.tapping = true
                                 item.updated(color)
+                                Queue.mainQueue().after(0.4) {
+                                    strongSelf.tapping = false
+                                }
                             }
                             let _ = ensureColorVisible(listNode: strongSelf.listNode, accentColor: color, animated: true)
                         }

@@ -876,6 +876,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.votersNode.contentMode = .topLeft
         self.votersNode.contentsScale = UIScreenScale
         self.votersNode.displaysAsynchronously = false
+        self.votersNode.clipsToBounds = true
         
         var displaySolution: (() -> Void)?
         self.solutionButtonNode = SolutionButtonNode(pressed: {
@@ -1024,6 +1025,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -1036,20 +1038,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var dateReactions: [MessageReaction] = []
-                var dateReactionCount = 0
-                if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                    for reaction in reactionsAttribute.reactions {
-                        if reaction.isSelected {
-                            dateReactions.insert(reaction, at: 0)
-                        } else {
-                            dateReactions.append(reaction)
-                        }
-                        dateReactionCount += Int(reaction.count)
-                    }
-                }
-                
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -1069,8 +1058,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         statusType = nil
                 }
                 
-                var statusSize: CGSize?
-                var statusApply: ((Bool) -> Void)?
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 
                 if let statusType = statusType {
                     var isReplyThread = false
@@ -1078,9 +1066,23 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: item.context,
+                        presentationData: item.presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
+                        constrainedSize: textConstrainedSize,
+                        availableReactions: item.associatedData.availableReactions,
+                        reactions: dateReactionsAndPeers.reactions,
+                        reactionPeers: dateReactionsAndPeers.peers,
+                        replyCount: dateReplies,
+                        isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
+                        hasAutoremove: item.message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                    ))
                 }
                 
                 var poll: TelegramMediaPoll?
@@ -1164,21 +1166,19 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
-                var statusFrame: CGRect?
-                if let statusSize = statusSize {
-                    statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
-                }
-                
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
-                statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 
                 var boundingSize: CGSize = textFrameWithoutInsets.size
                 boundingSize.width += additionalTextRightInset
                 boundingSize.width = max(boundingSize.width, typeLayout.size.width)
-                boundingSize.width = max(boundingSize.width, votersLayout.size.width + 4.0 + (statusSize?.width ?? 0.0))
-                boundingSize.width = max(boundingSize.width, buttonSubmitInactiveTextLayout.size.width + 4.0 + (statusSize?.width ?? 0.0))
-                boundingSize.width = max(boundingSize.width, buttonViewResultsTextLayout.size.width + 4.0 + (statusSize?.width ?? 0.0))
+                boundingSize.width = max(boundingSize.width, votersLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
+                boundingSize.width = max(boundingSize.width, buttonSubmitInactiveTextLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
+                boundingSize.width = max(boundingSize.width, buttonViewResultsTextLayout.size.width + 4.0/* + (statusSize?.width ?? 0.0)*/)
+                
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    boundingSize.width = max(boundingSize.width, statusSuggestedWidthAndContinue.0)
+                }
                 
                 boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
@@ -1296,19 +1296,18 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         resultSize.height += 26.0
                     }
                     
+                    var statusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> Void)?
+                    if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                        statusSizeAndApply = statusSuggestedWidthAndContinue.1(boundingWidth)
+                    }
+                    
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        resultSize.height += statusSizeAndApply.0.height - 6.0
+                    }
+                    
                     let buttonSubmitInactiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitInactiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitInactiveTextLayout.size)
                     let buttonSubmitActiveTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonSubmitActiveTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonSubmitActiveTextLayout.size)
                     let buttonViewResultsTextFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - buttonViewResultsTextLayout.size.width) / 2.0), y: optionsButtonSpacing), size: buttonViewResultsTextLayout.size)
-                    
-                    var adjustedStatusFrame: CGRect?
-                    if let statusFrame = statusFrame {
-                        var localStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: resultSize.height - statusFrame.size.height - 6.0), size: statusFrame.size)
-                        if localStatusFrame.minX <= buttonViewResultsTextFrame.maxX || localStatusFrame.minX <= buttonSubmitActiveTextFrame.maxX {
-                            localStatusFrame.origin.y += 10.0
-                            resultSize.height += 10.0
-                        }
-                        adjustedStatusFrame = localStatusFrame
-                    }
                     
                     return (resultSize, { [weak self] animation, synchronousLoad in
                         if let strongSelf = self {
@@ -1378,28 +1377,6 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             strongSelf.optionNodes = updatedOptionNodes
-                            
-                            if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
-                                let previousStatusFrame = strongSelf.statusNode.frame
-                                strongSelf.statusNode.frame = adjustedStatusFrame
-                                var hasAnimation = true
-                                if case .None = animation {
-                                    hasAnimation = false
-                                }
-                                statusApply(hasAnimation)
-                                if strongSelf.statusNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.statusNode)
-                                } else {
-                                    if case let .System(duration) = animation {
-                                        let delta = CGPoint(x: previousStatusFrame.maxX - adjustedStatusFrame.maxX, y: previousStatusFrame.minY - adjustedStatusFrame.minY)
-                                        let statusPosition = strongSelf.statusNode.layer.position
-                                        let previousPosition = CGPoint(x: statusPosition.x + delta.x, y: statusPosition.y + delta.y)
-                                        strongSelf.statusNode.layer.animatePosition(from: previousPosition, to: statusPosition, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-                                    }
-                                }
-                            } else if strongSelf.statusNode.supernode != nil {
-                                strongSelf.statusNode.removeFromSupernode()
-                            }
                             
                             if textLayout.hasRTL {
                                 strongSelf.textNode.frame = CGRect(origin: CGPoint(x: resultSize.width - textFrame.size.width - textInsets.left - layoutConstants.text.bubbleInsets.right - additionalTextRightInset, y: textFrame.origin.y), size: textFrame.size)
@@ -1532,11 +1509,27 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             let _ = votersApply()
-                            strongSelf.votersNode.frame = CGRect(origin: CGPoint(x: floor((resultSize.width - votersLayout.size.width) / 2.0), y: verticalOffset + optionsVotersSpacing), size: votersLayout.size)
+                            let votersFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - votersLayout.size.width) / 2.0), y: verticalOffset + optionsVotersSpacing), size: votersLayout.size)
+                            strongSelf.votersNode.frame = votersFrame
                             if animation.isAnimated, let previousPoll = previousPoll, let poll = poll {
                                 if previousPoll.results.totalVoters == nil && poll.results.totalVoters != nil {
                                     strongSelf.votersNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                                 }
+                            }
+                            
+                            if let statusSizeAndApply = statusSizeAndApply {
+                                let statusFrame = CGRect(origin: CGPoint(x: resultSize.width - statusSizeAndApply.0.width - layoutConstants.text.bubbleInsets.right, y: votersFrame.maxY), size: statusSizeAndApply.0)
+                                
+                                if strongSelf.statusNode.supernode == nil {
+                                    statusSizeAndApply.1(.None)
+                                    strongSelf.statusNode.frame = statusFrame
+                                    strongSelf.addSubnode(strongSelf.statusNode)
+                                } else {
+                                    statusSizeAndApply.1(animation)
+                                    animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: statusFrame, completion: nil)
+                                }
+                            } else if strongSelf.statusNode.supernode != nil {
+                                strongSelf.statusNode.removeFromSupernode()
                             }
                             
                             let _ = buttonSubmitInactiveTextApply()
@@ -1744,13 +1737,6 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
-        if !self.statusNode.isHidden {
-            return self.statusNode.reactionNode(value: value)
-        }
-        return nil
-    }
-    
     func updatePollTooltipMessageState(animated: Bool) {
         guard let item = self.item else {
             return
@@ -1766,6 +1752,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             transition.updateAlpha(node: self.solutionButtonNode.iconNode, alpha: displaySolutionButton ? 1.0 : 0.0)
             transition.updateSublayerTransformScale(node: self.solutionButtonNode, scale: displaySolutionButton ? 1.0 : 0.1)
         }
+    }
+    
+    override func reactionTargetView(value: String) -> UIView? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionView(value: value)
+        }
+        return nil
     }
 }
 

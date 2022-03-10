@@ -1,14 +1,10 @@
 import Foundation
 
-public protocol OrderedItemListEntryContents: PostboxCoding {
-    
-}
-
 public struct OrderedItemListEntry {
     public let id: MemoryBuffer
-    public let contents: OrderedItemListEntryContents
+    public let contents: CodableEntry
     
-    public init(id: MemoryBuffer, contents: OrderedItemListEntryContents) {
+    public init(id: MemoryBuffer, contents: CodableEntry) {
         self.id = id
         self.contents = contents
     }

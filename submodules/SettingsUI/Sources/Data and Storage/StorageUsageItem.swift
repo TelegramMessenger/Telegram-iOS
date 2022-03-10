@@ -194,7 +194,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
                 
                 var textFrame = CGRect(origin: textOrigin, size: textLayout.size)
                 if textFrame.maxX > params.width - params.rightInset - inset {
-                    textFrame.origin = CGPoint(x: horizontalSpacing, y: textOrigin.y + verticalSpacing)
+                    textFrame.origin = CGPoint(x: params.leftInset + horizontalSpacing, y: textOrigin.y + verticalSpacing)
                 }
  
                 textOrigin = CGPoint(x: textFrame.maxX + horizontalSpacing, y: textFrame.minY)
@@ -203,7 +203,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
             }
             
             contentSize = CGSize(width: params.width, height: textOrigin.y + 34.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -254,6 +254,7 @@ private final class StorageUsageItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0

@@ -58,8 +58,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     var updateScrubbingHandlePosition: (CGFloat) -> Void = { _ in }
     var seek: (Double) -> Void = { _ in }
     
-    override init(frame: CGRect) {
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: scrubberBackgroundColor, foregroundColor: scrubberForegroundColor, bufferingColor: scrubberBufferingColor, chapters: self.chapters))
+    init(chapters: [MediaPlayerScrubbingChapter]) {
+        self.chapters = chapters
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: scrubberBackgroundColor, foregroundColor: scrubberForegroundColor, bufferingColor: scrubberBufferingColor, chapters: chapters))
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
@@ -71,7 +72,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.infoNode.isUserInteractionEnabled = false
         self.infoNode.displaysAsynchronously = false
         
-        super.init(frame: frame)
+        super.init(frame: CGRect())
         
         self.scrubberNode.seek = { [weak self] timestamp in
             self?.seek(timestamp)
@@ -167,10 +168,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.leftTimestampNode.status = mappedStatus
         self.rightTimestampNode.status = mappedStatus
         
-        if let mappedStatus = mappedStatus, false {
+        if let mappedStatus = mappedStatus {
             self.chapterDisposable.set((mappedStatus
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                if let strongSelf = self, status.duration > 1.0 {
+                if let strongSelf = self, status.duration > 1.0, strongSelf.chapters.count > 0 {
                     var text: String = ""
                     
                     for chapter in strongSelf.chapters {
@@ -229,7 +230,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
             if let fetchStatus = fetchStatus {
                 self.fetchStatusDisposable.set((fetchStatus
                 |> deliverOnMainQueue).start(next: { [weak self] status in
-                    if let strongSelf = self {
+                    if let strongSelf = self, strongSelf.chapters.isEmpty {
                         var text: String
                         switch status {
                             case .Remote:
@@ -246,10 +247,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         }
                     }
                 }))
-            } else {
+            } else if self.chapters.isEmpty {
                 self.infoNode.attributedText = NSAttributedString(string: dataSizeString(fileSize, forceDecimal: true, formatting: formatting), font: textFont, textColor: .white)
             }
-        } else {
+        } else if self.chapters.isEmpty {
             self.infoNode.attributedText = nil
         }
     }

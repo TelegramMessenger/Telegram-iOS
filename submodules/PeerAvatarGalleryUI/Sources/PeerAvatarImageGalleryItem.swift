@@ -12,6 +12,7 @@ import ShareController
 import PhotoResources
 import GalleryUI
 import TelegramUniversalVideoContent
+import UndoUI
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
@@ -185,13 +186,22 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.footerContentNode.share = { [weak self] interaction in
             if let strongSelf = self, let entry = strongSelf.entry, !entry.representations.isEmpty {
                 let subject: ShareControllerSubject
+                var actionCompletionText: String?
                 if let video = entry.videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
                     subject = .media(videoFileReference.abstract)
+                    actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
                 } else {
                     subject = .image(entry.representations)
+                    actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
                 }
                 let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll)
+                shareController.actionCompleted = { [weak self] in
+                    if let strongSelf = self, let actionCompletionText = actionCompletionText {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        interaction.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
+                    }
+                }
                 interaction.presentController(shareController, nil)
             }
         }
@@ -429,7 +439,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.contentNode.layer.animate(from: NSValue(caTransform3D: transform), to: NSValue(caTransform3D: self.contentNode.layer.transform), keyPath: "transform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.contentNode.clipsToBounds = true
-        if case .round(true) = self.sourceCorners {
+        if case .round = self.sourceCorners {
             self.contentNode.layer.animate(from: (self.contentNode.frame.width / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "cornerRadius", timingFunction: CAMediaTimingFunctionName.default.rawValue, duration: 0.18, removeOnCompletion: false, completion: { [weak self] value in
                 if value {
                     self?.contentNode.clipsToBounds = false

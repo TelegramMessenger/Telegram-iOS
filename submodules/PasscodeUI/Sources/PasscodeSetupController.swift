@@ -46,7 +46,7 @@ public final class PasscodeSetupController: ViewController {
         
         self.nextAction = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
-        self.title = isOpaqueNavigationBar ? "" : self.presentationData.strings.PasscodeSettings_Title
+        self.title = self.presentationData.strings.PasscodeSettings_Title
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -56,6 +56,8 @@ public final class PasscodeSetupController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = PasscodeSetupControllerNode(presentationData: self.presentationData, mode: self.mode, isChangeModeAllowed: isChangeModeAllowed)
         self.displayNodeDidLoad()
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         
         self.controllerNode.selectPasscodeMode = { [weak self] in
             guard let strongSelf = self, case let .setup(change, type) = strongSelf.mode else {

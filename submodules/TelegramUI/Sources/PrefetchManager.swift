@@ -54,7 +54,7 @@ private final class PrefetchManagerInnerImpl {
         let appConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> take(1)
         |> map { view in
-            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
         }
         
         let orderedPreloadMedia = combineLatest(account.viewTracker.orderedPreloadMedia, TelegramEngine(account: account).stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false), appConfiguration)
@@ -65,7 +65,7 @@ private final class PrefetchManagerInnerImpl {
             switch stickerPack {
                 case let .result(_, items, _):
                     var animatedEmojiStickers: [String: StickerPackItem] = [:]
-                    for case let item as StickerPackItem in items {
+                    for item in items {
                         if let emoji = item.getStringRepresentationsOfIndexKeys().first {
                             animatedEmojiStickers[emoji.basicEmoji.0] = item
                         }
@@ -245,7 +245,7 @@ private final class PrefetchManagerInnerImpl {
         |> mapToSignal { sticker -> Signal<Void, NoError> in
             if let sticker = sticker {
                 let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: sticker)).start()
-                return chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                return chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: sticker.resource, fitzModifier: nil, isVideo: sticker.isVideoSticker, width: 384, height: 384, synchronousLoad: false)
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     return .complete()
                 }

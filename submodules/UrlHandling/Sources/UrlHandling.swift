@@ -10,7 +10,14 @@ import TelegramNotices
 import AccountContext
 
 private let baseTelegramMePaths = ["telegram.me", "t.me", "telegram.dog"]
-private let baseTelegraPhPaths = ["telegra.ph/", "te.legra.ph/", "graph.org/", "t.me/iv?"]
+private let baseTelegraPhPaths = [
+    "telegra.ph/",
+    "te.legra.ph/",
+    "graph.org/",
+    "t.me/iv?",
+    "telegram.org/blog/",
+    "telegram.org/tour/"
+]
 
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
@@ -425,8 +432,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
                             }
                         } else {
-                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: messageId, highlight: true, timecode: timecode), peekData: nil)))
-                        }
+                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: true, timecode: timecode), peekData: nil)))                        }
                     } else {
                         return .single(.inaccessiblePeer)
                     }
@@ -564,7 +570,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
     return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
     |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
         return context.account.postbox.transaction { transaction -> Signal<ResolvedUrl, NoError> in
-            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration) as? AppConfiguration ?? AppConfiguration.defaultValue
+            let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
             let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
             
             var skipUrlAuth = skipUrlAuth

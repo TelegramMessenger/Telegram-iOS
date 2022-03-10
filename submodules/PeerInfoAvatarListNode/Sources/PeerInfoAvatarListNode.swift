@@ -77,21 +77,13 @@ private class PeerInfoAvatarListLoadingStripNode: ASImageNode {
     }
 }
 
-private struct CustomListItemResourceId: MediaResourceId {
+private struct CustomListItemResourceId {
     public var uniqueId: String {
         return "customNode"
     }
     
     public var hashValue: Int {
         return 0
-    }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if to is CustomListItemResourceId {
-            return true
-        } else {
-            return false
-        }
     }
 }
 
@@ -100,16 +92,16 @@ public enum PeerInfoAvatarListItem: Equatable {
     case topImage([ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     case image(TelegramMediaImageReference?, [ImageRepresentationWithReference], [VideoRepresentationWithReference], Data?)
     
-    var id: WrappedMediaResourceId {
+    var id: MediaResourceId {
         switch self {
         case .custom:
-            return WrappedMediaResourceId(CustomListItemResourceId())
+            return MediaResourceId(CustomListItemResourceId().uniqueId)
         case let .topImage(representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
-            return WrappedMediaResourceId(representation.resource.id)
+            return representation.resource.id
         case let .image(_, representations, _, _):
             let representation = largestImageRepresentation(representations.map { $0.representation }) ?? representations[representations.count - 1].representation
-            return WrappedMediaResourceId(representation.resource.id)
+            return representation.resource.id
         }
     }
     
@@ -351,7 +343,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.isReady.set(videoNode.ready |> map { return true })
     }
     
-    func setup(item: PeerInfoAvatarListItem, progress: Signal<Float?, NoError>? = nil, synchronous: Bool, fullSizeOnly: Bool = false) {
+    func setup(item: PeerInfoAvatarListItem, isMain: Bool, progress: Signal<Float?, NoError>? = nil, synchronous: Bool, fullSizeOnly: Bool = false) {
         self.item = item
         self.progress = progress
         
@@ -393,7 +385,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 id = self.peer.id.id._internalGetInt64Value()
             }
         }
-        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
+        self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: true, attemptSynchronously: synchronous, skipThumbnail: fullSizeOnly, skipBlurIfLarge: isMain), attemptSynchronously: synchronous, dispatchOnDisplayLink: false)
         
         if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
@@ -455,7 +447,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let controlsContainerNode: ASDisplayNode
     public let controlsClippingNode: ASDisplayNode
     public let controlsClippingOffsetNode: ASDisplayNode
-    public let shadowNode: ASImageNode
+    public let topShadowNode: ASImageNode
+    public let bottomShadowNode: ASImageNode
     
     public let contentNode: ASDisplayNode
     let leftHighlightNode: ASDisplayNode
@@ -465,7 +458,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public let highlightContainerNode: ASDisplayNode
     public private(set) var galleryEntries: [AvatarGalleryEntry] = []
     private var items: [PeerInfoAvatarListItem] = []
-    private var itemNodes: [WrappedMediaResourceId: PeerInfoAvatarListItemNode] = [:]
+    private var itemNodes: [MediaResourceId: PeerInfoAvatarListItemNode] = [:]
     private var stripNodes: [ASImageNode] = []
     private var activeStripNode: ASImageNode
     private var loadingStripNode: PeerInfoAvatarListLoadingStripNode
@@ -639,10 +632,15 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.controlsClippingNode.isUserInteractionEnabled = false
         self.controlsClippingNode.clipsToBounds = true
         
-        self.shadowNode = ASImageNode()
-        self.shadowNode.displaysAsynchronously = false
-        self.shadowNode.displayWithoutProcessing = true
-        self.shadowNode.contentMode = .scaleToFill
+        self.topShadowNode = ASImageNode()
+        self.topShadowNode.displaysAsynchronously = false
+        self.topShadowNode.displayWithoutProcessing = true
+        self.topShadowNode.contentMode = .scaleToFill
+        
+        self.bottomShadowNode = ASImageNode()
+        self.bottomShadowNode.displaysAsynchronously = false
+        self.bottomShadowNode.displayWithoutProcessing = true
+        self.bottomShadowNode.contentMode = .scaleToFill
         
         do {
             let size = CGSize(width: 88.0, height: 88.0)
@@ -664,10 +662,17 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 let image = UIGraphicsGetImageFromCurrentImageContext()
                 UIGraphicsEndImageContext()
                 if let image = image {
-                    self.shadowNode.image = generateImage(image.size, contextGenerator: { size, context in
+                    self.topShadowNode.image = generateImage(image.size, contextGenerator: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                         context.rotate(by: -CGFloat.pi / 2.0)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                        context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                    })
+                    self.bottomShadowNode.image = generateImage(image.size, contextGenerator: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.rotate(by: CGFloat.pi / 2.0)
                         context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
                         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
                     })
@@ -682,7 +687,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.addSubnode(self.contentNode)
         
         self.controlsContainerNode.addSubnode(self.highlightContainerNode)
-        self.controlsContainerNode.addSubnode(self.shadowNode)
+        self.controlsContainerNode.addSubnode(self.topShadowNode)
+        self.addSubnode(self.bottomShadowNode)
         self.controlsContainerNode.addSubnode(self.stripContainerNode)
         self.controlsClippingNode.addSubnode(self.controlsContainerNode)
         self.controlsClippingOffsetNode.addSubnode(self.controlsClippingNode)
@@ -1131,7 +1137,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     public var updateCustomItemsOnlySynchronously = false
     
     private func updateItems(size: CGSize, update: Bool = false, transition: ContainedViewLayoutTransition, stripTransition: ContainedViewLayoutTransition, synchronous: Bool = false) {
-        var validIds: [WrappedMediaResourceId] = []
+        var validIds: [MediaResourceId] = []
         var addedItemNodesForAdditiveTransition: [PeerInfoAvatarListItemNode] = []
         var additiveTransitionOffset: CGFloat = 0.0
         var itemsAdded = false
@@ -1151,13 +1157,13 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                         if case .custom = self.items[i], self.updateCustomItemsOnlySynchronously {
                             synchronous = true
                         }
-                        current.setup(item: self.items[i], synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
+                        current.setup(item: self.items[i], isMain: i == 0, synchronous: synchronous && i == self.currentIndex, fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     }
                 } else if let peer = self.peer {
                     wasAdded = true
                     let addedItemNode = PeerInfoAvatarListItemNode(context: self.context, peer: peer)
                     itemNode = addedItemNode
-                    addedItemNode.setup(item: self.items[i], progress: i == 0 ? self.additionalEntryProgress : nil, synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
+                    addedItemNode.setup(item: self.items[i], isMain: i == 0, progress: i == 0 ? self.additionalEntryProgress : nil, synchronous: (i == 0 && i == self.currentIndex) || (synchronous && i == self.currentIndex), fullSizeOnly: self.firstFullSizeOnly && i == 0)
                     self.itemNodes[self.items[i].id] = addedItemNode
                     self.contentNode.addSubnode(addedItemNode)
                 }
@@ -1185,7 +1191,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         for itemNode in addedItemNodesForAdditiveTransition {
             transition.animatePositionAdditive(node: itemNode, offset: CGPoint(x: additiveTransitionOffset, y: 0.0))
         }
-        var removeIds: [WrappedMediaResourceId] = []
+        var removeIds: [MediaResourceId] = []
         for (id, _) in self.itemNodes {
             if !validIds.contains(id) {
                 removeIds.append(id)

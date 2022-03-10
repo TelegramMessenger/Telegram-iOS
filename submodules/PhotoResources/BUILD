@@ -23,6 +23,7 @@ swift_library(
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
     ],
     visibility = [
         "//visibility:public",

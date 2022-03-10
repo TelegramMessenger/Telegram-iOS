@@ -245,7 +245,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
             case let .themeHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .themeItem(theme, strings, themes, allThemes, currentTheme, themeSpecificAccentColors, themeSpecificChatWallpapers):
-                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, allThemes: allThemes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, currentTheme: currentTheme, updatedTheme: { theme in
+            return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, allThemes: allThemes, displayUnsupported: false, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, themePreferredBaseTheme: [:], currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
                 }, contextAction: nil)
         }
@@ -369,7 +369,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         let _ = (combineLatest(stagingSettingsPromise.get(), sharedData)
         |> take(1)
         |> deliverOnMainQueue).start(next: { stagingSettings, sharedData in
-            let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+            let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
             let updated = f(stagingSettings ?? settings.automaticThemeSwitchSetting)
             stagingSettingsPromise.set(updated)
             if areSettingsValid(updated) {
@@ -384,7 +384,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     
     let forceUpdateLocation: () -> Void = {
         let locationCoordinates = Signal<(Double, Double), NoError> { subscriber in
-            return context.sharedContext.locationManager!.push(mode: DeviceLocationMode.precise, updated: { location, _ in
+            return context.sharedContext.locationManager!.push(mode: DeviceLocationMode.preciseForeground, updated: { location, _ in
                 subscriber.putNext((location.coordinate.latitude, location.coordinate.longitude))
                 subscriber.putCompletion()
             })
@@ -569,7 +569,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     
     let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, sharedData |> deliverOnMainQueue, cloudThemes.get() |> deliverOnMainQueue, stagingSettingsPromise.get() |> deliverOnMainQueue)
     |> map { presentationData, sharedData, cloudThemes, stagingSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+        let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
         
         let defaultThemes: [PresentationThemeReference] = [.builtin(.night), .builtin(.nightAccent)]
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil, creatorAccountId: $0.isCreator ? context.account.id : nil)) }

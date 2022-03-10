@@ -9,12 +9,14 @@ import PresentationDataUtils
 
 public enum ItemListPeerActionItemHeight {
     case generic
+    case compactPeerList
     case peerList
 }
 
 public enum ItemListPeerActionItemColor {
     case accent
     case destructive
+    case disabled
 }
 
 public class ItemListPeerActionItem: ListViewItem, ItemListItem {
@@ -29,7 +31,7 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool = false, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.title = title
@@ -161,15 +163,23 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                 updatedTheme = item.presentationData.theme
             }
             let leftInset: CGFloat
+            let iconOffset: CGFloat
             let verticalInset: CGFloat
             let verticalOffset: CGFloat
             switch item.height {
                 case .generic:
+                    iconOffset = 1.0
                     verticalInset = 11.0
                     verticalOffset = 0.0
                     leftInset = (item.icon == nil ? 16.0 : 59.0) + params.leftInset
                 case .peerList:
+                    iconOffset = 3.0
                     verticalInset = 14.0
+                    verticalOffset = 0.0
+                    leftInset = 65.0 + params.leftInset
+                case .compactPeerList:
+                    iconOffset = 3.0
+                    verticalInset = 11.0
                     verticalOffset = 0.0
                     leftInset = 65.0 + params.leftInset
             }
@@ -182,13 +192,15 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     textColor = item.presentationData.theme.list.itemAccentColor
                 case .destructive:
                     textColor = item.presentationData.theme.list.itemDestructiveColor
+                case .disabled:
+                    textColor = item.presentationData.theme.list.itemDisabledTextColor
             }
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - editingOffset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset * 2.0)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -219,7 +231,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     
                     strongSelf.iconNode.image = item.icon
                     if let image = item.icon {
-                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + 3.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
+                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + iconOffset, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {
@@ -252,15 +264,14 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = leftInset + editingOffset
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = !item.hasSeparator
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
                             hasBottomCorners = true
-                            strongSelf.bottomStripeNode.isHidden = hasCorners
+                            strongSelf.bottomStripeNode.isHidden = hasCorners || !item.hasSeparator
                     }
-                    
-                    strongSelf.bottomStripeNode.isHidden = strongSelf.bottomStripeNode.isHidden || !item.hasSeparator
-                    
+                        
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))

@@ -34,6 +34,12 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ImageContentAnalysis:ImageContentAnalysis",
+        "//submodules/TextSelectionNode:TextSelectionNode",
+        "//submodules/Speak:Speak",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
+        "//submodules/Translate:Translate",
     ],
     visibility = [
         "//visibility:public",

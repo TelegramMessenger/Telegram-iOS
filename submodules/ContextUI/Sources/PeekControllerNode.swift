@@ -72,10 +72,13 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         var feedbackTapImpl: (() -> Void)?
         var activatedActionImpl: (() -> Void)?
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak controller] in
+        var requestLayoutImpl: (() -> Void)?
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: presentationData, items: ContextController.Items(content: .list(content.menuItems())), getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             activatedActionImpl?()
+        }, requestLayout: {
+            requestLayoutImpl?()
         }, feedbackTap: {
             feedbackTapImpl?()
         }, blurBackground: true)
@@ -85,6 +88,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         feedbackTapImpl = { [weak self] in
             self?.hapticFeedback.tap()
+        }
+
+        requestLayoutImpl = { [weak self] in
+            self?.updateLayout()
         }
         
         if content.presentation() == .freeform {
@@ -118,6 +125,12 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTap(_:))))
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
     }
+
+    func updateLayout() {
+        if let layout = self.validLayout {
+            self.containerLayoutUpdated(layout, transition: .immediate)
+        }
+    }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
@@ -145,7 +158,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
-        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: .immediate)
+        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: .immediate)
         
         let containerFrame: CGRect
         let actionsFrame: CGRect
@@ -328,10 +341,12 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.contentNodeHasValidLayout = false
         
         let previousActionsContainerNode = self.actionsContainerNode
-        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(items: content.menuItems()), getController: { [weak self] in
+        self.actionsContainerNode = ContextActionsContainerNode(presentationData: self.presentationData, items: ContextController.Items(content: .list(content.menuItems())), getController: { [weak self] in
             return self?.controller
         }, actionSelected: { [weak self] result in
             self?.requestDismiss()
+        }, requestLayout: { [weak self] in
+            self?.updateLayout()
         }, feedbackTap: { [weak self] in
             self?.hapticFeedback.tap()
         }, blurBackground: true)

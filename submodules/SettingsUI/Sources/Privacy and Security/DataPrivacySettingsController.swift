@@ -64,7 +64,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .contactsHeader, .deleteContacts, .syncContacts, .syncContactsInfo:
+            case .contactsHeader, .deleteContacts, .syncContacts, .syncContactsInfo:
                 return PrivacyAndSecuritySection.contacts.rawValue
             case .frequentContacts, .frequentContactsInfo:
                 return PrivacyAndSecuritySection.frequentContacts.rawValue
@@ -72,9 +72,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return PrivacyAndSecuritySection.chats.rawValue
             case .paymentHeader, .clearPaymentInfo, .paymentInfo:
                 return PrivacyAndSecuritySection.payments.rawValue
-        case .secretChatLinkPreviewsHeader, .secretChatLinkPreviews, .secretChatLinkPreviewsInfo:
+            case .secretChatLinkPreviewsHeader, .secretChatLinkPreviews, .secretChatLinkPreviewsInfo:
                 return PrivacyAndSecuritySection.secretChats.rawValue
-        
         }
     }
     
@@ -419,9 +418,9 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                 
                 let _ = context.account.postbox.transaction({ transaction in
                     transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                        var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                        var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                         settings.synchronizeContacts = false
-                        return settings
+                        return PreferencesEntry(settings)
                     })
                 }).start()
                 
@@ -440,9 +439,9 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     }, updateSyncContacts: { value in
         let _ = context.account.postbox.transaction({ transaction in
             transaction.updatePreferencesEntry(key: PreferencesKeys.contactsSettings, { current in
-                var settings = current as? ContactsSettings ?? ContactsSettings.defaultSettings
+                var settings = current?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
                 settings.synchronizeContacts = value
-                return settings
+                return PreferencesEntry(settings)
             })
         }).start()
     }, updateSuggestFrequentContacts: { value in
@@ -506,7 +505,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
     |> map { presentationData, state, noticeView, sharedData, preferences, recentPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let secretChatLinkPreviews = noticeView.value.flatMap({ ApplicationSpecificNotice.getSecretChatLinkPreviews($0) })
         
-        let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings] as? ContactsSettings ?? ContactsSettings.defaultSettings
+        let settings: ContactsSettings = preferences.values[PreferencesKeys.contactsSettings]?.get(ContactsSettings.self) ?? ContactsSettings.defaultSettings
         
         let synchronizeDeviceContacts: Bool = settings.synchronizeContacts
         

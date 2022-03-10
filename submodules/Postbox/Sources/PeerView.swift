@@ -27,7 +27,7 @@ final class MutablePeerView: MutablePostboxView {
     var peerIsContact: Bool
     var groupId: PeerGroupId?
     
-    init(postbox: Postbox, peerId: PeerId, components: PeerViewComponents) {
+    init(postbox: PostboxImpl, peerId: PeerId, components: PeerViewComponents) {
         self.components = components
         
         let getPeer: (PeerId) -> Peer? = { peerId in
@@ -83,11 +83,11 @@ final class MutablePeerView: MutablePostboxView {
         }
     }
     
-    func reset(postbox: Postbox) -> Bool {
+    func reset(postbox: PostboxImpl) -> Bool {
         return false
     }
     
-    func replay(postbox: Postbox, transaction: PostboxTransaction) -> Bool {
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         let updatedPeers = transaction.currentUpdatedPeers
         let updatedNotificationSettings = transaction.currentUpdatedPeerNotificationSettings
         let updatedCachedPeerData = transaction.currentUpdatedCachedPeerData
@@ -252,6 +252,10 @@ final class MutablePeerView: MutablePostboxView {
         }
         
         return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
     }
     
     func immutableView() -> PostboxView {

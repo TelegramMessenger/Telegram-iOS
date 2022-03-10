@@ -98,7 +98,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     
     initializeAccountManagement()
     let hiddenAccountManager = HiddenAccountManagerImpl()
-    let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, hiddenAccountManager: hiddenAccountManager)
+    let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false, hiddenAccountManager: hiddenAccountManager)
     
     let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
     let encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
@@ -177,7 +177,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                     var mappedMessage: WidgetDataPeer.Message?
                     if let index = transaction.getTopPeerMessageIndex(peerId: peer.id) {
                         if let message = transaction.getMessage(index.id) {
-                            mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: message)
+                            mappedMessage = WidgetDataPeer.Message(accountPeerId: state.peerId, message: EngineMessage(message))
                         }
                     }
                     

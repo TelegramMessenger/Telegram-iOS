@@ -10,6 +10,8 @@ import AccountContext
 import LocalizedPeerData
 import PhotoResources
 import TelegramStringFormatting
+import TextFormat
+import InvisibleInkDustNode
 
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
@@ -21,6 +23,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
     private let lineNode: ASImageNode
     private var titleNode: TextNode?
     private var textNode: TextNode?
+    private var dustNode: InvisibleInkDustNode?
     private var imageNode: TransformImageNode?
     private var previousMediaReference: AnyMediaReference?
     
@@ -54,22 +57,23 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleFont = Font.medium(fontSize)
             let textFont = Font.regular(fontSize)
             
-            var titleString = message.effectiveAuthor?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
+            var titleString = message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             
             if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                 if let author = forwardInfo.author {
-                    titleString = author.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
+                    titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
                 } else if let authorSignature = forwardInfo.authorSignature {
                     titleString = authorSignature
                 }
             }
             
-            let (textString, isMedia) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: message, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId)
+            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId)
             
             let placeholderColor: UIColor =  message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
+            let dustColor: UIColor
                 
             switch type {
                 case let .bubble(incoming):
@@ -80,6 +84,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     } else {
                         textColor = incoming ? presentationData.theme.theme.chat.message.incoming.primaryTextColor : presentationData.theme.theme.chat.message.outgoing.primaryTextColor
                     }
+                    dustColor = incoming ? presentationData.theme.theme.chat.message.incoming.secondaryTextColor : presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
@@ -87,6 +92,26 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     let graphics = PresentationResourcesChat.additionalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, bubbleCorners: presentationData.chatBubbleCorners)
                     lineImage = graphics.chatServiceVerticalLineImage
                     textColor = titleColor
+                    dustColor = titleColor
+            }
+            
+            
+            let messageText: NSAttributedString
+            if isText {
+                let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                    if case .Spoiler = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                if entities.count > 0 {
+                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                } else {
+                    messageText = NSAttributedString(string: textString, font: textFont, textColor: textColor)
+                }
+            } else {
+                messageText = NSAttributedString(string: textString, font: textFont, textColor: textColor)
             }
             
             var leftInset: CGFloat = 11.0
@@ -103,7 +128,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                             imageDimensions = representation.dimensions.cgSize
                         }
                         break
-                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                    } else if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
                         updatedMediaReference = .message(message: MessageReference(message), media: file)
                         
                         if let dimensions = file.dimensions {
@@ -131,7 +156,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
             
             let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: textString, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
             
             let imageSide = titleLayout.size.height + textLayout.size.height - 16.0
             
@@ -215,10 +240,30 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     imageNode.removeFromSupernode()
                     node.imageNode = nil
                 }
+                node.imageNode?.captureProtected = message.isCopyProtected()
                 
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: spacing - textInsets.top), size: titleLayout.size)
-                textNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top), size: textLayout.size)
                 
+                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top), size: textLayout.size)
+                textNode.frame = textFrame
+                
+                if !textLayout.spoilers.isEmpty {
+                    let dustNode: InvisibleInkDustNode
+                    if let current = node.dustNode {
+                        dustNode = current
+                    } else {
+                        dustNode = InvisibleInkDustNode(textNode: nil)
+                        dustNode.isUserInteractionEnabled = false
+                        node.dustNode = dustNode
+                        node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode)
+                    }
+                    dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                    dustNode.update(size: dustNode.frame.size, color: dustColor, textColor: dustColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                } else if let dustNode = node.dustNode {
+                    dustNode.removeFromSupernode()
+                    node.dustNode = nil
+                }
+                    
                 node.lineNode.image = lineImage
                 node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 5.0)))
                 

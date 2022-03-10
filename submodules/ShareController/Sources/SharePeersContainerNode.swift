@@ -13,6 +13,7 @@ import AccountContext
 import PeerPresenceStatusManager
 import AppBundle
 import SegmentedControlNode
+import ContextUI
 
 private let subtitleFont = Font.regular(12.0)
 
@@ -96,7 +97,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let contentTitleAccountNode: AvatarNode
     private let contentSeparatorNode: ASDisplayNode
     private let searchButtonNode: HighlightableButtonNode
+    
     private let shareButtonNode: HighlightableButtonNode
+    private let shareReferenceNode: ContextReferenceContentNode
+    private let shareContainerNode: ContextControllerSourceNode
     private let segmentedNode: SegmentedControlNode
     
     private let segmentedValues: [ShareControllerSegmentedValue]?
@@ -104,7 +108,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     var openSearch: (() -> Void)?
-    var openShare: (() -> Void)?
+    var openShare: ((ASDisplayNode, ContextGesture?) -> Void)?
     var segmentedSelectedIndexUpdated: ((Int) -> Void)?
     
     private var ensurePeerVisibleOnLayout: PeerId?
@@ -183,6 +187,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.shareButtonNode = HighlightableButtonNode()
         self.shareButtonNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "Share/ShareIcon"), color: self.theme.actionSheet.controlAccentColor), for: [])
                  
+        self.shareReferenceNode = ContextReferenceContentNode()
+        self.shareContainerNode = ContextControllerSourceNode()
+        self.shareContainerNode.animateScale = false
+        
         let segmentedItems: [SegmentedControlItem]
         if let segmentedValues = segmentedValues {
             segmentedItems = segmentedValues.map { SegmentedControlItem(title: $0.title) }
@@ -213,9 +221,19 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.addSubnode(self.contentTitleAccountNode)
         self.addSubnode(self.segmentedNode)
         self.addSubnode(self.searchButtonNode)
+        
+        self.shareContainerNode.addSubnode(self.shareReferenceNode)
+        self.shareButtonNode.addSubnode(self.shareContainerNode)
+        
         self.addSubnode(self.shareButtonNode)
         self.addSubnode(self.contentSeparatorNode)
         
+        self.shareContainerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.openShare?(strongSelf.shareReferenceNode, gesture)
+        }
         
         let previousItems = Atomic<[SharePeerEntry]?>(value: [])
         self.disposable.set((items
@@ -310,7 +328,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     func deactivate() {
     }
     
-    func updateLayout(size: CGSize, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = (size, bottomInset)
         
@@ -376,6 +394,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         let shareButtonFrame = CGRect(origin: CGPoint(x: size.width - titleButtonSize.width - 12.0, y: titleOffset + 12.0), size: titleButtonSize)
         transition.updateFrame(node: self.shareButtonNode, frame: shareButtonFrame)
+        transition.updateFrame(node: self.shareContainerNode, frame: CGRect(origin: CGPoint(), size: titleButtonSize))
+        transition.updateFrame(node: self.shareReferenceNode, frame: CGRect(origin: CGPoint(), size: titleButtonSize))
         
         let segmentedSize = self.segmentedNode.updateLayout(.sizeToFit(maximumWidth: size.width - titleButtonSize.width * 2.0, minimumWidth: 160.0, height: 32.0), transition: transition)
         transition.updateFrame(node: self.segmentedNode, frame: CGRect(origin: CGPoint(x: floor((size.width - segmentedSize.width) / 2.0), y: titleOffset + 18.0), size: segmentedSize))
@@ -422,7 +442,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if peer.peerId == self.accountPeer.id {
                         text = self.strings.DialogList_SavedMessages
                     } else {
-                        text = peer.chatMainPeer?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
+                        text = peer.chatMainPeer.flatMap(EnginePeer.init)?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
                     }
                     
                     if !string.isEmpty {
@@ -446,9 +466,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     }
     
     @objc func sharePressed() {
-        self.openShare?()
+        self.openShare?(self.shareReferenceNode, nil)
     }
-    
+        
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let nodes: [ASDisplayNode] = [self.searchButtonNode, self.shareButtonNode, self.contentTitleAccountNode]
         for node in nodes {

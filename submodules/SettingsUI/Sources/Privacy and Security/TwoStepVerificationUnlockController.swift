@@ -509,7 +509,7 @@ public func twoStepVerificationUnlockSettingsController(context: AccountContext,
                                         }
 
                                         var stateUpdated: ((SetupTwoStepVerificationStateUpdate) -> Void)?
-                                        let controller = TwoFactorDataInputScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .authorized), stateUpdated: { state in
+                                        let controller = TwoFactorDataInputScreen(sharedContext: context.sharedContext, engine: .authorized(context.engine), mode: .passwordRecoveryEmail(emailPattern: emailPattern, mode: .authorized, doneText: presentationData.strings.TwoFactorSetup_Done_Action), stateUpdated: { state in
                                             stateUpdated?(state)
                                         })
                                         stateUpdated = { [weak controller] state in

@@ -102,11 +102,11 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             let stickerConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             |> map { preferencesView -> StickersSearchConfiguration in
-                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
                 return StickersSearchConfiguration.with(appConfiguration: appConfiguration)
             }
             let stickerSettings = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
-                let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
+                let stickerSettings: StickerSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings)?.get(StickerSettings.self) ?? .defaultSettings
                 return stickerSettings
             }
 
@@ -207,7 +207,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 var sortedPeers = filteredInlineBots
                 sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                    let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                    let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
                     return result == .orderedAscending
                 }))
                 sortedPeers = sortedPeers.filter { peer in
@@ -391,7 +391,7 @@ func searchQuerySuggestionResultStateForChatInterfacePresentationState(_ chatPre
                             let filteredPeers = peers
                             var sortedPeers: [EnginePeer] = []
                             sortedPeers.append(contentsOf: filteredPeers.sorted(by: { lhs, rhs in
-                                let result = lhs.indexName.indexName(.lastNameFirst).compare(rhs.indexName.indexName(.lastNameFirst))
+                                let result = lhs.indexName.stringRepresentation(lastNameFirst: true).compare(rhs.indexName.stringRepresentation(lastNameFirst: true))
                                 return result == .orderedAscending
                             }))
                             return { _ in return .mentions(sortedPeers) }

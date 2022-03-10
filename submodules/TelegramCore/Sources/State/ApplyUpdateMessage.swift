@@ -32,7 +32,7 @@ func applyMediaResourceChanges(from: Media, to: Media, postbox: Postbox, force: 
         if let fromPreview = smallestImageRepresentation(fromFile.previewRepresentations), let toPreview = smallestImageRepresentation(toFile.previewRepresentations) {
             copyOrMoveResourceData(from: fromPreview.resource, to: toPreview.resource, mediaBox: postbox.mediaBox)
         }
-        if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id.uniqueId != toVideoThumbnail.resource.id.uniqueId {
+        if let fromVideoThumbnail = fromFile.videoThumbnails.first, let toVideoThumbnail = toFile.videoThumbnails.first, fromVideoThumbnail.resource.id != toVideoThumbnail.resource.id {
             copyOrMoveResourceData(from: fromVideoThumbnail.resource, to: toVideoThumbnail.resource, mediaBox: postbox.mediaBox)
         }
         if (force || fromFile.size == toFile.size || fromFile.resource.size == toFile.resource.size) && fromFile.mimeType == toFile.mimeType {
@@ -64,12 +64,12 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(message):
-                    updatedTimestamp = message.date
+                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                    updatedTimestamp = date
                 case .messageEmpty:
                     break
-                case let .messageService(messageService):
-                    updatedTimestamp = messageService.date
+                case let .messageService(_, _, _, _, _, date, _, _):
+                    updatedTimestamp = date
             }
         } else {
             switch result {
@@ -184,7 +184,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                                     sentStickers.append(file)
                                 }
                             case .Animated:
-                                sentGifs.append(file)
+                                if !file.isAnimatedSticker && !file.isVideoSticker {
+                                    sentGifs.append(file)
+                                }
                             default:
                                 break
                             }
@@ -244,11 +246,15 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         for file in sentStickers {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+            if let entry = CodableEntry(RecentMediaItem(file)) {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 20)
+            }
         }
         for file in sentGifs {
             if !file.hasLinkedStickers {
-                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+                if let entry = CodableEntry(RecentMediaItem(file)) {
+                    transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 200)
+                }
             }
         }
         
@@ -360,7 +366,9 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                                         sentStickers.append(file)
                                     }
                                 case .Animated:
-                                    sentGifs.append(file)
+                                    if !file.isAnimatedSticker && !file.isVideoSticker {
+                                        sentGifs.append(file)
+                                    }
                                 default:
                                     break
                                 }
@@ -385,11 +393,15 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
         }
         
         for file in sentStickers {
-            transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
+            if let entry = CodableEntry(RecentMediaItem(file)) {
+                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 20)
+            }
         }
         for file in sentGifs {
             if !file.hasLinkedStickers {
-                transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
+                if let entry = CodableEntry(RecentMediaItem(file)) {
+                    transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry), removeTailIfCountExceeds: 200)
+                }
             }
         }
         stateManager.addUpdates(result)

@@ -23,10 +23,10 @@ extension ProxyServerSettings {
 public func updateProxySettingsInteractively(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, _ f: @escaping (ProxySettings) -> ProxySettings) -> Bool {
     var hasChanges = false
     transaction.updateSharedData(SharedDataKeys.proxySettings, { current in
-        let previous = (current as? ProxySettings) ?? ProxySettings.defaultSettings
+        let previous = current?.get(ProxySettings.self) ?? ProxySettings.defaultSettings
         let updated = f(previous)
         hasChanges = previous != updated
-        return updated
+        return PreferencesEntry(updated)
     })
     return hasChanges
 }

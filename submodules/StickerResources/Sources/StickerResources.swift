@@ -75,7 +75,7 @@ private func chatMessageStickerDatas(postbox: Postbox, file: TelegramMediaFile, 
                 }
                 
                 var fetchThumbnail: Disposable?
-                if !thumbnailResource.id.isEqual(to: resource.id) {
+                if thumbnailResource.id != resource.id {
                     fetchThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
                 }
                 let disposable = (combineLatest(thumbnailData, fullSizeData)
@@ -126,7 +126,7 @@ public func chatMessageAnimatedStickerDatas(postbox: Postbox, file: TelegramMedi
                 }
                 
                 var fetchThumbnail: Disposable?
-                if !thumbnailResource.id.isEqual(to: resource.id) {
+                if thumbnailResource.id != resource.id {
                     fetchThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
                 }
                 let disposable = (combineLatest(thumbnailData, fullSizeData)
@@ -225,8 +225,8 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, resource: Med
     }
 }
 
-public func chatMessageAnimationData(mediaBox: MediaBox, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
-    let representation = CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height), fitzModifier: fitzModifier)
+public func chatMessageAnimationData(mediaBox: MediaBox, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, isVideo: Bool = false, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
+    let representation: CachedMediaResourceRepresentation = isVideo ? CachedVideoStickerRepresentation(width: Int32(width), height: Int32(height)) : CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height), fitzModifier: fitzModifier)
     let maybeFetched = mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: false, attemptSynchronously: synchronousLoad)
 
     return maybeFetched

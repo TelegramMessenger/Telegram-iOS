@@ -17,14 +17,16 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import GalleryUI
 import WallpaperBackgroundNode
+import InvisibleInkDustNode
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
-    return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false)
+    return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false)
 }
 
 class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     let labelNode: TextNode
-    var backgroundNode: WallpaperBackgroundNode.BubbleBackgroundNode?
+    private var dustNode: InvisibleInkDustNode?
+    var backgroundNode: WallpaperBubbleBackgroundNode?
     var backgroundColorNode: ASDisplayNode
     let backgroundMaskNode: ASImageNode
     var linkHighlightingNode: LinkHighlightingNode?
@@ -277,6 +279,25 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.labelNode.frame = labelFrame
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
 
+                            if !labelLayout.spoilers.isEmpty {
+                                let dustColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                                
+                                let dustNode: InvisibleInkDustNode
+                                if let current = strongSelf.dustNode {
+                                    dustNode = current
+                                } else {
+                                    dustNode = InvisibleInkDustNode(textNode: nil)
+                                    dustNode.isUserInteractionEnabled = false
+                                    strongSelf.dustNode = dustNode
+                                    strongSelf.insertSubnode(dustNode, aboveSubnode: strongSelf.labelNode)
+                                }
+                                dustNode.frame = labelFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 1.0)
+                                dustNode.update(size: dustNode.frame.size, color: dustColor, textColor: dustColor, rects: labelLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: labelLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                            } else if let dustNode = strongSelf.dustNode {
+                                dustNode.removeFromSupernode()
+                                strongSelf.dustNode = nil
+                            }
+                            
                             let baseBackgroundFrame = labelFrame.offsetBy(dx: 0.0, dy: -11.0)
 
                             if let (offset, image) = backgroundMaskImage {
@@ -327,7 +348,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
             var backgroundFrame = backgroundNode.frame
             backgroundFrame.origin.x += rect.minX
             backgroundFrame.origin.y += rect.minY
-            backgroundNode.update(rect: backgroundFrame, within: containerSize)
+            backgroundNode.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
     }
 

@@ -7,7 +7,7 @@ Like TCP, SCTP provides reliable, connection oriented data delivery with congest
 In this manual the socket API for the SCTP User-land implementation will be described.  It is based on [RFC 6458](https://tools.ietf.org/html/rfc6458). The main focus of this document is on pointing out the differences to the SCTP Sockets API. For all aspects of the sockets API that are not mentioned in this document, please refer to [RFC 6458](https://tools.ietf.org/html/rfc6458). Questions about SCTP itself can hopefully be answered by [RFC 4960](https://tools.ietf.org/html/rfc4960).
 
 ## Getting Started
-The user-land stack has been tested on FreeBSD 10.0, Ubuntu 11.10, Windows 7, Mac OS X 10.6, and Mac OS X 10.7. The current version of the user-land stack is provided on [github](https://github.com/sctplab/usrsctp). Download the tarball and untar it in a folder of your choice. The tarball contains all the sources to build the libusrsctp, which has to be linked to the object file of an example program. In addition there are two applications in the folder `programs` that can be built and run.
+The user-land stack has been tested on FreeBSD 10.0, OpenBSD 7.0, Ubuntu 11.10, Windows 7, Mac OS X 10.6, and Mac OS X 10.7. The current version of the user-land stack is provided on [github](https://github.com/sctplab/usrsctp). Download the tarball and untar it in a folder of your choice. The tarball contains all the sources to build the libusrsctp, which has to be linked to the object file of an example program. In addition there are two applications in the folder `programs` that can be built and run.
 
 ### Building the Library and the Applications
 #### Unix-like Operating Systems
@@ -128,7 +128,8 @@ usrsctp_socket(int domain,
                                  int flags,
                                  void *ulp_info),
                int (*send_cb)(struct socket *sock,
-                              uint32_t sb_free),
+                              uint32_t sb_free,
+                              void *ulp_info),
                uint32_t sb_threshold,
                void *ulp_info)
 ```
@@ -363,7 +364,7 @@ SCTP_RECVRCVINFO | int | r/w
 SCTP_RECVNXTINFO | int | r/w
 SCTP_DEFAULT_SNDINFO | struct sctp_sndinfo | r/w
 SCTP_DEFAULT_PRINFO | struct sctp_default_prinfo | r/w
-SCTP_REMOTE_UDP_ENCAPS_PORT | int | r/w
+SCTP_REMOTE_UDP_ENCAPS_PORT | struct sctp_udpencaps | r/w
 SCTP_ENABLE_STREAM_RESET | struct sctp_assoc_value | r/w
 SCTP_STATUS | struct sctp_status | r
 SCTP_GET_PEER_ADDR_INFO | struct sctp_paddrinfo | r

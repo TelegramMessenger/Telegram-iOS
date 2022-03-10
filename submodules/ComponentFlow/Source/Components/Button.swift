@@ -1,12 +1,12 @@
 import Foundation
 import UIKit
 
-final class Button: CombinedComponent, Equatable {
-    let content: AnyComponent<Empty>
-    let insets: UIEdgeInsets
-    let action: () -> Void
+public final class Button: CombinedComponent, Equatable {
+    public let content: AnyComponent<Empty>
+    public let insets: UIEdgeInsets
+    public let action: () -> Void
 
-    init(
+    public init(
         content: AnyComponent<Empty>,
         insets: UIEdgeInsets,
         action: @escaping () -> Void
@@ -16,7 +16,7 @@ final class Button: CombinedComponent, Equatable {
         self.action = action
     }
 
-    static func ==(lhs: Button, rhs: Button) -> Bool {
+    public static func ==(lhs: Button, rhs: Button) -> Bool {
         if lhs.content != rhs.content {
             return false
         }
@@ -26,7 +26,7 @@ final class Button: CombinedComponent, Equatable {
         return true
     }
 
-    final class State: ComponentState {
+    public final class State: ComponentState {
         var isHighlighted = false
 
         override init() {
@@ -34,11 +34,11 @@ final class Button: CombinedComponent, Equatable {
         }
     }
 
-    func makeState() -> State {
+    public func makeState() -> State {
         return State()
     }
 
-    static var body: Body {
+    public static var body: Body {
         let content = Child(environment: Empty.self)
 
         return { context in

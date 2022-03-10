@@ -61,6 +61,7 @@ swift_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/TelegramCallsUI:TelegramCallsUI",
         "//submodules/StickerResources:StickerResources",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

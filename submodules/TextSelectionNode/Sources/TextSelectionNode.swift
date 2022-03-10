@@ -67,7 +67,7 @@ private enum Knob {
     case right
 }
 
-private final class TextSelectionGetureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var longTapTimer: Timer?
     private var movingKnob: (Knob, CGPoint, CGPoint)?
     private var currentLocation: CGPoint?
@@ -188,6 +188,7 @@ public enum TextSelectionAction {
     case share
     case lookup
     case speak
+    case translate
 }
 
 public final class TextSelectionNode: ASDisplayNode {
@@ -195,6 +196,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private let strings: PresentationStrings
     private let textNode: TextNode
     private let updateIsActive: (Bool) -> Void
+    public var updateRange: ((NSRange?) -> Void)?
     private let present: (ViewController, Any?) -> Void
     private weak var rootNode: ASDisplayNode?
     private let performAction: (NSAttributedString, TextSelectionAction) -> Void
@@ -207,7 +209,7 @@ public final class TextSelectionNode: ASDisplayNode {
     
     public let highlightAreaNode: ASDisplayNode
     
-    private var recognizer: TextSelectionGetureRecognizer?
+    private var recognizer: TextSelectionGestureRecognizer?
     private var displayLinkAnimator: DisplayLinkAnimator?
     
     public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
@@ -250,7 +252,7 @@ public final class TextSelectionNode: ASDisplayNode {
             return self?.hitTest(point, with: event)
         }
        
-        let recognizer = TextSelectionGetureRecognizer(target: nil, action: nil)
+        let recognizer = TextSelectionGestureRecognizer(target: nil, action: nil)
         recognizer.knobAtPoint = { [weak self] point in
             return self?.knobAtPoint(point)
         }
@@ -395,6 +397,8 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     private func updateSelection(range: NSRange?, animateIn: Bool) {
+        self.updateRange?(range)
+        
         var rects: (rects: [CGRect], start: TextRangeRectEdge, end: TextRangeRectEdge)?
         
         if let range = range {
@@ -501,12 +505,18 @@ public final class TextSelectionNode: ASDisplayNode {
             self?.performAction(attributedText, .lookup)
             self?.dismissSelection()
         }))
-        if isSpeakSelectionEnabled() {
-            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
-                self?.performAction(attributedText, .speak)
+        if #available(iOS 15.0, *) {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+                self?.performAction(attributedText, .translate)
                 self?.dismissSelection()
             }))
         }
+//        if isSpeakSelectionEnabled() {
+//            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
+//                self?.performAction(attributedText, .speak)
+//                self?.dismissSelection()
+//            }))
+//        }
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             self?.performAction(attributedText, .share)
             self?.dismissSelection()

@@ -2,7 +2,6 @@ import Display
 import UIKit
 import AsyncDisplayKit
 import UIKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -57,6 +56,7 @@ final class ContactsControllerNode: ASDisplayNode {
     var requestAddContact: ((String) -> Void)?
     var openPeopleNearby: (() -> Void)?
     var openInvite: (() -> Void)?
+    var openQrScan: (() -> Void)?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -71,6 +71,7 @@ final class ContactsControllerNode: ASDisplayNode {
         
         var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
+        
         let options = [ContactListAdditionalOption(title: presentationData.strings.Contacts_AddPeopleNearby, icon: .generic(UIImage(bundleImageName: "Contact List/PeopleNearbyIcon")!), action: {
             addNearbyImpl?()
         }), ContactListAdditionalOption(title: presentationData.strings.Contacts_InviteFriends, icon: .generic(UIImage(bundleImageName: "Contact List/AddMemberIcon")!), action: {
@@ -87,7 +88,7 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        var contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+        var contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
         
         self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture in
             contextAction?(peer, node, gesture)
@@ -169,13 +170,13 @@ final class ContactsControllerNode: ASDisplayNode {
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
     }
     
-    private func contextAction(peer: Peer, node: ASDisplayNode, gesture: ContextGesture?) {
+    private func contextAction(peer: EnginePeer, node: ASDisplayNode, gesture: ContextGesture?) {
         guard let contactsController = self.controller else {
             return
         }
         let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
         chatController.canReadHistory.set(false)
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController) |> map { ContextController.Items(items: $0) }, reactionItems: [], gesture: gesture)
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
         contactsController.presentInGlobalOverlay(contextController)
     }
     

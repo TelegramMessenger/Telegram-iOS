@@ -20,6 +20,7 @@ import OverlayStatusController
 import PresentationDataUtils
 import DirectionalPanGesture
 import UndoUI
+import QrCodeUI
 
 class InviteLinkInviteInteraction {
     let context: AccountContext
@@ -158,13 +159,13 @@ public final class InviteLinkInviteController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peerId: PeerId
+    private let peerId: EnginePeer.Id
     private weak var parentNavigationController: NavigationController?
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
             
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, parentNavigationController: NavigationController?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, parentNavigationController: NavigationController?) {
         self.context = context
         self.peerId = peerId
         self.parentNavigationController = parentNavigationController
@@ -251,7 +252,7 @@ public final class InviteLinkInviteController: ViewController {
         private weak var controller: InviteLinkInviteController?
         
         private let context: AccountContext
-        private let peerId: PeerId
+        private let peerId: EnginePeer.Id
         private let invitesContext: PeerExportedInvitationsContext
         
         private var interaction: InviteLinkInviteInteraction?
@@ -278,7 +279,7 @@ public final class InviteLinkInviteController: ViewController {
         
         private var revokeDisposable = MetaDisposable()
         
-        init(context: AccountContext, presentationData: PresentationData, peerId: PeerId, controller: InviteLinkInviteController) {
+        init(context: AccountContext, presentationData: PresentationData, peerId: EnginePeer.Id, controller: InviteLinkInviteController) {
             self.context = context
             self.peerId = peerId
             
@@ -354,7 +355,7 @@ public final class InviteLinkInviteController: ViewController {
                 })))
                 
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.InviteLink_ContextGetQRCode, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Wallet/QrIcon"), color: theme.contextMenu.primaryColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: "Settings/QrIcon"), color: theme.contextMenu.primaryColor)
                 }, action: { _, f in
                     f(.dismissWithoutContent)
                     
@@ -371,7 +372,7 @@ public final class InviteLinkInviteController: ViewController {
                                 isGroup = true
                             }
                             let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
-                            let controller = InviteLinkQRCodeController(context: context, updatedPresentationData: updatedPresentationData, invite: invite, isGroup: isGroup)
+                            let controller = QrCodeScreen(context: context, updatedPresentationData: updatedPresentationData, subject: .invite(invite: invite, isGroup: isGroup))
                             strongSelf.controller?.present(controller, in: .window(.root))
                         })
                     }
@@ -418,7 +419,7 @@ public final class InviteLinkInviteController: ViewController {
                     })
                 })))
 
-                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(items: items)), reactionItems: [], gesture: gesture)
+                let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(InviteLinkContextReferenceContentSource(controller: controller, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
                 self?.controller?.presentInGlobalOverlay(contextController)
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
@@ -433,6 +434,46 @@ public final class InviteLinkInviteController: ViewController {
                 }
                 let updatedPresentationData = (strongSelf.presentationData, strongSelf.presentationDataPromise.get())
                 let shareController = ShareController(context: context, subject: .url(invite.link), updatedPresentationData: updatedPresentationData)
+                shareController.completed = { [weak self] peerIds in
+                    if let strongSelf = self {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
+                            var peers: [Peer] = []
+                            for peerId in peerIds {
+                                if let peer = transaction.getPeer(peerId) {
+                                    peers.append(peer)
+                                }
+                            }
+                            return peers
+                        } |> deliverOnMainQueue).start(next: { [weak self] peers in
+                            if let strongSelf = self {
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                
+                                let text: String
+                                var savedMessages = false
+                                if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_SavedMessages_One
+                                    savedMessages = true
+                                } else {
+                                    if peers.count == 1, let peer = peers.first {
+                                        let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_Chat_One(peerName).string
+                                    } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                        let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(firstPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : EnginePeer(secondPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                                    } else if let peer = peers.first {
+                                        let peerName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                                    } else {
+                                        text = ""
+                                    }
+                                }
+                                
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                            }
+                        })
+                    }
+                }
                 shareController.actionCompleted = { [weak self] in
                     if let strongSelf = self {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

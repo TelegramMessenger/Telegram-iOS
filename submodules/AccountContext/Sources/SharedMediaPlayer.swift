@@ -4,6 +4,7 @@ import Postbox
 import TelegramUIPreferences
 import SwiftSignalKit
 import UniversalMediaPlayer
+import MusicAlbumArtResources
 
 public enum SharedMediaPlaybackDataType {
     case music
@@ -12,13 +13,16 @@ public enum SharedMediaPlaybackDataType {
 }
 
 public enum SharedMediaPlaybackDataSource: Equatable {
-    case telegramFile(FileMediaReference)
+    case telegramFile(reference: FileMediaReference, isCopyProtected: Bool)
     
     public static func ==(lhs: SharedMediaPlaybackDataSource, rhs: SharedMediaPlaybackDataSource) -> Bool {
         switch lhs {
-        case let .telegramFile(lhsFileReference):
-            if case let .telegramFile(rhsFileReference) = rhs {
+        case let .telegramFile(lhsFileReference, lhsIsCopyProtected):
+            if case let .telegramFile(rhsFileReference, rhsIsCopyProtected) = rhs {
                 if !lhsFileReference.media.isEqual(to: rhsFileReference.media) {
+                    return false
+                }
+                if lhsIsCopyProtected != rhsIsCopyProtected {
                     return false
                 }
                 return true
@@ -44,24 +48,12 @@ public struct SharedMediaPlaybackData: Equatable {
 }
 
 public struct SharedMediaPlaybackAlbumArt: Equatable {
-    public let thumbnailResource: TelegramMediaResource
-    public let fullSizeResource: TelegramMediaResource
+    public let thumbnailResource: ExternalMusicAlbumArtResource
+    public let fullSizeResource: ExternalMusicAlbumArtResource
     
-    public init(thumbnailResource: TelegramMediaResource, fullSizeResource: TelegramMediaResource) {
+    public init(thumbnailResource: ExternalMusicAlbumArtResource, fullSizeResource: ExternalMusicAlbumArtResource) {
         self.thumbnailResource = thumbnailResource
         self.fullSizeResource = fullSizeResource
-    }
-    
-    public static func ==(lhs: SharedMediaPlaybackAlbumArt, rhs: SharedMediaPlaybackAlbumArt) -> Bool {
-        if !lhs.thumbnailResource.isEqual(to: rhs.thumbnailResource) {
-            return false
-        }
-        
-        if !lhs.fullSizeResource.isEqual(to: rhs.fullSizeResource) {
-            return false
-        }
-        
-        return true
     }
 }
 

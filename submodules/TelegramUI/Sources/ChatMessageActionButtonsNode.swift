@@ -38,8 +38,6 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         
         self.addSubnode(self.backgroundBlurNode)
         self.addSubnode(self.accessibilityArea)
-
-        //self.backgroundBlurNode.view.mask = backgroundMaskNode.view
         
         self.accessibilityArea.activate = { [weak self] in
             self?.buttonPressed()
@@ -85,7 +83,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ bubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ bubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ message: Message, _ button: ReplyMarkupButton, _ constrainedWidth: CGFloat, _ position: MessageBubbleActionButtonPosition) -> (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))) {
         let titleLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         
         return { context, theme, bubbleCorners, strings, message, button, constrainedWidth, position in
@@ -106,6 +104,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingShareIconImage : graphics.chatBubbleActionButtonOutgoingShareIconImage
                 case .payment:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
+                case .openUserProfile:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingProfileIconImage : graphics.chatBubbleActionButtonOutgoingProfileIconImage
                 default:
                     iconImage = nil
             }
@@ -140,12 +140,15 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             }
             
             return (titleSize.size.width + sideInset + sideInset, { width in
-                return (CGSize(width: width, height: 42.0), {
+                return (CGSize(width: width, height: 42.0), { animation in
+                    var animation = animation
+                    
                     let node: ChatMessageActionButtonNode
                     if let maybeNode = maybeNode {
                         node = maybeNode
                     } else {
                         node = ChatMessageActionButtonNode()
+                        animation = .None
                     }
                     
                     node.button = button
@@ -158,10 +161,10 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     }
                     
                     node.backgroundMaskNode.image = backgroundMaskImage
-                    node.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
+                    animation.animator.updateFrame(layer: node.backgroundMaskNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0)), completion: nil)
 
-                    node.backgroundBlurNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0))
-                    node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: bubbleCorners.auxiliaryRadius, transition: .immediate)
+                    animation.animator.updateFrame(layer: node.backgroundBlurNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: max(0.0, width), height: 42.0)), completion: nil)
+                    node.backgroundBlurNode.update(size: node.backgroundBlurNode.bounds.size, cornerRadius: bubbleCorners.auxiliaryRadius, animator: animation.animator)
                     node.backgroundBlurNode.updateColor(color: selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper), transition: .immediate)
                     
                     if iconImage != nil {
@@ -183,11 +186,17 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         node.addSubnode(titleNode)
                         titleNode.isUserInteractionEnabled = false
                     }
-                    titleNode.frame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
                     
+                    let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
+                    titleNode.layer.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                    animation.animator.updatePosition(layer: titleNode.layer, position: titleFrame.center, completion: nil)
                     
-                    node.buttonView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
-                    node.iconNode?.frame = CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0)
+                    if let buttonView = node.buttonView {
+                        buttonView.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
+                    }
+                    if let iconNode = node.iconNode {
+                        animation.animator.updateFrame(layer: iconNode.layer, frame: CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0), completion: nil)
+                    }
                     
                     node.accessibilityArea.accessibilityLabel = title
                     node.accessibilityArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
@@ -223,7 +232,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ chatBubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animated: Bool) -> ChatMessageActionButtonsNode)) {
+    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ chatBubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
         return { context, theme, chatBubbleCorners, strings, replyMarkup, message, constrainedWidth in
@@ -232,14 +241,14 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
             
             var overallMinimumRowWidth: CGFloat = 0.0
             
-            var finalizeRowLayouts: [[((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))]] = []
+            var finalizeRowLayouts: [[((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))]] = []
             
             var rowIndex = 0
             var buttonIndex = 0
             for row in replyMarkup.rows {
                 var maximumRowButtonWidth: CGFloat = 0.0
                 let maximumButtonWidth: CGFloat = max(1.0, floor((constrainedWidth - CGFloat(max(0, row.buttons.count - 1)) * buttonSpacing) / CGFloat(row.buttons.count)))
-                var finalizeRowButtonLayouts: [((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode))] = []
+                var finalizeRowButtonLayouts: [((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode))] = []
                 var rowButtonIndex = 0
                 for button in row.buttons {
                     let buttonPosition: MessageBubbleActionButtonPosition
@@ -257,7 +266,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                         buttonPosition = .middle
                     }
                     
-                    let prepareButtonLayout: (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, () -> ChatMessageActionButtonNode)))
+                    let prepareButtonLayout: (minimumWidth: CGFloat, layout: ((CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode)))
                     if buttonIndex < currentButtonLayouts.count {
                         prepareButtonLayout = currentButtonLayouts[buttonIndex](context, theme, chatBubbleCorners, strings, message, button, maximumButtonWidth, buttonPosition)
                     } else {
@@ -278,7 +287,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
             }
             
             return (min(constrainedWidth, overallMinimumRowWidth), { constrainedWidth in
-                var buttonFramesAndApply: [(CGRect, () -> ChatMessageActionButtonNode)] = []
+                var buttonFramesAndApply: [(CGRect, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode)] = []
                 
                 var verticalRowOffset: CGFloat = 0.0
                 verticalRowOffset += buttonSpacing
@@ -301,7 +310,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                     verticalRowOffset = max(0.0, verticalRowOffset - buttonSpacing)
                 }
                 
-                return (CGSize(width: constrainedWidth, height: verticalRowOffset), { animated in
+                return (CGSize(width: constrainedWidth, height: verticalRowOffset), { animation in
                     let node: ChatMessageActionButtonsNode
                     if let maybeNode = maybeNode {
                         node = maybeNode
@@ -312,13 +321,16 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                     var updatedButtons: [ChatMessageActionButtonNode] = []
                     var index = 0
                     for (buttonFrame, buttonApply) in buttonFramesAndApply {
-                        let buttonNode = buttonApply()
-                        buttonNode.frame = buttonFrame
+                        let buttonNode = buttonApply(animation)
                         updatedButtons.append(buttonNode)
                         if buttonNode.supernode == nil {
-                            node.addSubnode(buttonNode)
                             buttonNode.pressed = node.buttonPressedWrapper
                             buttonNode.longTapped = node.buttonLongTappedWrapper
+                            buttonNode.frame = buttonFrame
+                            
+                            node.addSubnode(buttonNode)
+                        } else {
+                            animation.animator.updateFrame(layer: buttonNode.layer, frame: buttonFrame, completion: nil)
                         }
                         index += 1
                     }
@@ -342,12 +354,6 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                         }
                     }
                     node.buttonNodes = updatedButtons
-                    
-                    if animated {
-                        /*UIView.transition(with: node.view, duration: 0.2, options: [.transitionCrossDissolve], animations: {
-                            
-                        }, completion: nil)*/
-                    }
                     
                     return node
                 })

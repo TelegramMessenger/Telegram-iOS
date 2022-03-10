@@ -128,7 +128,7 @@ public class ChatTitleActivityContentNode: ASDisplayNode {
         if case .center = alignment {
             self.textNode.position = CGPoint(x: 0.0, y: size.height / 2.0 + offset)
         } else {
-            self.textNode.position = CGPoint(x: size.width / 2.0, y: size.height / 2.0 + offset)
+            self.textNode.position = CGPoint(x: size.width / 2.0 + 3.0, y: size.height / 2.0 + offset)
         }
         return size
     }

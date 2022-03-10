@@ -105,12 +105,15 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
             
             let displaySeparator: Bool
             let topOffset: CGFloat
+            let topSeparatorOffset: CGFloat
             if case let .linear(top, _) = preparePosition, case .Neighbour(_, .media, _) = top {
                 displaySeparator = false
                 topOffset = 2.0
+                topSeparatorOffset = 0.0
             } else {
                 displaySeparator = true
-                topOffset = 0.0
+                topOffset = 2.0
+                topSeparatorOffset = 2.0
             }
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
@@ -374,7 +377,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.separatorNode.backgroundColor = messageTheme.polls.separator
                             strongSelf.separatorNode.isHidden = !displaySeparator
-                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: layoutConstants.bubble.strokeInsets.left, y: -3.0), size: CGSize(width: boundingWidth - layoutConstants.bubble.strokeInsets.left - layoutConstants.bubble.strokeInsets.right, height: UIScreenPixel))
+                            strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: layoutConstants.bubble.strokeInsets.left, y: -3.0 + topSeparatorOffset), size: CGSize(width: boundingWidth - layoutConstants.bubble.strokeInsets.left - layoutConstants.bubble.strokeInsets.right, height: UIScreenPixel))
                             
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: boundingWidth, height: boundingSize.height))
                             
@@ -417,7 +420,3 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         return nil
     }
 }
-
-
-
-

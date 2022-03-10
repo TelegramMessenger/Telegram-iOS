@@ -40,5 +40,23 @@ public extension TelegramEngine {
         public func acceptAndShareContact(peerId: PeerId) -> Signal<Never, AcceptAndShareContactError> {
             return _internal_acceptAndShareContact(account: self.account, peerId: peerId)
         }
+
+        public func searchRemotePeers(query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+            return _internal_searchPeers(account: self.account, query: query)
+        }
+
+        public func searchLocalPeers(query: String) -> Signal<[EngineRenderedPeer], NoError> {
+            return self.account.postbox.searchPeers(query: query)
+            |> map { peers in
+                return peers.map(EngineRenderedPeer.init)
+            }
+        }
+
+        public func searchContacts(query: String) -> Signal<([EnginePeer], [EnginePeer.Id: EnginePeer.Presence]), NoError> {
+            return self.account.postbox.searchContacts(query: query)
+            |> map { peers, presences in
+                return (peers.map(EnginePeer.init), presences.mapValues(EnginePeer.Presence.init))
+            }
+        }
     }
 }

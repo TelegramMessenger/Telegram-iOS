@@ -9,6 +9,7 @@ import AVFoundation
 import ContextUI
 import TelegramPresentationData
 import ShimmerEffect
+import SoftwareVideo
 
 final class MultiplexedVideoPlaceholderNode: ASDisplayNode {
     private let effectNode: ShimmerEffectNode
@@ -168,7 +169,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         self.trackingNode.isLayerBacked = true
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseCreateWithSourceClock(allocator: nil, sourceClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
         CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         

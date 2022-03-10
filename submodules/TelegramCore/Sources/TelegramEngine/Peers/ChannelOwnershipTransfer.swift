@@ -77,8 +77,7 @@ func _internal_updateChannelOwnership(account: Account, accountStateManager: Acc
     }
     
     return combineLatest(_internal_fetchChannelParticipant(account: account, peerId: channelId, participantId: account.peerId), _internal_fetchChannelParticipant(account: account, peerId: channelId, participantId: memberId))
-    |> mapError { error -> ChannelOwnershipTransferError in
-        return .generic
+    |> mapError { _ -> ChannelOwnershipTransferError in
     }
     |> mapToSignal { currentCreator, currentParticipant -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
         return account.postbox.transaction { transaction -> Signal<[(ChannelParticipant?, RenderedChannelParticipant)], ChannelOwnershipTransferError> in
@@ -185,14 +184,14 @@ func _internal_updateChannelOwnership(account: Account, accountStateManager: Acc
                             }
                             return [(currentCreator, RenderedChannelParticipant(participant: updatedPreviousCreator, peer: accountUser, peers: peers, presences: presences)), (currentParticipant, RenderedChannelParticipant(participant: updatedParticipant, peer: user, peers: peers, presences: presences))]
                         }
-                        |> mapError { _ -> ChannelOwnershipTransferError in return .generic }
+                        |> mapError { _ -> ChannelOwnershipTransferError in }
                     }
                 }
             } else {
                 return .fail(.generic)
             }
         }
-        |> mapError { _ -> ChannelOwnershipTransferError in return .generic }
+        |> mapError { _ -> ChannelOwnershipTransferError in }
         |> switchToLatest
     }
 }

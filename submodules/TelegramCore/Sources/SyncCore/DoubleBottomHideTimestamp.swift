@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public struct DoubleBottomHideTimestamp: PreferencesEntry, Equatable {
+public struct DoubleBottomHideTimestamp: Codable, Equatable, PostboxCoding {
     public var timestamp: Int64
     
     public static var defaultValue: DoubleBottomHideTimestamp {
@@ -20,7 +20,7 @@ public struct DoubleBottomHideTimestamp: PreferencesEntry, Equatable {
         encoder.encodeInt64(self.timestamp, forKey: "t")
     }
     
-    public func isEqual(to: PreferencesEntry) -> Bool {
+    public func isEqual(to: Codable) -> Bool {
         guard let to = to as? DoubleBottomHideTimestamp else {
             return false
         }

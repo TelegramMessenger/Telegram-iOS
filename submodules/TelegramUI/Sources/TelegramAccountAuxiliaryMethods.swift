@@ -21,18 +21,12 @@ public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(fetchResour
         return fetchLocalFileGifMediaResource(resource: resource)
     } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {
         return fetchPhotoLibraryResource(localIdentifier: photoLibraryResource.localIdentifier)
-    } else if let resource = resource as? ExternalMusicAlbumArtResource {
-        return fetchExternalMusicAlbumArtResource(account: account, resource: resource)
     } else if let resource = resource as? ICloudFileResource {
         return fetchICloudFileResource(resource: resource)
     } else if let resource = resource as? SecureIdLocalImageResource {
         return fetchSecureIdLocalImageResource(postbox: account.postbox, resource: resource)
-    } else if let resource = resource as? OpenInAppIconResource {
-        return fetchOpenInAppIconResource(resource: resource)
     } else if let resource = resource as? EmojiSpriteResource {
         return fetchEmojiSpriteResource(account: account, resource: resource)
-    } else if let resource = resource as? VenueIconResource {
-        return fetchVenueIconResource(account: account, resource: resource)
     } else if let resource = resource as? BundleResource {
         return Signal { subscriber in
             subscriber.putNext(.reset)

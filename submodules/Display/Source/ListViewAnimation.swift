@@ -7,15 +7,15 @@ public protocol Interpolatable {
 }
 
 private func floorToPixels(_ value: CGFloat) -> CGFloat {
-    return round(value * 10.0) / 10.0
+    return value
 }
 
 private func floorToPixels(_ value: CGPoint) -> CGPoint {
-    return CGPoint(x: round(value.x * 10.0) / 10.0, y: round(value.y * 10.0) / 10.0)
+    return CGPoint(x: floorToPixels(value.x), y: floorToPixels(value.y))
 }
 
 private func floorToPixels(_ value: CGSize) -> CGSize {
-    return CGSize(width: round(value.width * 10.0) / 10.0, height: round(value.height * 10.0) / 10.0)
+    return CGSize(width: floorToPixels(value.width), height: floorToPixels(value.height))
 }
 
 private func floorToPixels(_ value: CGRect) -> CGRect {
@@ -23,7 +23,7 @@ private func floorToPixels(_ value: CGRect) -> CGRect {
 }
 
 private func floorToPixels(_ value: UIEdgeInsets) -> UIEdgeInsets {
-    return UIEdgeInsets(top: round(value.top * 10.0) / 10.0, left: round(value.left * 10.0) / 10.0, bottom: round(value.bottom * 10.0) / 10.0, right: round(value.right * 10.0) / 10.0)
+    return UIEdgeInsets(top: floorToPixels(value.top), left: floorToPixels(value.left), bottom: floorToPixels(value.bottom), right: floorToPixels(value.right))
 }
 
 extension CGFloat: Interpolatable {
@@ -35,6 +35,12 @@ extension CGFloat: Interpolatable {
             let term: CGFloat = toValue * t + fromValue * invT
             return floorToPixels(term)
         }
+    }
+    
+    static func interpolate(from fromValue: CGFloat, to toValue: CGFloat, at t: CGFloat) -> CGFloat {
+        let invT: CGFloat = 1.0 - t
+        let term: CGFloat = toValue * t + fromValue * invT
+        return term
     }
 }
 
@@ -56,6 +62,10 @@ extension CGRect: Interpolatable {
             return floorToPixels(CGRect(x: toValue.origin.x * t + fromValue.origin.x * (1.0 - t), y: toValue.origin.y * t + fromValue.origin.y * (1.0 - t), width: toValue.size.width * t + fromValue.size.width * (1.0 - t), height: toValue.size.height * t + fromValue.size.height * (1.0 - t)))
         }
     }
+    
+    static func interpolate(from fromValue: CGRect, to toValue: CGRect, at t: CGFloat) -> CGRect {
+        return CGRect(origin: CGPoint.interpolate(from: fromValue.origin, to: toValue.origin, at: t), size: CGSize.interpolate(from: fromValue.size, to: toValue.size, at: t))
+    }
 }
 
 extension CGPoint: Interpolatable {
@@ -66,6 +76,16 @@ extension CGPoint: Interpolatable {
             return floorToPixels(CGPoint(x: toValue.x * t + fromValue.x * (1.0 - t), y: toValue.y * t + fromValue.y * (1.0 - t)))
         }
     }
+    
+    static func interpolate(from fromValue: CGPoint, to toValue: CGPoint, at t: CGFloat) -> CGPoint {
+        return CGPoint(x: toValue.x * t + fromValue.x * (1.0 - t), y: toValue.y * t + fromValue.y * (1.0 - t))
+    }
+}
+
+extension CGSize {
+    static func interpolate(from fromValue: CGSize, to toValue: CGSize, at t: CGFloat) -> CGSize {
+        return CGSize(width: toValue.width * t + fromValue.width * (1.0 - t), height: toValue.height * t + fromValue.height * (1.0 - t))
+    }
 }
 
 private let springAnimationIn: CABasicAnimation = {
@@ -73,7 +93,7 @@ private let springAnimationIn: CABasicAnimation = {
     return animation
 }()
 
-private let springAnimationSolver: (CGFloat) -> CGFloat = { () -> (CGFloat) -> CGFloat in
+let springAnimationSolver: (CGFloat) -> CGFloat = { () -> (CGFloat) -> CGFloat in
     if #available(iOS 9.0, *) {
         return { t in
             return springAnimationValueAt(springAnimationIn, t)

@@ -67,52 +67,69 @@ public final class DisplayLinkAnimator {
 }
 
 public final class ConstantDisplayLinkAnimator {
-    private var displayLink: CADisplayLink!
+    private var displayLink: CADisplayLink?
     private let update: () -> Void
     private var completed = false
     
     public var frameInterval: Int = 1 {
         didSet {
-            if #available(iOS 10.0, *) {
-                let preferredFramesPerSecond: Int
-                if self.frameInterval == 1 {
-                    preferredFramesPerSecond = 60
-                } else {
-                    preferredFramesPerSecond = 30
-                }
-                self.displayLink.preferredFramesPerSecond = preferredFramesPerSecond
+            self.updateDisplayLink()
+        }
+    }
+    
+    private func updateDisplayLink() {
+        guard let displayLink = self.displayLink else {
+            return
+        }
+        if #available(iOS 10.0, *) {
+            let preferredFramesPerSecond: Int
+            if self.frameInterval == 1 {
+                preferredFramesPerSecond = 60
             } else {
-                self.displayLink.frameInterval = self.frameInterval
+                preferredFramesPerSecond = 30
             }
+            displayLink.preferredFramesPerSecond = preferredFramesPerSecond
+        } else {
+            displayLink.frameInterval = self.frameInterval
         }
     }
     
     public var isPaused: Bool = true {
         didSet {
             if self.isPaused != oldValue {
-                self.displayLink.isPaused = self.isPaused
+                if !self.isPaused && self.displayLink == nil {
+                    let displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
+                        self?.tick()
+                    }), selector: #selector(DisplayLinkTarget.event))
+                    /*if #available(iOS 15.0, *) {
+                        self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
+                    }*/
+                    displayLink.add(to: RunLoop.main, forMode: .common)
+                    self.displayLink = displayLink
+                    self.updateDisplayLink()
+                }
+                
+                self.displayLink?.isPaused = self.isPaused
             }
         }
     }
     
     public init(update: @escaping () -> Void) {
         self.update = update
-        
-        self.displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
-            self?.tick()
-        }), selector: #selector(DisplayLinkTarget.event))
-        self.displayLink.isPaused = true
-        self.displayLink.add(to: RunLoop.main, forMode: .common)
     }
     
     deinit {
-        self.displayLink.isPaused = true
-        self.displayLink.invalidate()
+        if let displayLink = self.displayLink {
+            displayLink.isPaused = true
+            displayLink.invalidate()
+        }
     }
     
     public func invalidate() {
-        self.displayLink.isPaused = true
-        self.displayLink.invalidate()
+        if let displayLink = self.displayLink {
+            displayLink.isPaused = true
+            displayLink.invalidate()
+        }
     }
     
     @objc private func tick() {

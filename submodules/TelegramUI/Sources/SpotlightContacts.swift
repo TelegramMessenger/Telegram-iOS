@@ -187,11 +187,13 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
     return accounts
     |> mapToSignal { accounts -> Signal<[[PeerId: SpotlightIndexStorageItem]], NoError> in
         return combineLatest(queue: queue, accounts.map { account -> Signal<[PeerId: SpotlightIndexStorageItem], NoError> in
-            return account.postbox.contactPeersView(accountPeerId: account.peerId, includePresences: false)
-            |> map { view -> [PeerId: SpotlightIndexStorageItem] in
-                var result: [PeerId: SpotlightIndexStorageItem] = [:]
+            return TelegramEngine(account: account).data.subscribe(
+                TelegramEngine.EngineData.Item.Contacts.List(includePresences: false)
+            )
+            |> map { view -> [EnginePeer.Id: SpotlightIndexStorageItem] in
+                var result: [EnginePeer.Id: SpotlightIndexStorageItem] = [:]
                 for peer in view.peers {
-                    if let user = peer as? TelegramUser {
+                    if case let .user(user) = peer {
                         let avatarSourcePath = smallestImageRepresentation(user.photo).flatMap { representation -> String? in
                             let resourcePath = account.postbox.mediaBox.resourcePath(representation.resource)
                             if resourcePath.hasPrefix(appBasePath + "/") {
@@ -208,8 +210,8 @@ private func manageableSpotlightContacts(appBasePath: String, accounts: Signal<[
             |> distinctUntilChanged
         })
     }
-    |> map { accountContacts -> [PeerId: SpotlightIndexStorageItem] in
-        var result: [PeerId: SpotlightIndexStorageItem] = [:]
+    |> map { accountContacts -> [EnginePeer.Id: SpotlightIndexStorageItem] in
+        var result: [EnginePeer.Id: SpotlightIndexStorageItem] = [:]
         for singleAccountContacts in accountContacts {
             for (peerId, contact) in singleAccountContacts {
                 if result[peerId] == nil {

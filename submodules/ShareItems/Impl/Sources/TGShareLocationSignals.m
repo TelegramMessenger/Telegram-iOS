@@ -1,6 +1,6 @@
 #import <ShareItemsImpl/TGShareLocationSignals.h>
 
-#import <MTProtoKit/MTProtoKit.h>
+#import <MtProtoKit/MtProtoKit.h>
 
 NSString *const TGShareAppleMapsHost = @"maps.apple.com";
 NSString *const TGShareAppleMapsPath = @"/maps";

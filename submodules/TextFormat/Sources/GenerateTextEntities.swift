@@ -2,6 +2,14 @@ import Foundation
 import UIKit
 import TelegramCore
 
+private let whitelistedHosts: Set<String> = Set([
+    "telegram.org",
+    "t.me",
+    "telegram.me",
+    "telegra.ph",
+    "telesco.pe"
+])
+
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 private let dataAndPhoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link, .phoneNumber]).rawValue)
 private let phoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.phoneNumber]).rawValue)
@@ -101,8 +109,12 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     var overlaps = false
     for entity in entities {
         if entity.range.overlaps(indexRange) {
-            overlaps = true
-            break
+            if case .Spoiler = entity.type {
+                
+            } else {
+                overlaps = true
+                break
+            }
         }
     }
     if !overlaps {
@@ -148,6 +160,8 @@ public func generateChatInputTextEntities(_ text: NSAttributedString) -> [Messag
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextMention(peerId: value.peerId)))
             } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .TextUrl(url: value.url)))
+            } else if key == ChatTextInputAttributes.spoiler {
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Spoiler))
             }
         }
     })
@@ -184,10 +198,14 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                                     return
                                 }
                                 if url.scheme != "tg" {
-                                    guard let host = url.host?.lowercased() else {
+                                    guard var host = url.host?.lowercased() else {
                                         return
                                     }
-                                    if host == "telegram.org" || host == "t.me" {
+                                    let www = "www."
+                                    if host.hasPrefix(www) {
+                                        host.removeFirst(www.count)
+                                    }
+                                    if whitelistedHosts.contains(host) {
                                     } else {
                                         return
                                     }
@@ -309,7 +327,7 @@ public func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEnt
         }
     }
     
-    if hasDigits {
+    if hasDigits || hasColons {
         if let phoneNumberDetector = phoneNumberDetector, detectPhoneNumbers {
             let utf16 = text.utf16
             phoneNumberDetector.enumerateMatches(in: text, options: [], range: NSMakeRange(0, utf16.count), using: { result, _, _ in

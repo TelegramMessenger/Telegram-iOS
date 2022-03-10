@@ -117,7 +117,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
     return entries.map { entry -> ListViewInsertItem in
         switch entry.entry {
             case let .displayTab(_, text, value):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: false, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(_, text):
@@ -125,7 +125,7 @@ private func mappedInsertEntries(context: AccountContext, presentationData: Item
             case let .groupCall(peer, _, isActive):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListGroupCallItem(presentationData: presentationData, context: context, style: showSettings ? .blocks : .plain, peer: peer, isActive: isActive, editing: false, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .messageEntry(topMessage, messages, _, _, dateTimeFormat, editing, hasActiveRevealControls, displayHeader, _):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, displayHeader: displayHeader, interaction: nodeInteraction), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, context: context, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, displayHeader: displayHeader, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
@@ -136,7 +136,7 @@ private func mappedUpdateEntries(context: AccountContext, presentationData: Item
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
             case let .displayTab(_, text, value):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: true, sectionId: 0, style: .blocks, updated: { value in
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, noCorners: false, sectionId: 0, style: .blocks, updated: { value in
                     nodeInteraction.updateShowCallsTab(value)
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(_, text):
@@ -177,6 +177,8 @@ final class CallListControllerNode: ASDisplayNode {
         return _ready.get()
     }
     
+    weak var navigationBar: NavigationBar?
+    
     var peerSelected: ((EnginePeer.Id) -> Void)?
     var activateSearch: (() -> Void)?
     var deletePeerChat: ((EnginePeer.Id) -> Void)?
@@ -214,6 +216,8 @@ final class CallListControllerNode: ASDisplayNode {
     private let emptyStateDisposable = MetaDisposable()
     
     private let openGroupCallDisposable = MetaDisposable()
+    
+    private var previousContentOffset: ListViewVisibleContentOffset?
     
     init(controller: CallListController, context: AccountContext, mode: CallListControllerMode, presentationData: PresentationData, call: @escaping (EnginePeer.Id, Bool) -> Void, joinGroupCall: @escaping (EnginePeer.Id, EngineGroupCallDescription) -> Void, openInfo: @escaping (EnginePeer.Id, [EngineMessage]) -> Void, emptyStateUpdated: @escaping (Bool) -> Void) {
         self.controller = controller
@@ -272,7 +276,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.addSubnode(self.emptyButtonTextNode)
         self.addSubnode(self.emptyButtonIconNode)
         self.addSubnode(self.emptyButtonNode)
-        
+                
         switch self.mode {
             case .tab:
                 self.backgroundColor = presentationData.theme.chatList.backgroundColor
@@ -451,7 +455,7 @@ final class CallListControllerNode: ASDisplayNode {
         let showCallsTab = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings])
         |> map { sharedData -> Bool in
             var value = CallListSettings.defaultSettings.showTab
-            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings] as? CallListSettings {
+            if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings]?.get(CallListSettings.self) {
                 value = settings.showTab
             }
             return value
@@ -607,6 +611,39 @@ final class CallListControllerNode: ASDisplayNode {
                 strongSelf.updateEmptyPlaceholder(theme: state.presentationData.theme, strings: state.presentationData.strings, type: type, isHidden: !isEmpty)
             }
         }))
+        
+        if case .navigation = mode {
+            self.listNode.itemNodeHitTest = { [weak self] point in
+                if let strongSelf = self {
+                    return point.x > strongSelf.leftOverlayNode.frame.maxX && point.x < strongSelf.rightOverlayNode.frame.minX
+                } else {
+                    return true
+                }
+            }
+            
+            self.listNode.visibleContentOffsetChanged = { [weak self] offset in
+                if let strongSelf = self {
+                    var previousContentOffsetValue: CGFloat?
+                    if let previousContentOffset = strongSelf.previousContentOffset, case let .known(value) = previousContentOffset {
+                        previousContentOffsetValue = value
+                    }
+                    switch offset {
+                        case let .known(value):
+                            let transition: ContainedViewLayoutTransition
+                            if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
+                                transition = .animated(duration: 0.2, curve: .easeInOut)
+                            } else {
+                                transition = .immediate
+                            }
+                            strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                        case .unknown, .none:
+                            strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                    }
+                    
+                    strongSelf.previousContentOffset = offset
+                }
+            }
+        }
     }
     
     deinit {
@@ -838,8 +875,30 @@ final class CallListControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += max(navigationBarHeight, layout.insets(options: [.statusBar]).top)
-        insets.left += layout.safeInsets.left
-        insets.right += layout.safeInsets.right
+        
+        let inset: CGFloat
+        if layout.size.width >= 375.0 {
+            inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        } else {
+            inset = 0.0
+        }
+        if case .navigation = self.mode {
+            insets.left += inset
+            insets.right += inset
+            
+            self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: insets.left, height: layout.size.height)
+            self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: 0.0, width: insets.right, height: layout.size.height)
+            
+            if self.leftOverlayNode.supernode == nil {
+                self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
+            }
+            if self.rightOverlayNode.supernode == nil {
+                self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
+            }
+        } else {
+            insets.left += layout.safeInsets.left
+            insets.right += layout.safeInsets.right
+        }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)

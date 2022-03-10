@@ -88,6 +88,11 @@
     return _cachedAVAsset;
 }
 
+- (NSString *)uniformTypeIdentifier
+{
+    return nil;
+}
+
 - (SSignal *)avAsset {
     if (_originalAsset != nil) {
         if (_cachedAVAsset != nil) {

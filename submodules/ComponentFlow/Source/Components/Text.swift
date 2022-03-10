@@ -30,7 +30,7 @@ public final class Text: Component {
     public final class View: UIView {
         private var measureState: MeasureState?
 
-        func update(component: Text, availableSize: CGSize) -> CGSize {
+        public func update(component: Text, availableSize: CGSize) -> CGSize {
             let attributedText = NSAttributedString(string: component.text, attributes: [
                 NSAttributedString.Key.font: component.font,
                 NSAttributedString.Key.foregroundColor: component.color
@@ -95,7 +95,7 @@ public final class Text: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize)
     }
 }

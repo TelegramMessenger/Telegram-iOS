@@ -37,7 +37,7 @@ func _internal_toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinned
                 additionalCount = 1
             }
             
-            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
+            let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
             let limitCount: Int
             if case .root = groupId {
                 limitCount = Int(limitsConfiguration.maxPinnedChatCount)

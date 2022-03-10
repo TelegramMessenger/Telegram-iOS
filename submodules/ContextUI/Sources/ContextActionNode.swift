@@ -4,7 +4,7 @@ import Display
 import TelegramPresentationData
 import SwiftSignalKit
 
-enum ContextActionSibling {
+public enum ContextActionSibling {
     case none
     case item
     case separator
@@ -13,13 +13,17 @@ enum ContextActionSibling {
 public protocol ContextActionNodeProtocol: ASDisplayNode {
     func setIsHighlighted(_ value: Bool)
     func performAction()
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol
     var isActionEnabled: Bool { get }
 }
 
-final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
-    private let action: ContextMenuActionItem
+public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
+    private var presentationData: PresentationData
+    private(set) var action: ContextMenuActionItem
     private let getController: () -> ContextControllerProtocol?
     private let actionSelected: (ContextMenuActionResult) -> Void
+    private let requestLayout: () -> Void
+    private let requestUpdateAction: (AnyHashable, ContextMenuActionItem) -> Void
     
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -34,14 +38,17 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     
     private var pointerInteraction: PointerInteraction?
 
-    var isActionEnabled: Bool {
+    public var isActionEnabled: Bool {
         return true
     }
     
-    init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    public init(presentationData: PresentationData, action: ContextMenuActionItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, requestLayout: @escaping () -> Void, requestUpdateAction: @escaping (AnyHashable, ContextMenuActionItem) -> Void) {
+        self.presentationData = presentationData
         self.action = action
         self.getController = getController
         self.actionSelected = actionSelected
+        self.requestLayout = requestLayout
+        self.requestUpdateAction = requestUpdateAction
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         
@@ -63,6 +70,8 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             textColor = presentationData.theme.contextMenu.primaryColor
         case .destructive:
             textColor = presentationData.theme.contextMenu.destructiveColor
+        case .disabled:
+            textColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
         }
         
         let titleFont: UIFont
@@ -73,7 +82,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             titleFont = customFont
         }
         
-        let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 13.0 / 17.0)
+        let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
         
         self.textNode.attributedText = NSAttributedString(string: action.text, font: titleFont, textColor: textColor)
         
@@ -156,6 +165,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             }
         }
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        self.buttonNode.isUserInteractionEnabled = self.action.action != nil
         
         if let iconSource = action.iconSource {
             self.iconDisposable = (iconSource.signal
@@ -172,7 +182,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         self.iconDisposable?.dispose()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.pointerInteraction = PointerInteraction(node: self.buttonNode, style: .hover, willEnter: { [weak self] in
@@ -186,7 +196,7 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         })
     }
     
-    func updateLayout(constrainedWidth: CGFloat, previous: ContextActionSibling, next: ContextActionSibling) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+    public func updateLayout(constrainedWidth: CGFloat, previous: ContextActionSibling, next: ContextActionSibling) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
         let iconSideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 12.0
@@ -263,7 +273,9 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         }
     }
     
-    func updateTheme(presentationData: PresentationData) {
+    public func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
+
         self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
         self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
@@ -273,6 +285,8 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             textColor = presentationData.theme.contextMenu.primaryColor
         case .destructive:
             textColor = presentationData.theme.contextMenu.destructiveColor
+        case .disabled:
+            textColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
         }
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
@@ -305,21 +319,65 @@ final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
     @objc private func buttonPressed() {
         self.performAction()
     }
+
+    func updateAction(item: ContextMenuActionItem) {
+        self.action = item
+
+        let textColor: UIColor
+        switch self.action.textColor {
+        case .primary:
+            textColor = self.presentationData.theme.contextMenu.primaryColor
+        case .destructive:
+            textColor = self.presentationData.theme.contextMenu.destructiveColor
+        case .disabled:
+            textColor = self.presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
+        }
+
+        let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
+        let titleFont: UIFont
+        switch self.action.textFont {
+        case .regular:
+            titleFont = textFont
+        case let .custom(customFont):
+            titleFont = customFont
+        }
+
+        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: titleFont, textColor: textColor)
+
+        if self.action.iconSource == nil {
+            self.iconNode.image = self.action.icon(self.presentationData.theme)
+        }
+
+        self.requestLayout()
+    }
     
-    func performAction() {
+    public func performAction() {
         guard let controller = self.getController() else {
             return
         }
-        self.action.action(controller, { [weak self] result in
-            self?.actionSelected(result)
-        })
+        self.action.action?(ContextMenuActionItem.Action(
+            controller: controller,
+            dismissWithResult: { [weak self] result in
+                self?.actionSelected(result)
+            },
+            updateAction: { [weak self] id, updatedAction in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestUpdateAction(id, updatedAction)
+            }
+        ))
     }
     
-    func setIsHighlighted(_ value: Bool) {
-        if value {
+    public func setIsHighlighted(_ value: Bool) {
+        if value && self.buttonNode.isUserInteractionEnabled {
             self.highlightedBackgroundNode.alpha = 1.0
         } else {
             self.highlightedBackgroundNode.alpha = 0.0
         }
+    }
+    
+    public func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
+        return self
     }
 }

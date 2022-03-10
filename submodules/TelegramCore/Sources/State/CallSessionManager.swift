@@ -63,10 +63,52 @@ enum CallSessionInternalState {
     case active(id: Int64, accessHash: Int64, beginTimestamp: Int32, key: Data, keyId: Int64, keyVisualHash: Data, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowsP2P: Bool)
     case dropping(reason: CallSessionTerminationReason, disposable: Disposable)
     case terminated(id: Int64?, accessHash: Int64?, reason: CallSessionTerminationReason, reportRating: Bool, sendDebugLogs: Bool)
+
+    var stableId: Int64? {
+        switch self {
+        case let .ringing(id, _, _, _, _):
+            return id
+        case let .accepting(id, _, _, _, _):
+            return id
+        case let .awaitingConfirmation(id, _, _, _, _):
+            return id
+        case .requesting:
+            return nil
+        case let .requested(id, _, _, _, _, _):
+            return id
+        case let .confirming(id, _, _, _, _, _):
+            return id
+        case let .active(id, _, _, _, _, _, _, _, _, _):
+            return id
+        case .dropping:
+            return nil
+        case let .terminated(id, _, _, _, _):
+            return id
+        }
+    }
 }
 
 public typealias CallSessionInternalId = UUID
 typealias CallSessionStableId = Int64
+
+private final class StableIncomingUUIDs {
+    static let shared = Atomic<StableIncomingUUIDs>(value: StableIncomingUUIDs())
+
+    private var dict: [Int64: UUID] = [:]
+
+    private init() {
+    }
+
+    func get(id: Int64) -> UUID {
+        if let value = self.dict[id] {
+            return value
+        } else {
+            let value = UUID()
+            self.dict[id] = value
+            return value
+        }
+    }
+}
 
 public struct CallSessionRingingState: Equatable {
     public let id: CallSessionInternalId
@@ -147,10 +189,27 @@ public struct CallSession {
     }
     
     public let id: CallSessionInternalId
+    public let stableId: Int64?
     public let isOutgoing: Bool
     public let type: CallType
     public let state: CallSessionState
     public let isVideoPossible: Bool
+
+    init(
+        id: CallSessionInternalId,
+        stableId: Int64?,
+        isOutgoing: Bool,
+        type: CallType,
+        state: CallSessionState,
+        isVideoPossible: Bool
+    ) {
+        self.id = id
+        self.stableId = stableId
+        self.isOutgoing = isOutgoing
+        self.type = type
+        self.state = state
+        self.isVideoPossible = isVideoPossible
+    }
 }
 
 public enum CallSessionConnection: Equatable {
@@ -232,6 +291,11 @@ private func parseConnection(_ apiConnection: Api.PhoneConnection) -> CallSessio
 public struct CallSessionConnectionSet {
     public let primary: CallSessionConnection
     public let alternatives: [CallSessionConnection]
+
+    public init(primary: CallSessionConnection, alternatives: [CallSessionConnection]) {
+        self.primary = primary
+        self.alternatives = alternatives
+    }
 }
 
 private func parseConnectionSet(primary: Api.PhoneConnection, alternative: [Api.PhoneConnection]) -> CallSessionConnectionSet {
@@ -379,7 +443,7 @@ private final class CallSessionManagerContext {
                     let index = context.subscribers.add { next in
                         subscriber.putNext(next)
                     }
-                    subscriber.putNext(CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible))
+                    subscriber.putNext(CallSession(id: internalId, stableId: context.state.stableId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible))
                     disposable.set(ActionDisposable {
                         queue.async {
                             if let strongSelf = self, let context = strongSelf.contexts[internalId] {
@@ -442,7 +506,7 @@ private final class CallSessionManagerContext {
     
     private func contextUpdated(internalId: CallSessionInternalId) {
         if let context = self.contexts[internalId] {
-            let session = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
+            let session = CallSession(id: internalId, stableId: context.state.stableId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
             for subscriber in context.subscribers.copyItems() {
                 subscriber(session)
             }
@@ -464,7 +528,7 @@ private final class CallSessionManagerContext {
             isVideoPossible = true
             //#endif
             
-            let internalId = CallSessionInternalId()
+            let internalId = CallSessionManager.getStableIncomingUUID(stableId: stableId)
             let context = CallSessionContext(peerId: peerId, isOutgoing: false, type: isVideo ? .video : .audio, isVideoPossible: isVideoPossible, state: .ringing(id: stableId, accessHash: accessHash, gAHash: gAHash, b: b, versions: versions))
             self.contexts[internalId] = context
             let queue = self.queue
@@ -562,7 +626,7 @@ private final class CallSessionManagerContext {
                                 |> timeout(5.0, queue: strongSelf.queue, alternate: .single(nil))
                                 |> deliverOnMainQueue).start(next: { debugLog in
                                     if let debugLog = debugLog {
-                                        _internal_saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
+                                        let _ = _internal_saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
                                     }
                                 })
                             }
@@ -688,7 +752,8 @@ private final class CallSessionManagerContext {
                             let keyHash = MTSha1(key)
                             
                             var keyId: Int64 = 0
-                            keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                            keyHash.withUnsafeBytes { rawBytes -> Void in
+                                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                                 memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
                             }
                             
@@ -829,7 +894,7 @@ private final class CallSessionManagerContext {
                         }
                     }
                     if let context = self.contexts[internalId] {
-                        let callSession = CallSession(id: internalId, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
+                        let callSession = CallSession(id: internalId, stableId: id, isOutgoing: context.isOutgoing, type: context.type, state: CallSessionState(context), isVideoPossible: context.isVideoPossible)
                         if let resultRingingStateValue = resultRingingStateValue {
                             resultRingingState = (resultRingingStateValue, callSession)
                         }
@@ -891,7 +956,8 @@ private final class CallSessionManagerContext {
         let keyHash = MTSha1(key)
         
         var keyId: Int64 = 0
-        keyHash.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+        keyHash.withUnsafeBytes { rawBytes -> Void in
+            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
             memcpy(&keyId, bytes.advanced(by: keyHash.count - 8), 8)
         }
         
@@ -941,6 +1007,12 @@ public enum CallRequestError {
 }
 
 public final class CallSessionManager {
+    public static func getStableIncomingUUID(stableId: Int64) -> UUID {
+        return StableIncomingUUIDs.shared.with { impl in
+            return impl.get(id: stableId)
+        }
+    }
+
     private let queue = Queue()
     private var contextRef: Unmanaged<CallSessionManagerContext>?
     
@@ -1267,9 +1339,9 @@ private func dropCallSession(network: Network, addUpdates: @escaping (Api.Update
                         switch update {
                             case .updatePhoneCall(let phoneCall):
                                 switch phoneCall {
-                                    case.phoneCallDiscarded(let values):
-                                        reportRating = (values.flags & (1 << 2)) != 0
-                                        sendDebugLogs = (values.flags & (1 << 3)) != 0
+                                    case let .phoneCallDiscarded(flags, _, _, _):
+                                        reportRating = (flags & (1 << 2)) != 0
+                                        sendDebugLogs = (flags & (1 << 3)) != 0
                                     default:
                                         break
                                 }

@@ -294,3 +294,169 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
         }
     }
 }
+
+public final class AnimatedAvatarSetView: UIView {
+    private final class ContentView: UIView {
+        private let unclippedView: UIImageView
+        private let clippedView: UIImageView
+
+        private var size: CGSize
+        private var spacing: CGFloat
+        
+        private var disposable: Disposable?
+        
+        init(context: AccountContext, peer: EnginePeer?, placeholderColor: UIColor, synchronousLoad: Bool, size: CGSize, spacing: CGFloat) {
+            self.size = size
+            self.spacing = spacing
+
+            self.unclippedView = UIImageView()
+            self.clippedView = UIImageView()
+            
+            super.init(frame: CGRect())
+            
+            self.addSubview(self.unclippedView)
+            self.addSubview(self.clippedView)
+
+            if let peer = peer {
+                if let representation = peer.smallProfileImage, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: representation, displayDimensions: size, synchronousLoad: synchronousLoad) {
+                    let image = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(UIColor.lightGray.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                    })!
+                    self.updateImage(image: image, size: size, spacing: spacing)
+
+                    let disposable = (signal
+                    |> deliverOnMainQueue).start(next: { [weak self] imageVersions in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let image = imageVersions?.0
+                        if let image = image {
+                            strongSelf.updateImage(image: image, size: size, spacing: spacing)
+                        }
+                    })
+                    self.disposable = disposable
+                } else {
+                    let image = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: peer.displayLetters, peerId: peer.id)
+                    })!
+                    self.updateImage(image: image, size: size, spacing: spacing)
+                }
+            } else {
+                let image = generateImage(size, rotatedContext: { size, context in
+                    context.clear(CGRect(origin: CGPoint(), size: size))
+                    context.setFillColor(placeholderColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                })!
+                self.updateImage(image: image, size: size, spacing: spacing)
+            }
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        private func updateImage(image: UIImage, size: CGSize, spacing: CGFloat) {
+            self.unclippedView.image = image
+            self.clippedView.image = generateImage(size, rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                
+                context.setBlendMode(.copy)
+                context.setFillColor(UIColor.clear.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.5, dy: -1.5).offsetBy(dx: spacing - size.width, dy: 0.0))
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+        
+        func updateLayout(size: CGSize, isClipped: Bool, animated: Bool) {
+            self.unclippedView.frame = CGRect(origin: CGPoint(), size: size)
+            self.clippedView.frame = CGRect(origin: CGPoint(), size: size)
+            
+            if animated && self.unclippedView.alpha.isZero != self.clippedView.alpha.isZero {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
+                transition.updateAlpha(layer: self.unclippedView.layer, alpha: isClipped ? 0.0 : 1.0)
+                transition.updateAlpha(layer: self.clippedView.layer, alpha: isClipped ? 1.0 : 0.0)
+            } else {
+                self.unclippedView.alpha = isClipped ? 0.0 : 1.0
+                self.clippedView.alpha = isClipped ? 1.0 : 0.0
+            }
+        }
+    }
+    
+    private var contentViews: [AnimatedAvatarSetContext.Content.Item.Key: ContentView] = [:]
+    
+    public func update(context: AccountContext, content: AnimatedAvatarSetContext.Content, itemSize: CGSize = CGSize(width: 30.0, height: 30.0), customSpacing: CGFloat? = nil, animation: ListViewItemUpdateAnimation, synchronousLoad: Bool) -> CGSize {
+        var contentWidth: CGFloat = 0.0
+        let contentHeight: CGFloat = itemSize.height
+
+        let spacing: CGFloat
+        if let customSpacing = customSpacing {
+            spacing = customSpacing
+        } else {
+            spacing = 10.0
+        }
+        
+        var validKeys: [AnimatedAvatarSetContext.Content.Item.Key] = []
+        var index = 0
+        for i in 0 ..< content.items.count {
+            let (key, item) = content.items[i]
+            
+            validKeys.append(key)
+            
+            let itemFrame = CGRect(origin: CGPoint(x: contentWidth, y: 0.0), size: itemSize)
+            
+            let itemView: ContentView
+            if let current = self.contentViews[key] {
+                itemView = current
+                itemView.updateLayout(size: itemSize, isClipped: index != 0, animated: animation.isAnimated)
+                animation.animator.updateFrame(layer: itemView.layer, frame: itemFrame, completion: nil)
+            } else {
+                itemView = ContentView(context: context, peer: item.peer, placeholderColor: item.placeholderColor, synchronousLoad: synchronousLoad, size: itemSize, spacing: spacing)
+                self.addSubview(itemView)
+                self.contentViews[key] = itemView
+                itemView.updateLayout(size: itemSize, isClipped: index != 0, animated: false)
+                itemView.frame = itemFrame
+                if animation.isAnimated {
+                    itemView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    itemView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                }
+            }
+            itemView.layer.zPosition = CGFloat(100 - i)
+            contentWidth += itemSize.width - spacing
+            index += 1
+        }
+        var removeKeys: [AnimatedAvatarSetContext.Content.Item.Key] = []
+        for key in self.contentViews.keys {
+            if !validKeys.contains(key) {
+                removeKeys.append(key)
+            }
+        }
+        for key in removeKeys {
+            guard let itemView = self.contentViews.removeValue(forKey: key) else {
+                continue
+            }
+            if animation.isAnimated {
+                itemView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemView] _ in
+                    itemView?.removeFromSuperview()
+                })
+                itemView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+            } else {
+                itemView.removeFromSuperview()
+            }
+        }
+        
+        return CGSize(width: contentWidth, height: contentHeight)
+    }
+}

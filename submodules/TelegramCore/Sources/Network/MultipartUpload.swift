@@ -4,6 +4,7 @@ import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 import CryptoUtils
+import ManagedFile
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
@@ -17,7 +18,8 @@ private struct UploadPart {
 }
 
 private func md5(_ data: Data) -> Data {
-    return data.withUnsafeBytes { bytes -> Data in
+    return data.withUnsafeBytes { rawBytes -> Data in
+        let bytes = rawBytes.baseAddress!
         return CryptoMD5(bytes, Int32(data.count))
     }
 }
@@ -54,11 +56,13 @@ private final class MultipartUploadState {
                 encryptedData.count = encryptedData.count + paddingSize
             }
             let encryptedDataCount = encryptedData.count
-            encryptedData.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+            encryptedData.withUnsafeMutableBytes { rawBytes -> Void in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
                 if paddingSize != 0 {
                     arc4random_buf(bytes.advanced(by: encryptedDataCount - paddingSize), paddingSize)
                 }
-                self.aesIv.withUnsafeMutableBytes { (iv: UnsafeMutablePointer<UInt8>) -> Void in
+                self.aesIv.withUnsafeMutableBytes { rawIv -> Void in
+                    let iv = rawIv.baseAddress!.assumingMemoryBound(to: UInt8.self)
                     MTAesEncryptBytesInplaceAndModifyIv(bytes, encryptedDataCount, self.aesKey, iv)
                 }
             }
@@ -386,7 +390,7 @@ enum MultipartUploadError {
     case generic
 }
 
-func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, forceNoBigParts: Bool, useLargerParts: Bool = false, increaseParallelParts: Bool = false, useMultiplexedRequests: Bool = false, useCompression: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
+func multipartUpload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int?, hintFileIsLarge: Bool, forceNoBigParts: Bool, useLargerParts: Bool = false, increaseParallelParts: Bool = false, useMultiplexedRequests: Bool = true, useCompression: Bool = false) -> Signal<MultipartUploadResult, MultipartUploadError> {
     enum UploadInterface {
         case download(Download)
         case multiplexed(manager: MultiplexedRequestManager, datacenterId: Int, consumerId: Int64)
@@ -411,10 +415,12 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                 aesKey.count = 32
                 var aesIv = Data()
                 aesIv.count = 32
-                aesKey.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                aesKey.withUnsafeMutableBytes { rawBytes -> Void in
+                    let bytes = rawBytes.baseAddress!
                     arc4random_buf(bytes, 32)
                 }
-                aesIv.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
+                aesIv.withUnsafeMutableBytes { rawBytes -> Void in
+                    let bytes = rawBytes.baseAddress!
                     arc4random_buf(bytes, 32)
                 }
                 encryptionKey = SecretFileEncryptionKey(aesKey: aesKey, aesIv: aesIv)
@@ -466,7 +472,9 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                     if let encryptionKey = encryptionKey {
                         let keyDigest = md5(encryptionKey.aesKey + encryptionKey.aesIv)
                         var fingerprint: Int32 = 0
-                        keyDigest.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
+                        keyDigest.withUnsafeBytes { rawBytes -> Void in
+                            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+                            
                             withUnsafeMutableBytes(of: &fingerprint, { ptr -> Void in
                                 let uintPtr = ptr.baseAddress!.assumingMemoryBound(to: UInt8.self)
                                 uintPtr[0] = bytes[0] ^ bytes[4]

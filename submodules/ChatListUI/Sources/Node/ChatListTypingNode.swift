@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import Display
 import SwiftSignalKit
@@ -20,7 +19,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         self.addSubnode(self.activityNode)
     }
     
-    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, PeerId, [(Peer, PeerInputActivity)]) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, EnginePeer.Id, [(EnginePeer, PeerInputActivity)]) -> (CGSize, () -> Void) {
         return { [weak self] boundingSize, presentationData, color, peerId, activities in
             let strings = presentationData.strings
             
@@ -61,7 +60,9 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 text = strings.DialogList_Typing
                             case .choosingSticker:
                                 text = strings.Activity_ChoosingSticker
-                            case .speakingInGroupCall, .seeingEmojiInteraction, .interactingWithEmoji:
+                            case let .interactingWithEmoji(emoticon, _, _):
+                                text = strings.Activity_TappingInteractiveEmoji(emoticon).string
+                            case .speakingInGroupCall, .seeingEmojiInteraction:
                                 text = ""
                         }
                         let string = NSAttributedString(string: text, font: textFont, textColor: color)
@@ -81,7 +82,9 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
                                 state = .typingText(string, lightColor)
                             case .choosingSticker:
                                 state = .choosingSticker(string, lightColor)
-                            case .seeingEmojiInteraction, .interactingWithEmoji:
+                            case .interactingWithEmoji:
+                                state = .interactingWithEmoji(string, lightColor)
+                            case .seeingEmojiInteraction:
                                 state = .none
                         }
                     } else {

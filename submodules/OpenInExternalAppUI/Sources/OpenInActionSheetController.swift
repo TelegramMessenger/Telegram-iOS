@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import MapKit
 import TelegramPresentationData
@@ -55,12 +54,12 @@ public final class OpenInActionSheetController: ActionSheetController {
             switch action {
             case let .openUrl(url):
                 openUrl(url)
-            case let .openLocation(latitude, longitude, withDirections):
+            case let .openLocation(latitude, longitude, directions):
                 let placemark = MKPlacemark(coordinate: CLLocationCoordinate2DMake(latitude, longitude), addressDictionary: [:])
                 let mapItem = MKMapItem(placemark: placemark)
                 
-                if withDirections {
-                    let options = [ MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving ]
+                if let directions = directions {
+                    let options = [ MKLaunchOptionsDirectionsModeKey: directions.launchOptions ]
                     MKMapItem.openMaps(with: [MKMapItem.forCurrentLocation(), mapItem], launchOptions: options)
                 } else {
                     mapItem.openInMaps(launchOptions: nil)
@@ -71,7 +70,7 @@ public final class OpenInActionSheetController: ActionSheetController {
         }
         
         var items: [ActionSheetItem] = []
-        items.append(OpenInActionSheetItem(postbox: context.account.postbox, context: context, strings: strings, options: availableOpenInOptions(context: context, item: item), invokeAction: invokeActionImpl))
+        items.append(OpenInActionSheetItem(context: context, strings: strings, options: availableOpenInOptions(context: context, item: item), invokeAction: invokeActionImpl))
         
         if let action = additionalAction {
             items.append(ActionSheetButtonItem(title: action.title, action: { [weak self] in
@@ -100,14 +99,12 @@ public final class OpenInActionSheetController: ActionSheetController {
 }
 
 private final class OpenInActionSheetItem: ActionSheetItem {
-    let postbox: Postbox
     let context: AccountContext
     let strings: PresentationStrings
     let options: [OpenInOption]
     let invokeAction: (OpenInAction) -> Void
     
-    init(postbox: Postbox, context: AccountContext, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
-        self.postbox = postbox
+    init(context: AccountContext, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.context = context
         self.strings = strings
         self.options = options
@@ -115,7 +112,7 @@ private final class OpenInActionSheetItem: ActionSheetItem {
     }
     
     func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
-        return OpenInActionSheetItemNode(postbox: self.postbox, context: self.context, theme: theme, strings: self.strings, options: self.options, invokeAction: self.invokeAction)
+        return OpenInActionSheetItemNode(context: self.context, theme: theme, strings: self.strings, options: self.options, invokeAction: self.invokeAction)
     }
     
     func updateNode(_ node: ActionSheetItemNode) {
@@ -131,7 +128,7 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
     
     let openInNodes: [OpenInAppNode]
     
-    init(postbox: Postbox, context: AccountContext, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
+    init(context: AccountContext, theme: ActionSheetControllerTheme, strings: PresentationStrings, options: [OpenInOption], invokeAction: @escaping (OpenInAction) -> Void) {
         self.theme = theme
         self.strings = strings
         
@@ -152,7 +149,7 @@ private final class OpenInActionSheetItemNode: ActionSheetItemNode {
         
         self.openInNodes = options.map { option in
             let node = OpenInAppNode()
-            node.setup(postbox: postbox, context: context, theme: theme, option: option, invokeAction: invokeAction)
+            node.setup(context: context, theme: theme, option: option, invokeAction: invokeAction)
             return node
         }
         
@@ -217,7 +214,7 @@ private final class OpenInAppNode : ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func setup(postbox: Postbox, context: AccountContext, theme: ActionSheetControllerTheme, option: OpenInOption, invokeAction: @escaping (OpenInAction) -> Void) {
+    func setup(context: AccountContext, theme: ActionSheetControllerTheme, option: OpenInOption, invokeAction: @escaping (OpenInAction) -> Void) {
         let textFont = Font.regular(floor(theme.baseFontSize * 11.0 / 17.0))
         self.textNode.attributedText = NSAttributedString(string: option.title, font: textFont, textColor: theme.primaryTextColor, paragraphAlignment: .center)
         
@@ -229,14 +226,14 @@ private final class OpenInAppNode : ASDisplayNode {
         switch option.application {
             case .safari:
                 if let image = UIImage(bundleImageName: "Open In/Safari") {
-                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image: image)))
+                    self.iconNode.setSignal(openInAppIcon(engine: context.engine, appIcon: .image(image: image)))
                 }
             case .maps:
                 if let image = UIImage(bundleImageName: "Open In/Maps") {
-                    self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .image(image: image)))
+                    self.iconNode.setSignal(openInAppIcon(engine: context.engine, appIcon: .image(image: image)))
                 }
             case let .other(_, identifier, _, store):
-                self.iconNode.setSignal(openInAppIcon(postbox: postbox, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store))))
+                self.iconNode.setSignal(openInAppIcon(engine: context.engine, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store))))
         }
         
         self.action = {

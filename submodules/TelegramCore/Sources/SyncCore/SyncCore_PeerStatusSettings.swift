@@ -21,20 +21,31 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
     
     public var flags: PeerStatusSettings.Flags
     public var geoDistance: Int32?
+    public var requestChatTitle: String?
+    public var requestChatDate: Int32?
+    public var requestChatIsChannel: Bool?
     
     public init() {
         self.flags = PeerStatusSettings.Flags()
         self.geoDistance = nil
+        self.requestChatTitle = nil
+        self.requestChatDate = nil
     }
     
-    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil) {
+    public init(flags: PeerStatusSettings.Flags, geoDistance: Int32? = nil, requestChatTitle: String? = nil, requestChatDate: Int32? = nil, requestChatIsChannel: Bool? = nil) {
         self.flags = flags
         self.geoDistance = geoDistance
+        self.requestChatTitle = requestChatTitle
+        self.requestChatDate = requestChatDate
+        self.requestChatIsChannel = requestChatIsChannel
     }
     
     public init(decoder: PostboxDecoder) {
         self.flags = Flags(rawValue: decoder.decodeInt32ForKey("flags", orElse: 0))
         self.geoDistance = decoder.decodeOptionalInt32ForKey("geoDistance")
+        self.requestChatTitle = decoder.decodeOptionalStringForKey("requestChatTitle")
+        self.requestChatDate = decoder.decodeOptionalInt32ForKey("requestChatDate")
+        self.requestChatIsChannel = decoder.decodeOptionalBoolForKey("requestChatIsChannel")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -43,6 +54,21 @@ public struct PeerStatusSettings: PostboxCoding, Equatable {
             encoder.encodeInt32(geoDistance, forKey: "geoDistance")
         } else {
             encoder.encodeNil(forKey: "geoDistance")
+        }
+        if let requestChatTitle = self.requestChatTitle {
+            encoder.encodeString(requestChatTitle, forKey: "requestChatTitle")
+        } else {
+            encoder.encodeNil(forKey: "requestChatTitle")
+        }
+        if let requestChatDate = self.requestChatDate {
+            encoder.encodeInt32(requestChatDate, forKey: "requestChatDate")
+        } else {
+            encoder.encodeNil(forKey: "requestChatDate")
+        }
+        if let requestChatIsChannel = self.requestChatIsChannel {
+            encoder.encodeBool(requestChatIsChannel, forKey: "requestChatIsChannel")
+        } else {
+            encoder.encodeNil(forKey: "requestChatIsChannel")
         }
     }
     

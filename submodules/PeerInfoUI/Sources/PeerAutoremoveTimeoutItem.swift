@@ -90,15 +90,6 @@ class PeerRemoveTimeoutItem: ListViewItem, ItemListItem {
     }
 }
 
-private func generateKnobImage() -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -3.0), blur: 8.0, color: UIColor(white: 0.0, alpha: 0.15).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-    })
-}
-
 class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -146,8 +137,8 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
         
         let sliderView = TGPhotoEditorSliderView()
         sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
+        sliderView.trackCornerRadius = 2.0
+        sliderView.lineSize = 4.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
         sliderView.maximumValue = CGFloat(self.titleNodes.count - 1)
@@ -162,9 +153,9 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             sliderView.value = mapTimeoutToSliderValue(item.value, availableValues: item.availableValues)
             
             sliderView.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.presentationData.theme.list.disclosureArrowColor
+            sliderView.backColor = item.presentationData.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.enabled ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemDisabledTextColor
-            sliderView.knobImage = generateKnobImage()
+            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.presentationData.theme)
             
             let sliderInset: CGFloat = params.leftInset + 16.0
             
@@ -201,7 +192,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
             }
             
             contentSize = CGSize(width: params.width, height: 88.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -251,6 +242,7 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                         case .sameSection(false):
                             bottomStripeInset = params.leftInset + 16.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -290,8 +282,8 @@ class PeerRemoveTimeoutItemNode: ListViewItemNode, ItemListItemNode {
                         
                         if themeUpdated {
                             sliderView.backgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.presentationData.theme.list.disclosureArrowColor
-                            sliderView.knobImage = generateKnobImage()
+                            sliderView.backColor = item.presentationData.theme.list.itemSwitchColors.frameColor
+                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.presentationData.theme)
                         }
                         
                         let value: CGFloat

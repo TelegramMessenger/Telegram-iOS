@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -21,14 +20,16 @@ public final class JoinLinkPreviewController: ViewController {
     
     private let context: AccountContext
     private let link: String
-    private let navigateToPeer: (PeerId, ChatPeekTimeout?) -> Void
+    private var isRequest = false
+    private var isGroup = false
+    private let navigateToPeer: (EnginePeer.Id, ChatPeekTimeout?) -> Void
     private let parentNavigationController: NavigationController?
     private var resolvedState: ExternalJoiningChatState?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContext, link: String, navigateToPeer: @escaping (PeerId, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (EnginePeer.Id, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
         self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer
@@ -65,7 +66,7 @@ public final class JoinLinkPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
         
-        let signal: Signal<ExternalJoiningChatState, NoError>
+        let signal: Signal<ExternalJoiningChatState, JoinLinkInfoError>
         if let resolvedState = self.resolvedState {
             signal = .single(resolvedState)
         } else {
@@ -77,9 +78,15 @@ public final class JoinLinkPreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.resolvedState = result
                 switch result {
-                    case let .invite(title, photoRepresentation, participantsCount, participants):
-                        let data = JoinLinkPreviewData(isGroup: participants != nil, isJoined: false)
-                        strongSelf.controllerNode.setPeer(image: photoRepresentation, title: title, memberCount: participantsCount, members: participants ?? [], data: data)
+                    case let .invite(invite):
+                        if invite.flags.requestNeeded {
+                            strongSelf.isRequest = true
+                            strongSelf.isGroup = !invite.flags.isBroadcast
+                            strongSelf.controllerNode.setRequestPeer(image: invite.photoRepresentation, title: invite.title, about: invite.about, memberCount: invite.participantsCount, isGroup: !invite.flags.isBroadcast)
+                        } else {
+                            let data = JoinLinkPreviewData(isGroup: invite.participants != nil, isJoined: false)
+                            strongSelf.controllerNode.setInvitePeer(image: invite.photoRepresentation, title: invite.title, memberCount: invite.participantsCount, members: invite.participants?.map({ $0 }) ?? [], data: data)
+                        }
                     case let .alreadyJoined(peerId):
                         strongSelf.navigateToPeer(peerId, nil)
                         strongSelf.dismiss()
@@ -88,9 +95,21 @@ public final class JoinLinkPreviewController: ViewController {
                         strongSelf.dismiss()
                     case .invalidHash:
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
-                        strongSelf.dismiss()
+                        Queue.mainQueue().after(0.2) {
+                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkRevoked(text: presentationData.strings.InviteLinks_InviteLinkExpired), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                            strongSelf.dismiss()
+                        }
                 }
+            }
+        }, error: { [weak self] error in
+            if let strongSelf = self {
+                switch error {
+                    case .flood:
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_FloodError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    default:
+                        break
+                }
+                strongSelf.dismiss()
             }
         }))
         self.ready.set(self.controllerNode.ready.get())
@@ -122,10 +141,14 @@ public final class JoinLinkPreviewController: ViewController {
     private func join() {
         self.disposable.set((self.context.engine.peers.joinChatInteractively(with: self.link) |> deliverOnMainQueue).start(next: { [weak self] peerId in
             if let strongSelf = self {
-                if let peerId = peerId {
-                    strongSelf.navigateToPeer(peerId, nil)
-                    strongSelf.dismiss()
+                if strongSelf.isRequest {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .inviteRequestSent(title: strongSelf.presentationData.strings.MemberRequests_RequestToJoinSent, text: strongSelf.isGroup ? strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionGroup : strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionChannel ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                } else {
+                    if let peerId = peerId {
+                        strongSelf.navigateToPeer(peerId, nil)
+                    }
                 }
+                strongSelf.dismiss()
             }
         }, error: { [weak self] error in
             if let strongSelf = self {
@@ -146,6 +169,12 @@ public final class JoinLinkPreviewController: ViewController {
                         }
                     case .tooMuchUsers:
                         strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_UsersTooMuchError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    case .requestSent:
+                        if strongSelf.isRequest {
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .inviteRequestSent(title: strongSelf.presentationData.strings.MemberRequests_RequestToJoinSent, text: strongSelf.isGroup ? strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionGroup : strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionChannel ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        }
+                    case .flood:
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.TwoStepAuth_FloodError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     case .generic:
                         break
                 }

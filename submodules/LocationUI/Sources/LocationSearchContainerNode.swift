@@ -50,7 +50,7 @@ private struct LocationSearchEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> ListViewItem {
+    func item(engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> ListViewItem {
         let venue = self.location
         let header: ChatListSearchItemHeader
         let subtitle: String?
@@ -61,7 +61,7 @@ private struct LocationSearchEntry: Identifiable, Comparable {
             header = ChatListSearchItemHeader(type: .mapAddress, theme: presentationData.theme, strings: presentationData.strings)
             subtitle = presentationData.strings.Map_DistanceAway(stringForDistance(strings: presentationData.strings, distance: self.distance)).string
         }
-        return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), account: account, venue: self.location, title: self.title, subtitle: subtitle, style: .plain, action: {
+        return ItemListVenueItem(presentationData: ItemListPresentationData(presentationData), engine: engine, venue: self.location, title: self.title, subtitle: subtitle, style: .plain, action: {
             sendVenue(venue)
         }, header: header)
     }
@@ -76,12 +76,12 @@ struct LocationSearchContainerTransition {
     let isEmpty: Bool
 }
 
-private func locationSearchContainerPreparedTransition(from fromEntries: [LocationSearchEntry], to toEntries: [LocationSearchEntry], query: String, isSearching: Bool, isEmpty: Bool, account: Account, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> LocationSearchContainerTransition {
+private func locationSearchContainerPreparedTransition(from fromEntries: [LocationSearchEntry], to toEntries: [LocationSearchEntry], query: String, isSearching: Bool, isEmpty: Bool, engine: TelegramEngine, presentationData: PresentationData, sendVenue: @escaping (TelegramMediaMap) -> Void) -> LocationSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(engine: engine, presentationData: presentationData, sendVenue: sendVenue), directionHint: nil) }
     
     return LocationSearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, query: query, isSearching: isSearching, isEmpty: isEmpty)
 }
@@ -211,7 +211,7 @@ final class LocationSearchContainerNode: ASDisplayNode {
             if let strongSelf = self {
                 let (items, query) = itemsAndQuery ?? (nil, "")
                 let previousItems = previousSearchItems.swap(items ?? [])
-                let transition = locationSearchContainerPreparedTransition(from: previousItems, to: items ?? [], query: query, isSearching: items != nil, isEmpty: items?.isEmpty ?? false, account: context.account, presentationData: strongSelf.presentationData, sendVenue: { venue in self?.listNode.clearHighlightAnimated(true)
+                let transition = locationSearchContainerPreparedTransition(from: previousItems, to: items ?? [], query: query, isSearching: items != nil, isEmpty: items?.isEmpty ?? false, engine: context.engine, presentationData: strongSelf.presentationData, sendVenue: { venue in self?.listNode.clearHighlightAnimated(true)
                     if let _ = venue.venue {
                         self?.interaction.sendVenue(venue)
                     } else {

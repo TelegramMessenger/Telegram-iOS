@@ -1,4 +1,3 @@
-
 #if !os(macOS)
 import UIKit
 #else
@@ -7,6 +6,7 @@ import AppKit
 import CoreMedia
 import Accelerate
 import FFMpegBinding
+import YuvConversion
 
 private let bufferCount = 32
 
@@ -56,30 +56,17 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
     
     private var delayedFrames: [MediaTrackFrame] = []
     
+    private var uvPlane: (UnsafeMutablePointer<UInt8>, Int)?
+    
     public init(codecContext: FFMpegAVCodecContext) {
         self.codecContext = codecContext
         self.videoFrame = FFMpegAVFrame()
-        
-        /*var sourcePixelBufferOptions: [String: Any] = [:]
-        sourcePixelBufferOptions[kCVPixelBufferPixelFormatTypeKey as String] = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange as NSNumber
-        
-        sourcePixelBufferOptions[kCVPixelBufferWidthKey as String] = codecContext.pointee.width as NSNumber
-        sourcePixelBufferOptions[kCVPixelBufferHeightKey as String] = codecContext.pointee.height as NSNumber
-        sourcePixelBufferOptions[kCVPixelBufferBytesPerRowAlignmentKey as String] = 128 as NSNumber
-        sourcePixelBufferOptions[kCVPixelBufferPlaneAlignmentKey as String] = 128 as NSNumber
-        
-        let ioSurfaceProperties = NSMutableDictionary()
-        ioSurfaceProperties["IOSurfaceIsGlobal"] = true as NSNumber
-        
-        sourcePixelBufferOptions[kCVPixelBufferIOSurfacePropertiesKey as String] = ioSurfaceProperties
-        
-        var pixelBufferPoolOptions: [String: Any] = [:]
-        pixelBufferPoolOptions[kCVPixelBufferPoolMinimumBufferCountKey as String] = bufferCount as NSNumber
-        
-        var pixelBufferPool: CVPixelBufferPool?
-        CVPixelBufferPoolCreate(kCFAllocatorDefault, pixelBufferPoolOptions as CFDictionary, sourcePixelBufferOptions as CFDictionary, &pixelBufferPool)
-        
-        self.pixelBufferPool = pixelBufferPool*/
+    }
+    
+    deinit {
+        if let (dstPlane, _) = self.uvPlane {
+            free(dstPlane)
+        }
     }
     
     func decodeInternal(frame: MediaTrackDecodableFrame) {
@@ -128,7 +115,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
     }
     
-    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?) -> MediaTrackFrame? {
+    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?, forceARGB: Bool = false) -> MediaTrackFrame? {
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
             self.defaultDuration = frame.duration
@@ -139,7 +126,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
                 if let ptsOffset = ptsOffset {
                     pts = CMTimeAdd(pts, ptsOffset)
                 }
-                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration)
+                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB)
             }
         }
         
@@ -249,7 +236,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return UIImage(cgImage: image, scale: 1.0, orientation: .up)
     }
     
-    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime) -> MediaTrackFrame? {
+    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime, forceARGB: Bool = false) -> MediaTrackFrame? {
         if frame.data[0] == nil {
             return nil
         }
@@ -258,6 +245,30 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
         
         var pixelBufferRef: CVPixelBuffer?
+        
+        let pixelFormat: OSType
+        var hasAlpha = false
+        if forceARGB {
+            pixelFormat = kCVPixelFormatType_32ARGB
+            switch frame.pixelFormat {
+                case .YUV:
+                    hasAlpha = false
+                case .YUVA:
+                    hasAlpha = true
+                default:
+                    hasAlpha = false
+            }
+        } else {
+            switch frame.pixelFormat {
+                case .YUV:
+                    pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+                case .YUVA:
+                    pixelFormat = kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar
+                default:
+                    pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+            }
+        }
+        
         if let pixelBufferPool = self.pixelBufferPool {
             let auxAttributes: [String: Any] = [kCVPixelBufferPoolAllocationThresholdKey as String: bufferCount as NSNumber];
             let err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, pixelBufferPool, auxAttributes as CFDictionary, &pixelBufferRef)
@@ -271,11 +282,11 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             
             var options: [String: Any] = [kCVPixelBufferBytesPerRowAlignmentKey as String: frame.lineSize[0] as NSNumber]
             options[kCVPixelBufferIOSurfacePropertiesKey as String] = ioSurfaceProperties
-            
+  
             CVPixelBufferCreate(kCFAllocatorDefault,
                                           Int(frame.width),
                                           Int(frame.height),
-                                          kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+                                          pixelFormat,
                                           options as CFDictionary,
                                           &pixelBufferRef)
         }
@@ -283,57 +294,92 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         guard let pixelBuffer = pixelBufferRef else {
             return nil
         }
-        
-        let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
-        let dstPlaneSize = srcPlaneSize * 2
-        
-        let dstPlane = malloc(dstPlaneSize)!.assumingMemoryBound(to: UInt8.self)
-        defer {
-            free(dstPlane)
-        }
-        
-        for i in 0 ..< srcPlaneSize {
-            dstPlane[2 * i] = frame.data[1]![i]
-            dstPlane[2 * i + 1] = frame.data[2]![i]
-        }
-        
+
         let status = CVPixelBufferLockBaseAddress(pixelBuffer, [])
         if status != kCVReturnSuccess {
             return nil
         }
-        
-        let bytePerRowY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
-        
-        let bytesPerRowUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
-        
-        var base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!
-        if bytePerRowY == frame.lineSize[0] {
-            memcpy(base, frame.data[0]!, bytePerRowY * Int(frame.height))
+
+        var base: UnsafeMutableRawPointer
+        if pixelFormat == kCVPixelFormatType_32ARGB {
+            let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+            decodeYUVAPlanesToRGBA(frame.data[0], Int32(frame.lineSize[0]), frame.data[1], Int32(frame.lineSize[1]), frame.data[2], Int32(frame.lineSize[2]), hasAlpha, frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow))
         } else {
-            var dest = base
-            var src = frame.data[0]!
-            let linesize = Int(frame.lineSize[0])
-            for _ in 0 ..< Int(frame.height) {
-                memcpy(dest, src, linesize)
-                dest = dest.advanced(by: bytePerRowY)
-                src = src.advanced(by: linesize)
+            let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
+            let uvPlaneSize = srcPlaneSize * 2
+
+            let uvPlane: UnsafeMutablePointer<UInt8>
+            if let (existingUvPlane, existingUvPlaneSize) = self.uvPlane, existingUvPlaneSize == uvPlaneSize {
+                uvPlane = existingUvPlane
+            } else {
+                if let (existingDstPlane, _) = self.uvPlane {
+                    free(existingDstPlane)
+                }
+                uvPlane = malloc(uvPlaneSize)!.assumingMemoryBound(to: UInt8.self)
+                self.uvPlane = (uvPlane, uvPlaneSize)
+            }
+                    
+            fillDstPlane(uvPlane, frame.data[1]!, frame.data[2]!, srcPlaneSize)
+
+            let bytesPerRowY = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 0)
+            let bytesPerRowUV = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 1)
+            let bytesPerRowA = CVPixelBufferGetBytesPerRowOfPlane(pixelBuffer, 2)
+
+            var requiresAlphaMultiplication = false
+            
+            if pixelFormat == kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar {
+                requiresAlphaMultiplication = true
+                
+                base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2)!
+                if bytesPerRowA == frame.lineSize[3] {
+                    memcpy(base, frame.data[3]!, bytesPerRowA * Int(frame.height))
+                } else {
+                    var dest = base
+                    var src = frame.data[3]!
+                    let lineSize = Int(frame.lineSize[3])
+                    for _ in 0 ..< Int(frame.height) {
+                        memcpy(dest, src, lineSize)
+                        dest = dest.advanced(by: bytesPerRowA)
+                        src = src.advanced(by: lineSize)
+                    }
+                }
+            }
+            
+            base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!
+            if bytesPerRowY == frame.lineSize[0] {
+                memcpy(base, frame.data[0]!, bytesPerRowY * Int(frame.height))
+            } else {
+                var dest = base
+                var src = frame.data[0]!
+                let lineSize = Int(frame.lineSize[0])
+                for _ in 0 ..< Int(frame.height) {
+                    memcpy(dest, src, lineSize)
+                    dest = dest.advanced(by: bytesPerRowY)
+                    src = src.advanced(by: lineSize)
+                }
+            }
+            
+            if requiresAlphaMultiplication {
+                var y = vImage_Buffer(data: CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 0)!, height: vImagePixelCount(frame.height), width: vImagePixelCount(bytesPerRowY), rowBytes: bytesPerRowY)
+                var a = vImage_Buffer(data: CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 2)!, height: vImagePixelCount(frame.height), width: vImagePixelCount(bytesPerRowY), rowBytes: bytesPerRowA)
+                let _ = vImagePremultiplyData_Planar8(&y, &a, &y, vImage_Flags(kvImageDoNotTile))
+            }
+
+            base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)!
+            if bytesPerRowUV == frame.lineSize[1] * 2 {
+                memcpy(base, uvPlane, Int(frame.height / 2) * bytesPerRowUV)
+            } else {
+                var dest = base
+                var src = uvPlane
+                let lineSize = Int(frame.lineSize[1]) * 2
+                for _ in 0 ..< Int(frame.height / 2) {
+                    memcpy(dest, src, lineSize)
+                    dest = dest.advanced(by: bytesPerRowUV)
+                    src = src.advanced(by: lineSize)
+                }
             }
         }
-        
-        base = CVPixelBufferGetBaseAddressOfPlane(pixelBuffer, 1)!
-        if bytesPerRowUV == frame.lineSize[1] * 2 {
-            memcpy(base, dstPlane, Int(frame.height / 2) * bytesPerRowUV)
-        } else {
-            var dest = base
-            var src = dstPlane
-            let linesize = Int(frame.lineSize[1]) * 2
-            for _ in 0 ..< Int(frame.height / 2) {
-                memcpy(dest, src, linesize)
-                dest = dest.advanced(by: bytesPerRowUV)
-                src = src.advanced(by: linesize)
-            }
-        }
-        
+
         CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
         
         var formatRef: CMVideoFormatDescription?
@@ -382,11 +428,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
     }
-    
-    func decodeImage() {
-
-    }
-    
+        
     public func reset() {
         self.codecContext.flushBuffers()
         self.resetDecoderOnNextFrame = true

@@ -250,7 +250,7 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 waveform = MemoryBuffer(data: waveformData)
             }
             
-            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
+            return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(audioData), mimeType: mimeType, attributes: [.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: artist, waveform: waveform?.makeData()), .FileName(fileName: fileName)], hintFileIsLarge: audioData.count > 10 * 1024 * 1024)
             |> mapError { _ -> Void in return Void() }
             |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
                 switch event {
@@ -365,7 +365,7 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
     })
 }
 
-public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent]) -> Signal<Float, Void> {
+public func sentShareItems(account: Account, to peerIds: [PeerId], items: [PreparedShareItemContent], silently: Bool) -> Signal<Float, Void> {
     var messages: [EnqueueMessage] = []
     var groupingKey: Int64?
     var mediaTypes: (photo: Int, video: Int, music: Int, other: Int) = (0, 0, 0, 0)
@@ -401,15 +401,20 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
         groupingKey = Int64.random(in: Int64.min ... Int64.max)
     }
     
+    var attributes: [MessageAttribute] = []
+    if silently {
+        attributes.append(NotificationInfoMessageAttribute(flags: .muted))
+    }
+    
     var mediaMessages: [EnqueueMessage] = []
     for item in items {
         switch item {
             case let .text(text):
-                messages.append(.message(text: text, attributes: [], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                messages.append(.message(text: text, attributes: attributes, mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
             case let .media(media):
                 switch media {
                     case let .media(reference):
-                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey, correlationId: nil)
+                        let message: EnqueueMessage = .message(text: "", attributes: attributes, mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey, correlationId: nil)
                         messages.append(message)
                         mediaMessages.append(message)
                         

@@ -681,7 +681,7 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
                             foregroundColor = .white
                             strokeColor = color.displayColor
                         }
-                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor))]
+                        tokens = [SearchBarToken(id: 0, icon: UIImage(bundleImageName: "Settings/WallpaperSearchColorIcon"), title: color.localizedString(strings: self.presentationData.strings), style: SearchBarToken.Style(backgroundColor: backgroundColor, foregroundColor: foregroundColor, strokeColor: strokeColor), permanent: false)]
                         text = query
                         placeholder = self.presentationData.strings.Wallpaper_SearchShort
                 }
@@ -774,14 +774,14 @@ final class ThemeGridSearchContentNode: SearchDisplayControllerContentNode {
         let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
         let screenWidth = min(layout.size.width, layout.size.height)
-        if screenWidth >= 375.0 {
+        if screenWidth >= 390.0 {
             referenceImageSize = CGSize(width: 108.0, height: 230.0)
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 161.0)
         }
         let imageCount = Int((layout.size.width - minSpacing * 2.0) / (referenceImageSize.width + minSpacing))
-        let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
-        let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
+        let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
+        let spacing = floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
         let topInset = navigationBarHeight
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))

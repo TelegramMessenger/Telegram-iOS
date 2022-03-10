@@ -510,17 +510,17 @@ extension SecretChatServiceAction {
 extension StoreMessage {
     convenience init?(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32, timestamp: Int32, apiMessage: SecretApi8.DecryptedMessage, file: SecretChatFileReference?) {
         switch apiMessage {
-            case let .decryptedMessage(randomId, _, message, media):
+            case let .decryptedMessage(randomId, _, message, _):
                 self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorId, text: message, attributes: [], media: [])
             case let .decryptedMessageService(randomId, _, action):
                 switch action {
-                    case let .decryptedMessageActionDeleteMessages(randomIds):
+                    case .decryptedMessageActionDeleteMessages:
                         return nil
                     case .decryptedMessageActionFlushHistory:
                         return nil
-                    case let .decryptedMessageActionNotifyLayer(layer):
+                    case .decryptedMessageActionNotifyLayer:
                         return nil
-                    case let .decryptedMessageActionReadMessages(randomIds):
+                    case .decryptedMessageActionReadMessages:
                         return nil
                     case .decryptedMessageActionScreenshotMessages:
                         self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: [], media: [TelegramMediaAction(action: .historyScreenshot)])
@@ -538,12 +538,7 @@ extension TelegramMediaFileAttribute {
                 self = .Animated
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
-                var waveformBuffer: MemoryBuffer?
-                if let waveform = waveform {
-                    let memory = malloc(waveform.size)!
-                    memcpy(memory, waveform.data, waveform.size)
-                    waveformBuffer = MemoryBuffer(memory: memory, capacity: waveform.size, length: waveform.size, freeWhenDone: true)
-                }
+                let waveformBuffer: Data? = waveform?.makeData()
                 self = .Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: performer, waveform: waveformBuffer)
             case let .documentAttributeFilename(fileName):
                 self = .FileName(fileName: fileName)
@@ -571,12 +566,7 @@ extension TelegramMediaFileAttribute {
                 self = .Animated
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
-                var waveformBuffer: MemoryBuffer?
-                if let waveform = waveform {
-                    let memory = malloc(waveform.size)!
-                    memcpy(memory, waveform.data, waveform.size)
-                    waveformBuffer = MemoryBuffer(memory: memory, capacity: waveform.size, length: waveform.size, freeWhenDone: true)
-                }
+                let waveformBuffer: Data? = waveform?.makeData()
                 self = .Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: performer, waveform: waveformBuffer)
             case let .documentAttributeFilename(fileName):
                 self = .FileName(fileName: fileName)
@@ -608,12 +598,7 @@ extension TelegramMediaFileAttribute {
                 self = .Animated
             case let .documentAttributeAudio(flags, duration, title, performer, waveform):
                 let isVoice = (flags & (1 << 10)) != 0
-                var waveformBuffer: MemoryBuffer?
-                if let waveform = waveform {
-                    let memory = malloc(waveform.size)!
-                    memcpy(memory, waveform.data, waveform.size)
-                    waveformBuffer = MemoryBuffer(memory: memory, capacity: waveform.size, length: waveform.size, freeWhenDone: true)
-                }
+                let waveformBuffer: Data? = waveform?.makeData()
                 self = .Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: performer, waveform: waveformBuffer)
             case let .documentAttributeFilename(fileName):
                 self = .FileName(fileName: fileName)
@@ -824,7 +809,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             return (StoreMessage(id: MessageId(peerId: peerId, namespace: Namespaces.Message.SecretIncoming, id: tagLocalIndex), globallyUniqueId: randomId, groupingKey: nil, threadId: nil, timestamp: timestamp, flags: [.Incoming], tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: parsedMedia), resources)
         case let .decryptedMessageService(randomId, action):
             switch action {
-                case let .decryptedMessageActionDeleteMessages(randomIds):
+                case .decryptedMessageActionDeleteMessages:
                     return nil
                 case .decryptedMessageActionFlushHistory:
                     return nil
@@ -977,7 +962,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                             parsedMedia.append(fileMedia)
                         }
-                    case let .decryptedMessageMediaExternalDocument(id, accessHash, date, mimeType, size, thumb, dcId, attributes):
+                    case let .decryptedMessageMediaExternalDocument(id, accessHash, _, mimeType, size, thumb, dcId, attributes):
                         var parsedAttributes: [TelegramMediaFileAttribute] = []
                         for attribute in attributes {
                             if let parsedAttribute = TelegramMediaFileAttribute(attribute) {
@@ -1215,7 +1200,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int(size), attributes: parsedAttributes)
                             parsedMedia.append(fileMedia)
                         }
-                    case let .decryptedMessageMediaExternalDocument(id, accessHash, date, mimeType, size, thumb, dcId, attributes):
+                    case let .decryptedMessageMediaExternalDocument(id, accessHash, _, mimeType, size, thumb, dcId, attributes):
                         var parsedAttributes: [TelegramMediaFileAttribute] = []
                         for attribute in attributes {
                             if let parsedAttribute = TelegramMediaFileAttribute(attribute) {

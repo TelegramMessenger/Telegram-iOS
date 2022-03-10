@@ -45,9 +45,10 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-avformat \
                  --disable-xlib \
                  --enable-libopus \
+				 --enable-libvpx \
                  --enable-audiotoolbox \
                  --enable-bsf=aac_adtstoasc \
-                 --enable-decoder=h264,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
+                 --enable-decoder=h264,libvpx_vp9,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav,aiff,matroska \
                  --enable-parser=aac,h264,mp3,libopus \
                  --enable-protocol=file \
@@ -122,6 +123,7 @@ then
 		pushd "$SCRATCH/$RAW_ARCH"
 
 		LIBOPUS_PATH="$SOURCE_DIR/libopus"
+		LIBVPX_PATH="$SOURCE_DIR/libvpx"
 
 		CFLAGS="$EXTRA_CFLAGS -arch $ARCH"
 		if [ "$RAW_ARCH" = "i386" -o "$RAW_ARCH" = "x86_64" ]
@@ -174,7 +176,7 @@ then
 			    --extra-ldflags="$LDFLAGS" \
 			    --prefix="$THIN/$RAW_ARCH" \
 			    --pkg-config="$PKG_CONFIG" \
-			    --pkg-config-flags="--libopus_path $LIBOPUS_PATH" \
+			    --pkg-config-flags="--libopus_path $LIBOPUS_PATH --libvpx_path $LIBVPX_PATH" \
 			|| exit 1
 			echo "$CONFIGURE_FLAGS" > "$CONFIGURED_MARKER"
 		fi

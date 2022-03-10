@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -21,21 +20,37 @@ import UndoUI
 private final class InviteLinkEditControllerArguments {
     let context: AccountContext
     let updateState: ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void
+    let scrollToUsage: () -> Void
     let dismissInput: () -> Void
     let revoke: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void, dismissInput: @escaping () -> Void, revoke: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((InviteLinkEditControllerState) -> InviteLinkEditControllerState) -> Void,  scrollToUsage: @escaping () -> Void, dismissInput: @escaping () -> Void, revoke: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
+        self.scrollToUsage = scrollToUsage
         self.dismissInput = dismissInput
         self.revoke = revoke
     }
 }
 
 private enum InviteLinksEditSection: Int32 {
+    case title
+    case requestApproval
     case time
     case usage
     case revoke
+}
+
+private enum InviteLinksEditEntryTag: ItemListItemTag {
+    case usage
+
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? InviteLinksEditEntryTag, self == other {
+            return true
+        } else {
+            return false
+        }
+    }
 }
 
 private let invalidAmountCharacters = CharacterSet(charactersIn: "01234567890.,").inverted
@@ -55,6 +70,13 @@ func isValidNumberOfUsers(_ number: String) -> Bool {
 }
 
 private enum InviteLinksEditEntry: ItemListNodeEntry {
+    case titleHeader(PresentationTheme, String)
+    case title(PresentationTheme, String, String)
+    case titleInfo(PresentationTheme, String)
+    
+    case requestApproval(PresentationTheme, String, Bool)
+    case requestApprovalInfo(PresentationTheme, String)
+    
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
@@ -70,6 +92,10 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
    
     var section: ItemListSectionId {
         switch self {
+            case .titleHeader, .title, .titleInfo:
+                return InviteLinksEditSection.title.rawValue
+            case .requestApproval, .requestApprovalInfo:
+                return InviteLinksEditSection.requestApproval.rawValue
             case .timeHeader, .timePicker, .timeExpiryDate, .timeCustomPicker, .timeInfo:
                 return InviteLinksEditSection.time.rawValue
             case .usageHeader, .usagePicker, .usageCustomPicker, .usageInfo:
@@ -81,31 +107,71 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-            case .timeHeader:
+            case .titleHeader:
                 return 0
-            case .timePicker:
+            case .title:
                 return 1
-            case .timeExpiryDate:
+            case .titleInfo:
                 return 2
-            case .timeCustomPicker:
+            case .requestApproval:
                 return 3
-            case .timeInfo:
+            case .requestApprovalInfo:
                 return 4
-            case .usageHeader:
+            case .timeHeader:
                 return 5
-            case .usagePicker:
+            case .timePicker:
                 return 6
-            case .usageCustomPicker:
+            case .timeExpiryDate:
                 return 7
-            case .usageInfo:
+            case .timeCustomPicker:
                 return 8
-            case .revoke:
+            case .timeInfo:
                 return 9
+            case .usageHeader:
+                return 10
+            case .usagePicker:
+                return 11
+            case .usageCustomPicker:
+                return 12
+            case .usageInfo:
+                return 13
+            case .revoke:
+                return 14
         }
     }
     
     static func ==(lhs: InviteLinksEditEntry, rhs: InviteLinksEditEntry) -> Bool {
         switch lhs {
+            case let .titleHeader(lhsTheme, lhsText):
+                if case let .titleHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .title(lhsTheme, lhsPlaceholder, lhsValue):
+                if case let .title(rhsTheme, rhsPlaceholder, rhsValue) = rhs, lhsTheme === rhsTheme, lhsPlaceholder == rhsPlaceholder, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .titleInfo(lhsTheme, lhsText):
+                if case let .titleInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestApproval(lhsTheme, lhsText, lhsValue):
+                if case let .requestApproval(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .requestApprovalInfo(lhsTheme, lhsText):
+                if case let .requestApprovalInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .timeHeader(lhsTheme, lhsText):
                 if case let .timeHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -176,6 +242,28 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! InviteLinkEditControllerArguments
         switch self {
+            case let .titleHeader(_, text):
+                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+            case let .title(_, placeholder, value):
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(), text: value, placeholder: placeholder, maxLength: 32, sectionId: self.section, textUpdated: { value in
+                    arguments.updateState { state in
+                        var updatedState = state
+                        updatedState.title = value
+                        return updatedState
+                    }
+                }, action: {})
+            case let .titleInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .requestApproval(_, text, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateState { state in
+                        var updatedState = state
+                        updatedState.requestApproval = value
+                        return updatedState
+                    }
+                })
+            case let .requestApprovalInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .timeHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .timePicker(_, value):
@@ -235,7 +323,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     text = focused ? "" : presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsersUnlimited
                 }
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: nil, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: presentationData.strings.InviteLink_Create_UsersLimitNumberOfUsers, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .number, alignment: .right, selectAllOnFocus: true, secondaryStyle: !customValue, tag: InviteLinksEditEntryTag.usage, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updateState { state in
                         var updatedState = state
                         if updatedText.isEmpty {
@@ -255,6 +343,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                             updatedState.pickingUsageLimit = true
                             return updatedState
                         }
+                        arguments.scrollToUsage()
                     } else {
                         arguments.updateState { state in
                             var updatedState = state
@@ -275,11 +364,25 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     }
 }
 
-private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, presentationData: PresentationData) -> [InviteLinksEditEntry] {
+private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state: InviteLinkEditControllerState, isGroup: Bool, isPublic: Bool, presentationData: PresentationData) -> [InviteLinksEditEntry] {
     var entries: [InviteLinksEditEntry] = []
     
-    entries.append(.timeHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_TimeLimit.uppercased()))
+    entries.append(.titleHeader(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameTitle.uppercased()))
+    entries.append(.title(presentationData.theme, presentationData.strings.InviteLink_Create_LinkName, state.title))
+    entries.append(.titleInfo(presentationData.theme, presentationData.strings.InviteLink_Create_LinkNameInfo))
     
+    if !isPublic {
+        entries.append(.requestApproval(presentationData.theme, presentationData.strings.InviteLink_Create_RequestApproval, state.requestApproval))
+        var requestApprovalInfoText = presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        if state.requestApproval {
+            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOnInfoChannel
+        } else {
+            requestApprovalInfoText = isGroup ? presentationData.strings.InviteLink_Create_RequestApprovalOnInfoGroup : presentationData.strings.InviteLink_Create_RequestApprovalOffInfoChannel
+        }
+        entries.append(.requestApprovalInfo(presentationData.theme, requestApprovalInfoText))
+    }
+    
+    entries.append(.timeHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_TimeLimit.uppercased()))
     entries.append(.timePicker(presentationData.theme, state.time))
     
     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -295,16 +398,17 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
-    entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
-    entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
-    
-    var customValue = false
-    if case .custom = state.usage {
-        customValue = true
+    if !state.requestApproval || isPublic {
+        entries.append(.usageHeader(presentationData.theme,  presentationData.strings.InviteLink_Create_UsersLimit.uppercased()))
+        entries.append(.usagePicker(presentationData.theme, presentationData.dateTimeFormat, state.usage))
+        
+        var customValue = false
+        if case .custom = state.usage {
+            customValue = true
+        }
+        entries.append(.usageCustomPicker(presentationData.theme, state.usage.value, state.pickingUsageLimit, customValue))
+        entries.append(.usageInfo(presentationData.theme, presentationData.strings.InviteLink_Create_UsersLimitInfo))
     }
-    entries.append(.usageCustomPicker(presentationData.theme, state.usage.value, state.pickingUsageLimit, customValue))
-
-    entries.append(.usageInfo(presentationData.theme, presentationData.strings.InviteLink_Create_UsersLimitInfo))
     
     if let _ = invite {
         entries.append(.revoke(presentationData.theme, presentationData.strings.InviteLink_Create_Revoke))
@@ -314,14 +418,16 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
 }
 
 private struct InviteLinkEditControllerState: Equatable {
+    var title: String
     var usage: InviteLinkUsageLimit
     var time: InviteLinkTimeLimit
+    var requestApproval = false
     var pickingTimeLimit = false
     var pickingUsageLimit = false
     var updating = false
 }
 
-public func inviteLinkEditController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, invite: ExportedInvitation?, completion: ((ExportedInvitation?) -> Void)? = nil) -> ViewController {
+public func inviteLinkEditController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, invite: ExportedInvitation?, completion: ((ExportedInvitation?) -> Void)? = nil) -> ViewController {
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
     let actionsDisposable = DisposableSet()
 
@@ -344,9 +450,9 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             timeLimit = .unlimited
         }
         
-        initialState = InviteLinkEditControllerState(usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: invite.title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: invite.requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
     } else {
-        initialState = InviteLinkEditControllerState(usage: .unlimited, time: .unlimited, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingTimeLimit: false, pickingUsageLimit: false)
     }
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -357,9 +463,12 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
 
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var scrollToUsageImpl: (() -> Void)?
     
     let arguments = InviteLinkEditControllerArguments(context: context, updateState: { f in
         updateState(f)
+    }, scrollToUsage: {
+        scrollToUsageImpl?()
     }, dismissInput: {
        dismissInputImpl?()
     }, revoke: {
@@ -419,9 +528,16 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     
     let previousState = Atomic<InviteLinkEditControllerState?>(value: nil)
-    let signal = combineLatest(presentationData, statePromise.get())
+    let signal = combineLatest(
+        presentationData,
+        statePromise.get(),
+        context.engine.data.subscribe(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        ))
     |> deliverOnMainQueue
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let isPublic = !(peer?.addressName?.isEmpty ?? true)
+        
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
@@ -443,9 +559,13 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                 expireDate = 0
             }
 
+            let titleString = state.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            let title = titleString.isEmpty ? nil : titleString
             let usageLimit = state.usage.value
+            let requestNeeded = state.requestApproval && !isPublic
+            
             if invite == nil {
-                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, expireDate: expireDate, usageLimit: usageLimit)
+                let _ = (context.engine.peers.createPeerExportedInvitation(peerId: peerId, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -458,8 +578,13 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
-            } else if let invite = invite {
-                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: invite.link, expireDate: expireDate, usageLimit: usageLimit)
+            } else if let initialInvite = invite {
+                if initialInvite.expireDate == expireDate && initialInvite.usageLimit == usageLimit && initialInvite.requestApproval == requestNeeded {
+                    completion?(initialInvite)
+                    dismissImpl?()
+                    return
+                }
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: initialInvite.link, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)
@@ -477,12 +602,19 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         
         let previousState = previousState.swap(state)
         var animateChanges = false
-        if let previousState = previousState, previousState.pickingTimeLimit != state.pickingTimeLimit {
+        if let previousState = previousState, previousState.pickingTimeLimit != state.pickingTimeLimit || previousState.requestApproval != state.requestApproval {
             animateChanges = true
         }
         
+        let isGroup: Bool
+        if case let .channel(channel) = peer, case .broadcast = channel.info {
+            isGroup = false
+        } else {
+            isGroup = true
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(invite == nil ? presentationData.strings.InviteLink_Create_Title : presentationData.strings.InviteLink_Create_EditTitle), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: inviteLinkEditControllerEntries(invite: invite, state: state, isGroup: isGroup, isPublic: isPublic, presentationData: presentationData), style: .blocks, emptyStateItem: nil, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -498,6 +630,27 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         if let controller = controller {
             controller.present(c, in: .window(.root), with: p)
         }
+    }
+    scrollToUsageImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListSingleLineInputItemNode {
+                    if let tag = itemNode.tag as? InviteLinksEditEntryTag, tag == .usage {
+                        resultItemNode = itemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode)
+            }
+        })
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)

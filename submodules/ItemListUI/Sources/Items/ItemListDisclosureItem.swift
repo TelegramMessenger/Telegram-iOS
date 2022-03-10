@@ -24,6 +24,7 @@ public enum ItemListDisclosureLabelStyle {
     case multilineDetailText
     case badge(UIColor)
     case color(UIColor)
+    case image(image: UIImage, size: CGSize)
 }
 
 public class ItemListDisclosureItem: ListViewItem, ItemListItem {
@@ -179,6 +180,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         self.backgroundNode.backgroundColor = .white
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -276,6 +278,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     updatedLabelImage = generateFilledCircleImage(diameter: 17.0, color: color)
                 }
             }
+            if case let .image(image, _) = item.labelStyle {
+                updatedLabelImage = image
+            }
             
             let badgeDiameter: CGFloat = 20.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -323,7 +328,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset - additionalTextRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let detailFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
+            let detailFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             
             let labelFont: UIFont
             let labelBadgeColor: UIColor
@@ -354,7 +359,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.label, font: labelFont, textColor:labelBadgeColor), backgroundColor: nil, maximumNumberOfLines: multilineLabel ? 0 : 1, truncationType: .end, constrainedSize: CGSize(width: labelConstrain, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let verticalInset: CGFloat = 11.0
-            let titleSpacing: CGFloat = 3.0
+            let titleSpacing: CGFloat = 1.0
             
             let height: CGFloat
             switch item.labelStyle {
@@ -376,7 +381,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: height)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -512,6 +517,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true
@@ -555,7 +561,16 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     strongSelf.labelNode.frame = labelFrame
  
-                    if case .color = item.labelStyle {
+                    if case let .image(_, size) = item.labelStyle {
+                        if let updatedLabelImage = updatedLabelImage {
+                            strongSelf.labelImageNode.image = updatedLabelImage
+                        }
+                        if strongSelf.labelImageNode.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.labelImageNode)
+                        }
+                        
+                        strongSelf.labelImageNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - size.width - 30.0, y: floor((layout.contentSize.height - size.height) / 2.0)), size: size)
+                    } else if case .color = item.labelStyle {
                         if let updatedLabelImage = updatedLabelImage {
                             strongSelf.labelImageNode.image = updatedLabelImage
                         }

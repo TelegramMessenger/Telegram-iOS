@@ -454,7 +454,7 @@ public class InstantPageGalleryController: ViewController, StandalonePresentable
             }
         }
         
-        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself)
+        self.galleryNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

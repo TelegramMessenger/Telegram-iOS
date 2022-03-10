@@ -35,6 +35,7 @@ private enum ApplicationSpecificSharedDataKeyValues: Int32 {
     case contactSynchronizationSettings = 15
     case webBrowserSettings = 16
     case intentsSettings = 17
+    case translationSettings = 18
 }
 
 public struct ApplicationSpecificSharedDataKeys {
@@ -56,6 +57,7 @@ public struct ApplicationSpecificSharedDataKeys {
     public static let contactSynchronizationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.contactSynchronizationSettings.rawValue)
     public static let webBrowserSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.webBrowserSettings.rawValue)
     public static let intentsSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.intentsSettings.rawValue)
+    public static let translationSettings = applicationSpecificPreferencesKey(ApplicationSpecificSharedDataKeyValues.translationSettings.rawValue)
 }
 
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
@@ -64,6 +66,8 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case cachedWallpapers = 2
     case mediaPlaybackStoredState = 3
     case cachedGeocodes = 4
+    case visualMediaStoredState = 5
+    case cachedImageRecognizedContent = 6
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
@@ -72,6 +76,8 @@ public struct ApplicationSpecificItemCacheCollectionId {
     public static let cachedWallpapers = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedWallpapers.rawValue)
     public static let mediaPlaybackStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.mediaPlaybackStoredState.rawValue)
     public static let cachedGeocodes = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedGeocodes.rawValue)
+    public static let visualMediaStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.visualMediaStoredState.rawValue)
+    public static let cachedImageRecognizedContent = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedImageRecognizedContent.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {

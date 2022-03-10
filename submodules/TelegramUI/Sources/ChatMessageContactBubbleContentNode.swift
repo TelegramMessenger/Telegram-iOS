@@ -41,6 +41,22 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.buttonNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+        
+        self.dateAndStatusNode.reactionSelected = { [weak self] value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+        }
+        
+        self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                gesture?.cancel()
+                return
+            }
+            
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
+        }
     }
     
     override func accessibilityActivate() -> Bool {
@@ -144,7 +160,9 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let avatarSize = CGSize(width: 40.0, height: 40.0)
                 
-                let maxTextWidth = max(1.0, constrainedSize.width - avatarSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right)
+                let sideInsets = layoutConstants.text.bubbleInsets.right * 2.0
+                
+                let maxTextWidth = max(1.0, constrainedSize.width - avatarSize.width - 7.0 - sideInsets)
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
@@ -154,6 +172,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -166,20 +185,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var dateReactions: [MessageReaction] = []
-                var dateReactionCount = 0
-                if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                    for reaction in reactionsAttribute.reactions {
-                        if reaction.isSelected {
-                            dateReactions.insert(reaction, at: 0)
-                        } else {
-                            dateReactions.append(reaction)
-                        }
-                        dateReactionCount += Int(reaction.count)
-                    }
-                }
-                
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -199,18 +205,30 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         statusType = nil
                 }
                 
-                var statusSize = CGSize()
-                var statusApply: ((Bool) -> Void)?
-                
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
                 if let statusType = statusType {
                     var isReplyThread = false
                     if case .replyThread = item.chatLocation {
                         isReplyThread = true
                     }
                     
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude), dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: item.context,
+                        presentationData: item.presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
+                        constrainedSize: CGSize(width: constrainedSize.width - sideInsets, height: .greatestFiniteMagnitude),
+                        availableReactions: item.associatedData.availableReactions,
+                        reactions: dateReactionsAndPeers.reactions,
+                        reactionPeers: dateReactionsAndPeers.peers,
+                        replyCount: dateReplies,
+                        isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
+                        hasAutoremove: item.message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                    ))
                 }
                 
                 let buttonImage: UIImage
@@ -238,27 +256,30 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, titleHighlightedColor)
                 
-                var maxContentWidth: CGFloat = 0.0
-                maxContentWidth = max(maxContentWidth, statusSize.width)
-                maxContentWidth = max(maxContentWidth, titleLayout.size.width)
-                maxContentWidth = max(maxContentWidth, textLayout.size.width)
+                var maxContentWidth: CGFloat = avatarSize.width + 7.0
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    maxContentWidth = max(maxContentWidth, statusSuggestedWidthAndContinue.0)
+                }
+                maxContentWidth = max(maxContentWidth, avatarSize.width + 7.0 + titleLayout.size.width)
+                maxContentWidth = max(maxContentWidth, avatarSize.width + 7.0 + textLayout.size.width)
                 maxContentWidth = max(maxContentWidth, buttonWidth)
                 
-                let contentWidth = avatarSize.width + maxContentWidth +  layoutConstants.text.bubbleInsets.right + 8.0
+                let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
                 return (contentWidth, { boundingWidth in
-                    let layoutSize: CGSize
-                    let statusFrame: CGRect
-                    
-                    let baseAvatarFrame = CGRect(origin: CGPoint(), size: avatarSize)
+                    let baseAvatarFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutConstants.text.bubbleInsets.top), size: avatarSize)
                     
                     let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
                     let buttonSpacing: CGFloat = 4.0
                     
-                    layoutSize = CGSize(width: contentWidth, height: 49.0 + textLayout.size.height + buttonSize.height + buttonSpacing)
-                    statusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusSize.width - layoutConstants.text.bubbleInsets.right, y: layoutSize.height - statusSize.height - 9.0 - buttonSpacing - buttonSize.height), size: statusSize)
+                    let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
+                    
+                    var layoutSize = CGSize(width: contentWidth, height: 49.0 + textLayout.size.height + buttonSize.height + buttonSpacing)
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        layoutSize.height += statusSizeAndApply.0.height - 4.0
+                    }
                     let buttonFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutSize.height - 9.0 - buttonSize.height), size: buttonSize)
-                    let avatarFrame = baseAvatarFrame.offsetBy(dx: 5.0, dy: 5.0)
+                    let avatarFrame = baseAvatarFrame.offsetBy(dx: 0.0, dy: 5.0)
                     
                     var customLetters: [String] = []
                     if let selectedContact = selectedContact, selectedContact.peerId == nil {
@@ -291,16 +312,14 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textNode.frame = CGRect(origin: CGPoint(x: avatarFrame.maxX + 7.0, y: avatarFrame.minY + 20.0), size: textLayout.size)
                             strongSelf.buttonNode.frame = buttonFrame
                             
-                            if let statusApply = statusApply {
+                            if let statusSizeAndApply = statusSizeAndApply {
+                                strongSelf.dateAndStatusNode.frame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.left, y: strongSelf.textNode.frame.maxY + 2.0), size: statusSizeAndApply.0)
                                 if strongSelf.dateAndStatusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.dateAndStatusNode)
+                                    statusSizeAndApply.1(.None)
+                                } else {
+                                    statusSizeAndApply.1(animation)
                                 }
-                                var hasAnimation = true
-                                if case .None = animation {
-                                    hasAnimation = false
-                                }
-                                statusApply(hasAnimation)
-                                strongSelf.dateAndStatusNode.frame = statusFrame
                             } else if strongSelf.dateAndStatusNode.supernode != nil {
                                 strongSelf.dateAndStatusNode.removeFromSupernode()
                             }
@@ -360,6 +379,9 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         if self.buttonNode.frame.contains(point) {
             return .openMessage
         }
+        if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
+            return .ignore
+        }
         return .none
     }
     
@@ -377,10 +399,17 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func reactionTargetView(value: String) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
-            return self.dateAndStatusNode.reactionNode(value: value)
+            return self.dateAndStatusNode.reactionView(value: value)
         }
         return nil
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.dateAndStatusNode.supernode != nil, let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
+            return result
+        }
+        return super.hitTest(point, with: event)
     }
 }

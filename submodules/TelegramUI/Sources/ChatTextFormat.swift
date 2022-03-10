@@ -1,6 +1,7 @@
 import Foundation
 import TextFormat
 import Postbox
+import TelegramCore
 import AccountContext
 
 func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedString.Key) -> ChatTextInputState {
@@ -50,9 +51,9 @@ func chatTextInputClearFormattingAttributes(_ state: ChatTextInputState) -> Chat
     }
 }
 
-func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, url: String) -> ChatTextInputState {
-    if !state.selectionRange.isEmpty {
-        let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
+func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>, url: String) -> ChatTextInputState {
+    if !selectionRange.isEmpty {
+        let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
         var linkRange = nsRange
         var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
         state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
@@ -71,7 +72,7 @@ func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, url: String) -> 
             result.removeAttribute(attribute, range: range)
         }
         result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: nsRange)
-        return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
+        return ChatTextInputState(inputText: result, selectionRange: selectionRange)
     } else {
         return state
     }
@@ -90,9 +91,9 @@ func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: Peer) -
         let selectionPosition = range.lowerBound + (replacementText as NSString).length
         
         return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
-    } else if !peer.compactDisplayTitle.isEmpty {
+    } else if !EnginePeer(peer).compactDisplayTitle.isEmpty {
         let replacementText = NSMutableAttributedString()
-        replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+        replacementText.append(NSAttributedString(string: EnginePeer(peer).compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
         replacementText.append(NSAttributedString(string: " "))
         
         let updatedRange = NSRange(location: range.location , length: range.length)

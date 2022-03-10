@@ -290,3 +290,177 @@ public class InteractiveCheckNode: CheckNode {
         self.buttonNode.frame = self.bounds
     }
 }
+
+private final class NullActionClass: NSObject, CAAction {
+    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
+    }
+}
+
+private let nullAction = NullActionClass()
+
+public class CheckLayer: CALayer {
+    private var animatingOut = false
+    private var animationProgress: CGFloat = 0.0
+    public var theme: CheckNodeTheme {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+
+    public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
+        self.theme = theme
+        self.content = content
+
+        super.init()
+
+        self.isOpaque = false
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override public func action(forKey event: String) -> CAAction? {
+        return nullAction
+    }
+
+    public var content: CheckNodeContent {
+        didSet {
+            self.setNeedsDisplay()
+        }
+    }
+
+    public var selected = false
+    public func setSelected(_ selected: Bool, animated: Bool = false) {
+        guard self.selected != selected else {
+            return
+        }
+        self.selected = selected
+
+        if animated {
+            self.animatingOut = !selected
+
+            let animation = POPBasicAnimation()
+            animation.property = (POPAnimatableProperty.property(withName: "progress", initializer: { property in
+                property?.readBlock = { node, values in
+                    values?.pointee = (node as! CheckLayer).animationProgress
+                }
+                property?.writeBlock = { node, values in
+                    (node as! CheckLayer).animationProgress = values!.pointee
+                    (node as! CheckLayer).setNeedsDisplay()
+                }
+                property?.threshold = 0.01
+            }) as! POPAnimatableProperty)
+            animation.fromValue = (selected ? 0.0 : 1.0) as NSNumber
+            animation.toValue = (selected ? 1.0 : 0.0) as NSNumber
+            animation.timingFunction = CAMediaTimingFunction(name: selected ? CAMediaTimingFunctionName.easeOut : CAMediaTimingFunctionName.easeIn)
+            animation.duration = selected ? 0.21 : 0.15
+            self.pop_add(animation, forKey: "progress")
+        } else {
+            self.pop_removeAllAnimations()
+            self.animatingOut = false
+            self.animationProgress = selected ? 1.0 : 0.0
+            self.setNeedsDisplay()
+        }
+    }
+
+    public func setHighlighted(_ highlighted: Bool, animated: Bool = false) {
+    }
+
+    override public func display() {
+        if self.bounds.isEmpty {
+            return
+        }
+        self.contents = generateImage(self.bounds.size, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+
+            let parameters = CheckNodeParameters(theme: self.theme, content: self.content, animationProgress: self.animationProgress, selected: self.selected, animatingOut: self.animatingOut)
+
+            let center = CGPoint(x: bounds.width / 2.0, y: bounds.width / 2.0)
+
+            var borderWidth: CGFloat = 1.0 + UIScreenPixel
+            if parameters.theme.hasInset {
+                borderWidth = 1.5
+            }
+            if let customBorderWidth = parameters.theme.borderWidth {
+                borderWidth = customBorderWidth
+            }
+
+            let checkWidth: CGFloat = 1.5
+
+            let inset: CGFloat = parameters.theme.hasInset ? 2.0 - UIScreenPixel : 0.0
+
+            let checkProgress = parameters.animatingOut ? 1.0 : parameters.animationProgress
+            let fillProgress = parameters.animatingOut ? 1.0 : min(1.0, parameters.animationProgress * 1.35)
+
+            context.setStrokeColor(parameters.theme.borderColor.cgColor)
+            context.setLineWidth(borderWidth)
+
+            let maybeScaleOut = {
+                if parameters.animatingOut {
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: parameters.animationProgress, y: parameters.animationProgress)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+
+                    context.setAlpha(parameters.animationProgress)
+                }
+            }
+
+            let borderInset = borderWidth / 2.0 + inset
+            let borderProgress: CGFloat = parameters.theme.filledBorder ? fillProgress : 1.0
+            let borderFrame = bounds.insetBy(dx: borderInset, dy: borderInset)
+
+            if parameters.theme.filledBorder {
+                maybeScaleOut()
+            }
+
+            context.saveGState()
+            if parameters.theme.hasShadow {
+                context.setShadow(offset: CGSize(), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+            }
+
+            context.strokeEllipse(in: borderFrame.insetBy(dx: borderFrame.width * (1.0 - borderProgress), dy: borderFrame.height * (1.0 - borderProgress)))
+            context.restoreGState()
+
+            if !parameters.theme.filledBorder {
+                maybeScaleOut()
+            }
+
+            context.setFillColor(parameters.theme.backgroundColor.cgColor)
+
+            let fillInset = parameters.theme.overlayBorder ? borderWidth + inset : inset
+            let fillFrame = bounds.insetBy(dx: fillInset, dy: fillInset)
+            context.fillEllipse(in: fillFrame.insetBy(dx: fillFrame.width * (1.0 - fillProgress), dy: fillFrame.height * (1.0 - fillProgress)))
+
+            let scale = (bounds.width - inset) / 18.0
+
+            let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
+            let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
+            let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
+            let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
+
+            if !firstSegment.isZero {
+                if firstSegment < 1.0 {
+                    context.move(to: CGPoint(x: s.x + p1.x * firstSegment, y: s.y + p1.y * firstSegment))
+                    context.addLine(to: s)
+                } else {
+                    let secondSegment = (checkProgress - 0.33) * 1.5
+                    context.move(to: CGPoint(x: s.x + p1.x + p2.x * secondSegment, y: s.y + p1.y + p2.y * secondSegment))
+                    context.addLine(to: CGPoint(x: s.x + p1.x, y: s.y + p1.y))
+                    context.addLine(to: s)
+                }
+            }
+
+            context.setStrokeColor(parameters.theme.strokeColor.cgColor)
+            if parameters.theme.strokeColor == .clear {
+                context.setBlendMode(.clear)
+            }
+            context.setLineWidth(checkWidth)
+            context.setLineCap(.round)
+            context.setLineJoin(.round)
+            context.setMiterLimit(10.0)
+
+            context.strokePath()
+        })?.cgImage
+    }
+}

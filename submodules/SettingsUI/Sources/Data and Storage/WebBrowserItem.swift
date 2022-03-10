@@ -10,7 +10,7 @@ import PhotoResources
 import OpenInExternalAppUI
 
 class WebBrowserItem: ListViewItem, ItemListItem {
-    let account: Account
+    let engine: TelegramEngine
     let presentationData: ItemListPresentationData
     let title: String
     let application: OpenInApplication
@@ -18,8 +18,8 @@ class WebBrowserItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    public init(account: Account, presentationData: ItemListPresentationData, title: String, application: OpenInApplication, checked: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
-        self.account = account
+    public init(engine: TelegramEngine, presentationData: ItemListPresentationData, title: String, application: OpenInApplication, checked: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+        self.engine = engine
         self.presentationData = presentationData
         self.title = title
         self.application = application
@@ -144,14 +144,14 @@ private final class WebBrowserItemNode: ListViewItemNode {
                 switch item.application {
                 case .safari:
                     if let image = UIImage(bundleImageName: "Open In/Safari") {
-                        updatedIconSignal = openInAppIcon(postbox: item.account.postbox, appIcon: .image(image: image))
+                        updatedIconSignal = openInAppIcon(engine: item.engine, appIcon: .image(image: image))
                     }
                 case .maps:
                     if let image = UIImage(bundleImageName: "Open In/Maps") {
-                        updatedIconSignal = openInAppIcon(postbox: item.account.postbox, appIcon: .image(image: image))
+                        updatedIconSignal = openInAppIcon(engine: item.engine, appIcon: .image(image: image))
                     }
                 case let .other(_, identifier, _, store):
-                    updatedIconSignal = openInAppIcon(postbox: item.account.postbox, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store)))
+                    updatedIconSignal = openInAppIcon(engine: item.engine, appIcon: .resource(resource: OpenInAppIconResource(appStoreId: identifier, store: store)))
                 }
             }
             
@@ -161,7 +161,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
             
             let separatorHeight = UIScreenPixel
             
-            let insets = itemListNeighborsGroupedInsets(neighbors)
+            let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let contentSize = CGSize(width: params.width, height: 22.0 + titleLayout.size.height)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -237,6 +237,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
                     switch neighbors.bottom {
                         case .sameSection(false):
                             bottomStripeInset = leftInset
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             hasBottomCorners = true
@@ -252,7 +253,7 @@ private final class WebBrowserItemNode: ListViewItemNode {
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 11.0), size: titleLayout.size)
                     
-                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: 44.0 + UIScreenPixel + UIScreenPixel))
+                    strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                 }
             })
         }

@@ -61,7 +61,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                 return account.postbox.transaction { transaction -> Api.InputPeer? in
                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                 }
-                |> mapError { _ -> StandaloneUploadMediaError in return .generic }
+                |> mapError { _ -> StandaloneUploadMediaError in }
                 |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                     if let inputPeer = inputPeer {
                         return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedPhoto(flags: 0, file: inputFile, stickers: nil, ttlSeconds: nil)))
@@ -150,7 +150,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                                 return account.postbox.transaction { transaction -> Api.InputPeer? in
                                     return transaction.getPeer(peerId).flatMap(apiInputPeer)
                                     }
-                                |> mapError { _ -> StandaloneUploadMediaError in return .generic }
+                                |> mapError { _ -> StandaloneUploadMediaError in }
                                 |> mapToSignal { inputPeer -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                     if let inputPeer = inputPeer {
                                         var flags: Int32 = 0

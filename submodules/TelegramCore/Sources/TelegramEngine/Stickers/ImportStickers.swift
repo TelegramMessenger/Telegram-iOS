@@ -33,12 +33,12 @@ private func uploadedSticker(postbox: Postbox, network: Network, resource: Media
     }
 }
 
-func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, isAnimated: Bool) -> Signal<UploadStickerStatus, UploadStickerError> {
+func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResource, alt: String, dimensions: PixelDimensions, mimeType: String) -> Signal<UploadStickerStatus, UploadStickerError> {
     guard let inputPeer = apiInputPeer(peer) else {
         return .fail(.generic)
     }
     return uploadedSticker(postbox: account.postbox, network: account.network, resource: resource)
-    |> mapError { _ -> UploadStickerError in return .generic }
+    |> mapError { _ -> UploadStickerError in }
     |> mapToSignal { result -> Signal<UploadStickerStatus, UploadStickerError> in
         switch result.content {
             case .error:
@@ -48,12 +48,11 @@ func _internal_uploadSticker(account: Account, peer: Peer, resource: MediaResour
                     case let .progress(progress):
                         return .single(.progress(progress))
                     case let .inputFile(file):
-                        var flags: Int32 = 0
-                        flags |= (1 << 4)
+                        let flags: Int32 = 0
                         var attributes: [Api.DocumentAttribute] = []
                         attributes.append(.documentAttributeSticker(flags: 0, alt: alt, stickerset: .inputStickerSetEmpty, maskCoords: nil))
                         attributes.append(.documentAttributeImageSize(w: dimensions.width, h: dimensions.height))
-                        return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: nil, mimeType: isAnimated ? "application/x-tgsticker": "image/png", attributes: attributes, stickers: nil, ttlSeconds: nil)))
+                        return account.network.request(Api.functions.messages.uploadMedia(peer: inputPeer, media: Api.InputMedia.inputMediaUploadedDocument(flags: flags, file: file, thumb: nil, mimeType: mimeType, attributes: attributes, stickers: nil, ttlSeconds: nil)))
                         |> mapError { _ -> UploadStickerError in return .generic }
                         |> mapToSignal { media -> Signal<UploadStickerStatus, UploadStickerError> in
                             switch media {
@@ -81,20 +80,28 @@ public struct ImportSticker {
     public let resource: MediaResource
     let emojis: [String]
     public let dimensions: PixelDimensions
+    public let mimeType: String
     
-    public init(resource: MediaResource, emojis: [String], dimensions: PixelDimensions) {
+    public init(resource: MediaResource, emojis: [String], dimensions: PixelDimensions, mimeType: String) {
         self.resource = resource
         self.emojis = emojis
         self.dimensions = dimensions
+        self.mimeType = mimeType
     }
 }
 
 public enum CreateStickerSetStatus {
     case progress(Float, Int32, Int32)
-    case complete(StickerPackCollectionInfo, [ItemCollectionItem])
+    case complete(StickerPackCollectionInfo, [StickerPackItem])
 }
 
-func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, isAnimated: Bool, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
+public enum CreateStickerSetType {
+    case image
+    case animation
+    case video
+}
+
+func _internal_createStickerSet(account: Account, title: String, shortName: String, stickers: [ImportSticker], thumbnail: ImportSticker?, type: CreateStickerSetType, software: String?) -> Signal<CreateStickerSetStatus, CreateStickerSetError> {
     return account.postbox.loadedPeerWithId(account.peerId)
     |> castError(CreateStickerSetError.self)
     |> mapToSignal { peer -> Signal<CreateStickerSetStatus, CreateStickerSetError> in
@@ -108,9 +115,9 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
         }
         for sticker in stickers {
             if let resource = sticker.resource as? CloudDocumentMediaResource {
-                uploadStickers.append(.single(.complete(resource, isAnimated ? "application/x-tgsticker": "image/png")))
+                uploadStickers.append(.single(.complete(resource, sticker.mimeType)))
             } else {
-                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, isAnimated: isAnimated)
+                uploadStickers.append(_internal_uploadSticker(account: account, peer: peer, resource: sticker.resource, alt: sticker.emojis.first ?? "", dimensions: sticker.dimensions, mimeType: sticker.mimeType)
                 |> mapError { _ -> CreateStickerSetError in
                     return .generic
                 })
@@ -126,8 +133,13 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
             }
             if resources.count == stickers.count {
                 var flags: Int32 = 0
-                if isAnimated {
-                    flags |= (1 << 1)
+                switch type {
+                    case .animation:
+                        flags |= (1 << 1)
+                    case .video:
+                        flags |= (1 << 4)
+                    default:
+                        break
                 }
                 var inputStickers: [Api.InputStickerSetItem] = []
                 let stickerDocuments = thumbnail != nil ? resources.dropLast() : resources
@@ -150,9 +162,11 @@ func _internal_createStickerSet(account: Account, title: String, shortName: Stri
                 }
                 |> mapToSignal { result -> Signal<CreateStickerSetStatus, CreateStickerSetError> in
                     let info: StickerPackCollectionInfo
-                    var items: [ItemCollectionItem] = []
+                    var items: [StickerPackItem] = []
                     
                     switch result {
+                    case .stickerSetNotModified:
+                        return .complete()
                     case let .stickerSet(set, packs, documents):
                         let namespace: ItemCollectionId.Namespace
                         switch set {

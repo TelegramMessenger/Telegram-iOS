@@ -8,11 +8,17 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import AuthorizationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
-private func generateButtonImage(backgroundColor: UIColor, borderColor: UIColor, highlightColor: UIColor?) -> UIImage? {
-    return generateImage(CGSize(width: 1.0, height: 44.0), contextGenerator: { size, context in
+private func generateButtonImage(backgroundColor: UIColor, highlightColor: UIColor?) -> UIImage? {
+    return generateImage(CGSize(width: 24.0, height: 44.0), contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
+        
+        let path = UIBezierPath(roundedRect: bounds, byRoundingCorners: .allCorners, cornerRadii: CGSize(width: 11.0, height: 11.0))
+        context.addPath(path.cgPath)
+        context.clip()
         
         if let highlightColor = highlightColor {
             context.setFillColor(highlightColor.cgColor)
@@ -20,12 +26,8 @@ private func generateButtonImage(backgroundColor: UIColor, borderColor: UIColor,
         } else {
             context.setFillColor(backgroundColor.cgColor)
             context.fill(bounds)
-            
-            context.setFillColor(borderColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: UIScreenPixel)))
-            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: 1.0, height: UIScreenPixel)))
         }
-    })
+    }, opaque: false)?.stretchableImage(withLeftCapWidth: 11, topCapHeight: 11)
 }
 
 private let titleFont = Font.bold(17.0)
@@ -39,6 +41,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     private let proceedAction: () -> Void
     
     private let iconNode: ASImageNode
+    private let animationNode: AnimatedStickerNode
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -55,6 +58,8 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.proceedAction = proceedAction
         
         self.iconNode = ASImageNode()
+        self.animationNode = AnimatedStickerNode()
+        
         self.titleNode = ASTextNode()
         self.textNode = ASTextNode()
         self.buttonNode = HighlightTrackingButtonNode()
@@ -68,7 +73,19 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         
         super.init()
         
+        if let animationName = mode.animationName {
+            self.iconNode.isHidden = true
+            self.animationNode.isHidden = false
+            
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 380, height: 380, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.visibility = true
+        } else {
+            self.iconNode.isHidden = false
+            self.animationNode.isHidden = true
+        }
+        
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.animationNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.buttonBackgroundNode)
@@ -98,15 +115,17 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.presentationData = presentationData
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
-        self.iconNode.image = self.mode.icon(theme: presentationData.theme)
+        if self.animationNode.isHidden {
+            self.iconNode.image = self.mode.icon(theme: presentationData.theme)
+        }
         self.titleNode.attributedText = NSAttributedString(string: self.mode.title(strings: presentationData.strings), font: titleFont, textColor: presentationData.theme.list.sectionHeaderTextColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: self.mode.text(strings: presentationData.strings), font: textFont, textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
         self.noticeNode.attributedText = NSAttributedString(string: self.mode.notice(strings: presentationData.strings), font: textFont, textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
         self.buttonTextNode.attributedText = NSAttributedString(string: self.mode.buttonTitle(strings: presentationData.strings), font: buttonFont, textColor: presentationData.theme.list.itemAccentColor, paragraphAlignment: .center)
         self.buttonTextNode.isAccessibilityElement = false
         self.buttonNode.accessibilityLabel = self.buttonTextNode.attributedText?.string
-        self.buttonBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, borderColor: presentationData.theme.list.itemBlocksSeparatorColor, highlightColor: nil)
-        self.buttonHighlightedBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, borderColor: presentationData.theme.list.itemBlocksSeparatorColor, highlightColor: presentationData.theme.list.itemHighlightedBackgroundColor)
+        self.buttonBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, highlightColor: nil)
+        self.buttonHighlightedBackgroundNode.image = generateButtonImage(backgroundColor: presentationData.theme.list.itemBlocksBackgroundColor, highlightColor: presentationData.theme.list.itemHighlightedBackgroundColor)
         
         if let (layout, navigationBarHeight) = self.validLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -120,7 +139,18 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         insets.top += navigationBarHeight
         
         var iconSize = CGSize()
-        if let size = self.iconNode.image?.size {
+        var animationSize = CGSize()
+        if !self.animationNode.isHidden {
+            animationSize = CGSize(width: 180.0, height: 180.0)
+            self.animationNode.updateLayout(size: animationSize)
+            
+            var iconAlpha: CGFloat = 1.0
+            if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+                iconAlpha = 0.0
+                iconSize = CGSize()
+            }
+            transition.updateAlpha(node: self.animationNode, alpha: iconAlpha)
+        } else if let size = self.iconNode.image?.size {
             iconSize = size
             
             var iconAlpha: CGFloat = 1.0
@@ -136,11 +166,19 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         let textSize = self.textNode.measure(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
         let noticeSize = self.noticeNode.measure(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
         
+        let buttonInset: CGFloat
+        if layout.size.width >= 375.0 {
+            buttonInset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
+        } else {
+            buttonInset = 0.0
+        }
+            
         let items: [AuthorizationLayoutItem] = [
             AuthorizationLayoutItem(node: self.iconNode, size: iconSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.textNode, size: textSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 16.0, maxValue: 16.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
-            AuthorizationLayoutItem(node: self.buttonNode, size: CGSize(width: layout.size.width, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.buttonNode, size: CGSize(width: layout.size.width - buttonInset * 2.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 44.0, maxValue: 44.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 40.0))
         ]
         

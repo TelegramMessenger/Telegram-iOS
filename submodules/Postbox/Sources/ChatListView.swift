@@ -1,32 +1,45 @@
 import Foundation
 
+public struct ChatListEntryMessageTagSummaryKey: Hashable {
+    public var tag: MessageTags
+    public var actionType: PendingMessageActionType
+    
+    public init(tag: MessageTags, actionType: PendingMessageActionType) {
+        self.tag = tag
+        self.actionType = actionType
+    }
+}
+
 public struct ChatListEntryMessageTagSummaryComponent {
-    public let tag: MessageTags
     public let namespace: MessageId.Namespace
     
-    public init(tag: MessageTags, namespace: MessageId.Namespace) {
-        self.tag = tag
+    public init(namespace: MessageId.Namespace) {
         self.namespace = namespace
     }
 }
 
 public struct ChatListEntryPendingMessageActionsSummaryComponent {
-    public let type: PendingMessageActionType
     public let namespace: MessageId.Namespace
     
-    public init(type: PendingMessageActionType, namespace: MessageId.Namespace) {
-        self.type = type
+    public init(namespace: MessageId.Namespace) {
         self.namespace = namespace
     }
 }
 
 public struct ChatListEntrySummaryComponents {
-    public let tagSummary: ChatListEntryMessageTagSummaryComponent?
-    public let actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent?
+    public struct Component {
+        public let tagSummary: ChatListEntryMessageTagSummaryComponent?
+        public let actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent?
+        
+        public init(tagSummary: ChatListEntryMessageTagSummaryComponent? = nil, actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent? = nil) {
+            self.tagSummary = tagSummary
+            self.actionsSummary = actionsSummary
+        }
+    }
+    public var components: [ChatListEntryMessageTagSummaryKey: Component]
     
-    public init(tagSummary: ChatListEntryMessageTagSummaryComponent? = nil, actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent? = nil) {
-        self.tagSummary = tagSummary
-        self.actionsSummary = actionsSummary
+    public init(components: [ChatListEntryMessageTagSummaryKey: Component] = [:]) {
+        self.components = components
     }
 }
 
@@ -88,7 +101,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
 }
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, hasFailed: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], hasFailed: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     public var index: ChatListIndex {
@@ -185,7 +198,7 @@ public enum ChatListEntry: Comparable {
 
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(index: ChatListIndex, messageIndex: MessageIndex?)
-    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: ChatListMessageTagSummaryInfo, hasFailedMessages: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], hasFailedMessages: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     init(_ intermediateEntry: ChatListIntermediateEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) {
@@ -337,7 +350,7 @@ final class MutableChatListView {
     private var additionalItems: [AdditionalChatListItem] = []
     fileprivate var additionalItemEntries: [MutableChatListAdditionalItemEntry] = []
     
-    init(postbox: Postbox, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
+    init(postbox: PostboxImpl, currentTransaction: Transaction, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?, aroundIndex: ChatListIndex, count: Int, summaryComponents: ChatListEntrySummaryComponents) {
         self.groupId = groupId
         self.filterPredicate = filterPredicate
         self.summaryComponents = summaryComponents
@@ -358,8 +371,8 @@ final class MutableChatListView {
             spaces.append(.group(groupId: self.groupId, pinned: .includePinned, predicate: filterPredicate))
         }
         self.spaces = spaces
-        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, halfLimit: count)
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: aroundIndex, summaryComponents: self.summaryComponents, halfLimit: count)
+        self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         
         self.count = count
         
@@ -382,7 +395,7 @@ final class MutableChatListView {
         }
     }
     
-    private func reloadGroups(postbox: Postbox) {
+    private func reloadGroups(postbox: PostboxImpl) {
         self.groupEntries.removeAll()
         if case .root = self.groupId, self.filterPredicate == nil {
             for groupId in postbox.chatListTable.existingGroups() {
@@ -451,11 +464,11 @@ final class MutableChatListView {
         }
     }
     
-    func refreshDueToExternalTransaction(postbox: Postbox) -> Bool {
+    func refreshDueToExternalTransaction(postbox: PostboxImpl, currentTransaction: Transaction) -> Bool {
         var updated = false
         
-        self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
-        self.sampledState = self.state.sample(postbox: postbox)
+        self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
+        self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
         updated = true
         
         let currentGroupEntries = self.groupEntries
@@ -469,16 +482,16 @@ final class MutableChatListView {
         return updated
     }
     
-    func replay(postbox: Postbox, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
+    func replay(postbox: PostboxImpl, currentTransaction: Transaction, operations: [PeerGroupId: [ChatListOperation]], updatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], updatedPeers: [PeerId: Peer], updatedPeerPresences: [PeerId: PeerPresence], transaction: PostboxTransaction, context: MutableChatListViewReplayContext) -> Bool {
         var hasChanges = false
         
         if transaction.updatedGlobalNotificationSettings && self.filterPredicate != nil {
-            self.state = ChatListViewState(postbox: postbox, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
-            self.sampledState = self.state.sample(postbox: postbox)
+            self.state = ChatListViewState(postbox: postbox, currentTransaction: currentTransaction, spaces: self.spaces, anchorIndex: .absoluteUpperBound, summaryComponents: self.summaryComponents, halfLimit: self.count)
+            self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
             hasChanges = true
         } else {
-            if self.state.replay(postbox: postbox, transaction: transaction) {
-                self.sampledState = self.state.sample(postbox: postbox)
+            if self.state.replay(postbox: postbox, currentTransaction: currentTransaction, transaction: transaction) {
+                self.sampledState = self.state.sample(postbox: postbox, currentTransaction: currentTransaction)
                 hasChanges = true
             }
         }
@@ -551,7 +564,7 @@ final class MutableChatListView {
         return hasChanges
     }
     
-    func complete(postbox: Postbox, context: MutableChatListViewReplayContext) {
+    func complete(postbox: PostboxImpl, context: MutableChatListViewReplayContext) {
         
     }
     
@@ -559,7 +572,7 @@ final class MutableChatListView {
         return self.sampledState.hole
     }
     
-    private func renderEntry(_ entry: MutableChatListEntry, postbox: Postbox) -> MutableChatListEntry? {
+    private func renderEntry(_ entry: MutableChatListEntry, postbox: PostboxImpl) -> MutableChatListEntry? {
         switch entry {
         case let .IntermediateMessageEntry(index, messageIndex):
             var renderedMessages: [Message] = []
@@ -588,16 +601,13 @@ final class MutableChatListView {
                 }
             }
             
-            let tagSummaryCount: Int32? = nil
-            let actionsSummaryCount: Int32? = nil
-            
-            return .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), presence: presence, tagSummaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: tagSummaryCount, actionsSummaryCount: actionsSummaryCount), hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
+            return .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers), presence: presence, tagSummaryInfo: [:], hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
         default:
             return nil
         }
     }
     
-    func render(postbox: Postbox) {
+    func render(postbox: PostboxImpl) {
         for i in 0 ..< self.additionalItemEntries.count {
             if let updatedEntry = self.renderEntry(self.additionalItemEntries[i].entry, postbox: postbox) {
                 self.additionalItemEntries[i].entry = updatedEntry

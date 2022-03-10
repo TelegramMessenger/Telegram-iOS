@@ -448,6 +448,7 @@ private extension UIColor {
 
 private final class DoubleBottomAnimationSource: AnimatedStickerNodeSource {
     public let path: String
+    public let isVideo = false
     
     public let fitzModifier: EmojiFitzModifier? = nil
     

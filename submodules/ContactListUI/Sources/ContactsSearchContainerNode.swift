@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -54,7 +53,7 @@ private enum ContactListSearchEntryId: Hashable {
 
 private enum ContactListSearchEntry: Comparable, Identifiable {
     case addContact(PresentationTheme, PresentationStrings, String)
-    case peer(Int, PresentationTheme, PresentationStrings, ContactListPeer, PeerPresence?, ContactListSearchGroup, Bool)
+    case peer(Int, PresentationTheme, PresentationStrings, ContactListPeer, EnginePeer.Presence?, ContactListSearchGroup, Bool)
     
     var stableId: ContactListSearchEntryId {
         switch self {
@@ -89,7 +88,7 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
                             return false
                         }
                         if let lhsPresence = lhsPresence, let rhsPresence = rhsPresence {
-                            if !lhsPresence.isEqual(to: rhsPresence) {
+                            if lhsPresence != rhsPresence {
                                 return false
                             }
                         } else if (lhsPresence != nil) != (rhsPresence != nil) {
@@ -122,7 +121,7 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) -> ListViewItem {
         switch self {
             case let .addContact(theme, strings, phoneNumber):
                 return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
@@ -150,12 +149,12 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
                         header = ChatListSearchItemHeader(type: .deviceContacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
                         status = .none
                 }
-                var nativePeer: Peer?
+                var nativePeer: EnginePeer?
                 let peerItem: ContactsPeerItemPeer
                 switch peer {
                     case let .peer(peer, _, _):
-                        peerItem = .peer(peer: peer, chatPeer: peer)
-                        nativePeer = peer
+                        peerItem = .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer))
+                        nativePeer = EnginePeer(peer)
                     case let .deviceContact(stableId, contact):
                         peerItem = .deviceContact(stableId: stableId, contact: contact)
                 }
@@ -181,7 +180,7 @@ struct ContactListSearchContainerTransition {
     let query: String
 }
 
-private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) -> ContactListSearchContainerTransition {
+private func contactListSearchContainerPreparedRecentTransition(from fromEntries: [ContactListSearchEntry], to toEntries: [ContactListSearchEntry], isSearching: Bool, emptyResults: Bool, query: String, context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) -> ContactListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -207,7 +206,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
     private let context: AccountContext
     private let addContact: ((String) -> Void)?
     private let openPeer: (ContactListPeer) -> Void
-    private let contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+    private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
     
     private let dimNode: ASDisplayNode
     public let listNode: ListView
@@ -230,7 +229,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         return true
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, onlyWriteable: Bool, categories: ContactsSearchCategories, filters: [ContactListFilter] = [.excludeSelf], addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.addContact = addContact
         self.openPeer = openPeer
@@ -289,9 +288,9 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
         let searchItems = self.searchQuery.get()
         |> mapToSignal { query -> Signal<([ContactListSearchEntry]?, String), NoError> in
             if let query = query, !query.isEmpty {
-                let foundLocalContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
+                let foundLocalContacts: Signal<([EnginePeer], [EnginePeer.Id: EnginePeer.Presence]), NoError>
                 if categories.contains(.cloudContacts) {
-                    foundLocalContacts = context.account.postbox.searchContacts(query: query.lowercased())
+                    foundLocalContacts = context.engine.contacts.searchContacts(query: query.lowercased())
                 } else {
                     foundLocalContacts = .single(([], [:]))
                 }
@@ -299,7 +298,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                 if categories.contains(.global) {
                     foundRemoteContacts = .single(previousFoundRemoteContacts.with({ $0 }))
                     |> then(
-                        context.engine.peers.searchPeers(query: query)
+                        context.engine.contacts.searchRemotePeers(query: query)
                         |> map { ($0.0, $0.1) }
                         |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     )
@@ -307,7 +306,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     foundRemoteContacts = .single(([], []))
                 }
                 let searchDeviceContacts = categories.contains(.deviceContacts)
-                let foundDeviceContacts: Signal<[DeviceContactStableId: (DeviceContactBasicData, PeerId?)]?, NoError>
+                let foundDeviceContacts: Signal<[DeviceContactStableId: (DeviceContactBasicData, EnginePeer.Id?)]?, NoError>
                 if searchDeviceContacts, let contactDataManager = context.sharedContext.contactDataManager {
                     foundDeviceContacts = contactDataManager.search(query: query)
                     |> map(Optional.init)
@@ -321,8 +320,8 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     let _ = previousFoundRemoteContacts.swap(remotePeers)
                     
                     var entries: [ContactListSearchEntry] = []
-                    var existingPeerIds = Set<PeerId>()
-                    var disabledPeerIds = Set<PeerId>()
+                    var existingPeerIds = Set<EnginePeer.Id>()
+                    var disabledPeerIds = Set<EnginePeer.Id>()
                     for filter in filters {
                         switch filter {
                             case .excludeSelf:
@@ -342,10 +341,10 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                         existingPeerIds.insert(peer.id)
                         var enabled = true
                         if onlyWriteable {
-                            enabled = canSendMessagesToPeer(peer)
+                            enabled = canSendMessagesToPeer(peer._asPeer())
                         }
-                        entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer, isGlobal: false, participantCount: nil), localPeersAndPresences.1[peer.id], .contacts, enabled))
-                        if searchDeviceContacts, let user = peer as? TelegramUser, let phone = user.phone {
+                        entries.append(.peer(index, themeAndStrings.0, themeAndStrings.1, .peer(peer: peer._asPeer(), isGlobal: false, participantCount: nil), localPeersAndPresences.1[peer.id], .contacts, enabled))
+                        if searchDeviceContacts, case let .user(user) = peer, let phone = user.phone {
                             existingNormalizedPhoneNumbers.insert(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))
                         }
                         index += 1

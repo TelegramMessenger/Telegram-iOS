@@ -12,18 +12,20 @@ public enum ChatMessageEntryContentType {
 }
 
 public struct ChatMessageEntryAttributes: Equatable {
-    let rank: CachedChannelAdminRank?
-    let isContact: Bool
-    let contentTypeHint: ChatMessageEntryContentType
-    let updatingMedia: ChatUpdatingMessageMedia?
-    let isPlaying: Bool
+    var rank: CachedChannelAdminRank?
+    var isContact: Bool
+    var contentTypeHint: ChatMessageEntryContentType
+    var updatingMedia: ChatUpdatingMessageMedia?
+    var isPlaying: Bool
+    var isCentered: Bool
     
-    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool) {
+    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
         self.updatingMedia = updatingMedia
         self.isPlaying = isPlaying
+        self.isCentered = isCentered
     }
     
     public init() {
@@ -32,12 +34,13 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.contentTypeHint = .generic
         self.updatingMedia = nil
         self.isPlaying = false
+        self.isCentered = false
     }
 }
 
 enum ChatHistoryEntry: Identifiable, Comparable {
-    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryMonthLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
-    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)], ChatPresentationData)
+    case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
+    case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
     case ReplyCountEntry(MessageIndex, Bool, Int, ChatPresentationData)
     case ChatInfoEntry(String, String, ChatPresentationData)
@@ -130,8 +133,8 @@ enum ChatHistoryEntry: Identifiable, Comparable {
             case let .MessageGroupEntry(lhsGroupInfo, lhsMessages, lhsPresentationData):
                 if case let .MessageGroupEntry(rhsGroupInfo, rhsMessages, rhsPresentationData) = rhs, lhsGroupInfo == rhsGroupInfo, lhsPresentationData === rhsPresentationData, lhsMessages.count == rhsMessages.count {
                     for i in 0 ..< lhsMessages.count {
-                        let (lhsMessage, lhsRead, lhsSelection, lhsAttributes) = lhsMessages[i]
-                        let (rhsMessage, rhsRead, rhsSelection, rhsAttributes) = rhsMessages[i]
+                        let (lhsMessage, lhsRead, lhsSelection, lhsAttributes, lhsLocation) = lhsMessages[i]
+                        let (rhsMessage, rhsRead, rhsSelection, rhsAttributes, rhsLocation) = rhsMessages[i]
                         
                         if lhsMessage.id != rhsMessage.id {
                             return false
@@ -175,6 +178,9 @@ enum ChatHistoryEntry: Identifiable, Comparable {
                             }
                         }
                         if lhsAttributes != rhsAttributes {
+                            return false
+                        }
+                        if lhsLocation != rhsLocation {
                             return false
                         }
                     }

@@ -51,57 +51,59 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
         }
     }
     
-    let remoteSignal = network.request(Api.functions.messages.getStickerSet(stickerset: input))
-        |> mapError { _ -> RequestStickerSetError in
-            return .invalid
-        }
-        |> map { result -> RequestStickerSetResult in
-            var items: [ItemCollectionItem] = []
-            let info: ItemCollectionInfo
-            let installed: Bool
-            switch result {
-                case let .stickerSet(set, packs, documents):
-                    info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
-                    
-                    switch set {
-                        case let .stickerSet(data):
-                            installed = (data.flags & (1 << 0) != 0)
-                    }
-                    
-                    var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
-                    for pack in packs {
-                        switch pack {
-                        case let .stickerPack(text, fileIds):
-                            let key = ValueBoxKey(text).toMemoryBuffer()
-                            for fileId in fileIds {
-                                let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-                                if indexKeysByFile[mediaId] == nil {
-                                    indexKeysByFile[mediaId] = [key]
-                                } else {
-                                    indexKeysByFile[mediaId]!.append(key)
-                                }
-                            }
-                            break
-                        }
-                    }
-                    
-                    for apiDocument in documents {
-                        if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
-                            let fileIndexKeys: [MemoryBuffer]
-                            if let indexKeys = indexKeysByFile[id] {
-                                fileIndexKeys = indexKeys
+    let remoteSignal = network.request(Api.functions.messages.getStickerSet(stickerset: input, hash: 0))
+    |> mapError { _ -> RequestStickerSetError in
+        return .invalid
+    }
+    |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
+        var items: [ItemCollectionItem] = []
+        let info: ItemCollectionInfo
+        let installed: Bool
+        switch result {
+            case .stickerSetNotModified:
+                return .complete()
+            case let .stickerSet(set, packs, documents):
+                info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
+                
+                switch set {
+                    case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _):
+                        installed = (flags & (1 << 0) != 0)
+                }
+                
+                var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
+                for pack in packs {
+                    switch pack {
+                    case let .stickerPack(text, fileIds):
+                        let key = ValueBoxKey(text).toMemoryBuffer()
+                        for fileId in fileIds {
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                            if indexKeysByFile[mediaId] == nil {
+                                indexKeysByFile[mediaId] = [key]
                             } else {
-                                fileIndexKeys = []
+                                indexKeysByFile[mediaId]!.append(key)
                             }
-                            items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
                         }
+                        break
                     }
-            }
-            return .remote(info: info, items: items, installed: installed)
+                }
+                
+                for apiDocument in documents {
+                    if let file = telegramMediaFileFromApiDocument(apiDocument), let id = file.id {
+                        let fileIndexKeys: [MemoryBuffer]
+                        if let indexKeys = indexKeysByFile[id] {
+                            fileIndexKeys = indexKeys
+                        } else {
+                            fileIndexKeys = []
+                        }
+                        items.append(StickerPackItem(index: ItemCollectionItemIndex(index: Int32(items.count), id: id.id), file: file, indexKeys: fileIndexKeys))
+                    }
+                }
+        }
+        return .single(.remote(info: info, items: items, installed: installed))
     }
     
     if let collectionId = collectionId {
-        return localSignal(collectionId) |> mapError {_ in return .generic} |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
+        return localSignal(collectionId) |> mapError { _ -> RequestStickerSetError in } |> mapToSignal { result -> Signal<RequestStickerSetResult, RequestStickerSetError> in
             if let result = result {
                 return .single(.local(info: result.0, items: result.1))
             } else {
@@ -195,7 +197,7 @@ func _internal_installStickerSetInteractively(account: Account, info: StickerPac
                 collections.insert((info.id, info, items), at: 0)
                 
                 transaction.replaceItemCollections(namespace: info.id.namespace, itemCollections: collections)
-                } |> map { _ in return addResult} |> mapError {_ in return .generic}
+                } |> map { _ in return addResult} |> mapError { _ -> InstallStickerSetError in }
     }
 }
 

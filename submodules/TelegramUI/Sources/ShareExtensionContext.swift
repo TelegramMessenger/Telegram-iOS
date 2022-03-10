@@ -23,6 +23,7 @@ import ChatImportUI
 import ZipArchive
 import ActivityIndicator
 import DebugSettingsUI
+import ManagedFile
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -208,8 +209,8 @@ public class ShareRootControllerImpl {
             initializeAccountManagement()
             
             let hiddenAccountManager = HiddenAccountManagerImpl()
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, hiddenAccountManager: hiddenAccountManager)
-            
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false, hiddenAccountManager: hiddenAccountManager)
+                       
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
             } else {
@@ -233,7 +234,7 @@ public class ShareRootControllerImpl {
                     return nil
                 })
                 
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider()), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, openDoubleBottomFlow: {})
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, openDoubleBottomFlow: {})
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -250,7 +251,7 @@ public class ShareRootControllerImpl {
             }
             
             let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
-                return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
+                return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings)
             }
             |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
@@ -263,7 +264,7 @@ public class ShareRootControllerImpl {
                     let accountRecords = Set(transaction.getRecords().map { record in
                         return record.id
                     })
-                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings) as? IntentsSettings ?? IntentsSettings.defaultSettings
+                    let intentsSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.intentsSettings)?.get(IntentsSettings.self) ?? IntentsSettings.defaultSettings
                     return (accountRecords, intentsSettings.account)
                 })
                 |> castError(ShareAuthorizationError.self)
@@ -302,7 +303,7 @@ public class ShareRootControllerImpl {
             |> mapToSignal { sharedContext, account, otherAccounts -> Signal<(AccountContext, PostboxAccessChallengeData, [AccountWithInfo]), ShareAuthorizationError> in
                 let limitsConfigurationAndContentSettings = account.postbox.transaction { transaction -> (LimitsConfiguration, ContentSettings, AppConfiguration) in
                     return (
-                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue,
+                        transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue,
                         getContentSettings(transaction: transaction),
                         getAppConfiguration(transaction: transaction)
                     )
@@ -326,12 +327,12 @@ public class ShareRootControllerImpl {
                     var cancelImpl: (() -> Void)?
                     
                     let beginShare: () -> Void = {
-						let filteredAccounts: [AccountWithInfo]
-                   		if let unlockedHiddenAccountRecordId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId {
-                        	filteredAccounts = otherAccounts.filter { $0.account.id == unlockedHiddenAccountRecordId }
-	                    } else {
-    	                    filteredAccounts = otherAccounts.filter { !$0.account.isHidden }
-        	            }
+                        let filteredAccounts: [AccountWithInfo]
+                           if let unlockedHiddenAccountRecordId = context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordId {
+                            filteredAccounts = otherAccounts.filter { $0.account.id == unlockedHiddenAccountRecordId }
+                        } else {
+                            filteredAccounts = otherAccounts.filter { !$0.account.isHidden }
+                        }
 
                         let requestUserInteraction: ([UnpreparedShareItemContent]) -> Signal<[PreparedShareItemContent], NoError> = { content in
                             return Signal { [weak self] subscriber in
@@ -357,8 +358,8 @@ public class ShareRootControllerImpl {
                             } |> runOn(Queue.mainQueue())
                         }
                         
-                        let sentItems: ([PeerId], [PreparedShareItemContent], Account) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account in
-                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents)
+                        let sentItems: ([PeerId], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account, silently in
+                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents, silently: silently)
                             |> `catch` { _ -> Signal<
                                 Float, NoError> in
                                 return .complete()
@@ -370,7 +371,7 @@ public class ShareRootControllerImpl {
                             |> then(.single(.done))
                         }
                                             
-                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
+                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account, silently in
                             if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
@@ -390,10 +391,10 @@ public class ShareRootControllerImpl {
                                         case let .userInteractionRequired(value):
                                             return requestUserInteraction(value)
                                             |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, NoError> in
-                                                return sentItems(peerIds, contents, account)
+                                                return sentItems(peerIds, contents, account, silently)
                                             }
                                         case let .done(contents):
-                                            return sentItems(peerIds, contents, account)
+                                            return sentItems(peerIds, contents, account, silently)
                                     }
                                 }
                             } else {
@@ -863,9 +864,9 @@ public class ShareRootControllerImpl {
                                                             switch result {
                                                             case .allowed:
                                                                 if let title = title {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 } else {
-                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                    text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                 }
                                                             case let .alert(textValue):
                                                                 text = textValue
@@ -965,9 +966,9 @@ public class ShareRootControllerImpl {
                                                                     switch result {
                                                                     case .allowed:
                                                                         if let title = peerTitle {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithTitle(title, EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         } else {
-                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
+                                                                            text = presentationData.strings.ChatImport_SelectionConfirmationUserWithoutTitle(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                                                                         }
                                                                     case let .alert(textValue):
                                                                         text = textValue

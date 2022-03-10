@@ -8,6 +8,7 @@ import TextFormat
 import UrlEscaping
 import TelegramUniversalVideoContent
 import TextSelectionNode
+import InvisibleInkDustNode
 
 private final class CachedChatMessageText {
     let text: String
@@ -37,6 +38,9 @@ private final class CachedChatMessageText {
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
+    private var spoilerTextNode: TextNode?
+    private var dustNode: InvisibleInkDustNode?
+    
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -66,11 +70,20 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             self?.item?.controllerInteraction.openUrl(url, false, false, nil)
         }
         
-        self.statusNode.openReactions = { [weak self] in
+        self.statusNode.reactionSelected = { [weak self] value in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.controllerInteraction.openMessageReactions(item.message.id)
+            item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
+        }
+        
+        self.statusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                gesture?.cancel()
+                return
+            }
+            
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
         }
     }
 
@@ -80,6 +93,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let textLayout = TextNode.asyncLayout(self.textNode)
+        let spoilerTextLayout = TextNode.asyncLayout(self.spoilerTextNode)
         let statusLayout = self.statusNode.asyncLayout()
         
         let currentCachedChatMessageText = self.cachedChatMessageText
@@ -114,6 +128,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.topMessage)
+                
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -126,26 +142,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                var dateReactions: [MessageReaction] = []
-                var dateReactionCount = 0
-                if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
-                    for reaction in reactionsAttribute.reactions {
-                        if reaction.isSelected {
-                            dateReactions.insert(reaction, at: 0)
-                        } else {
-                            dateReactions.append(reaction)
-                        }
-                        dateReactionCount += Int(reaction.count)
-                    }
-                }
-                
                 let dateFormat: MessageTimestampStatusFormat
                 if let subject = item.associatedData.subject, case .forwardedMessages = subject {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
                 }
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat, reactionCount: dateReactionCount)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 var displayStatus = false
@@ -173,20 +176,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else {
                     statusType = nil
-                }
-                
-                var statusSize: CGSize?
-                var statusApply: ((Bool) -> Void)?
-                
-                if let statusType = statusType {
-                    var isReplyThread = false
-                    if case .replyThread = item.chatLocation {
-                        isReplyThread = true
-                    }
-                    
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions, dateReplies, item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread, item.message.isSelfExpiring)
-                    statusSize = size
-                    statusApply = apply
                 }
                 
                 let rawText: String
@@ -283,7 +272,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
                 let textFont = item.presentationData.messageFont
-                let forceStatusNewline = false
                 
                 if let entities = entities {
                     attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont)
@@ -293,65 +281,80 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                var cutout: TextNodeCutout?
-                if let statusSize = statusSize, !forceStatusNewline {
-                    cutout = TextNodeCutout(bottomRight: statusSize)
-                }
+                let cutout: TextNodeCutout? = nil
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 2.0, bottom: 5.0, right: 2.0)
                 
                 let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor))
                 
+                let spoilerTextLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+                if !textLayout.spoilers.isEmpty {
+                    spoilerTextLayoutAndApply = spoilerTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: cutout, insets: textInsets, lineColor: messageTheme.accentControlColor, displaySpoilers: true))
+                } else {
+                    spoilerTextLayoutAndApply = nil
+                }
+                
+                var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
+                if let statusType = statusType {
+                    var isReplyThread = false
+                    if case .replyThread = item.chatLocation {
+                        isReplyThread = true
+                    }
+                    
+                    let trailingWidthToMeasure: CGFloat
+                    if textLayout.hasRTL {
+                        trailingWidthToMeasure = 10000.0
+                    } else {
+                        trailingWidthToMeasure = textLayout.trailingLineWidth
+                    }
+                    
+                    let dateLayoutInput: ChatMessageDateAndStatusNode.LayoutInput
+                    dateLayoutInput = .trailingContent(contentWidth: trailingWidthToMeasure, reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: item.message), preferAdditionalInset: false))
+                    
+                    statusSuggestedWidthAndContinue = statusLayout(ChatMessageDateAndStatusNode.Arguments(
+                        context: item.context,
+                        presentationData: item.presentationData,
+                        edited: edited,
+                        impressionCount: viewCount,
+                        dateText: dateText,
+                        type: statusType,
+                        layoutInput: dateLayoutInput,
+                        constrainedSize: textConstrainedSize,
+                        availableReactions: item.associatedData.availableReactions,
+                        reactions: dateReactionsAndPeers.reactions,
+                        reactionPeers: dateReactionsAndPeers.peers,
+                        replyCount: dateReplies,
+                        isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && isReplyThread,
+                        hasAutoremove: item.message.isSelfExpiring,
+                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                    ))
+                }
+                
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
-                var statusFrame: CGRect?
-                if let statusSize = statusSize {
-                    statusFrame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSize.width, y: textFrameWithoutInsets.maxY - statusSize.height), size: statusSize)
-                }
-                
                 textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
                 textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
-                statusFrame = statusFrame?.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
 
-                var suggestedBoundingWidth: CGFloat
-                if let statusFrame = statusFrame {
-                    suggestedBoundingWidth = textFrameWithoutInsets.union(statusFrame).width
-                } else {
-                    suggestedBoundingWidth = textFrameWithoutInsets.width
+                var suggestedBoundingWidth: CGFloat = textFrameWithoutInsets.width
+                if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
+                    suggestedBoundingWidth = max(suggestedBoundingWidth, statusSuggestedWidthAndContinue.0)
                 }
-                suggestedBoundingWidth += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                let sideInsets = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                suggestedBoundingWidth += sideInsets
                 
                 return (suggestedBoundingWidth, { boundingWidth in
                     var boundingSize: CGSize
-                    var adjustedStatusFrame: CGRect?
                     
-                    if let statusFrame = statusFrame {
-                        let centeredTextFrame = CGRect(origin: CGPoint(x: floor((boundingWidth - textFrame.size.width) / 2.0), y: 0.0), size: textFrame.size)
-                        let statusOverlapsCenteredText = CGRect(origin: CGPoint(), size: statusFrame.size).intersects(centeredTextFrame)
-                        
-                        if !forceStatusNewline || statusOverlapsCenteredText {
-                            boundingSize = textFrameWithoutInsets.union(statusFrame).size
-                            boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                            boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
-                            adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: statusFrame.origin.y), size: statusFrame.size)
-                        } else {
-                            boundingSize = textFrameWithoutInsets.size
-                            boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                            boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
-                            adjustedStatusFrame = CGRect(origin: CGPoint(x: boundingWidth - statusFrame.size.width - layoutConstants.text.bubbleInsets.right, y: boundingSize.height - statusFrame.height - layoutConstants.text.bubbleInsets.bottom), size: statusFrame.size)
-                        }
-                    } else {
-                        boundingSize = textFrameWithoutInsets.size
-                        boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                        boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                    let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
+                    
+                    boundingSize = textFrameWithoutInsets.size
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        boundingSize.height += statusSizeAndApply.0.height
                     }
                     
-                    if attributedText.string.isEmpty, var adjustedStatusFrameValue = adjustedStatusFrame {
-                        adjustedStatusFrameValue.origin.y = 1.0
-                        boundingSize.height = adjustedStatusFrameValue.maxY + 5.0
-                        adjustedStatusFrame = adjustedStatusFrameValue
-                    }
+                    boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
+                    boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
                     
                     return (boundingSize, { [weak self] animation, _ in
                         if let strongSelf = self {
@@ -381,46 +384,67 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
-                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview && !item.presentationData.theme.theme.forceSync
                             let _ = textApply()
+                            animation.animator.updateFrame(layer: strongSelf.textNode.layer, frame: textFrame, completion: nil)
+                            //strongSelf.textNode.frame = textFrame
                             
-                            if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
-                                let previousStatusFrame = strongSelf.statusNode.frame
-                                strongSelf.statusNode.frame = adjustedStatusFrame
-                                var hasAnimation = true
-                                if case .None = animation {
-                                    hasAnimation = false
+                            if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
+                                let spoilerTextNode = spoilerTextApply()
+                                if strongSelf.spoilerTextNode == nil {
+                                    spoilerTextNode.alpha = 0.0
+                                    spoilerTextNode.isUserInteractionEnabled = false
+                                    spoilerTextNode.contentMode = .topLeft
+                                    spoilerTextNode.contentsScale = UIScreenScale
+                                    spoilerTextNode.displaysAsynchronously = false
+                                    strongSelf.insertSubnode(spoilerTextNode, aboveSubnode: strongSelf.textAccessibilityOverlayNode)
+                                    
+                                    strongSelf.spoilerTextNode = spoilerTextNode
                                 }
-                                statusApply(hasAnimation)
-                                if strongSelf.statusNode.supernode == nil {
-                                    strongSelf.addSubnode(strongSelf.statusNode)
+                                
+                                strongSelf.spoilerTextNode?.frame = textFrame
+                                
+                                let dustNode: InvisibleInkDustNode
+                                if let current = strongSelf.dustNode {
+                                    dustNode = current
                                 } else {
-                                    if case let .System(duration) = animation {
-                                        let delta = CGPoint(x: previousStatusFrame.maxX - adjustedStatusFrame.maxX, y: previousStatusFrame.minY - adjustedStatusFrame.minY)
-                                        let statusPosition = strongSelf.statusNode.layer.position
-                                        let previousPosition = CGPoint(x: statusPosition.x + delta.x, y: statusPosition.y + delta.y)
-                                        strongSelf.statusNode.layer.animatePosition(from: previousPosition, to: statusPosition, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
-                                    }
+                                    dustNode = InvisibleInkDustNode(textNode: spoilerTextNode)
+                                    strongSelf.dustNode = dustNode
+                                    strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
                                 }
-                            } else if strongSelf.statusNode.supernode != nil {
-                                strongSelf.statusNode.removeFromSupernode()
+                                dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+                                dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, textColor: messageTheme.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                            } else if let spoilerTextNode = strongSelf.spoilerTextNode {
+                                strongSelf.spoilerTextNode = nil
+                                spoilerTextNode.removeFromSupernode()
+                                
+                                if let dustNode = strongSelf.dustNode {
+                                    strongSelf.dustNode = nil
+                                    dustNode.removeFromSupernode()
+                                }
                             }
                             
-                            var adjustedTextFrame = textFrame
-                            if forceStatusNewline {
-                                adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
-                            }
-                            strongSelf.textNode.frame = adjustedTextFrame
                             if let textSelectionNode = strongSelf.textSelectionNode {
-                                let shouldUpdateLayout = textSelectionNode.frame.size != adjustedTextFrame.size
-                                textSelectionNode.frame = adjustedTextFrame
-                                textSelectionNode.highlightAreaNode.frame = adjustedTextFrame
+                                let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
+                                textSelectionNode.frame = textFrame
+                                textSelectionNode.highlightAreaNode.frame = textFrame
                                 if shouldUpdateLayout {
                                     textSelectionNode.updateLayout()
                                 }
                             }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
+                            
+                            if let statusSizeAndApply = statusSizeAndApply {
+                                animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
+                                if strongSelf.statusNode.supernode == nil {
+                                    strongSelf.addSubnode(strongSelf.statusNode)
+                                    statusSizeAndApply.1(.None)
+                                } else {
+                                    statusSizeAndApply.1(animation)
+                                }
+                            } else if strongSelf.statusNode.supernode != nil {
+                                strongSelf.statusNode.removeFromSupernode()
+                            }
                             
                             if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                                 strongSelf.statusNode.pressed = {
@@ -457,7 +481,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
+                return .none
+            } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
@@ -478,7 +504,23 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return .copy(pre)
             } else {
-                return .none
+                if let item = self.item, item.message.text.count == 1, !item.presentationData.largeEmoji {
+                    let (emoji, fitz) = item.message.text.basicEmoji
+                    var emojiFile: TelegramMediaFile?
+                    
+                    emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                    if emojiFile == nil {
+                        emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                    }
+                    
+                    if let emojiFile = emojiFile {
+                        return .largeEmoji(emoji, fitz, emojiFile)
+                    } else {
+                        return .none
+                    }
+                } else {
+                    return .none
+                }
             }
         } else {
             if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
@@ -488,9 +530,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.statusNode.supernode != nil, let result = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: event) {
+            return result
+        }
+        return super.hitTest(point, with: event)
+    }
+    
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [CGRect]?
+            var spoilerRects: [CGRect]?
             if let point = point {
                 let textNodeFrame = self.textNode.frame
                 if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
@@ -509,10 +559,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             break
                         }
                     }
+                    if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)] {
+                        spoilerRects = self.textNode.attributeRects(name: TelegramTextAttributes.Spoiler, at: index)
+                    }
                 }
             }
             
-            if let rects = rects {
+            if let spoilerRects = spoilerRects, !spoilerRects.isEmpty, !(self.dustNode?.isRevealed ?? true) {
+                
+            } else if let rects = rects {
                 let linkHighlightingNode: LinkHighlightingNode
                 if let current = self.linkHighlightingNode {
                     linkHighlightingNode = current
@@ -598,7 +653,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
-            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+            if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
                 let knobColor: UIColor
                 if item.message.effectivelyIncoming(item.context.account.peerId) {
@@ -619,26 +674,42 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
                 })
+                textSelectionNode.updateRange = { [weak self] selectionRange in
+                    if let strongSelf = self, let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.cachedLayout, !textLayout.spoilers.isEmpty, let selectionRange = selectionRange {
+                        for (spoilerRange, _) in textLayout.spoilers {
+                            if let intersection = selectionRange.intersection(spoilerRange), intersection.length > 0 {
+                                dustNode.update(revealed: true)
+                                return
+                            }
+                        }
+                    }
+                }
                 self.textSelectionNode = textSelectionNode
                 self.addSubnode(textSelectionNode)
                 self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
                 textSelectionNode.frame = self.textNode.frame
                 textSelectionNode.highlightAreaNode.frame = self.textNode.frame
             }
-        } else if let textSelectionNode = self.textSelectionNode {
-            self.textSelectionNode = nil
-            self.updateIsTextSelectionActive?(false)
-            textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
-                textSelectionNode?.highlightAreaNode.removeFromSupernode()
-                textSelectionNode?.removeFromSupernode()
-            })
+        } else {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                self.updateIsTextSelectionActive?(false)
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+            
+            if let dustNode = self.dustNode, dustNode.isRevealed {
+                dustNode.update(revealed: false)
+            }
         }
     }
     
-    override func reactionTargetNode(value: String) -> (ASDisplayNode, ASDisplayNode)? {
+    override func reactionTargetView(value: String) -> UIView? {
         if !self.statusNode.isHidden {
-            return self.statusNode.reactionNode(value: value)
+            return self.statusNode.reactionView(value: value)
         }
         return nil
     }

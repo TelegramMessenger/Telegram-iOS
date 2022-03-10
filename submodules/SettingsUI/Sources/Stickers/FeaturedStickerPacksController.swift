@@ -191,7 +191,7 @@ public func featuredStickerPacksController(context: AccountContext) -> ViewContr
         |> deliverOnMainQueue
         |> map { presentationData, state, view, featured, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var stickerSettings = StickerSettings.defaultSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
+            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
                 stickerSettings = value
             }
             

@@ -1,12 +1,11 @@
 import Foundation
 import UIKit
 import Display
-import Postbox
 import TelegramCore
 import MapKit
 import SwiftSignalKit
 
-public struct MapSnapshotMediaResourceId: MediaResourceId {
+public struct MapSnapshotMediaResourceId {
     public let latitude: Double
     public let longitude: Double
     public let width: Int32
@@ -19,17 +18,9 @@ public struct MapSnapshotMediaResourceId: MediaResourceId {
     public var hashValue: Int {
         return self.uniqueId.hashValue
     }
-    
-    public func isEqual(to: MediaResourceId) -> Bool {
-        if let to = to as? MapSnapshotMediaResourceId {
-            return self.latitude == to.latitude && self.longitude == to.longitude && self.width == to.width && self.height == to.height
-        } else {
-            return false
-        }
-    }
 }
 
-public class MapSnapshotMediaResource: TelegramMediaResource {
+public class MapSnapshotMediaResource {
     public let latitude: Double
     public let longitude: Double
     public let width: Int32
@@ -42,49 +33,8 @@ public class MapSnapshotMediaResource: TelegramMediaResource {
         self.height = height
     }
     
-    public required init(decoder: PostboxDecoder) {
-        self.latitude = decoder.decodeDoubleForKey("lt", orElse: 0.0)
-        self.longitude = decoder.decodeDoubleForKey("ln", orElse: 0.0)
-        self.width = decoder.decodeInt32ForKey("w", orElse: 0)
-        self.height = decoder.decodeInt32ForKey("h", orElse: 0)
-    }
-    
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeDouble(self.latitude, forKey: "lt")
-        encoder.encodeDouble(self.longitude, forKey: "ln")
-        encoder.encodeInt32(self.width, forKey: "w")
-        encoder.encodeInt32(self.height, forKey: "h")
-    }
-    
-    public var id: MediaResourceId {
-        return MapSnapshotMediaResourceId(latitude: self.latitude, longitude: self.longitude, width: self.width, height: self.height)
-    }
-    
-    public func isEqual(to: MediaResource) -> Bool {
-        if let to = to as? MapSnapshotMediaResource {
-            return self.latitude == to.latitude && self.longitude == to.longitude && self.width == to.width && self.height == to.height
-        } else {
-            return false
-        }
-    }
-}
-
-public final class MapSnapshotMediaResourceRepresentation: CachedMediaResourceRepresentation {
-    public let keepDuration: CachedMediaRepresentationKeepDuration = .shortLived
-    
-    public var uniqueId: String {
-        return "cached"
-    }
-    
-    public init() {
-    }
-    
-    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
-        if to is MapSnapshotMediaResourceRepresentation {
-            return true
-        } else {
-            return false
-        }
+    public var id: EngineMediaResource.Id {
+        return EngineMediaResource.Id(MapSnapshotMediaResourceId(latitude: self.latitude, longitude: self.longitude, width: self.width, height: self.height).uniqueId)
     }
 }
 
@@ -104,7 +54,7 @@ private func adjustGMapLatitude(_ latitude: Double, offset: Int, zoom: Int) -> D
     return yToLatitude(latitudeToY(latitude) + t)
 }
 
-public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+private func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
     return Signal { subscriber in
         let disposable = MetaDisposable()
         
@@ -121,9 +71,9 @@ public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Sign
             snapshotter.start(with: DispatchQueue.global(), completionHandler: { result, error in
                 if let image = result?.image {
                     if let data = image.jpegData(compressionQuality: 0.9) {
-                        let tempFile = TempBox.shared.tempFile(fileName: "image.jpg")
+                        let tempFile = EngineTempBox.shared.tempFile(fileName: "image.jpg")
                         if let _ = try? data.write(to: URL(fileURLWithPath: tempFile.path), options: .atomic) {
-                            subscriber.putNext(.tempFile(tempFile))
+                            subscriber.putNext(.moveTempFile(file: tempFile))
                             subscriber.putCompletion()
                         }
                     }
@@ -138,11 +88,17 @@ public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Sign
     }
 }
 
-public func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
+public func chatMapSnapshotData(engine: TelegramEngine, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
     return Signal<Data?, NoError> { subscriber in
-        let dataDisposable = account.postbox.mediaBox.cachedResourceRepresentation(resource, representation: MapSnapshotMediaResourceRepresentation(), complete: true).start(next: { next in
-            if next.size != 0 {
-                subscriber.putNext(next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
+        let dataDisposable = engine.resources.custom(
+            id: resource.id.stringRepresentation,
+            fetch: EngineMediaResource.Fetch {
+                return fetchMapSnapshotResource(resource: resource)
+            },
+            cacheTimeout: .shortLived
+        ).start(next: { next in
+            if next.availableSize != 0 {
+                subscriber.putNext(next.availableSize == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: []))
             }
         }, error: subscriber.putError, completed: subscriber.putCompletion)
         
@@ -152,8 +108,8 @@ public func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaReso
     }
 }
 
-public func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatMapSnapshotData(account: account, resource: resource)
+public func chatMapSnapshotImage(engine: TelegramEngine, resource: MapSnapshotMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatMapSnapshotData(engine: engine, resource: resource)
     
     return signal |> map { fullSizeData in
         return { arguments in

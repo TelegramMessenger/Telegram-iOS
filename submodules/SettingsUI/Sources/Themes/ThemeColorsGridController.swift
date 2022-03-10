@@ -119,6 +119,8 @@ final class ThemeColorsGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
+    private var previousContentOffset: GridNodeVisibleContentOffset?
+    
     init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -182,7 +184,7 @@ final class ThemeColorsGridController: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
+                    let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) ?? PresentationThemeSettings.defaultSettings
                     
                     let autoNightModeTriggered = strongSelf.presentationData.autoNightModeTriggered
                     let themeReference: PresentationThemeReference
@@ -216,8 +218,33 @@ final class ThemeColorsGridController: ViewController {
                 })
             }
         })
+        
+        self.controllerNode.gridNode.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self {
+                var previousContentOffsetValue: CGFloat?
+                if let previousContentOffset = strongSelf.previousContentOffset, case let .known(value) = previousContentOffset {
+                    previousContentOffsetValue = value
+                }
+                switch offset {
+                    case let .known(value):
+                        let transition: ContainedViewLayoutTransition
+                        if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 30.0 {
+                            transition = .animated(duration: 0.2, curve: .easeInOut)
+                        } else {
+                            transition = .immediate
+                        }
+                        strongSelf.navigationBar?.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                    case .unknown, .none:
+                        strongSelf.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
+                }
+                
+                strongSelf.previousContentOffset = offset
+            }
+        }
     
         self._ready.set(self.controllerNode.ready.get())
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         
         self.displayNodeDidLoad()
     }

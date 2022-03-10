@@ -138,15 +138,6 @@ final class ItemListInviteLinkUsageLimitItem: ListViewItem, ItemListItem {
     }
 }
 
-private func generateKnobImage() -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(width: 0.0, height: -2.0), blur: 3.5, color: UIColor(white: 0.0, alpha: 0.35).cgColor)
-        context.setFillColor(UIColor.white.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: 6.0, y: 6.0), size: CGSize(width: 28.0, height: 28.0)))
-    })
-}
-
 private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
@@ -226,8 +217,8 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
         
         let sliderView = TGPhotoEditorSliderView()
         sliderView.enablePanHandling = true
-        sliderView.trackCornerRadius = 1.0
-        sliderView.lineSize = 2.0
+        sliderView.trackCornerRadius = 2.0
+        sliderView.lineSize = 4.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
         sliderView.startValue = 0.0
@@ -243,10 +234,10 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
         if let item = self.item, let params = self.layoutParams {
             sliderView.value = CGFloat(item.value.position)
             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-            sliderView.backColor = item.theme.list.disclosureArrowColor
-            sliderView.startColor = item.theme.list.disclosureArrowColor
+            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
+            sliderView.startColor = item.theme.list.itemSwitchColors.frameColor
             sliderView.trackColor = item.theme.list.itemAccentColor
-            sliderView.knobImage = generateKnobImage()
+            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
             
             sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))
             sliderView.hitTestEdgeInsets = UIEdgeInsets(top: -sliderView.frame.minX, left: 0.0, bottom: 0.0, right: -sliderView.frame.minX)
@@ -294,7 +285,7 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
             let (customTextLayout, customTextApply) = makeCustomTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: customTextString, font: Font.regular(13.0), textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
             
             contentSize = CGSize(width: params.width, height: 88.0)
-            insets = itemListNeighborsGroupedInsets(neighbors)
+            insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
@@ -337,6 +328,7 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
                     case .sameSection(false):
                         bottomStripeInset = 0.0 //params.leftInset + 16.0
                         bottomStripeOffset = -separatorHeight
+                        strongSelf.bottomStripeNode.isHidden = false
                     default:
                         bottomStripeInset = 0.0
                         bottomStripeOffset = 0.0
@@ -382,9 +374,10 @@ private final class ItemListInviteLinkUsageLimitItemNode: ListViewItemNode {
                     if let sliderView = strongSelf.sliderView {
                         if themeUpdated {
                             sliderView.backgroundColor = item.theme.list.itemBlocksBackgroundColor
-                            sliderView.backColor = item.theme.list.disclosureArrowColor
+                            sliderView.backColor = item.theme.list.itemSwitchColors.frameColor
+                            sliderView.startColor = item.theme.list.itemSwitchColors.frameColor
                             sliderView.trackColor = item.theme.list.itemAccentColor
-                            sliderView.knobImage = generateKnobImage()
+                            sliderView.knobImage = PresentationResourcesItemList.knobImage(item.theme)
                         }
                         
                         sliderView.frame = CGRect(origin: CGPoint(x: params.leftInset + 15.0, y: 37.0), size: CGSize(width: params.width - params.leftInset - params.rightInset - 15.0 * 2.0, height: 44.0))

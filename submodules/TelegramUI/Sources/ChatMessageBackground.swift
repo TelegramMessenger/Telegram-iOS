@@ -93,6 +93,11 @@ class ChatMessageBackground: ASDisplayNode {
         transition.updateFrame(node: self.outlineImageNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
     }
     
+    func updateLayout(size: CGSize, transition: ListViewItemUpdateAnimation) {
+        transition.animator.updateFrame(layer: self.imageNode.layer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0), completion: nil)
+        transition.animator.updateFrame(layer: self.outlineImageNode.layer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0), completion: nil)
+    }
+    
     func setMaskMode(_ maskMode: Bool) {
         if let type = self.type, let hasWallpaper = self.hasWallpaper, let highlighted = self.currentHighlighted, let graphics = self.graphics, let backgroundNode = self.backgroundNode {
             self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, hasWallpaper: hasWallpaper, transition: .immediate, backgroundNode: backgroundNode)
@@ -101,7 +106,6 @@ class ChatMessageBackground: ASDisplayNode {
     
     func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
-        let previousHighlighted = self.currentHighlighted
         if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
             return
         }
@@ -117,7 +121,7 @@ class ChatMessageBackground: ASDisplayNode {
         case .none:
             image = nil
         case let .incoming(mergeType):
-            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .incoming) {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .incoming), !highlighted {
                 image = nil
             } else {
                 switch mergeType {
@@ -140,7 +144,7 @@ class ChatMessageBackground: ASDisplayNode {
                 }
             }
         case let .outgoing(mergeType):
-            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .outgoing) {
+            if maskMode, let backgroundNode = backgroundNode, backgroundNode.hasBubbleBackground(for: .outgoing), !highlighted {
                 image = nil
             } else {
                 switch mergeType {

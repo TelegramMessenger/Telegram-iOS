@@ -20,8 +20,8 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(channelMember):
             return channelMember.peer.id
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.peer.peerId
+        case let .legacyGroupMember(peer, _, _, _):
+            return peer.peerId
         case let .account(peer):
             return peer.peerId
         }
@@ -31,8 +31,8 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(channelMember):
             return channelMember.peer
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.peer.peers[legacyGroupMember.peer.peerId]!
+        case let .legacyGroupMember(peer, _, _, _):
+            return peer.peers[peer.peerId]!
         case let .account(peer):
             return peer.peers[peer.peerId]!
         }
@@ -42,8 +42,8 @@ enum PeerInfoMember: Equatable {
         switch self {
         case let .channelMember(channelMember):
             return channelMember.presences[channelMember.peer.id] as? TelegramUserPresence
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.presence
+        case let .legacyGroupMember(_, _, _, presence):
+            return presence
         case .account:
             return nil
         }
@@ -55,15 +55,15 @@ enum PeerInfoMember: Equatable {
             switch channelMember.participant {
             case .creator:
                 return .creator
-            case let .member(member):
-                if member.adminInfo != nil {
+            case let .member(_, _, adminInfo, _, _):
+                if adminInfo != nil {
                     return .admin
                 } else {
                     return .member
                 }
             }
-        case let .legacyGroupMember(legacyGroupMember):
-            return legacyGroupMember.role
+        case let .legacyGroupMember(_, role, _, _):
+            return role
         case .account:
             return .member
         }
@@ -73,10 +73,10 @@ enum PeerInfoMember: Equatable {
         switch self {
             case let .channelMember(channelMember):
                 switch channelMember.participant {
-                case let .creator(creator):
-                    return creator.rank
-                case let .member(member):
-                    return member.rank
+                case let .creator(_, _, rank):
+                    return rank
+                case let .member(_, _, _, _, rank):
+                    return rank
                 }
             case .legacyGroupMember:
                 return nil
@@ -92,6 +92,7 @@ enum PeerInfoMembersDataState: Equatable {
 }
 
 struct PeerInfoMembersState: Equatable {
+    var canAddMembers: Bool
     var members: [PeerInfoMember]
     var dataState: PeerInfoMembersDataState
 }
@@ -126,6 +127,7 @@ private final class PeerInfoMembersContextImpl {
     private let context: AccountContext
     private let peerId: PeerId
     
+    private var canAddMembers = false
     private var members: [PeerInfoMember] = []
     private var dataState: PeerInfoMembersDataState = .loading(isInitial: true)
     private var removingMemberIds: [PeerId: Disposable] = [:]
@@ -135,7 +137,7 @@ private final class PeerInfoMembersContextImpl {
         return self.stateValue.get()
     }
     private let disposable = MetaDisposable()
-    
+    private let peerDisposable = MetaDisposable()
     private var channelMembersControl: PeerChannelMemberCategoryControl?
     
     init(queue: Queue, context: AccountContext, peerId: PeerId) {
@@ -170,8 +172,28 @@ private final class PeerInfoMembersContextImpl {
             })
             self.disposable.set(disposable)
             self.channelMembersControl = control
+            
+            self.peerDisposable.set((context.account.postbox.peerView(id: peerId)
+            |> deliverOn(self.queue)).start(next: { [weak self] view in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let channel = peerViewMainPeer(view) as? TelegramChannel {
+                    var canAddMembers = false
+                    switch channel.info {
+                    case .broadcast:
+                        break
+                    case .group:
+                        if channel.flags.contains(.isCreator) || channel.hasPermission(.inviteMembers) {
+                            canAddMembers = true
+                        }
+                    }
+                    strongSelf.canAddMembers = canAddMembers
+                    strongSelf.pushState()
+                }
+            }))
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {
-            disposable.set((context.account.postbox.peerView(id: peerId)
+            self.disposable.set((context.account.postbox.peerView(id: peerId)
             |> deliverOn(self.queue)).start(next: { [weak self] view in
                 guard let strongSelf = self, let cachedData = view.cachedData as? CachedGroupData, let participantsData = cachedData.participants else {
                     return
@@ -185,16 +207,31 @@ private final class PeerInfoMembersContextImpl {
                         case .creator:
                             role = .creator
                             invitedBy = nil
-                        case let .admin(admin):
+                        case let .admin(_, invitedByValue, _):
                             role = .admin
-                            invitedBy = admin.invitedBy
-                        case let .member(member):
+                            invitedBy = invitedByValue
+                        case let .member(_, invitedByValue, _):
                             role = .member
-                            invitedBy = member.invitedBy
+                            invitedBy = invitedByValue
                         }
                         unsortedMembers.append(.legacyGroupMember(peer: RenderedPeer(peer: peer), role: role, invitedBy: invitedBy, presence: view.peerPresences[participant.peerId] as? TelegramUserPresence))
                     }
                 }
+                
+                if let group = peerViewMainPeer(view) as? TelegramGroup {
+                    var canAddMembers = false
+                    switch group.role {
+                        case .admin, .creator:
+                            canAddMembers = true
+                        case .member:
+                            break
+                    }
+                    if !group.hasBannedPermission(.banAddMembers) {
+                        canAddMembers = true
+                    }
+                    strongSelf.canAddMembers = canAddMembers
+                }
+                
                 strongSelf.members = membersSortedByPresence(unsortedMembers, accountPeerId: strongSelf.context.account.peerId)
                 strongSelf.dataState = .ready(canLoadMore: false)
                 strongSelf.pushState()
@@ -207,13 +244,14 @@ private final class PeerInfoMembersContextImpl {
     
     deinit {
         self.disposable.dispose()
+        self.peerDisposable.dispose()
     }
     
     private func pushState() {
         if self.removingMemberIds.isEmpty {
-            self.stateValue.set(.single(PeerInfoMembersState(members: self.members, dataState: self.dataState)))
+            self.stateValue.set(.single(PeerInfoMembersState(canAddMembers: self.canAddMembers, members: self.members, dataState: self.dataState)))
         } else {
-            self.stateValue.set(.single(PeerInfoMembersState(members: self.members.filter { member in
+            self.stateValue.set(.single(PeerInfoMembersState(canAddMembers: self.canAddMembers, members: self.members.filter { member in
                 return self.removingMemberIds[member.id] == nil
             }, dataState: self.dataState)))
         }
@@ -249,9 +287,7 @@ private final class PeerInfoMembersContextImpl {
             self.pushState()
             
             disposable.set((signal
-            |> deliverOn(self.queue)).start(error: { _ in
-                completed()
-            }, completed: {
+            |> deliverOn(self.queue)).start(completed: {
                 completed()
             }))
         }

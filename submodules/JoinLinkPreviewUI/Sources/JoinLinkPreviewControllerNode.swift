@@ -3,11 +3,31 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import ShareController
+
+private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(UIColor(rgb: 0x808084, alpha: 0.1).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(theme.actionSheet.inputClearButtonColor.cgColor)
+        
+        context.move(to: CGPoint(x: 10.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 20.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
+        context.strokePath()
+    })
+}
 
 struct JoinLinkPreviewData {
     let isGroup: Bool
@@ -25,18 +45,17 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     private let dimNode: ASDisplayNode
     
     private let wrappingScrollNode: ASScrollNode
-    private let cancelButtonNode: ASButtonNode
     
     private let contentContainerNode: ASDisplayNode
-    private let contentBackgroundNode: ASImageNode
+    private let effectNode: ASDisplayNode
+    private let backgroundNode: ASDisplayNode
+    private let contentBackgroundNode: ASDisplayNode
     
     private var contentNode: (ASDisplayNode & ShareContentContainerNode)?
     private var previousContentNode: (ASDisplayNode & ShareContentContainerNode)?
     private var animateContentNodeOffsetFromBackgroundOffset: CGFloat?
     
-    private let actionsBackgroundNode: ASImageNode
-    private let actionButtonNode: ShareActionButtonNode
-    private let actionSeparatorNode: ASDisplayNode
+    private let cancelButton: HighlightableButtonNode
     
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
@@ -52,27 +71,11 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     
     init(context: AccountContext, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = presentationData
         
         self.requestLayout = requestLayout
-        
-        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
-        let highlightedRoundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemHighlightedBackgroundColor)
-        
-        let theme = self.presentationData.theme
-        let halfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
-        
-        let highlightedHalfRoundedBackground = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(theme.actionSheet.opaqueItemHighlightedBackgroundColor.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
-            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height / 2.0)))
-        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 1)
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -82,35 +85,22 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
-        self.cancelButtonNode = ASButtonNode()
-        self.cancelButtonNode.displaysAsynchronously = false
-        self.cancelButtonNode.setBackgroundImage(roundedBackground, for: .normal)
-        self.cancelButtonNode.setBackgroundImage(highlightedRoundedBackground, for: .highlighted)
-        
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
-        self.contentContainerNode.clipsToBounds = true
         
-        self.contentBackgroundNode = ASImageNode()
-        self.contentBackgroundNode.displaysAsynchronously = false
-        self.contentBackgroundNode.displayWithoutProcessing = true
-        self.contentBackgroundNode.image = roundedBackground
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.clipsToBounds = true
+        self.backgroundNode.cornerRadius = 16.0
         
-        self.actionsBackgroundNode = ASImageNode()
-        self.actionsBackgroundNode.isLayerBacked = true
-        self.actionsBackgroundNode.displayWithoutProcessing = true
-        self.actionsBackgroundNode.displaysAsynchronously = false
-        self.actionsBackgroundNode.image = halfRoundedBackground
+        self.effectNode = ASDisplayNode(viewBlock: {
+            return UIVisualEffectView(effect: UIBlurEffect(style: presentationData.theme.actionSheet.backgroundType == .light ? .light : .dark))
+        })
         
-        self.actionButtonNode = ShareActionButtonNode(badgeBackgroundColor: self.presentationData.theme.actionSheet.controlAccentColor, badgeTextColor: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
-        self.actionButtonNode.displaysAsynchronously = false
-        self.actionButtonNode.titleNode.displaysAsynchronously = false
-        self.actionButtonNode.setBackgroundImage(highlightedHalfRoundedBackground, for: .highlighted)
-        
-        self.actionSeparatorNode = ASDisplayNode()
-        self.actionSeparatorNode.isLayerBacked = true
-        self.actionSeparatorNode.displaysAsynchronously = false
-        self.actionSeparatorNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemSeparatorColor
+        self.contentBackgroundNode = ASDisplayNode()
+        self.contentBackgroundNode.backgroundColor = self.presentationData.theme.actionSheet.itemBackgroundColor
+                
+        self.cancelButton = HighlightableButtonNode()
+        self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
         
         super.init()
         
@@ -122,27 +112,18 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.wrappingScrollNode.view.delegate = self
         self.addSubnode(self.wrappingScrollNode)
+                
+        self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
+                
+        self.backgroundNode.addSubnode(self.effectNode)
+        self.backgroundNode.addSubnode(self.contentBackgroundNode)
         
-        self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
-        
-        self.wrappingScrollNode.addSubnode(self.cancelButtonNode)
-        self.cancelButtonNode.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
-        
-        self.actionButtonNode.addTarget(self, action: #selector(self.installActionButtonPressed), forControlEvents: .touchUpInside)
-        
-        self.wrappingScrollNode.addSubnode(self.contentBackgroundNode)
-        
+        self.wrappingScrollNode.addSubnode(self.backgroundNode)
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
-        self.contentContainerNode.addSubnode(self.actionSeparatorNode)
-        self.contentContainerNode.addSubnode(self.actionsBackgroundNode)
-        self.contentContainerNode.addSubnode(self.actionButtonNode)
+        self.wrappingScrollNode.addSubnode(self.cancelButton)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: theme, forceNativeAppearance: false))
-        
-        self.actionButtonNode.alpha = 0.0
-        self.actionSeparatorNode.alpha = 0.0
-        self.actionsBackgroundNode.alpha = 0.0
-        
+        self.transitionToContentNode(JoinLinkPreviewLoadingContainerNode(theme: self.presentationData.theme))
+                
         self.ready.set(.single(true))
         self.didSetReady = true
     }
@@ -186,7 +167,7 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             if let (layout, navigationBarHeight, bottomGridInset) = self.containerLayout {
                 if let contentNode = contentNode, let previous = previous {
                     contentNode.frame = previous.frame
-                    contentNode.updateLayout(size: previous.bounds.size, bottomInset: bottomGridInset, transition: .immediate)
+                    contentNode.updateLayout(size: previous.bounds.size, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: .immediate)
                     
                     contentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                         self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
@@ -194,14 +175,14 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                     self.contentContainerNode.insertSubnode(contentNode, at: 0)
                     
                     contentNode.alpha = 1.0
-                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.35)
+                    let animation = contentNode.layer.makeAnimation(from: 0.0 as NSNumber, to: 1.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.25)
                     animation.fillMode = .both
                     if !fastOut {
                         animation.beginTime = CACurrentMediaTime() + 0.1
                     }
                     contentNode.layer.add(animation, forKey: "opacity")
                     
-                    self.animateContentNodeOffsetFromBackgroundOffset = self.contentBackgroundNode.frame.minY
+                    self.animateContentNodeOffsetFromBackgroundOffset = self.backgroundNode.frame.minY
                     self.scheduleInteractiveTransition(transition)
                     
                     contentNode.activate()
@@ -231,45 +212,31 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         insets.top = max(10.0, insets.top)
         
         var bottomInset: CGFloat = 10.0 + cleanInsets.bottom
-        if insets.bottom > 0 {
+        if insets.bottom > 0.0 {
             bottomInset -= 12.0
         }
-        let buttonHeight: CGFloat = 57.0
-        let sectionSpacing: CGFloat = 8.0
-        let titleAreaHeight: CGFloat = 64.0
         
-        let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
+        let maximumContentHeight = layout.size.height - insets.top - max(bottomInset, insets.bottom)
         
-        let width = min(layout.size.width, layout.size.height) - 20.0
+        let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         let sideInset = floor((layout.size.width - width) / 2.0)
         
         let contentContainerFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
-        let contentFrame = contentContainerFrame.insetBy(dx: 0.0, dy: 0.0)
-        
-        let bottomGridInset = buttonHeight
-        
-        self.containerLayout = (layout, navigationBarHeight, bottomGridInset)
+        let contentFrame = contentContainerFrame
+                
+        self.containerLayout = (layout, navigationBarHeight, 0.0)
         self.scheduledLayoutTransitionRequest = nil
         
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        
-        transition.updateFrame(node: self.cancelButtonNode, frame: CGRect(origin: CGPoint(x: sideInset, y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: width, height: buttonHeight)))
-        
+                
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         
-        transition.updateFrame(node: self.actionsBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset), size: CGSize(width: contentContainerFrame.size.width, height: bottomGridInset)))
-        
-        transition.updateFrame(node: self.actionButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - buttonHeight), size: CGSize(width: contentContainerFrame.size.width, height: buttonHeight)))
-        
-        transition.updateFrame(node: self.actionSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentContainerFrame.size.height - bottomGridInset - UIScreenPixel), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
-        
-        let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height - titleAreaHeight))
+        let gridSize = CGSize(width: contentFrame.size.width, height: max(32.0, contentFrame.size.height))
         
         if let contentNode = self.contentNode {
-            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-            contentNode.updateLayout(size: gridSize, bottomInset: bottomGridInset, transition: transition)
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: 0.0), size: gridSize))
+            contentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: 0.0, transition: transition)
         }
     }
     
@@ -283,14 +250,11 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             if insets.bottom > 0 {
                 bottomInset -= 12.0
             }
-            let buttonHeight: CGFloat = 57.0
-            let sectionSpacing: CGFloat = 8.0
             
-            let width = min(layout.size.width, layout.size.height) - 20.0
-            
+            let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
             let sideInset = floor((layout.size.width - width) / 2.0)
             
-            let maximumContentHeight = layout.size.height - insets.top - max(bottomInset + buttonHeight, insets.bottom) - sectionSpacing
+            let maximumContentHeight = layout.size.height - insets.top - max(bottomInset, insets.bottom)
             let contentFrame = CGRect(origin: CGPoint(x: sideInset, y: insets.top), size: CGSize(width: width, height: maximumContentHeight))
             
             var backgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX, y: contentFrame.minY - contentOffset), size: contentFrame.size)
@@ -300,11 +264,15 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             if backgroundFrame.maxY > contentFrame.maxY {
                 backgroundFrame.size.height += contentFrame.maxY - backgroundFrame.maxY
             }
-            if backgroundFrame.size.height < buttonHeight + 32.0 {
-                backgroundFrame.origin.y -= buttonHeight + 32.0 - backgroundFrame.size.height
-                backgroundFrame.size.height = buttonHeight + 32.0
-            }
-            transition.updateFrame(node: self.contentBackgroundNode, frame: backgroundFrame)
+            backgroundFrame.size.height += 2000.0
+
+            transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+            transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
+            
+            let cancelSize = CGSize(width: 44.0, height: 44.0)
+            let cancelFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - cancelSize.width - 3.0, y: backgroundFrame.minY + 6.0), size: cancelSize)
+            transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
             
             if let animateContentNodeOffsetFromBackgroundOffset = self.animateContentNodeOffsetFromBackgroundOffset {
                 self.animateContentNodeOffsetFromBackgroundOffset = nil
@@ -327,10 +295,6 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     
     @objc func cancelButtonPressed() {
         self.cancel?()
-    }
-    
-    @objc func installActionButtonPressed() {
-        self.join?()
     }
     
     func animateIn() {
@@ -371,8 +335,8 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             
             let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
             let dimPosition = self.dimNode.layer.position
-            self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
-            self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            self.dimNode.layer.animatePosition(from: dimPosition, to: CGPoint(x: dimPosition.x, y: dimPosition.y - offset), duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+            self.layer.animateBoundsOriginYAdditive(from: 0.0, to: -offset, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
                 offsetCompleted = true
                 internalCompletion()
             })
@@ -383,11 +347,8 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let result = self.actionButtonNode.hitTest(self.actionButtonNode.convert(point, from: self), with: event) {
-            return result
-        }
         if self.bounds.contains(point) {
-            if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) && !self.cancelButtonNode.bounds.contains(self.convert(point, to: self.cancelButtonNode)) {
+            if !self.contentBackgroundNode.bounds.contains(self.convert(point, to: self.contentBackgroundNode)) && !self.cancelButton.bounds.contains(self.convert(point, to: self.cancelButton)) {
                 return self.dimNode.view
             }
         }
@@ -431,38 +392,19 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         self.setNeedsLayout()
     }
     
-    func transitionToProgress(signal: Signal<Void, NoError>) {
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
-        
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: false), fastOut: true)
-        let timestamp = CACurrentMediaTime()
-        self.disposable.set(signal.start(completed: { [weak self] in
-            let minDelay = 0.6
-            let delay = max(0.0, (timestamp + minDelay) - CACurrentMediaTime())
-            Queue.mainQueue().after(delay, {
-                if let strongSelf = self {
-                    strongSelf.cancel?()
-                }
-            })
-        }))
+    func setInvitePeer(image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [EnginePeer], data: JoinLinkPreviewData) {
+        let contentNode = JoinLinkPreviewPeerContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, content: .invite(isGroup: data.isGroup, image: image, title: title, memberCount: memberCount, members: members))
+        contentNode.join = { [weak self] in
+            self?.join?()
+        }
+        self.transitionToContentNode(contentNode)
     }
     
-    func setPeer(image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [Peer], data: JoinLinkPreviewData) {
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
-        transition.updateAlpha(node: self.actionButtonNode, alpha: 1.0)
-        transition.updateAlpha(node: self.actionSeparatorNode, alpha: 1.0)
-        transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 1.0)
-        
-        self.actionButtonNode.isEnabled = true
-        if data.isJoined {
-            self.actionButtonNode.setTitle(self.presentationData.strings.Conversation_LinkDialogOpen, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
-        } else {
-            self.actionButtonNode.setTitle(data.isGroup ? self.presentationData.strings.Invitation_JoinGroup : self.presentationData.strings.Channel_JoinChannel, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
+    func setRequestPeer(image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32, isGroup: Bool) {
+        let contentNode = JoinLinkPreviewPeerContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, content: .request(isGroup: isGroup, image: image, title: title, about: about, memberCount: memberCount))
+        contentNode.join = { [weak self] in
+            self?.join?()
         }
-        
-        self.transitionToContentNode(JoinLinkPreviewPeerContentNode(context: self.context, image: image, title: title, memberCount: memberCount, members: members, isGroup: data.isGroup, theme: self.presentationData.theme, strings: self.presentationData.strings))
+        self.transitionToContentNode(contentNode)
     }
 }

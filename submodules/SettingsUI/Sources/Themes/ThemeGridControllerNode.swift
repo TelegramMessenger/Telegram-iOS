@@ -66,7 +66,7 @@ struct ThemeGridControllerEntry: Comparable, Identifiable {
             return .file(file.id, file.settings.colors, file.settings.intensity ?? 0)
         case let .image(representations, _):
             if let largest = largestImageRepresentation(representations) {
-                return .image(largest.resource.id.uniqueId)
+                return .image(largest.resource.id.stringRepresentation)
             } else {
                 return .image("")
             }
@@ -202,7 +202,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.resetWallpapers = resetWallpapers
         
         self.gridNode = GridNode()
-        self.gridNode.showVerticalScrollIndicator = true
+        self.gridNode.showVerticalScrollIndicator = false
         self.leftOverlayNode = ASDisplayNode()
         self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.rightOverlayNode = ASDisplayNode()
@@ -504,7 +504,7 @@ final class ThemeGridControllerNode: ASDisplayNode {
             self.context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.wallapersState])
         )
         |> map { remoteWallpapers, sharedData -> [Wallpaper] in
-            let localState = (sharedData.entries[SharedDataKeys.wallapersState] as? WallpapersState) ?? WallpapersState.default
+            let localState = sharedData.entries[SharedDataKeys.wallapersState]?.get(WallpapersState.self) ?? WallpapersState.default
 
             var wallpapers: [Wallpaper] = []
             for wallpaper in localState.wallpapers {
@@ -609,12 +609,13 @@ final class ThemeGridControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         insets.left = layout.safeInsets.left
         insets.right = layout.safeInsets.right
+        
         var scrollIndicatorInsets = insets
         
         let minSpacing: CGFloat = 8.0
         let referenceImageSize: CGSize
         let screenWidth = min(layout.size.width, layout.size.height)
-        if screenWidth >= 375.0 {
+        if screenWidth >= 390.0 {
             referenceImageSize = CGSize(width: 108.0, height: 230.0)
         } else {
             referenceImageSize = CGSize(width: 91.0, height: 161.0)
@@ -628,8 +629,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let makeDescriptionLayout = self.descriptionItemNode.asyncLayout()
         
         var listInsets = insets
-        if layout.size.width > 480.0 {
-            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+        if layout.size.width >= 375.0 {
+            let inset = max(16.0, floor((layout.size.width - 674.0) / 2.0))
             listInsets.left += inset
             listInsets.right += inset
             

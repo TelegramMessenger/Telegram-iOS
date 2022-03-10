@@ -13,6 +13,8 @@ import LocalizedPeerData
 import StickerResources
 import PhotoResources
 import TelegramStringFormatting
+import TextFormat
+import InvisibleInkDustNode
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext
@@ -68,6 +70,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private let titleIconNode: ASImageNode
     private let titleNode: TextNode
     private let textNode: TextNode
+    private var dustNode: InvisibleInkDustNode?
     private let imageNode: TransformImageNode
     
     private var titleAttributedText: NSAttributedString?
@@ -112,24 +115,24 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         var isReminder = false
         var isScheduled = false
         var title: String?
-        if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
-            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+        if let firstMessage = item.messages.first, let peer = messageMainPeer(EngineMessage(firstMessage)) {
+            if case let .channel(channel) = peer, case .broadcast = channel.info {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else if let author = firstMessage.author {
                 if firstMessage.id.peerId.isReplies, let _ = firstMessage.sourceReference, let effectiveAuthor = firstMessage.forwardInfo?.author {
-                    title = effectiveAuthor.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    title = EnginePeer(effectiveAuthor).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                 } else if author.id != peer.id {
                     if author.id == item.context.account.peerId {
                         title = presentationData.strings.DialogList_You + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     } else {
-                        title = author.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        title = EnginePeer(author).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     }
                 } else {
                     title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     for attribute in firstMessage.attributes {
                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                             if let sourcePeer = firstMessage.peers[attribute.messageId.peerId] {
-                                title = sourcePeer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                                title = EnginePeer(sourcePeer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             }
                             break
                         }
@@ -148,15 +151,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             }
             var avatarPeer = peer
             if firstMessage.id.peerId.isReplies, let author = firstMessage.forwardInfo?.author {
-                avatarPeer = author
+                avatarPeer = EnginePeer(author)
             }
-            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: EnginePeer(avatarPeer), overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
+            self.avatarNode.setPeer(context: item.context, theme: presentationData.theme, peer: avatarPeer, overrideImage: peer.id == item.context.account.peerId ? .savedMessagesIcon : nil, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var updatedMedia: Media?
         var imageDimensions: CGSize?
         var isRound = false
         var messageText: String
+        var messageEntities: [MessageTextEntity]?
         if item.messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
             messageText = item.strings.PUSH_ENCRYPTED_MESSAGE("").string
         } else if item.messages.count == 1 {
@@ -180,7 +184,23 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            messageText = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: message, strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId).0
+            let (textString, _, isText) = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId)
+            if isText {
+                messageText = message.text
+                messageEntities = message.textEntitiesAttribute?.entities.filter { entity in
+                    if case .Spoiler = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                if messageEntities?.count == 0 {
+                    messageEntities = nil
+                    messageText = textString
+                }
+            } else {
+                messageText = textString
+            }
         } else if item.messages.count > 1, let peer = item.messages[0].peers[item.messages[0].id.peerId] {
             var displayAuthor = true
             if let channel = peer as? TelegramChannel {
@@ -197,17 +217,17 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if item.messages[0].forwardInfo != nil && item.messages[0].sourceReference == nil {
                 if let author = item.messages[0].author, displayAuthor {
                     if !isReminder {
-                        title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     }
-                    messageText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
+                    messageText = presentationData.strings.PUSH_CHAT_MESSAGE_FWDS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                 } else {
-                    title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     messageText = presentationData.strings.PUSH_MESSAGE_FWDS_TEXT(Int32(item.messages.count))
                 }
             } else if item.messages[0].groupingKey != nil {
-                var kind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[0], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId).key
+                var kind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(item.messages[0]), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId).key
                 for i in 1 ..< item.messages.count {
-                    let nextKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.messages[i], strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId)
+                    let nextKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(item.messages[i]), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId)
                     if kind != nextKind.key {
                         kind = .text
                         break
@@ -227,16 +247,16 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if isChannel {
                     switch kind {
                         case .image:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count))
                         case .video:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count))
                         case .file:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGE_DOCS_TEXT(Int32(item.messages.count))
                         default:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_CHANNEL_MESSAGES_TEXT(Int32(item.messages.count))
                     }
                 } else if isGroup, var author = item.messages[0].author {
@@ -245,31 +265,31 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                     }
                     switch kind {
                         case .image:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
-                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                         case .video:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
-                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                         case .file:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
-                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGE_DOCS_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                         default:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
-                            messageText = presentationData.strings.PUSH_CHAT_MESSAGES_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: author.compactDisplayTitle)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            messageText = presentationData.strings.PUSH_CHAT_MESSAGES_TEXT(Int32(item.messages.count)).replacingOccurrences(of: "{author}", with: EnginePeer(author).compactDisplayTitle)
                     }
                 } else {
                     switch kind {
                         case .image:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGE_PHOTOS_TEXT(Int32(item.messages.count))
                         case .video:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGE_VIDEOS_TEXT(Int32(item.messages.count))
                         case .file:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGE_FILES_TEXT(Int32(item.messages.count))
                         default:
-                            title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                            title = EnginePeer(peer).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                             messageText = presentationData.strings.PUSH_MESSAGES_TEXT(Int32(item.messages.count))
                     }
                 }
@@ -286,8 +306,15 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             title = "📅 \(currentTitle)"
         }
         
-        messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
-        
+        let textFont = compact ? Font.regular(15.0) : Font.regular(16.0)
+        let textColor = presentationData.theme.inAppNotification.primaryTextColor
+        var attributedMessageText: NSAttributedString
+        if let messageEntities = messageEntities {
+            attributedMessageText = stringWithAppliedEntities(messageText, entities: messageEntities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+        } else {
+            attributedMessageText = NSAttributedString(string: messageText.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: textColor)
+        }
+                
         self.titleAttributedText = NSAttributedString(string: title ?? "", font: compact ? Font.semibold(15.0) : Font.semibold(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
         
         let imageNodeLayout = self.imageNode.asyncLayout()
@@ -325,7 +352,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             self.imageNode.setSignal(updateImageSignal)
         }
         
-        self.textAttributedText = NSAttributedString(string: messageText, font: compact ? Font.regular(15.0) : Font.regular(16.0), textColor: presentationData.theme.inAppNotification.primaryTextColor)
+        self.textAttributedText = attributedMessageText
         
         if let width = self.validLayout {
             let _ = self.updateLayout(width: width, transition: .immediate)
@@ -361,7 +388,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: self.textAttributedText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let _ = titleApply()
         let _ = textApply()
-        
+                
         let textSpacing: CGFloat = 1.0
         
         let titleFrame = CGRect(origin: CGPoint(x: leftInset + titleInset, y: 1.0 + floor((panelHeight - textLayout.size.height - titleLayout.size.height - textSpacing) / 2.0)), size: titleLayout.size)
@@ -371,9 +398,27 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             transition.updateFrame(node: self.titleIconNode, frame: CGRect(origin: CGPoint(x: leftInset + 1.0, y: titleFrame.minY + 3.0), size: image.size))
         }
         
-        transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size))
+        let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + textSpacing), size: textLayout.size)
+        transition.updateFrame(node: self.textNode, frame: textFrame)
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: width - 10.0 - imageSize.width, y: (panelHeight - imageSize.height) / 2.0), size: imageSize))
+        
+        if !textLayout.spoilers.isEmpty, let presentationData = self.item?.context.sharedContext.currentPresentationData.with({ $0 }) {
+            let dustNode: InvisibleInkDustNode
+            if let current = self.dustNode {
+                dustNode = current
+            } else {
+                dustNode = InvisibleInkDustNode(textNode: nil)
+                dustNode.isUserInteractionEnabled = false
+                self.dustNode = dustNode
+                self.insertSubnode(dustNode, aboveSubnode: self.textNode)
+            }
+            dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
+            dustNode.update(size: dustNode.frame.size, color: presentationData.theme.inAppNotification.primaryTextColor, textColor: presentationData.theme.inAppNotification.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+        } else if let dustNode = self.dustNode {
+            dustNode.removeFromSupernode()
+            self.dustNode = nil
+        }
         
         return panelHeight
     }

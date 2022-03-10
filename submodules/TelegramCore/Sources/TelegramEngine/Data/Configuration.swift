@@ -83,7 +83,7 @@ public extension TelegramEngine.EngineData.Item {
                 guard let view = view as? PreferencesView else {
                     preconditionFailure()
                 }
-                guard let limitsConfiguration = view.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration else {
+                guard let limitsConfiguration = view.values[PreferencesKeys.limitsConfiguration]?.get(LimitsConfiguration.self) else {
                     return EngineConfiguration.Limits(LimitsConfiguration.defaultValue)
                 }
                 return EngineConfiguration.Limits(limitsConfiguration)

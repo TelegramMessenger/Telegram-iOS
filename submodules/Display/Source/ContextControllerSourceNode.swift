@@ -1,12 +1,17 @@
 import Foundation
 import AsyncDisplayKit
 
-public final class ContextControllerSourceNode: ASDisplayNode {
-    private var contextGesture: ContextGesture?
+open class ContextControllerSourceNode: ContextReferenceContentNode {
+    public private(set) var contextGesture: ContextGesture?
     
     public var isGestureEnabled: Bool = true {
         didSet {
             self.contextGesture?.isEnabled = self.isGestureEnabled
+        }
+    }
+    public var beginDelay: Double = 0.12 {
+        didSet {
+            self.contextGesture?.beginDelay = self.beginDelay
         }
     }
     public var animateScale: Bool = true
@@ -14,6 +19,7 @@ public final class ContextControllerSourceNode: ASDisplayNode {
     public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var customActivationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
+    public weak var additionalActivationProgressLayer: CALayer?
     public var targetNodeForActivationProgress: ASDisplayNode?
     public var targetNodeForActivationProgressContentRect: CGRect?
     
@@ -23,12 +29,15 @@ public final class ContextControllerSourceNode: ASDisplayNode {
         self.contextGesture?.isEnabled = self.isGestureEnabled
     }
     
-    override public func didLoad() {
+    override open func didLoad() {
         super.didLoad()
         
         let contextGesture = ContextGesture(target: self, action: nil)
         self.contextGesture = contextGesture
         self.view.addGestureRecognizer(contextGesture)
+        
+        contextGesture.beginDelay = self.beginDelay
+        contextGesture.isEnabled = self.isGestureEnabled
         
         contextGesture.shouldBegin = { [weak self] point in
             guard let strongSelf = self, !strongSelf.bounds.width.isZero else {
@@ -75,20 +84,40 @@ public final class ContextControllerSourceNode: ASDisplayNode {
                 case .update:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     targetNode.layer.sublayerTransform = sublayerTransform
+                    if let additionalActivationProgressLayer = strongSelf.additionalActivationProgressLayer {
+                        additionalActivationProgressLayer.transform = sublayerTransform
+                    }
                 case .begin:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     targetNode.layer.sublayerTransform = sublayerTransform
+                    if let additionalActivationProgressLayer = strongSelf.additionalActivationProgressLayer {
+                        additionalActivationProgressLayer.transform = sublayerTransform
+                    }
                 case .ended:
                     let sublayerTransform = CATransform3DTranslate(CATransform3DScale(CATransform3DIdentity, currentScale, currentScale, 1.0), scaleMidX, scaleMidY, 0.0)
                     let previousTransform = targetNode.layer.sublayerTransform
                     targetNode.layer.sublayerTransform = sublayerTransform
                     
                     targetNode.layer.animate(from: NSValue(caTransform3D: previousTransform), to: NSValue(caTransform3D: sublayerTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
+                    
+                    if let additionalActivationProgressLayer = strongSelf.additionalActivationProgressLayer {
+                        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: {
+                            additionalActivationProgressLayer.transform = sublayerTransform
+                        })
+                    }
                 }
             }
         }
         contextGesture.activated = { [weak self] gesture, location in
-            if let activated = self?.activated {
+            guard let strongSelf = self else {
+                gesture.cancel()
+                return
+            }
+            if let customActivationProgress = strongSelf.customActivationProgress {
+                customActivationProgress(0.0, .ended(0.0))
+            }
+
+            if let activated = strongSelf.activated {
                 activated(gesture, location)
             } else {
                 gesture.cancel()

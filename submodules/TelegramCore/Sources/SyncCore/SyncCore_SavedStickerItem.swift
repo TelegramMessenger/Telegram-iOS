@@ -1,7 +1,7 @@
 import Foundation
 import Postbox
 
-public final class SavedStickerItem: OrderedItemListEntryContents, Equatable {
+public final class SavedStickerItem: Codable, Equatable {
     public let file: TelegramMediaFile
     public let stringRepresentations: [String]
     
@@ -10,14 +10,18 @@ public final class SavedStickerItem: OrderedItemListEntryContents, Equatable {
         self.stringRepresentations = stringRepresentations
     }
     
-    public init(decoder: PostboxDecoder) {
-        self.file = decoder.decodeObjectForKey("f") as! TelegramMediaFile
-        self.stringRepresentations = decoder.decodeStringArrayForKey("sr")
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+
+        self.file = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: (try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: "f")).data)))
+        self.stringRepresentations = try container.decode([String].self, forKey: "sr")
     }
     
-    public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeObject(self.file, forKey: "f")
-        encoder.encodeStringArray(self.stringRepresentations, forKey: "sr")
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+
+        try container.encode(PostboxEncoder().encodeObjectToRawData(self.file), forKey: "f")
+        try container.encode(self.stringRepresentations, forKey: "sr")
     }
     
     public static func ==(lhs: SavedStickerItem, rhs: SavedStickerItem) -> Bool {

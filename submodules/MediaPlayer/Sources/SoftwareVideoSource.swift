@@ -1,5 +1,9 @@
 import Foundation
+#if !os(macOS)
 import UIKit
+#else
+import AppKit
+#endif
 import CoreMedia
 import SwiftSignalKit
 import FFMpegBinding
@@ -54,11 +58,15 @@ public final class SoftwareVideoSource {
     fileprivate let fd: Int32?
     fileprivate let size: Int32
     
+    private let hintVP9: Bool
+    
     private var enqueuedFrames: [(MediaTrackFrame, CGFloat, CGFloat, Bool)] = []
     private var hasReadToEnd: Bool = false
     
-    public init(path: String) {
+    public init(path: String, hintVP9: Bool) {
         let _ = FFMpegMediaFrameSourceContextHelpers.registerFFMpegGlobals
+        
+        self.hintVP9 = hintVP9
         
         var s = stat()
         stat(path, &s)
@@ -74,7 +82,9 @@ public final class SoftwareVideoSource {
         self.path = path
         
         let avFormatContext = FFMpegAVFormatContext()
-        
+        if hintVP9 {
+            avFormatContext.forceVideoCodecId(FFMpegCodecIdVP9)
+        }
         let ioBufferSize = 64 * 1024
         
         let avIoContext = FFMpegAVIOContext(bufferSize: Int32(ioBufferSize), opaqueContext: Unmanaged.passUnretained(self).toOpaque(), readPacket: readPacketCallback, writePacket: nil, seek: seekCallback)
@@ -193,6 +203,14 @@ public final class SoftwareVideoSource {
         return (frames.first, endOfStream)
     }
     
+    public func getFramerate() -> Int {
+        if let videoStream = self.videoStream {
+            return Int(videoStream.fps.seconds)
+        } else {
+            return 0
+        }
+    }
+    
     public func readFrame(maxPts: CMTime?) -> (MediaTrackFrame?, CGFloat, CGFloat, Bool) {
         guard let videoStream = self.videoStream, let avFormatContext = self.avFormatContext else {
             return (nil, 0.0, 1.0, false)
@@ -210,7 +228,7 @@ public final class SoftwareVideoSource {
             if let maxPts = maxPts, CMTimeCompare(decodableFrame.pts, maxPts) < 0 {
                 ptsOffset = maxPts
             }
-            result = (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
+            result = (videoStream.decoder.decode(frame: decodableFrame, ptsOffset: ptsOffset, forceARGB: self.hintVP9), CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
         } else {
             result = (nil, CGFloat(videoStream.rotationAngle), CGFloat(videoStream.aspect), loop)
         }

@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
@@ -178,16 +177,40 @@ private final class ChatListShimmerNode: ASDisplayNode {
                         
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             
-            let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let peer1: EnginePeer = .user(TelegramUser(id: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "FirstName", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []))
             let timestamp1: Int32 = 100000
-            let peers = SimpleDictionary<PeerId, Peer>()
+            let peers: [EnginePeer.Id: EnginePeer] = [:]
             let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
             }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in }, activateChatPreview: { _, _, gesture in
                 gesture?.cancel()
             }, present: { _ in })
             
             let items = (0 ..< 2).map { _ -> ChatListItem in
-                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: ChatListIndex(pinningIndex: 0, messageIndex: MessageIndex(id: MessageId(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: timestamp1, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Text", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])], peer: RenderedPeer(peer: peer1), combinedReadState: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, PeerReadState.idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: 0, markedUnread: false))]), isRemovedFromTotalUnreadCount: false, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                let message = EngineMessage(
+                    stableId: 0,
+                    stableVersion: 0,
+                    id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0),
+                    globallyUniqueId: nil,
+                    groupingKey: nil,
+                    groupInfo: nil,
+                    threadId: nil,
+                    timestamp: timestamp1,
+                    flags: [],
+                    tags: [],
+                    globalTags: [],
+                    localTags: [],
+                    forwardInfo: nil,
+                    author: peer1,
+                    text: "Text",
+                    attributes: [],
+                    media: [],
+                    peers: peers,
+                    associatedMessages: [:],
+                    associatedMessageIds: []
+                )
+                let readState = EnginePeerReadCounters()
+
+                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: EngineChatList.Item.Index(pinningIndex: 0, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [message], peer: EngineRenderedPeer(peer: peer1), combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, draftState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -267,9 +290,8 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     let listNode: ChatListNode
     
     private var validLayout: (CGSize, UIEdgeInsets, CGFloat)?
-    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
-    init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
+    init(context: AccountContext, groupId: EngineChatList.Group, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.becameEmpty = becameEmpty
@@ -280,19 +302,6 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.listNode)
-        
-        self.unlockedHiddenAccountRecordIdDisposable = (context.sharedContext.accountManager.hiddenAccountManager.unlockedHiddenAccountRecordIdPromise.get() |> deliverOnMainQueue).start(next: { [weak self] accountId in
-            guard let strongSelf = self else { return }
-            
-            if accountId != nil && strongSelf.emptyShimmerEffectNode == nil {
-                let emptyShimmerEffectNode = ChatListShimmerNode()
-                strongSelf.emptyShimmerEffectNode = emptyShimmerEffectNode
-                strongSelf.addSubnode(emptyShimmerEffectNode)
-                if let (size, insets, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
-                    strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset, transition: .immediate)
-                }
-            }
-        }, error: { _ in }, completed: {})
         
         self.listNode.isEmptyUpdated = { [weak self] isEmptyState, _, transition in
             guard let strongSelf = self else {
@@ -406,15 +415,11 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             emptyNode.updateLayout(size: emptyNodeFrame.size, transition: transition)
         }
     }
-    
-    deinit {
-        self.unlockedHiddenAccountRecordIdDisposable?.dispose()
-    }
 }
 
 final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
-    private let groupId: PeerGroupId
+    private let groupId: EngineChatList.Group
     private let previewing: Bool
     private let controlsHistoryPreload: Bool
     private let filterBecameEmpty: (ChatListFilter?) -> Void
@@ -535,7 +540,17 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         })
         
         if self.controlsHistoryPreload {
-            self.context.account.viewTracker.chatListPreloadItems.set(itemNode.listNode.preloadItems.get())
+            self.context.account.viewTracker.chatListPreloadItems.set(combineLatest(queue: .mainQueue(),
+                context.sharedContext.hasOngoingCall.get(),
+                itemNode.listNode.preloadItems.get()
+            )
+            |> map { hasOngoingCall, preloadItems -> [ChatHistoryPreloadItem] in
+                if hasOngoingCall {
+                    return []
+                } else {
+                    return preloadItems
+                }
+            })
         }
     }
     
@@ -543,18 +558,18 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var presentAlert: ((String) -> Void)?
     var present: ((ViewController) -> Void)?
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
-    var hidePsa: ((PeerId) -> Void)?
-    var deletePeerChat: ((PeerId, Bool) -> Void)?
-    var peerSelected: ((Peer, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
-    var groupSelected: ((PeerGroupId) -> Void)?
-    var updatePeerGrouping: ((PeerId, Bool) -> Void)?
+    var hidePsa: ((EnginePeer.Id) -> Void)?
+    var deletePeerChat: ((EnginePeer.Id, Bool) -> Void)?
+    var peerSelected: ((EnginePeer, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
+    var groupSelected: ((EngineChatList.Group) -> Void)?
+    var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     var contentScrollingEnded: ((ListView) -> Bool)?
     var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
-    var addedVisibleChatsWithPeerIds: (([PeerId]) -> Void)?
+    var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
     
-    init(context: AccountContext, groupId: PeerGroupId, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
+    init(context: AccountContext, groupId: EngineChatList.Group, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
         self.groupId = groupId
         self.previewing = previewing
@@ -1001,7 +1016,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
 
 final class ChatListControllerNode: ASDisplayNode {
     private let context: AccountContext
-    private let groupId: PeerGroupId
+    private let groupId: EngineChatList.Group
     private var presentationData: PresentationData
     
     let containerNode: ChatListContainerNode
@@ -1023,11 +1038,11 @@ final class ChatListControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((Peer, Bool) -> Void)?
-    var requestOpenRecentPeerOptions: ((Peer) -> Void)?
-    var requestOpenMessageFromSearch: ((Peer, MessageId, Bool) -> Void)?
+    var requestOpenPeerFromSearch: ((EnginePeer, Bool) -> Void)?
+    var requestOpenRecentPeerOptions: ((EnginePeer) -> Void)?
+    var requestOpenMessageFromSearch: ((EnginePeer, EngineMessage.Id, Bool) -> Void)?
     var requestAddContact: ((String) -> Void)?
-    var peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
+    var peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     var dismissSelfIfCompletedPresentation: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
     var emptyListAction: (() -> Void)?
@@ -1035,7 +1050,7 @@ final class ChatListControllerNode: ASDisplayNode {
 
     let debugListView = ListView()
     
-    init(context: AccountContext, groupId: PeerGroupId, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListControllerImpl) {
+    init(context: AccountContext, groupId: EngineChatList.Group, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListControllerImpl) {
         self.context = context
         self.groupId = groupId
         self.presentationData = presentationData
@@ -1069,7 +1084,7 @@ final class ChatListControllerNode: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if case .group = strongSelf.groupId {
+            if case .archive = strongSelf.groupId {
                 strongSelf.dismissSelfIfCompletedPresentation?()
             }
         }
@@ -1111,7 +1126,7 @@ final class ChatListControllerNode: ASDisplayNode {
         self.searchDisplayController?.updatePresentationData(presentationData)
         
         if let toolbarNode = self.toolbarNode {
-            toolbarNode.updateTheme(TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
+            toolbarNode.updateTheme(ToolbarTheme(rootControllerTheme: self.presentationData.theme))
         }
     }
     
@@ -1144,7 +1159,7 @@ final class ChatListControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
-                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
                     self?.toolbarActionSelected?(.left)
                 }, right: { [weak self] in
                     self?.toolbarActionSelected?(.right)

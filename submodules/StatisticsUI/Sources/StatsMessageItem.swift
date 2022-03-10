@@ -241,7 +241,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
-            let contentKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: item.message, strings: item.presentationData.strings, nameDisplayOrder: .firstLast,  dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId)
+            let contentKind = messageContentKind(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(item.message), strings: item.presentationData.strings, nameDisplayOrder: .firstLast,  dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: item.context.account.peerId)
             var text = !item.message.text.isEmpty ? item.message.text : stringForMediaKind(contentKind, strings: item.presentationData.strings).0
             text = foldLineBreaks(text)
             
@@ -311,7 +311,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 itemBackgroundColor = item.presentationData.theme.list.itemBlocksBackgroundColor
                 itemSeparatorColor = item.presentationData.theme.list.itemBlocksSeparatorColor
                 contentSize = CGSize(width: params.width, height: height)
-                insets = itemListNeighborsGroupedInsets(neighbors)
+                insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -428,6 +428,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true

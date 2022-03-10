@@ -158,6 +158,7 @@ struct FetchMessageHistoryHoleResult: Equatable {
     var strictRemovedIndices: IndexSet
     var actualPeerId: PeerId?
     var actualThreadId: Int64?
+    var ids: [MessageId]
 }
 
 func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
@@ -183,7 +184,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
         }
         |> mapToSignal { (inputPeer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
             guard let inputPeer = inputPeer else {
-                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil))
+                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
             }
             
             print("fetchMessageHistoryHole for \(peerInput) direction \(direction) space \(space)")
@@ -340,6 +341,54 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         }
                         
                         request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                    } else if tag == .unseenReaction {
+                        let offsetId: Int32
+                        let addOffset: Int32
+                        let selectedLimit = count
+                        let maxId: Int32
+                        let minId: Int32
+                        
+                        switch direction {
+                            case let .range(start, end):
+                                if start.id <= end.id {
+                                    offsetId = start.id <= 1 ? 1 : (start.id - 1)
+                                    addOffset = Int32(-selectedLimit)
+                                    maxId = end.id
+                                    minId = start.id - 1
+                                    
+                                    let rangeStartId = start.id
+                                    let rangeEndId = min(end.id, Int32.max - 1)
+                                    if rangeStartId <= rangeEndId {
+                                        minMaxRange = rangeStartId ... rangeEndId
+                                    } else {
+                                        minMaxRange = rangeStartId ... rangeStartId
+                                        assertionFailure()
+                                    }
+                                } else {
+                                    offsetId = start.id == Int32.max ? start.id : (start.id + 1)
+                                    addOffset = 0
+                                    maxId = start.id == Int32.max ? start.id : (start.id + 1)
+                                    minId = end.id
+                                    
+                                    let rangeStartId = end.id
+                                    let rangeEndId = min(start.id, Int32.max - 1)
+                                    if rangeStartId <= rangeEndId {
+                                        minMaxRange = rangeStartId ... rangeEndId
+                                    } else {
+                                        minMaxRange = rangeStartId ... rangeStartId
+                                        assertionFailure()
+                                    }
+                                }
+                            case let .aroundId(id):
+                                offsetId = id.id
+                                addOffset = Int32(-selectedLimit / 2)
+                                maxId = Int32.max
+                                minId = 1
+                            
+                                minMaxRange = 1 ... Int32.max - 1
+                        }
+                        
+                        request = source.request(Api.functions.messages.getUnreadReactions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                     } else if tag == .liveLocation {
                         let selectedLimit = count
                         
@@ -501,6 +550,23 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             return nil
                         }
                     }
+                    let fullIds = storeMessages.compactMap { message -> MessageId? in
+                        switch message.id {
+                        case let .Id(id):
+                            switch space {
+                            case let .tag(tag):
+                                if !message.tags.contains(tag) {
+                                    return nil
+                                } else {
+                                    return id
+                                }
+                            case .everywhere:
+                                return id
+                            }
+                        case .Partial:
+                            return nil
+                        }
+                    }
                     if ids.count == 0 || implicitelyFillHole {
                         filledRange = minMaxRange
                         strictFilledIndices = IndexSet()
@@ -561,7 +627,8 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),
                         strictRemovedIndices: strictFilledIndices,
                         actualPeerId: storeMessages.first?.id.peerId,
-                        actualThreadId: storeMessages.first?.threadId
+                        actualThreadId: storeMessages.first?.threadId,
+                        ids: fullIds
                     )
                 })
             }
@@ -641,6 +708,9 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             
             for (peerId, summary) in fetchedChats.mentionTagSummaries {
                 transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
+            }
+            for (peerId, summary) in fetchedChats.reactionTagSummaries {
+                transaction.replaceMessageTagSummary(peerId: peerId, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: summary.count, maxId: summary.range.maxId)
             }
             
             for (groupId, summary) in fetchedChats.folderSummaries {

@@ -673,33 +673,32 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatHistoryReactionsButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatHistoryReactionsButtonImage.rawValue, { theme in
+            return generateImage(CGSize(width: 38.0, height: 38.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.chat.historyNavigation.fillColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.5, y: 0.5), size: CGSize(width: size.width - 1.0, height: size.height - 1.0)))
+                context.setLineWidth(0.5)
+                context.setStrokeColor(theme.chat.historyNavigation.strokeColor.cgColor)
+                context.strokeEllipse(in: CGRect(origin: CGPoint(x: 0.25, y: 0.25), size: CGSize(width: size.width - 0.5, height: size.height - 0.5)))
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: theme.chat.historyNavigation.foregroundColor), let cgImage = image.cgImage {
+                    context.draw(cgImage, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
     public static func chatHistoryNavigationButtonBadgeImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatHistoryNavigationButtonBadgeImage.rawValue, { theme in
             return generateStretchableFilledCircleImage(diameter: 18.0, color: theme.chat.historyNavigation.badgeBackgroundColor, strokeColor: theme.chat.historyNavigation.badgeStrokeColor, strokeWidth: 1.0, backgroundColor: nil)
         })
     }
     
-    public static func sharedMediaFileDownloadStartIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.sharedMediaFileDownloadStartIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 12.0, height: 12.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                
-                context.setStrokeColor(theme.list.itemAccentColor.cgColor)
-                context.setLineWidth(1.67)
-                context.setLineCap(.round)
-                context.setLineJoin(.round)
-                
-                context.translateBy(x: 2.0, y: 1.0)
-                
-                context.move(to: CGPoint(x: 4.0, y: 0.0))
-                context.addLine(to: CGPoint(x: 4.0, y: 10.0))
-                context.strokePath()
-                
-                context.move(to: CGPoint(x: 0.0, y: 6.0))
-                context.addLine(to: CGPoint(x: 4.0, y: 10.0))
-                context.addLine(to: CGPoint(x: 8.0, y: 6.0))
-                context.strokePath()
-            })
+    public static func sharedMediaFileDownloadStartIcon(_ theme: PresentationTheme, generate: () -> UIImage?) -> UIImage? {
+        return theme.image(PresentationResourceKey.sharedMediaFileDownloadStartIcon.rawValue, { _ in
+            return generate()
         })
     }
     

@@ -39,7 +39,6 @@ func _internal_convertGroupToSupergroup(account: Account, peerId: PeerId) -> Sig
                 return createdPeerId
             }
             |> mapError { _ -> ConvertGroupToSupergroupError in
-                return .generic
             }
             |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
         }
@@ -64,6 +63,6 @@ public func convertGroupToGigagroup(account: Account, peerId: PeerId) -> Signal<
             return .complete()
         }
     }
-    |> mapError { _ -> ConvertGroupToGigagroupError in return .generic }
+    |> mapError { _ -> ConvertGroupToGigagroupError in }
     |> switchToLatest
 }

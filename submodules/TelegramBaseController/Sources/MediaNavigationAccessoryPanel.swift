@@ -16,6 +16,7 @@ public final class MediaNavigationAccessoryPanel: ASDisplayNode {
     public var tapAction: (() -> Void)?
     public var playPrevious: (() -> Void)?
     public var playNext: (() -> Void)?
+    
     public var getController: (() -> ViewController?)?
     public var presentInGlobalOverlay: ((ViewController) -> Void)?
     

@@ -703,9 +703,10 @@ const NSInteger TGNeoConversationControllerInitialRenderCount = 4;
         NSMutableArray *botInfoSignals = [[NSMutableArray alloc] init];
         NSMutableArray *botUsers = [[NSMutableArray alloc] init];
         NSMutableArray *initialStates = [[NSMutableArray alloc] init];
-        [_chatModel.participantsUserIds enumerateIndexesUsingBlock:^(NSUInteger idx, BOOL * _Nonnull stop)
-        {
-            TGBridgeUser *user = [[TGBridgeUserCache instance] userWithId:(int32_t)idx];
+        
+        for (NSNumber *nId in _chatModel.participantsUserIds) {
+            int64_t idx = [nId longLongValue];
+            TGBridgeUser *user = [[TGBridgeUserCache instance] userWithId:idx];
             if ([user isBot])
             {
                 [botUsers addObject:user];
@@ -718,7 +719,7 @@ const NSInteger TGNeoConversationControllerInitialRenderCount = 4;
                     return botInfo.commandList;
                 }]];
             }
-        }];
+        }
         
         return [[SSignal combineSignals:botInfoSignals withInitialStates:initialStates] map:^id(NSArray *commandLists)
         {
@@ -767,15 +768,14 @@ const NSInteger TGNeoConversationControllerInitialRenderCount = 4;
     
     if ([self peerIsAnyGroup])
     {
-        [_chatModel.participantsUserIds enumerateIndexesUsingBlock:^(NSUInteger userId, BOOL * _Nonnull stop)
-        {
-            TGBridgeUser *user = [[TGBridgeUserCache instance] userWithId:(int32_t)userId];
-            if ([user isBot])
-            {
+        for (NSNumber *nId in _chatModel.participantsUserIds) {
+            int64_t userId = [nId longLongValue];
+            TGBridgeUser *user = [[TGBridgeUserCache instance] userWithId:userId];
+            if ([user isBot]) {
                 _hasBots = true;
-                *stop = true;
+                break;
             }
-        }];
+        }
     }
     else
     {

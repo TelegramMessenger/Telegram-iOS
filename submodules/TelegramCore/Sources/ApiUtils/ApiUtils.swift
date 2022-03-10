@@ -79,6 +79,13 @@ func apiInputPeer(_ peer: Peer) -> Api.InputPeer? {
     }
 }
 
+func apiInputPeerOrSelf(_ peer: Peer, accountPeerId: PeerId) -> Api.InputPeer? {
+    if peer.id == accountPeerId {
+        return .inputPeerSelf
+    }
+    return apiInputPeer(peer)
+}
+
 func apiInputChannel(_ peer: Peer) -> Api.InputChannel? {
     if let channel = peer as? TelegramChannel, let accessHash = channel.accessHash {
         return Api.InputChannel.inputChannel(channelId: channel.id.id._internalGetInt64Value(), accessHash: accessHash.value)
