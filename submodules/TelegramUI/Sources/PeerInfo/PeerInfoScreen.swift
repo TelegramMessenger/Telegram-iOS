@@ -56,6 +56,7 @@ import NGData
 import NGIAP
 import NGLab
 import UndoUI
+import NGSubscription
 //
 import ListMessageItem
 import GalleryData
@@ -701,8 +702,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     let locale = presentationData.strings.baseLanguageCode
     var ngId = 0
 
-    let bb = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] ?? "") as! String
-    if !NicegramProducts.Premium.isEmpty && bb.last == "1" {
+    if !NicegramProducts.Premium.isEmpty {
         items[.nicegram]!.append(PeerInfoScreenDisclosureItem(id: ngId, text: l("Premium.Title", locale), icon: PresentationResourcesSettings.premiumIcon, action: {
                  interaction.openSettings(.premium)
         }))
@@ -5539,7 +5539,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private func processPremiumControllerOpen() {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        
+        let subscriptionViewController = SubscriptionBuilderImpl().build(
+            isNightTheme: presentationData.theme.referenceTheme == .night || presentationData.theme.referenceTheme == .nightAccent
+        )
+        subscriptionViewController.modalPresentationStyle = .fullScreen
+
         if isPremium() {
             if (isPremium()) {
                 self.controller?.push(premiumController(context: self.context))
@@ -5551,77 +5555,61 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         }
 
-	let locale = presentationData.strings.baseLanguageCode
-       self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .info(text: l("IAP.Common.Connecting", locale)), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+        let locale = presentationData.strings.baseLanguageCode
+        self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .info(text: l("IAP.Common.Connecting", locale)), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
             return false
-       }), in: .current)
-        
-        
-        var premiumIntroController: PremiumIntroController? = nil
-        
+        }), in: .current)
+
         // observer
-        let _ = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: {  notification in
-            let productID = notification.object as? String
-            
-            if productID == NicegramProducts.Premium {
-                NGSettings.premium = true
-                validatePremium(isPremium(), forceValid: true)
-                
-                if (isPremium()) {
-                    (self.controller?.navigationController as? NavigationController)?.replaceTopController(premiumController(context: self.context), animated: true)
-                } else {
-                    let alertController = getIAPErrorController(context: self.context, "IAP.Common.ValidateError", presentationData)
-                    premiumIntroController?.present(alertController, in: .window(.root))
-                }
-            }
-        })
+//        let _ = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: {  notification in
+//            let productID = notification.object as? String
+//            
+//            if productID == NicegramProducts.Premium {
+//                // NGSettings.premium = true
+//                //validatePremium(isPremium(), forceValid: true)
+//                if (isPremium()) {
+//                    (self.controller?.navigationController as? NavigationController)?.replaceTopController(premiumController(context: self.context), animated: true)
+//                } else {
+//                    let alertController = getIAPErrorController(context: self.context, "IAP.Common.ValidateError", presentationData)
+//                    self.controller?.present(alertController, in: .window(.root))
+//                }
+//            }
+//        })
         // error observer
-        let _ = NotificationCenter.default.addObserver(forName: .IAPHelperErrorNotification, object: nil, queue: .main, using: {  notification in
-            let errorText = notification.object as! String
-            let alertController = textAlertController(context: self.context, title: nil, text: errorText, actions: [ TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
-            premiumIntroController?.present(alertController, in: .window(.root))
-        })
+//        let _ = NotificationCenter.default.addObserver(forName: .IAPHelperErrorNotification, object: nil, queue: .main, using: {  notification in
+//            let errorText = notification.object as! String
+//            let alertController = textAlertController(context: self.context, title: nil, text: errorText, actions: [ TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})])
+//            self.controller?.present(alertController, in: .window(.root))
+//        })
         
-        
-        NicegramProducts.store.requestProducts{ success, products in
-            Queue.mainQueue().async {
-                if success {
-                    if let products = products {
-                        for product in products {
-                            if product.productIdentifier == NicegramProducts.Premium {
-                                premiumIntroController = getPremiumIntroController(context: self.context, presentationData: presentationData, product: product)
-                                
-                                let canPay = IAPHelper.canMakePayments()
-                                
-                                if !isPremium() {
-                                    premiumIntroController!.proceed = { result in
-                                        if canPay {
-                                            premiumIntroController?.present(UndoOverlayController(presentationData: self.presentationData, content: .info(text: l("IAP.Common.Connecting", locale)), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
-                                                                  return false
-                                                              }), in: .current)
-                                            NicegramProducts.store.buyProduct(product)
-                                        } else {
-                                            let alertController = textAlertController(context: self.context, title: nil, text: l("IAP.Common.CantPay", presentationData.strings.baseLanguageCode), actions: [
-                                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
-                                                })])
-                                            premiumIntroController!.present(alertController, in: .window(.root))
-                                        }
-                                    }
-                                    self.controller?.push(premiumIntroController!)
-                                } else {
-                                    self.controller?.push(premiumController(context: self.context))
-                                }
-                                return
-                            }
-                        }
-                        self.controller?.present(getIAPErrorController(context: self.context, "IAP.Common.ErrorFetch", presentationData), animated: true)
-                    }
-                } else {
-                    self.controller?.present(getIAPErrorController(context: self.context, "IAP.Common.ErrorFetch", presentationData), animated: true)
-                }
-                
-            }
-        }
+//        Subscribtio
+
+        self.controller?.present(subscriptionViewController, animated: true, completion: nil)
+
+//        NicegramProducts.store.requestProducts{ success, products in
+//            Queue.mainQueue().async {
+//                if success {
+//                    if let products = products {
+//                        for product in products {
+//                            if product.productIdentifier == NicegramProducts.Premium {
+//                                //premiumIntroController = getPremiumIntroController(context: self.context, presentationData: presentationData, product: product)
+//                                
+//                               // let canPay = IAPHelper.canMakePayments()
+//
+////                                self.controller?.navigationController?.pushViewController(subscriptionViewController, animated: true)
+//                                //self.controller?.push(subscriptionViewController)
+//
+//                                return
+//                            }
+//                        }
+//                        self.controller?.present(getIAPErrorController(context: self.context, "IAP.Common.ErrorFetch", presentationData), animated: true)
+//                    }
+//                } else {
+//                    self.controller?.present(getIAPErrorController(context: self.context, "IAP.Common.ErrorFetch", presentationData), animated: true)
+//                }
+//                
+//            }
+//        }
     }
     
     private func openAvatarForEditing(fromGallery: Bool = false, completion: @escaping () -> Void = {}) {

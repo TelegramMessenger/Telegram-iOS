@@ -63,3 +63,59 @@ http_archive(
     sha256 = "032907801dc7784744a1ca8fd40d3eecc34a2e27a93a4b3993f617cca204a9f3",
     build_file = "@//third-party/AppCenter:AppCenter.BUILD",
 )
+
+http_archive(
+        name = "FirebaseSDK",
+        urls = ["https://github.com/firebase/firebase-ios-sdk/releases/download/v8.11.0/Firebase.zip"],
+        build_file = "@//third-party/Firebase:BUILD",
+        sha256 = "ecf1013b5d616bb5d3acc7d9ddf257c06228c0a7364dd84d03989bae6af5ac5b"
+)
+
+http_archive(
+        name = "FacebookSDK",
+        urls = ["https://github.com/facebook/facebook-ios-sdk/releases/download/v12.3.2/FacebookSDK-Static_XCFramework.zip"],
+        build_file = "@//third-party/Facebook:BUILD",
+)
+
+http_archive(
+        name = "AppsFlyerSDK",
+        urls = ["https://github.com/AppsFlyerSDK/AppsFlyerFramework/releases/download/6.5.2/AppsFlyerLib.xcframework.zip"],
+        build_file = "@//third-party/AppsFlyer:BUILD",
+	sha256 = "da29b80c0296688488468e642094ec9a022b50319faff2ff9c05a24b13b061e6",
+)
+
+http_archive(
+    name = "cgrindel_rules_spm",
+    sha256 = "cbe5d5dccdc8d5aa300e1538c4214f44a1266895d9817e8279a9335bcbee2f1e",
+    strip_prefix = "rules_spm-0.7.0",
+    urls = [
+        "http://github.com/cgrindel/rules_spm/archive/v0.7.0.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "rules_pods",
+    urls = ["https://github.com/pinterest/PodToBUILD/releases/download/4.0.0-ad1dec4/PodToBUILD.zip"],
+)
+
+load(
+    "@cgrindel_rules_spm//spm:deps.bzl",
+    "spm_rules_dependencies",
+)
+
+spm_rules_dependencies()
+
+load(
+    "@build_bazel_rules_swift//swift:repositories.bzl",
+    "swift_rules_dependencies",
+)
+
+swift_rules_dependencies()
+
+load(
+    "@build_bazel_rules_swift//swift:extras.bzl",
+    "swift_rules_extra_dependencies",
+)
+
+swift_rules_extra_dependencies()
+

@@ -975,7 +975,7 @@ private final class NotificationServiceHandler {
                                 Logger.shared.log("NotificationService \(episode)", "Will report voip notification")
                                 let content = NotificationContent(isLockedMessage: nil)
                                 updateCurrentContent(content)
-                                
+
                                 CXProvider.reportNewIncomingVoIPPushPayload(voipPayload, completion: { error in
                                     Logger.shared.log("NotificationService \(episode)", "Did report voip notification, error: \(String(describing: error))")
 

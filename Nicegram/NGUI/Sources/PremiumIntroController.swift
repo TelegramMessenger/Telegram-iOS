@@ -236,7 +236,7 @@ public final class PremiumIntroController : ViewController {
             let observer = NotificationCenter.default.addObserver(forName: .IAPHelperPurchaseNotification, object: nil, queue: .main, using: { notification in
                 let productID = notification.object as? String
                 if productID == NicegramProducts.Premium {
-                    NGSettings.premium = true
+                    // NGSettings.premium = true
                     validatePremium(isPremium(), forceValid: true)
                     if (isPremium()) {
                         if let strongSelf = self {

@@ -35,6 +35,8 @@ load(
     "telegram_enable_icloud",
     "telegram_enable_siri",
     "telegram_enable_watch",
+    "facebook_url_schemes",
+    "facebook_app_id",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -263,6 +265,13 @@ filegroup(
 )
 
 filegroup(
+    name = "GoogleService-Info",
+    srcs = glob([
+        "Telegram-iOS/GoogleService-Info.plist",
+    ]),
+)
+
+filegroup(
     name = "AdditionalIcons",
     srcs = glob([
         "Telegram-iOS/*.png",
@@ -324,6 +333,7 @@ swift_library(
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
         ":GeneratedPresentationStrings/Resources/PresentationStrings.data",
+        ":GoogleService-Info",
     ] + NGRESOURCES,
     deps = [
         "//submodules/TelegramUI:TelegramUI",
@@ -355,6 +365,7 @@ plist_fragment(
             <string>{telegram_bundle_id}</string>
             <key>CFBundleURLSchemes</key>
             <array>
+                <string>{facebook_url_schemes}</string>
                 <string>telegram</string>
                 <string>nicegram</string>
             </array>
@@ -366,14 +377,25 @@ plist_fragment(
             <string>{telegram_bundle_id}.compatibility</string>
             <key>CFBundleURLSchemes</key>
             <array>
+                <string>{facebook_url_schemes}</string>
                 <string>tg</string>
                 <string>ng</string>
                 <string>ngcn</string>
             </array>
         </dict>
     </array>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>We need access to your advertising identifier in order to correctly identify the source of your installation and provide you with a high quality service.</string>
+    <key>FacebookAppID</key>
+    <string>{facebook_app_id}</string>
+    <key>FacebookClientToken</key>
+    <string>74f6476c9428ec13a71ba158eed5c83f</string>
+    <key>FacebookDisplayName</key>
+    <string>Nicegram</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        facebook_url_schemes = facebook_url_schemes,
+        facebook_app_id = facebook_app_id,
     )
 )
 
@@ -476,6 +498,11 @@ communication_notifications_fragment = """
 <true/>
 """
 
+#filtering_notifications_fragment = """
+#<key>com.apple.developer.usernotifications.filtering</key>
+#<true/>
+#"""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -489,6 +516,7 @@ plist_fragment(
         unrestricted_voip_fragment,
         carplay_fragment,
         communication_notifications_fragment,
+#        filtering_notifications_fragment,
     ])
 )
 
@@ -1785,6 +1813,8 @@ plist_fragment(
         <string>ucbrowser</string>
         <string>dolphin</string>
         <string>instagram-stories</string>
+        <string>fbapi</string>
+        <string>fb-messenger-share-api</string>
     </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>

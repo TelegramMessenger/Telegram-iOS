@@ -2,21 +2,9 @@
 import NGData
 import NGStrings
 import NGLogging
-//
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import SubscriptionAnalytics
+import NGEnv
+import NGAppCache
 
 import UIKit
 import SwiftSignalKit
@@ -59,6 +47,12 @@ import UIKitRuntimeUtils
 import AppCenter
 import AppCenterCrashes
 #endif
+
+import FBSDKCoreKit
+import FirebaseCore
+import AppsFlyerLib
+import AppTrackingTransparency
+import AdSupport
 
 private let handleVoipNotifications = false
 
@@ -293,11 +287,44 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
+        AppCache.appLaunchCount += 1
+        
+        SubscriptionService.shared.setup()
         
         let _ = voipTokenPromise.get().start(next: { token in
             self.deviceToken.set(.single(token))
         })
-        
+
+        if #available(iOS 12.0, *) {
+            FirebaseApp.configure()
+
+            AppsFlyerLib.shared().appsFlyerDevKey = NGENV.apps_flyer_key
+            AppsFlyerLib.shared().appleAppID = NGENV.app_id
+            AppsFlyerLib.shared().delegate = self
+            AppsFlyerLib.shared().waitForATTUserAuthorization(timeoutInterval: 60)
+
+            ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
+        }
+
+        MobySubscriptionAnalytics.logger = MobySubscriptionAnalyticsLogger()
+        let mobyApiKey = NGENV.moby_key
+        MobySubscriptionAnalytics.setup(apiKey: mobyApiKey) { account in
+            account.appsflyerID = AppsFlyerLib.shared().getAppsFlyerUID()
+        } completion: { _, produncInfoResult in
+            if let result = produncInfoResult,
+               let activeProduct = result.transactions.firstActiveProduct {
+                AppCache.currentProductID = activeProduct.productID
+            } else {
+                AppCache.currentProductID = nil
+            }
+        }
+
+        if AppCache.appLaunchCount == 1 {
+            let installTime = (time_t)(Date().timeIntervalSince1970)
+            let installInfo = InstallInfo(installDateTimestamp: installTime)
+            MobySubscriptionAnalytics.trackInstall(installInfo: installInfo)
+        }
+
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
         let statusBarHost = ApplicationStatusBarHost()
@@ -1409,6 +1436,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        self.showTrackingPermission()
+        AppsFlyerLib.shared().start()
         self.isInForegroundValue = true
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
@@ -1418,11 +1447,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         self.maybeCheckForUpdates()
         
-        
         // MARK: Nicegram fetch
         Queue().async {
         	self.fetchGlobalNGSettings()
-		    self.fetchPremium()
+		    //self.fetchPremium()
         }
         
         let _ = (self.context.get()
@@ -1433,7 +1461,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 	let presentationData = context.context.sharedContext.currentPresentationData.with({ $0 })
                 	self.fetchNGUserSettings(context.context.account.peerId.id._internalGetInt64Value())
                 	self.fetchLocale(lang: presentationData.strings.baseLanguageCode)
-		 }
+                }
             }
         })
         //
@@ -1685,11 +1713,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {
+        if #available(iOS 12.0, *) {
+            AppsFlyerLib.shared().handleOpen(url, sourceApplication: sourceApplication, withAnnotation: annotation)
+        }
         self.openUrl(url: url)
         return true
     }
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        if #available(iOS 12.0, *) {
+            AppsFlyerLib.shared().handleOpen(url, options: options)
+            ApplicationDelegate.shared.application(app, open: url, sourceApplication: options[.sourceApplication] as? String, annotation: options[.annotation])
+        }
         self.openUrl(url: url)
         return true
     }
@@ -1734,6 +1769,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        if #available(iOS 12.0, *) {
+            AppsFlyerLib.shared().continue(userActivity, restorationHandler: nil)
+        }
         if #available(iOS 10.0, *) {
             var startCallContacts: [INPerson]?
             var startCallIsVideo = false
@@ -1882,6 +1920,26 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         
         return true
+    }
+
+    private func showTrackingPermission() {
+        if #available(iOS 14.5, *) {
+            ATTrackingManager.requestTrackingAuthorization { status in
+                DispatchQueue.main.async {
+                    switch status {
+                    case .authorized:
+                        // AnalyticsService.sharedInstance.logEvent(name: "idfa_authorized")
+                        Settings.shared.isAdvertiserTrackingEnabled = true
+                        MobySubscriptionAnalytics.refreshAdvertisingAccount()
+                    case .denied:
+                        // AnalyticsService.sharedInstance.logEvent(name: "idfa_denied")
+                        Settings.shared.isAdvertiserTrackingEnabled = false
+
+                    default: break
+                    }
+                }
+            }
+        }
     }
     
     @available(iOS 9.0, *)
@@ -2240,11 +2298,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         #endif
     }
     
-    private func fetchPremium() {
-        if (isPremium()) {
-            validatePremium(true)
-        }
-    }
+//    private func fetchPremium() {
+//        if (isPremium()) {
+//            validatePremium(true)
+//        }
+//    }
     
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
@@ -2332,6 +2390,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }).start()
     }
+}
+
+extension AppDelegate: AppsFlyerLibDelegate {
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
+          AppsFlyerLib.shared().continue(userActivity, restorationHandler: restorationHandler)
+          return true
+      }
+
+      func onConversionDataSuccess(_ conversionInfo: [AnyHashable : Any]) { }
+
+      func onConversionDataFail(_ error: Error) { }
 }
 
 private func notificationPayloadKey(data: Data) -> Data? {

@@ -150,18 +150,12 @@ public func gtranslate(_ text: String, _ toLang: String) -> Signal<String, Trans
 
 extension String {
     var htmlDecoded: String {
-        
-        
         let attributedOptions: [NSAttributedString.DocumentReadingOptionKey : Any] = [
-            
             NSAttributedString.DocumentReadingOptionKey.documentType : NSAttributedString.DocumentType.html,
             NSAttributedString.DocumentReadingOptionKey.characterEncoding : String.Encoding.utf8.rawValue
         ]
         
-        
-        let decoded = try? NSAttributedString(data: Data(utf8), options: attributedOptions
-            , documentAttributes: nil).string
-        
+        let decoded = try? NSAttributedString(data: Data(utf8), options: attributedOptions, documentAttributes: nil).string
         return decoded ?? self
     }
     

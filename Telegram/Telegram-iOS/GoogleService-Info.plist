@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>766680609344-2age2g22734e0bmkio91n43unbs2nhi2.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.766680609344-2age2g22734e0bmkio91n43unbs2nhi2</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCPuPuNGrfdN6NOAJcsQR3qf-5QV3lWpm8</string>
+	<key>GCM_SENDER_ID</key>
+	<string>766680609344</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>app.nicegram</string>
+	<key>PROJECT_ID</key>
+	<string>nicegram-55d94</string>
+	<key>STORAGE_BUCKET</key>
+	<string>nicegram-55d94.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:766680609344:ios:1234f8bcd907eff700e5a5</string>
+</dict>
+</plist>

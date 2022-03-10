@@ -1,6 +1,19 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
-NGDEPS = ["//Nicegram/NGLogging:NGLogging", "//Nicegram/NGData:NGData", "//Nicegram/NGWebUtils:NGWebUtils", "//Nicegram/NGUI:NGUI", "//Nicegram/NGStrings:NGStrings", "//Nicegram/NGTranslate:NGTranslate", "//Nicegram/NGLab:NGLab"]
+NGDEPS = [
+    "//Nicegram/NGLogging:NGLogging",
+    "//Nicegram/NGData:NGData",
+    "//Nicegram/NGWebUtils:NGWebUtils",
+    "//Nicegram/NGUI:NGUI",
+    "//Nicegram/NGStrings:NGStrings",
+    "//Nicegram/NGTranslate:NGTranslate",
+    "//Nicegram/NGLab:NGLab",
+    "//Nicegram/EsimModule/SubscriptionAnalytics:SubscriptionAnalytics",
+    "//Nicegram/NGAppCache:NGAppCache",
+    "//Nicegram/NGSubscription:NGSubscription",
+    "//Nicegram/NGEnv:NGEnv",
+]
+
 load(
     "@build_configuration//:variables.bzl",
     "telegram_bundle_id",
@@ -257,6 +270,9 @@ swift_library(
         "//submodules/TabBarUI:TabBarUI",
         "//submodules/SoftwareVideo:SoftwareVideo",
         "//submodules/ManagedFile:ManagedFile",
+        "@FirebaseSDK//:FirebaseCore",
+        "@FacebookSDK//:FBSDKCoreKit",
+        "@AppsFlyerSDK//:AppsFlyerLib",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

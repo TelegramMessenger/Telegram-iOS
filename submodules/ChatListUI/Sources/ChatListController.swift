@@ -3,6 +3,7 @@ import UIKit
 import Postbox
 // MARK: Nicegram Imports
 import NGData
+import NGAssistant
 // MARKL
 import SwiftSignalKit
 import AsyncDisplayKit
@@ -220,7 +221,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 
                 let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
                 rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
-                self.navigationItem.rightBarButtonItem = rightBarButtonItem
+
+//                let nicegramItem = UIBarButtonItem(image: UIImage(named: "NicegramMain"), style: .plain, target: self, action: #selector(self.nicegramAssistantPressed))
+//                nicegramItem.accessibilityLabel = "Nicegram Assistant"
+
+//                self.navigationItem.rightBarButtonItems = [nicegramItem, rightBarButtonItem]
+                self.navigationItem.rightBarButtonItems = [rightBarButtonItem]
+
                 let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
                 backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
                 self.navigationItem.backBarButtonItem = backBarButtonItem
@@ -348,9 +355,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             } else {
                                 let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.composePressed))
                                 rightBarButtonItem.accessibilityLabel = strongSelf.presentationData.strings.VoiceOver_Navigation_Compose
-                                if strongSelf.navigationItem.rightBarButtonItem?.accessibilityLabel != rightBarButtonItem.accessibilityLabel {
-                                    strongSelf.navigationItem.setRightBarButton(rightBarButtonItem, animated: true)
-                                }
+
+//                                let nicegramItem = UIBarButtonItem(image: UIImage(named: "NicegramMain"), style: .plain, target: self, action: #selector(strongSelf.nicegramAssistantPressed))
+//                                nicegramItem.accessibilityLabel = "Nicegram Assistant"
+
+//                                let isComposeExist = strongSelf.navigationItem.rightBarButtonItems?.contains {
+//                                    $0.accessibilityLabel == rightBarButtonItem.accessibilityLabel
+//                                }
+//                                let isNicegramExist = strongSelf.navigationItem.rightBarButtonItems?.contains {
+//                                    $0.accessibilityLabel == rightBarButtonItem.accessibilityLabel
+//                                }
+
+                                strongSelf.navigationItem.setRightBarButtonItems([rightBarButtonItem], animated: true)
+//                                if isComposeExist ?? false { //, isNicegramExist ?? false {
+//                                    // strongSelf.navigationItem.setRightBarButtonItems([nicegramItem, rightBarButtonItem], animated: true)
+//
+//                                }
                             }
                             
                             if isReorderingTabs {
@@ -566,7 +586,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationItem.leftBarButtonItem = editItem
             let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
             rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
-            self.navigationItem.rightBarButtonItem = rightBarButtonItem
+
+//            let nicegramItem = UIBarButtonItem(image: UIImage(named: "NicegramMain"), style: .plain, target: self, action: #selector(self.nicegramAssistantPressed))
+//            nicegramItem.accessibilityLabel = "Nicegram Assistant"
+
+//            self.navigationItem.rightBarButtonItems = [nicegramItem, rightBarButtonItem]
+            self.navigationItem.rightBarButtonItems = [rightBarButtonItem]
         } else {
             self.navigationItem.rightBarButtonItem = editItem
         }
@@ -1957,6 +1982,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let controller = self.context.sharedContext.makeComposeController(context: self.context)
             navigationController.pushViewController(controller)
         }
+    }
+
+    @objc private func nicegramAssistantPressed() {
+        let personalAssistant = AssistantBuilderImpl().build()
+        let navigation = UINavigationController(rootViewController: personalAssistant)
+        navigation.navigationBar.tintColor = .white
+        navigation.modalPresentationStyle = .overFullScreen
+
+        present(navigation, animated: false, completion: nil)
     }
     
     public override var keyShortcuts: [KeyShortcut] {

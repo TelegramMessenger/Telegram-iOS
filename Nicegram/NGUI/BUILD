@@ -31,7 +31,8 @@ swift_library(
         "//Nicegram/NGData:NGData",
         "//Nicegram/NGLogging:NGLogging",
         "//Nicegram/NGStrings:NGStrings",
-        "//Nicegram/NGIAP:NGIAP"
+        "//Nicegram/NGIAP:NGIAP",
+        "//Nicegram/NGAssistant:NGAssistant",
     ],
     visibility = [
         "//visibility:public",
