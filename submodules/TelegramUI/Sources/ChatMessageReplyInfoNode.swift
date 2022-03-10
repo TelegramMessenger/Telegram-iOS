@@ -247,9 +247,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                 node.imageNode?.captureProtected = message.isCopyProtected()
                 
-                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: spacing - textInsets.top), size: titleLayout.size)
+                titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: spacing - textInsets.top + 1.0), size: titleLayout.size)
                 
-                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top), size: textLayout.size)
+                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
                 textNode.frame = textFrame
                 
                 if !textLayout.spoilers.isEmpty {
@@ -270,7 +270,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                     
                 node.lineNode.image = lineImage
-                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 5.0)))
+                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 4.0)))
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 
