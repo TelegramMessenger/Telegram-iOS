@@ -30,7 +30,7 @@ final class MutableTimestampBasedMessageAttributesView {
                     }
                 case let .remove(entry):
                     if entry.tag == self.tag {
-                        if let head = self.head, head.index == entry.index {
+                        if let head = self.head, head.messageId == entry.messageId {
                             self.head = nil
                             updated = true
                             invalidatedHead = true
