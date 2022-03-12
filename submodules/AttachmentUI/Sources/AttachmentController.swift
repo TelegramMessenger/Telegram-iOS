@@ -28,6 +28,8 @@ public protocol AttachmentContainable: ViewController {
     
     func resetForReuse()
     func prepareForReuse()
+    
+    func requestDismiss(completion: @escaping () -> Void)
 }
 
 public extension AttachmentContainable {
@@ -37,6 +39,10 @@ public extension AttachmentContainable {
     
     func prepareForReuse() {
         
+    }
+    
+    func requestDismiss(completion: @escaping () -> Void) {
+        completion()
     }
 }
 
@@ -274,7 +280,13 @@ public class AttachmentController: ViewController {
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.controller?.dismiss(animated: true)
+                if let controller = self.currentControllers.last {
+                    controller.requestDismiss(completion: { [weak self] in
+                        self?.controller?.dismiss(animated: true)
+                    })
+                } else {
+                    self.controller?.dismiss(animated: true)
+                }
             }
         }
         

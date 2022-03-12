@@ -207,18 +207,24 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     if currentOffset > 0.0, let scrollView = scrollView {
                         scrollView.panGestureRecognizer.setTranslation(CGPoint(), in: scrollView)
                     }
-                    
-                    var bounds = self.bounds
-                    bounds.origin.y = -translation
-                    bounds.origin.y = min(0.0, bounds.origin.y)
-                    self.bounds = bounds
                 }
+            
+                var bounds = self.bounds
+                if self.isExpanded {
+                    bounds.origin.y = -max(0.0, translation - edgeTopInset)
+                } else {
+                    bounds.origin.y = -translation
+                }
+                bounds.origin.y = min(0.0, bounds.origin.y)
+                self.bounds = bounds
             
                 self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .immediate)
             case .ended:
                 guard let (currentTopInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
                     return
                 }
+                self.panGestureArguments = nil
+            
                 let visibleContentOffset = listNode?.visibleContentOffset()
                 let contentOffset = scrollView?.contentOffset.y ?? 0.0
             
@@ -236,15 +242,23 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             
                 var bounds = self.bounds
-                bounds.origin.y = -translation
+                if self.isExpanded {
+                    bounds.origin.y = -max(0.0, translation - edgeTopInset)
+                } else {
+                    bounds.origin.y = -translation
+                }
                 bounds.origin.y = min(0.0, bounds.origin.y)
             
                 scrollView?.bounces = true
             
                 let offset = currentTopInset + panOffset
                 let topInset: CGFloat = edgeTopInset
-                if self.isExpanded {
-                    self.panGestureArguments = nil
+
+                var dismissing = false
+                if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 600.0) {
+                    self.interactivelyDismissed?()
+                    dismissing = true
+                } else if self.isExpanded {
                     if velocity.y > 300.0 || offset > topInset / 2.0 {
                         self.isExpanded = false
                         if let listNode = listNode {
@@ -262,42 +276,34 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))
                     }
+                } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
+                    if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
+                        DispatchQueue.main.async {
+                            listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                        }
+                    }
+                                                
+                    let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+                    self.isExpanded = true
+                   
+                    self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
                 } else {
-                    self.panGestureArguments = nil
-                    
-                    var dismissing = false
-                    if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
-                        self.interactivelyDismissed?()
-                        dismissing = true
-                    } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
-                        if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
-                            DispatchQueue.main.async {
-                                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                            }
-                        }
-                                                    
-                        let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
-                        let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
-                        self.isExpanded = true
-                       
-                        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
-                    } else {
-                        if let listNode = listNode {
-                            listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                        } else if let scrollView = scrollView {
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
-                        }
-                        
-                        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))
+                    if let listNode = listNode {
+                        listNode.scroller.setContentOffset(CGPoint(), animated: false)
+                    } else if let scrollView = scrollView {
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                     }
                     
-                    if !dismissing {
-                        var bounds = self.bounds
-                        let previousBounds = bounds
-                        bounds.origin.y = 0.0
-                        self.bounds = bounds
-                        self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                    }
+                    self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
+                
+                if !dismissing {
+                    var bounds = self.bounds
+                    let previousBounds = bounds
+                    bounds.origin.y = 0.0
+                    self.bounds = bounds
+                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                 }
             case .cancelled:
                 self.panGestureArguments = nil

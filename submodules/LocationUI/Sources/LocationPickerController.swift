@@ -88,8 +88,7 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         
         self.title = self.presentationData.strings.Map_ChooseLocationTitle
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.searchPressed))
-        self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_Search
+        self.updateBarButtons()
         
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -100,7 +99,8 @@ public final class LocationPickerController: ViewController, AttachmentContainab
             
             strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.presentationData.theme).withUpdatedSeparatorColor(.clear), strings: NavigationBarStrings(presentationStrings: strongSelf.presentationData.strings)))
             strongSelf.searchNavigationContentNode?.updatePresentationData(strongSelf.presentationData)
-            strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(strongSelf.presentationData.theme), style: .plain, target: strongSelf, action: #selector(strongSelf.searchPressed))
+            
+            strongSelf.updateBarButtons()
             
             if strongSelf.isNodeLoaded {
                 strongSelf.controllerNode.updatePresentationData(presentationData)
@@ -288,6 +288,16 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         self.isSearchingDisposable.dispose()
     }
     
+    private var locationAccessDenied = false
+    private func updateBarButtons() {
+        if self.locationAccessDenied {
+            self.navigationItem.rightBarButtonItem = nil
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.searchPressed))
+            self.navigationItem.rightBarButtonItem?.accessibilityLabel = self.presentationData.strings.Common_Search
+        }
+    }
+    
     override public func loadDisplayNode() {
         super.loadDisplayNode()
         guard let interaction = self.interaction else {
@@ -298,6 +308,10 @@ public final class LocationPickerController: ViewController, AttachmentContainab
         self.displayNodeDidLoad()
         self.controllerNode.beganInteractiveDragging = { [weak self] in
             self?.requestAttachmentMenuExpansion()
+        }
+        self.controllerNode.locationAccessDeniedUpdated = { [weak self] denied in
+            self?.locationAccessDenied = denied
+            self?.updateBarButtons()
         }
         
         self.permissionDisposable = (DeviceAccess.authorizationStatus(subject: .location(.send))

@@ -188,11 +188,27 @@
     if (enumerationBlock == nil)
         return;
     
-    for (NSArray *identifier in _selectedIdentifiers)
+    for (NSString *identifier in _selectedIdentifiers)
     {
         NSObject<TGMediaSelectableItem> *item = _selectionMap[identifier];
         if (item != nil) {
             enumerationBlock(item);
+        }
+    }
+}
+
+- (void)enumerateDeselectedItems:(void (^)(id<TGMediaSelectableItem>))enumerationBlock
+{
+    if (enumerationBlock == nil || _savedSelectedIdentifiers == nil)
+        return;
+    
+    for (NSString *identifier in _savedSelectedIdentifiers)
+    {
+        if (![_selectedIdentifiers containsObject:identifier]) {
+            NSObject<TGMediaSelectableItem> *item = _selectionMap[identifier];
+            if (item != nil) {
+                enumerationBlock(item);
+            }
         }
     }
 }

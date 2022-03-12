@@ -379,12 +379,14 @@ static const CGFloat swipeDistanceThreshold = 128.0f;
             completion();
     }];
     
-    [UIView animateWithDuration:ABS(distance / velocity) animations:^
-    {
+    [UIView animateWithDuration:0.15 animations:^{
         _interfaceView.alpha = 0.0f;
         _overlayContainerView.alpha = 0.0f;
+    }];
+    
+    [UIView animateWithDuration:0.35 animations:^{
         self.backgroundColor = UIColorRGBA(0x000000, 0.0f);
-    } completion:nil];
+    }];
 }
 
 - (void)transitionInWithDuration:(NSTimeInterval)duration

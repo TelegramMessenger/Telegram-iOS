@@ -7284,6 +7284,7 @@ Sorry for the inconvenience.";
 "Attachment.Ungrouped" = "Ungrouped";
 
 "Attachment.MessagePreview" = "Message Preview";
+"Attachment.MessagesPreview" = "Messages Preview";
 "Attachment.DragToReorder" = "Drag media to reorder";
 
 "Attachment.SearchWeb" = "Search Web";
@@ -7351,6 +7352,10 @@ Sorry for the inconvenience.";
 
 "Attachment.LocationAccessTitle" = "Access Your Location";
 "Attachment.LocationAccessText" = "Share places or your live location.";
+
+"Attachment.CancelSelectionAlertText" = "Cancel selection?";
+"Attachment.CancelSelectionAlertYes" = "Yes";
+"Attachment.CancelSelectionAlertNo" = "No";
 
 "ChannelInfo.CreateExternalStream" = "Stream With...";
 

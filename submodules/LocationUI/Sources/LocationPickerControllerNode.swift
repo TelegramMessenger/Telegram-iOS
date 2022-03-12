@@ -313,6 +313,7 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
     private var listOffset: CGFloat?
         
     var beganInteractiveDragging: () -> Void = {}
+    var locationAccessDeniedUpdated: (Bool) -> Void = { _ in }
     
     init(controller: LocationPickerController, context: AccountContext, presentationData: PresentationData, mode: LocationPickerMode, interaction: LocationPickerInteraction, locationManager: LocationManager) {
         self.controller = controller
@@ -639,11 +640,13 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                     if [.denied, .restricted].contains(access) {
                         if !strongSelf.locationAccessDenied {
                             strongSelf.locationAccessDenied = true
+                            strongSelf.locationAccessDeniedUpdated(true)
                             updateLayout = true
                         }
                     } else {
                         if strongSelf.locationAccessDenied {
                             strongSelf.locationAccessDenied = false
+                            strongSelf.locationAccessDeniedUpdated(false)
                             updateLayout = true
                         }
                     }
@@ -998,6 +1001,8 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                 self.placeholderBackgroundNode = nil
                 placeholderBackgroundNode.removeFromSupernode()
             }
+            
+            self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
             self.controller?.updateTabBarAlpha(1.0, .immediate)
         }
         

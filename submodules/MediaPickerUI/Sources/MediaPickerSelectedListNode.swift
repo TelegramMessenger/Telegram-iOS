@@ -6,13 +6,13 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramStringFormatting
 import LegacyComponents
 import CheckNode
 import MosaicLayout
 import WallpaperBackgroundNode
 import AccountContext
 import ChatMessageBackground
-
 
 private class MediaPickerSelectedItemNode: ASDisplayNode {
     let asset: TGMediaAsset
@@ -22,6 +22,8 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     private var checkNode: InteractiveCheckNode?
     private var durationBackgroundNode: ASDisplayNode?
     private var durationTextNode: ImmediateTextNode?
+    
+    private var adjustmentsDisposable: Disposable?
     
     private var theme: PresentationTheme?
     
@@ -49,6 +51,8 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         return self.readyPromise.get()
     }
     
+    private var videoDuration: Double?
+    
     init(asset: TGMediaAsset, interaction: MediaPickerInteraction?) {
         self.imageNode = ImageNode()
         self.imageNode.contentMode = .scaleAspectFill
@@ -63,6 +67,44 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.clipsToBounds = true
         
         self.addSubnode(self.imageNode)
+        
+        if asset.isVideo, let editingState = interaction?.editingState {
+            func adjustmentsChangedSignal(editingState: TGMediaEditingContext) -> Signal<TGMediaEditAdjustments?, NoError> {
+                return Signal { subscriber in
+                    let disposable = editingState.adjustmentsSignal(for: asset).start(next: { next in
+                        if let next = next as? TGMediaEditAdjustments {
+                            subscriber.putNext(next)
+                        } else if next == nil {
+                            subscriber.putNext(nil)
+                        }
+                    }, error: nil, completed: {})
+                    return ActionDisposable {
+                        disposable?.dispose()
+                    }
+                }
+            }
+            
+            self.adjustmentsDisposable = (adjustmentsChangedSignal(editingState: editingState)
+            |> deliverOnMainQueue).start(next: { [weak self] adjustments in
+                if let strongSelf = self {
+                    let duration: Double
+                    if let adjustments = adjustments as? TGVideoEditAdjustments, adjustments.trimApplied() {
+                        duration = adjustments.trimEndValue - adjustments.trimStartValue
+                    } else {
+                        duration = asset.videoDuration
+                    }
+                    strongSelf.videoDuration = duration
+                    
+                    if let size = strongSelf.validLayout {
+                        strongSelf.updateLayout(size: size, transition: .immediate)
+                    }
+                }
+            })
+        }
+    }
+    
+    deinit {
+        self.adjustmentsDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -158,6 +200,13 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             if let checkNode = self.checkNode, checkNode.alpha > 0.0 {
                 checkNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
+            
+            if let durationTextNode = self.durationTextNode, durationTextNode.alpha > 0.0 {
+                durationTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+            if let durationBackgroundNode = self.durationBackgroundNode, durationBackgroundNode.alpha > 0.0 {
+                durationBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
     }
     
@@ -182,6 +231,42 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         if let checkNode = self.checkNode {
             transition.updateFrame(node: checkNode, frame: CGRect(origin: CGPoint(x: size.width - checkSize.width - 3.0, y: 3.0), size: checkSize))
         }
+        
+        if let duration = self.videoDuration {
+            let textNode: ImmediateTextNode
+            let backgroundNode: ASDisplayNode
+            if let currentTextNode = self.durationTextNode, let currentBackgroundNode = self.durationBackgroundNode {
+                textNode = currentTextNode
+                backgroundNode = currentBackgroundNode
+            } else {
+                backgroundNode = ASDisplayNode()
+                backgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.5)
+                backgroundNode.cornerRadius = 9.0
+                self.addSubnode(backgroundNode)
+                self.durationBackgroundNode = backgroundNode
+                
+                textNode = ImmediateTextNode()
+                textNode.displaysAsynchronously = false
+                self.addSubnode(textNode)
+                self.durationTextNode = textNode
+            }
+            
+            textNode.attributedText = NSAttributedString(string: stringForDuration(Int32(duration)), font: Font.with(size: 11.0, design: .regular, weight: .regular, traits: .monospacedNumbers), textColor: .white)
+            
+            let textSize = textNode.updateLayout(size)
+            let backgroundFrame = CGRect(x: 6.0, y: 6.0, width: ceil(textSize.width) + 14.0, height: 18.0)
+            backgroundNode.frame = backgroundFrame
+            textNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floorToScreenPixels((backgroundFrame.size.width - textSize.width) / 2.0), y: backgroundFrame.minY + floorToScreenPixels((backgroundFrame.size.height - textSize.height) / 2.0)), size: textSize)
+        } else {
+            if let durationTextNode = self.durationTextNode {
+                self.durationTextNode = nil
+                durationTextNode.removeFromSupernode()
+            }
+            if let durationBackgroundNode = self.durationBackgroundNode {
+                self.durationBackgroundNode = nil
+                durationBackgroundNode.removeFromSupernode()
+            }
+        }
     }
     
     func transitionView() -> UIView {
@@ -203,6 +288,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         let frame = view.convert(view.bounds, to: self.supernode?.view)
         let targetFrame = self.frame
         
+        self.durationTextNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.durationBackgroundNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
         self.updateLayout(size: frame.size, transition: .immediate)
         self.updateLayout(size: targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
         self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak view] _ in
@@ -218,10 +306,16 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         
         let corners = self.corners
         
+        self.durationTextNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.durationBackgroundNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        
         self.corners = []
         self.updateLayout(size: targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
         self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak view, weak self] _ in
             view?.alpha = 1.0
+            
+            self?.durationTextNode?.layer.removeAllAnimations()
+            self?.durationBackgroundNode?.layer.removeAllAnimations()
             
             var animateCheckNode = false
             if let strongSelf = self, let checkNode = strongSelf.checkNode, checkNode.alpha.isZero {
@@ -541,53 +635,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
-        var peers = SimpleDictionary<PeerId, Peer>()
-        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        
-        let previewMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_MessagePreview, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
-        let previewItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [previewMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, isCentered: true)
-        
-        let dragMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_DragToReorder, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
-        let dragItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [dragMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, isCentered: true)
-        
-        let headerItems: [ListViewItem] = [previewItem, dragItem]
-        
-        let params = ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: size.height)
-        if let messageNodes = self.messageNodes {
-            for i in 0 ..< headerItems.count {
-                let itemNode = messageNodes[i]
-                headerItems[i].updateNode(async: { $0() }, node: {
-                    return itemNode
-                }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
-                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: size.width, height: layout.size.height))
-                    
-                    itemNode.contentSize = layout.contentSize
-                    itemNode.insets = layout.insets
-                    itemNode.frame = nodeFrame
-                    itemNode.isUserInteractionEnabled = false
-                    
-                    apply(ListViewItemApply(isOnScreen: true))
-                })
-            }
-        } else {
-            var messageNodes: [ListViewItemNode] = []
-            for i in 0 ..< headerItems.count {
-                var itemNode: ListViewItemNode?
-                headerItems[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
-                    itemNode = node
-                    apply().1(ListViewItemApply(isOnScreen: true))
-                })
-                itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
-                itemNode!.isUserInteractionEnabled = false
-                messageNodes.append(itemNode!)
-                self.scrollNode.addSubnode(itemNode!)
-            }
-            self.messageNodes = messageNodes
-        }
-        
         var itemSizes: [CGSize] = []
-        
         let sideInset: CGFloat = 34.0
         let boundingWidth = min(320.0, size.width - insets.left - insets.right - sideInset * 2.0)
         
@@ -670,6 +718,53 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
                 let position: MosaicItemPosition = [.top, .bottom, .left, .right]
                 groupLayouts.append(([(item, itemRect, position)], itemRect.size))
             }
+        }
+        
+        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+        var peers = SimpleDictionary<PeerId, Peer>()
+        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        
+        let previewText = groupLayouts.count > 1 ? presentationData.strings.Attachment_MessagesPreview : presentationData.strings.Attachment_MessagePreview
+        
+        let previewMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: previewText, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+        let previewItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [previewMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, isCentered: true)
+        
+        let dragMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_DragToReorder, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+        let dragItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [dragMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, isCentered: true)
+        
+        let headerItems: [ListViewItem] = [previewItem, dragItem]
+        
+        let params = ListViewItemLayoutParams(width: size.width, leftInset: insets.left, rightInset: insets.right, availableHeight: size.height)
+        if let messageNodes = self.messageNodes {
+            for i in 0 ..< headerItems.count {
+                let itemNode = messageNodes[i]
+                headerItems[i].updateNode(async: { $0() }, node: {
+                    return itemNode
+                }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: size.width, height: layout.size.height))
+                    
+                    itemNode.contentSize = layout.contentSize
+                    itemNode.insets = layout.insets
+                    itemNode.frame = nodeFrame
+                    itemNode.isUserInteractionEnabled = false
+                    
+                    apply(ListViewItemApply(isOnScreen: true))
+                })
+            }
+        } else {
+            var messageNodes: [ListViewItemNode] = []
+            for i in 0 ..< headerItems.count {
+                var itemNode: ListViewItemNode?
+                headerItems[i].nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                    itemNode = node
+                    apply().1(ListViewItemApply(isOnScreen: true))
+                })
+                itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+                itemNode!.isUserInteractionEnabled = false
+                messageNodes.append(itemNode!)
+                self.scrollNode.addSubnode(itemNode!)
+            }
+            self.messageNodes = messageNodes
         }
         
         let spacing: CGFloat = 8.0
