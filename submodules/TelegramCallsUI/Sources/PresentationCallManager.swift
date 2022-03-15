@@ -798,6 +798,11 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         let isVideo = false
         
         let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
+            if let isStream = initialCall.isStream, isStream {
+                subscriber.putNext(true)
+                return EmptyDisposable
+            }
+            
             DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
                 present(c, a)
             }, openSettings: {
