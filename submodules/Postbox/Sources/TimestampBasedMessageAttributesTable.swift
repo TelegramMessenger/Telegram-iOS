@@ -82,8 +82,9 @@ final class TimestampBasedMessageAttributesTable: Table {
         if let previousTimestamp = previousTimestamp {
             self.valueBox.remove(self.table, key: self.key(tag: tag, timestamp: previousTimestamp, id: id), secure: false)
             self.indexTable.remove(tag: tag, id: id)
-            operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp, messageId: id)))
         }
+        
+        operations.append(.remove(TimestampBasedMessageAttributesEntry(tag: tag, timestamp: previousTimestamp ?? 0, messageId: id)))
     }
     
     func head(tag: UInt16) -> TimestampBasedMessageAttributesEntry? {
