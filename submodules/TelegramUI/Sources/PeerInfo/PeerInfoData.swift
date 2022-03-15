@@ -1037,6 +1037,11 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if isOpenedFromChat {
             result.append(.search)
         }
+        
+        if user.botInfo != nil, let cachedData = cachedData as? CachedUserData, !cachedData.isBlocked {
+            result.append(.stop)
+        }
+        
         if (isSecretChat && !isContact) || user.flags.contains(.isSupport) {
         } else {
             result.append(.more)
@@ -1085,7 +1090,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
         if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
             canReport = false
         }
-        
+                
         var hasMore = false
         if canReport || canViewStats {
             hasMore = true

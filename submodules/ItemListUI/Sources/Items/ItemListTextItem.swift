@@ -23,15 +23,17 @@ public class ItemListTextItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let linkAction: ((ItemListTextItemLinkAction) -> Void)?
     let style: ItemListStyle
+    let trimBottomInset: Bool
     public let isAlwaysPlain: Bool = true
     public let tag: ItemListItemTag?
     
-    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, tag: ItemListItemTag? = nil) {
+    public init(presentationData: ItemListPresentationData, text: ItemListTextItemText, sectionId: ItemListSectionId, linkAction: ((ItemListTextItemLinkAction) -> Void)? = nil, style: ItemListStyle = .blocks, tag: ItemListItemTag? = nil, trimBottomInset: Bool = false) {
         self.presentationData = presentationData
         self.text = text
         self.sectionId = sectionId
         self.linkAction = linkAction
         self.style = style
+        self.trimBottomInset = trimBottomInset
         self.tag = tag
     }
     
@@ -140,6 +142,10 @@ public class ItemListTextItemNode: ListViewItemNode, ItemListItemNode {
                 bottomInset = -6.0
             }
             contentSize = CGSize(width: params.width, height: titleLayout.size.height + topInset + bottomInset)
+            
+            if item.trimBottomInset {
+                insets.bottom -= 44.0
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             

@@ -23,6 +23,8 @@ import ChatInterfaceState
 import TelegramCallsUI
 import UndoUI
 import ImportStickerPackUI
+import PeerInfoUI
+import Markdown
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -66,38 +68,86 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
-            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup))
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title))
             controller.peerSelected = { [weak controller] peer in
                 let peerId = peer.id
                 
-                if payload.isEmpty {
-                    if peerId.namespace == Namespaces.Peer.CloudGroup {
-                        let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
-                        |> deliverOnMainQueue).start(completed: {
-                            controller?.dismiss()
-                        })
-                    } else {
-                        let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
-                        |> deliverOnMainQueue).start(completed: {
-                            controller?.dismiss()
-                        })
+                let addMemberImpl = {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let theme = AlertControllerTheme(presentationData: presentationData)
+                    let attributedTitle = NSAttributedString(string: presentationData.strings.Bot_AddToChat_Add_MemberAlertTitle, font: Font.medium(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+                  
+                    var isGroup: Bool = false
+                    var peerTitle: String = ""
+                    if let peer = peer as? TelegramGroup {
+                        isGroup = true
+                        peerTitle = peer.title
+                    } else if let peer = peer as? TelegramChannel {
+                        if case .group = peer.info {
+                            isGroup = true
+                        }
+                        peerTitle = peer.title
                     }
-                } else {
-                    let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
-                    |> deliverOnMainQueue).start(next: { result in
-                        if let navigationController = navigationController {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                    
+                    let text = isGroup ? presentationData.strings.Bot_AddToChat_Add_MemberAlertTextGroup(peerTitle).string : presentationData.strings.Bot_AddToChat_Add_MemberAlertTextChannel(peerTitle).string
+                    
+                    let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.primaryColor)
+                    let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: theme.primaryColor)
+                    let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
+                    
+                    let controller = richTextAlertController(context: context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Bot_AddToChat_Add_MemberAlertAdd, action: {
+                        if payload.isEmpty {
+                            if peerId.namespace == Namespaces.Peer.CloudGroup {
+                                let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
+                                |> deliverOnMainQueue).start(completed: {
+                                    controller?.dismiss()
+                                })
+                            } else {
+                                let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
+                                |> deliverOnMainQueue).start(completed: {
+                                    controller?.dismiss()
+                                })
+                            }
+                        } else {
+                            let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
+                            |> deliverOnMainQueue).start(next: { result in
+                                if let navigationController = navigationController {
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                }
+                                switch result {
+                                    case let .channelParticipant(participant):
+                                        context.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
+                                    case .none:
+                                        break
+                                }
+                                controller?.dismiss()
+                            }, error: { _ in
+                                
+                            })
                         }
-                        switch result {
-                            case let .channelParticipant(participant):
-                                context.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
-                            case .none:
-                                break
-                        }
-                        controller?.dismiss()
-                    }, error: { _ in
-                        
-                    })
+                    }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                    })], actionLayout: .vertical)
+                    present(controller, nil)
+                }
+                
+                if let peer = peer as? TelegramChannel {
+                    if peer.flags.contains(.isCreator) || peer.adminRights != nil {
+                        let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, updated: { _ in
+                            controller?.dismiss()
+                        }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                        navigationController?.pushViewController(controller)
+                    } else {
+                        addMemberImpl()
+                    }
+                } else if let peer = peer as? TelegramGroup {
+                    if case .member = peer.role {
+                        addMemberImpl()
+                    } else {
+                        let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, updated: { _ in
+                            controller?.dismiss()
+                        }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
+                        navigationController?.pushViewController(controller)
+                    }
                 }
             }
             dismissInput()

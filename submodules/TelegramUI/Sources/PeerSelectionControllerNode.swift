@@ -25,6 +25,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let filter: ChatListNodePeersFilter
     private let hasGlobalSearch: Bool
     private let forwardedMessageIds: [EngineMessage.Id]
+    private let hasTypeHeaders: Bool
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -80,7 +81,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     
-    init(context: AccountContext, presentationData: PresentationData, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, filter: ChatListNodePeersFilter, hasChatListSelector: Bool, hasContactSelector: Bool, hasGlobalSearch: Bool, forwardedMessageIds: [EngineMessage.Id], hasTypeHeaders: Bool, createNewGroup: (() -> Void)?, present: @escaping (ViewController, Any?) -> Void,  presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
@@ -88,6 +89,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.filter = filter
         self.hasGlobalSearch = hasGlobalSearch
         self.forwardedMessageIds = forwardedMessageIds
+        self.hasTypeHeaders = hasTypeHeaders
         
         self.presentationData = presentationData
         
@@ -112,13 +114,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.segmentedControlNode = nil
         }
         
-        var chatListcategories: [ChatListNodeAdditionalCategory] = []
+        var chatListCategories: [ChatListNodeAdditionalCategory] = []
         
         if let _ = createNewGroup {
-            chatListcategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), title: self.presentationData.strings.PeerSelection_ImportIntoNewGroup, appearance: .action))
+            chatListCategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), title: self.presentationData.strings.PeerSelection_ImportIntoNewGroup, appearance: .action))
         }
        
-        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: chatListcategories, chatListFilters: nil), theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
+        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil), theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
         
         super.init()
         

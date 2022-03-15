@@ -34,6 +34,7 @@ enum PeerInfoHeaderButtonKey: Hashable {
     case addMember
     case search
     case leave
+    case stop
 }
 
 enum PeerInfoHeaderButtonIcon {
@@ -47,6 +48,7 @@ enum PeerInfoHeaderButtonIcon {
     case addMember
     case search
     case leave
+    case stop
 }
 
 final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
@@ -241,6 +243,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                     imageName = "Peer Info/ButtonSearch"
                 case .leave:
                     imageName = nil
+                case .stop:
+                    imageName = "Peer Info/ButtonStop"
                 }
                 if let imageName = imageName, let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
                     let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
@@ -2851,6 +2855,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             case .leave:
                 buttonText = presentationData.strings.PeerInfo_ButtonLeave
                 buttonIcon = .leave
+            case .stop:
+                buttonText = presentationData.strings.PeerInfo_ButtonStop
+                buttonIcon = .stop
             }
             
             var isActive = true

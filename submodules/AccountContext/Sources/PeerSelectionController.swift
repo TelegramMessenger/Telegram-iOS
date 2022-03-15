@@ -29,6 +29,7 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let includeSavedMessages = ChatListNodePeersFilter(rawValue: 1 << 11)
     
     public static let excludeChannels = ChatListNodePeersFilter(rawValue: 1 << 12)
+    public static let onlyGroupsAndChannels = ChatListNodePeersFilter(rawValue: 1 << 13)
 }
 
 public final class PeerSelectionControllerParams {
@@ -44,8 +45,9 @@ public final class PeerSelectionControllerParams {
     public let pretendPresentedInModal: Bool
     public let multipleSelection: Bool
     public let forwardedMessageIds: [EngineMessage.Id]
+    public let hasTypeHeaders: Bool
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = []) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter = [.onlyWriteable], hasChatListSelector: Bool = true, hasContactSelector: Bool = true, hasGlobalSearch: Bool = true, title: String? = nil, attemptSelection: ((Peer) -> Void)? = nil, createNewGroup: (() -> Void)? = nil, pretendPresentedInModal: Bool = false, multipleSelection: Bool = false, forwardedMessageIds: [EngineMessage.Id] = [], hasTypeHeaders: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.filter = filter
@@ -58,6 +60,7 @@ public final class PeerSelectionControllerParams {
         self.pretendPresentedInModal = pretendPresentedInModal
         self.multipleSelection = multipleSelection
         self.forwardedMessageIds = forwardedMessageIds
+        self.hasTypeHeaders = hasTypeHeaders
     }
 }
 
