@@ -4,6 +4,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Display
 import AppBundle
+import ComponentFlow
 
 private let templateLoupeIcon = UIImage(bundleImageName: "Components/Search Bar/Loupe")
 
@@ -34,6 +35,9 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
     var pointerInteraction: PointerInteraction?
     
     public private(set) var placeholderString: NSAttributedString?
+    
+    private(set) var accessoryComponentContainer: UIView?
+    private(set) var accessoryComponentView: ComponentHostView<Empty>?
     
     convenience public override init() {
         self.init(fieldStyle: .legacy)
@@ -105,12 +109,55 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
         })
     }
     
-    public func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {
+    public func setAccessoryComponent(component: AnyComponent<Empty>?) {
+        if let component = component {
+            let accessoryComponentContainer: UIView
+            if let current = self.accessoryComponentContainer {
+                accessoryComponentContainer = current
+            } else {
+                accessoryComponentContainer = UIView()
+                self.accessoryComponentContainer = accessoryComponentContainer
+                self.view.addSubview(accessoryComponentContainer)
+            }
+            
+            let accessoryComponentView: ComponentHostView<Empty>
+            if let current = self.accessoryComponentView {
+                accessoryComponentView = current
+            } else {
+                accessoryComponentView = ComponentHostView()
+                self.accessoryComponentView = accessoryComponentView
+                accessoryComponentContainer.addSubview(accessoryComponentView)
+            }
+            let accessorySize = accessoryComponentView.update(
+                transition: .immediate,
+                component: component,
+                environment: {},
+                containerSize: CGSize(width: 32.0, height: 32.0)
+            )
+            accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: self.bounds.width - accessorySize.width - 4.0, y: floor((self.bounds.height - accessorySize.height) / 2.0)), size: accessorySize)
+            accessoryComponentView.frame = CGRect(origin: CGPoint(), size: accessorySize)
+        } else if let accessoryComponentView = self.accessoryComponentView {
+            self.accessoryComponentView = nil
+            accessoryComponentView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            accessoryComponentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak accessoryComponentView] _ in
+                accessoryComponentView?.removeFromSuperview()
+            })
+        }
+    }
+    
+    public func asyncLayout() -> (_ placeholderString: NSAttributedString?, _ compactPlaceholderString: NSAttributedString?, _ constrainedSize: CGSize, _ expansionProgress: CGFloat, _ iconColor: UIColor, _ foregroundColor: UIColor, _ backgroundColor: UIColor, _ transition: ContainedViewLayoutTransition) -> (CGFloat, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let currentForegroundColor = self.foregroundColor
         let currentIconColor = self.iconColor
         
-        return { placeholderString, constrainedSize, expansionProgress, iconColor, foregroundColor, backgroundColor, transition in
+        return { fullPlaceholderString, compactPlaceholderString, constrainedSize, expansionProgress, iconColor, foregroundColor, backgroundColor, transition in
+            let placeholderString: NSAttributedString?
+            if constrainedSize.width < 350.0 {
+                placeholderString = compactPlaceholderString
+            } else {
+                placeholderString = fullPlaceholderString
+            }
+            
             let (labelLayoutResult, labelApply) = labelLayout(TextNodeLayoutArguments(attributedString: placeholderString, backgroundColor: .clear, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var updatedColor: UIColor?
@@ -183,6 +230,10 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     transition.updateCornerRadius(node: strongSelf.backgroundNode, cornerRadius: cornerRadius)
                     transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
+                    
+                    if let accessoryComponentContainer = strongSelf.accessoryComponentContainer {
+                        accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentContainer.bounds.width - 4.0, y: floor((constrainedSize.height - accessoryComponentContainer.bounds.height) / 2.0)), size: accessoryComponentContainer.bounds.size)
+                    }
                 }
             })
         }

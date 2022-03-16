@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import TelegramCore
 import AccountContext
+import ChatPresentationInterfaceState
 
 func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {

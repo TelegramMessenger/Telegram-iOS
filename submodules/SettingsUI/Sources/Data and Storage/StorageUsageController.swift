@@ -1083,15 +1083,25 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         
         self.descriptionTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_KeepOpenedDescription, font: Font.regular(15.0), textColor: self.presentationData.theme.actionSheet.secondaryTextColor)
         let descriptionTextSize = self.descriptionTextNode.updateLayout(CGSize(width: size.width - inset * 3.0, height: size.height))
-        let descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: progressFrame.minY - spacing - 9.0 - descriptionTextSize.height), size: descriptionTextSize)
-        self.descriptionTextNode.frame = descriptionTextFrame
-        
+        var descriptionTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - descriptionTextSize.width) / 2.0), y: progressFrame.minY - spacing - 9.0 - descriptionTextSize.height), size: descriptionTextSize)
+       
         self.progressTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.ClearCache_Progress(Int(progress * 100.0)).string, font: Font.with(size: 17.0, design: .regular, weight: .bold, traits: [.monospacedNumbers]), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         let progressTextSize = self.progressTextNode.updateLayout(size)
-        let progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
-        self.progressTextNode.frame = progressTextFrame
+        var progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: descriptionTextFrame.minY - spacing - progressTextSize.height), size: progressTextSize)
         
         let availableHeight = progressTextFrame.minY
+        if availableHeight < 100.0 {
+            let offset = availableHeight / 2.0 - spacing
+            descriptionTextFrame = descriptionTextFrame.offsetBy(dx: 0.0, dy: -offset)
+            progressTextFrame = progressTextFrame.offsetBy(dx: 0.0, dy: -offset)
+            self.animationNode.alpha = 0.0
+        } else {
+            self.animationNode.alpha = 1.0
+        }
+        
+        self.progressTextNode.frame = progressTextFrame
+        self.descriptionTextNode.frame = descriptionTextFrame
+        
         let imageSide = min(160.0, availableHeight - 30.0)
         let imageSize = CGSize(width: imageSide, height: imageSide)
         

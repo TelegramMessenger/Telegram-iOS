@@ -532,6 +532,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         unreadBadgeActiveTextColor: UIColor(rgb: 0xffffff),
         unreadBadgeInactiveBackgroundColor: UIColor(rgb: 0xb6b6bb),
         unreadBadgeInactiveTextColor: UIColor(rgb: 0xffffff),
+        reactionBadgeActiveBackgroundColor: UIColor(rgb: 0xFF2D55),
         pinnedBadgeColor: UIColor(rgb: 0xb6b6bb),
         pinnedSearchBarColor: UIColor(rgb: 0xe5e5e5),
         regularSearchBarColor: UIColor(rgb: 0xe9e9e9),

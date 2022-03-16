@@ -115,7 +115,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         }
     }
     
-    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?) -> MediaTrackFrame? {
+    public func decode(frame: MediaTrackDecodableFrame, ptsOffset: CMTime?, forceARGB: Bool = false) -> MediaTrackFrame? {
         let status = frame.packet.send(toDecoder: self.codecContext)
         if status == 0 {
             self.defaultDuration = frame.duration
@@ -126,7 +126,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
                 if let ptsOffset = ptsOffset {
                     pts = CMTimeAdd(pts, ptsOffset)
                 }
-                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration)
+                return convertVideoFrame(self.videoFrame, pts: pts, dts: pts, duration: frame.duration, forceARGB: forceARGB)
             }
         }
         
@@ -236,7 +236,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return UIImage(cgImage: image, scale: 1.0, orientation: .up)
     }
     
-    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime) -> MediaTrackFrame? {
+    private func convertVideoFrame(_ frame: FFMpegAVFrame, pts: CMTime, dts: CMTime, duration: CMTime, forceARGB: Bool = false) -> MediaTrackFrame? {
         if frame.data[0] == nil {
             return nil
         }
@@ -247,13 +247,26 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         var pixelBufferRef: CVPixelBuffer?
         
         let pixelFormat: OSType
-        switch frame.pixelFormat {
-            case .YUV:
-                pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
-            case .YUVA:
-                pixelFormat = kCVPixelFormatType_32ARGB
-            default:
-                pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+        var hasAlpha = false
+        if forceARGB {
+            pixelFormat = kCVPixelFormatType_32ARGB
+            switch frame.pixelFormat {
+                case .YUV:
+                    hasAlpha = false
+                case .YUVA:
+                    hasAlpha = true
+                default:
+                    hasAlpha = false
+            }
+        } else {
+            switch frame.pixelFormat {
+                case .YUV:
+                    pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+                case .YUVA:
+                    pixelFormat = kCVPixelFormatType_420YpCbCr8VideoRange_8A_TriPlanar
+                default:
+                    pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+            }
         }
         
         if let pixelBufferPool = self.pixelBufferPool {
@@ -290,7 +303,7 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         var base: UnsafeMutableRawPointer
         if pixelFormat == kCVPixelFormatType_32ARGB {
             let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
-            decodeYUVAPlanesToRGBA(frame.data[0], Int32(frame.lineSize[0]), frame.data[1], Int32(frame.lineSize[1]), frame.data[2], Int32(frame.lineSize[2]), frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow))
+            decodeYUVAPlanesToRGBA(frame.data[0], Int32(frame.lineSize[0]), frame.data[1], Int32(frame.lineSize[1]), frame.data[2], Int32(frame.lineSize[2]), hasAlpha, frame.data[3], CVPixelBufferGetBaseAddress(pixelBuffer)?.assumingMemoryBound(to: UInt8.self), Int32(frame.width), Int32(frame.height), Int32(bytesPerRow))
         } else {
             let srcPlaneSize = Int(frame.lineSize[1]) * Int(frame.height / 2)
             let uvPlaneSize = srcPlaneSize * 2

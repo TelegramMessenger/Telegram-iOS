@@ -49,7 +49,7 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
                         free(yuvaFrameData)
                     }
                     
-                    encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
+                    encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow), true)
                     decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                     
                     if let colorSourceImage = context.generateImage(), let alphaImage = generateGrayscaleAlphaMaskImage(image: colorSourceImage) {
@@ -201,7 +201,7 @@ public func cacheAnimatedStickerFrames(data: Data, size: CGSize, fitzModifier: E
                         
                         let appendStartTime = CACurrentMediaTime()
                         
-                        encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow))
+                        encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), currentFrameData.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow), true)
                         
                         appendingTime += CACurrentMediaTime() - appendStartTime
                         
@@ -351,7 +351,7 @@ public func cacheVideoStickerFrames(path: String, size: CGSize, cacheKey: String
                 let originalWidth = CVPixelBufferGetWidth(imageBuffer!)
                 let originalHeight = CVPixelBufferGetHeight(imageBuffer!)
                 if let srcBuffer = CVPixelBufferGetBaseAddress(imageBuffer!) {
-                    resizeAndEncodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), srcBuffer.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow), Int32(originalWidth), Int32(originalHeight), Int32(originalBytesPerRow))
+                    resizeAndEncodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), srcBuffer.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(bytesPerRow), Int32(originalWidth), Int32(originalHeight), Int32(originalBytesPerRow), false)
                 }
                 CVPixelBufferUnlockBaseAddress(imageBuffer!, CVPixelBufferLockFlags(rawValue: 0))
                

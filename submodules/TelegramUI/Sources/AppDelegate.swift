@@ -48,12 +48,7 @@ import AppCenter
 import AppCenterCrashes
 #endif
 
-import FBSDKCoreKit
 import FirebaseCore
-import AppsFlyerLib
-import AppTrackingTransparency
-import AdSupport
-
 private let handleVoipNotifications = false
 
 private var testIsLaunched = false
@@ -290,26 +285,18 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         AppCache.appLaunchCount += 1
         
         SubscriptionService.shared.setup()
-        
         let _ = voipTokenPromise.get().start(next: { token in
             self.deviceToken.set(.single(token))
         })
 
         if #available(iOS 12.0, *) {
             FirebaseApp.configure()
-
-            AppsFlyerLib.shared().appsFlyerDevKey = NGENV.apps_flyer_key
-            AppsFlyerLib.shared().appleAppID = NGENV.app_id
-            AppsFlyerLib.shared().delegate = self
-            AppsFlyerLib.shared().waitForATTUserAuthorization(timeoutInterval: 60)
-
-            ApplicationDelegate.shared.application(application, didFinishLaunchingWithOptions: launchOptions)
         }
 
         MobySubscriptionAnalytics.logger = MobySubscriptionAnalyticsLogger()
         let mobyApiKey = NGENV.moby_key
         MobySubscriptionAnalytics.setup(apiKey: mobyApiKey) { account in
-            account.appsflyerID = AppsFlyerLib.shared().getAppsFlyerUID()
+            account.appsflyerID = nil
         } completion: { _, produncInfoResult in
             if let result = produncInfoResult,
                let activeProduct = result.transactions.firstActiveProduct {
@@ -324,7 +311,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let installInfo = InstallInfo(installDateTimestamp: installTime)
             MobySubscriptionAnalytics.trackInstall(installInfo: installInfo)
         }
-
+        
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
         let statusBarHost = ApplicationStatusBarHost()
@@ -1288,8 +1275,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         if let url = launchOptions?[.url] {
             if let url = url as? URL, url.scheme == "tg" || url.scheme == buildConfig.appSpecificUrlScheme {
-                self.openUrlWhenReady(url: url.absoluteString)
-            } else if let url = url as? String, url.lowercased().hasPrefix("tg:") || url.lowercased().hasPrefix("\(buildConfig.appSpecificUrlScheme):") {
+                self.openUrlWhenReady(url: url)
+            } else if let urlString = url as? String, urlString.lowercased().hasPrefix("tg:") || urlString.lowercased().hasPrefix("\(buildConfig.appSpecificUrlScheme):"), let url = URL(string: urlString) {
                 self.openUrlWhenReady(url: url)
             }
         }
@@ -1436,8 +1423,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        self.showTrackingPermission()
-        AppsFlyerLib.shared().start()
         self.isInForegroundValue = true
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
@@ -1482,7 +1467,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 2.0)
         })
-        
+
         var redactedPayload = userInfo
         if var aps = redactedPayload["aps"] as? [AnyHashable: Any] {
             if Logger.shared.redactSensitiveData {
@@ -1713,18 +1698,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func application(_ application: UIApplication, open url: URL, sourceApplication: String?, annotation: Any) -> Bool {
-        if #available(iOS 12.0, *) {
-            AppsFlyerLib.shared().handleOpen(url, sourceApplication: sourceApplication, withAnnotation: annotation)
-        }
         self.openUrl(url: url)
         return true
     }
     
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        if #available(iOS 12.0, *) {
-            AppsFlyerLib.shared().handleOpen(url, options: options)
-            ApplicationDelegate.shared.application(app, open: url, sourceApplication: options[.sourceApplication] as? String, annotation: options[.annotation])
+        guard self.openUrlInProgress != url else {
+            return true
         }
+        
         self.openUrl(url: url)
         return true
     }
@@ -1769,9 +1751,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        if #available(iOS 12.0, *) {
-            AppsFlyerLib.shared().continue(userActivity, restorationHandler: nil)
-        }
         if #available(iOS 10.0, *) {
             var startCallContacts: [INPerson]?
             var startCallIsVideo = false
@@ -1921,26 +1900,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         return true
     }
-
-    private func showTrackingPermission() {
-        if #available(iOS 14.5, *) {
-            ATTrackingManager.requestTrackingAuthorization { status in
-                DispatchQueue.main.async {
-                    switch status {
-                    case .authorized:
-                        // AnalyticsService.sharedInstance.logEvent(name: "idfa_authorized")
-                        Settings.shared.isAdvertiserTrackingEnabled = true
-                        MobySubscriptionAnalytics.refreshAdvertisingAccount()
-                    case .denied:
-                        // AnalyticsService.sharedInstance.logEvent(name: "idfa_denied")
-                        Settings.shared.isAdvertiserTrackingEnabled = false
-
-                    default: break
-                    }
-                }
-            }
-        }
-    }
     
     @available(iOS 9.0, *)
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
@@ -2037,12 +1996,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
     
-    private func openUrlWhenReady(url: String) {
+    private var openUrlInProgress: URL?
+    private func openUrlWhenReady(url: URL) {
+        self.openUrlInProgress = url
+        
         self.openUrlWhenReadyDisposable.set((self.authorizedContext()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { context in
-            let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-            context.context.sharedContext.openExternalUrl(context: context.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
+        |> deliverOnMainQueue).start(next: { [weak self] context in
+            context.openUrl(url)
+            
+            Queue.mainQueue().after(1.0, {
+                self?.openUrlInProgress = nil
             })
         }))
     }
@@ -2390,17 +2354,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }).start()
     }
-}
-
-extension AppDelegate: AppsFlyerLibDelegate {
-    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([Any]?) -> Void) -> Bool {
-          AppsFlyerLib.shared().continue(userActivity, restorationHandler: restorationHandler)
-          return true
-      }
-
-      func onConversionDataSuccess(_ conversionInfo: [AnyHashable : Any]) { }
-
-      func onConversionDataFail(_ error: Error) { }
 }
 
 private func notificationPayloadKey(data: Data) -> Data? {

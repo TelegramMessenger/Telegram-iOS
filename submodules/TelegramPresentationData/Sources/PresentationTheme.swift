@@ -569,6 +569,7 @@ public final class PresentationThemeChatList {
     public let unreadBadgeActiveTextColor: UIColor
     public let unreadBadgeInactiveBackgroundColor: UIColor
     public let unreadBadgeInactiveTextColor: UIColor
+    public let reactionBadgeActiveBackgroundColor: UIColor
     public let pinnedBadgeColor: UIColor
     public let pinnedSearchBarColor: UIColor
     public let regularSearchBarColor: UIColor
@@ -581,7 +582,42 @@ public final class PresentationThemeChatList {
     public let unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors
     public let onlineDotColor: UIColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageHighlightedTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, failedFillColor: UIColor, failedForegroundColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, onlineDotColor: UIColor) {
+    init(
+        backgroundColor: UIColor,
+        itemSeparatorColor: UIColor,
+        itemBackgroundColor: UIColor,
+        pinnedItemBackgroundColor: UIColor,
+        itemHighlightedBackgroundColor: UIColor,
+        itemSelectedBackgroundColor: UIColor,
+        titleColor: UIColor,
+        secretTitleColor: UIColor,
+        dateTextColor: UIColor,
+        authorNameColor: UIColor,
+        messageTextColor: UIColor,
+        messageHighlightedTextColor: UIColor,
+        messageDraftTextColor: UIColor,
+        checkmarkColor: UIColor,
+        pendingIndicatorColor: UIColor,
+        failedFillColor: UIColor,
+        failedForegroundColor: UIColor,
+        muteIconColor: UIColor,
+        unreadBadgeActiveBackgroundColor: UIColor,
+        unreadBadgeActiveTextColor: UIColor,
+        unreadBadgeInactiveBackgroundColor: UIColor,
+        unreadBadgeInactiveTextColor: UIColor,
+        reactionBadgeActiveBackgroundColor: UIColor,
+        pinnedBadgeColor: UIColor,
+        pinnedSearchBarColor: UIColor,
+        regularSearchBarColor: UIColor,
+        sectionHeaderFillColor: UIColor,
+        sectionHeaderTextColor: UIColor,
+        verifiedIconFillColor: UIColor,
+        verifiedIconForegroundColor: UIColor,
+        secretIconColor: UIColor,
+        pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors,
+        unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors,
+        onlineDotColor: UIColor
+    ) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
@@ -604,6 +640,7 @@ public final class PresentationThemeChatList {
         self.unreadBadgeActiveTextColor = unreadBadgeActiveTextColor
         self.unreadBadgeInactiveBackgroundColor = unreadBadgeInactiveBackgroundColor
         self.unreadBadgeInactiveTextColor = unreadBadgeInactiveTextColor
+        self.reactionBadgeActiveBackgroundColor = reactionBadgeActiveBackgroundColor
         self.pinnedBadgeColor = pinnedBadgeColor
         self.pinnedSearchBarColor = pinnedSearchBarColor
         self.regularSearchBarColor = regularSearchBarColor
@@ -617,8 +654,78 @@ public final class PresentationThemeChatList {
         self.onlineDotColor = onlineDotColor
     }
     
-    public func withUpdated(backgroundColor: UIColor? = nil, itemSeparatorColor: UIColor? = nil, itemBackgroundColor: UIColor? = nil, pinnedItemBackgroundColor: UIColor? = nil, itemHighlightedBackgroundColor: UIColor? = nil, itemSelectedBackgroundColor: UIColor? = nil, titleColor: UIColor? = nil, secretTitleColor: UIColor? = nil, dateTextColor: UIColor? = nil, authorNameColor: UIColor? = nil, messageTextColor: UIColor? = nil, messageHighlightedTextColor: UIColor? = nil, messageDraftTextColor: UIColor? = nil, checkmarkColor: UIColor? = nil, pendingIndicatorColor: UIColor? = nil, failedFillColor: UIColor? = nil, failedForegroundColor: UIColor? = nil, muteIconColor: UIColor? = nil, unreadBadgeActiveBackgroundColor: UIColor? = nil, unreadBadgeActiveTextColor: UIColor? = nil, unreadBadgeInactiveBackgroundColor: UIColor? = nil, unreadBadgeInactiveTextColor: UIColor? = nil, pinnedBadgeColor: UIColor? = nil, pinnedSearchBarColor: UIColor? = nil, regularSearchBarColor: UIColor? = nil, sectionHeaderFillColor: UIColor? = nil, sectionHeaderTextColor: UIColor? = nil, verifiedIconFillColor: UIColor? = nil, verifiedIconForegroundColor: UIColor? = nil, secretIconColor: UIColor? = nil, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil, onlineDotColor: UIColor? = nil) -> PresentationThemeChatList {
-        return PresentationThemeChatList(backgroundColor: backgroundColor ?? self.backgroundColor, itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor, itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor, pinnedItemBackgroundColor: pinnedItemBackgroundColor ?? self.pinnedItemBackgroundColor, itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor, itemSelectedBackgroundColor: itemSelectedBackgroundColor ?? self.itemSelectedBackgroundColor, titleColor: titleColor ?? self.titleColor, secretTitleColor: secretTitleColor ?? self.secretTitleColor, dateTextColor: dateTextColor ?? self.dateTextColor, authorNameColor: authorNameColor ?? self.authorNameColor, messageTextColor: messageTextColor ?? self.messageTextColor, messageHighlightedTextColor: messageHighlightedTextColor ?? self.messageHighlightedTextColor, messageDraftTextColor: messageDraftTextColor ?? self.messageDraftTextColor, checkmarkColor: checkmarkColor ?? self.checkmarkColor, pendingIndicatorColor: pendingIndicatorColor ?? self.pendingIndicatorColor, failedFillColor: failedFillColor ?? self.failedFillColor, failedForegroundColor: failedForegroundColor ?? self.failedForegroundColor, muteIconColor: muteIconColor ?? self.muteIconColor, unreadBadgeActiveBackgroundColor: unreadBadgeActiveBackgroundColor ?? self.unreadBadgeActiveBackgroundColor, unreadBadgeActiveTextColor: unreadBadgeActiveTextColor ?? self.unreadBadgeActiveTextColor, unreadBadgeInactiveBackgroundColor: unreadBadgeInactiveBackgroundColor ?? self.unreadBadgeInactiveBackgroundColor, unreadBadgeInactiveTextColor: unreadBadgeInactiveTextColor ?? self.unreadBadgeInactiveTextColor, pinnedBadgeColor: pinnedBadgeColor ?? self.pinnedBadgeColor, pinnedSearchBarColor: pinnedSearchBarColor ?? self.pinnedSearchBarColor, regularSearchBarColor: regularSearchBarColor ?? self.regularSearchBarColor, sectionHeaderFillColor: sectionHeaderFillColor ?? self.sectionHeaderFillColor, sectionHeaderTextColor: sectionHeaderTextColor ?? self.sectionHeaderTextColor, verifiedIconFillColor: verifiedIconFillColor ?? self.verifiedIconFillColor, verifiedIconForegroundColor: verifiedIconForegroundColor ?? self.verifiedIconForegroundColor, secretIconColor: secretIconColor ?? self.secretIconColor, pinnedArchiveAvatarColor: pinnedArchiveAvatarColor ?? self.pinnedArchiveAvatarColor, unpinnedArchiveAvatarColor: unpinnedArchiveAvatarColor ?? self.unpinnedArchiveAvatarColor, onlineDotColor: onlineDotColor ?? self.onlineDotColor)
+    public func withUpdated(
+        backgroundColor: UIColor? = nil,
+        itemSeparatorColor: UIColor? = nil,
+        itemBackgroundColor: UIColor? = nil,
+        pinnedItemBackgroundColor: UIColor? = nil,
+        itemHighlightedBackgroundColor: UIColor? = nil,
+        itemSelectedBackgroundColor: UIColor? = nil,
+        titleColor: UIColor? = nil,
+        secretTitleColor: UIColor? = nil,
+        dateTextColor: UIColor? = nil,
+        authorNameColor: UIColor? = nil,
+        messageTextColor: UIColor? = nil,
+        messageHighlightedTextColor: UIColor? = nil,
+        messageDraftTextColor: UIColor? = nil,
+        checkmarkColor: UIColor? = nil,
+        pendingIndicatorColor: UIColor? = nil,
+        failedFillColor: UIColor? = nil,
+        failedForegroundColor: UIColor? = nil,
+        muteIconColor: UIColor? = nil,
+        unreadBadgeActiveBackgroundColor: UIColor? = nil,
+        unreadBadgeActiveTextColor: UIColor? = nil,
+        unreadBadgeInactiveBackgroundColor: UIColor? = nil,
+        unreadBadgeInactiveTextColor: UIColor? = nil,
+        reactionBadgeActiveBackgroundColor: UIColor? = nil,
+        pinnedBadgeColor: UIColor? = nil,
+        pinnedSearchBarColor: UIColor? = nil,
+        regularSearchBarColor: UIColor? = nil,
+        sectionHeaderFillColor: UIColor? = nil,
+        sectionHeaderTextColor: UIColor? = nil,
+        verifiedIconFillColor: UIColor? = nil,
+        verifiedIconForegroundColor: UIColor? = nil,
+        secretIconColor: UIColor? = nil,
+        pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil,
+        unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors? = nil,
+        onlineDotColor: UIColor? = nil
+    ) -> PresentationThemeChatList {
+        return PresentationThemeChatList(
+            backgroundColor: backgroundColor ?? self.backgroundColor,
+            itemSeparatorColor: itemSeparatorColor ?? self.itemSeparatorColor,
+            itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor,
+            pinnedItemBackgroundColor: pinnedItemBackgroundColor ?? self.pinnedItemBackgroundColor,
+            itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor,
+            itemSelectedBackgroundColor: itemSelectedBackgroundColor ?? self.itemSelectedBackgroundColor,
+            titleColor: titleColor ?? self.titleColor,
+            secretTitleColor: secretTitleColor ?? self.secretTitleColor,
+            dateTextColor: dateTextColor ?? self.dateTextColor,
+            authorNameColor: authorNameColor ?? self.authorNameColor,
+            messageTextColor: messageTextColor ?? self.messageTextColor,
+            messageHighlightedTextColor: messageHighlightedTextColor ?? self.messageHighlightedTextColor,
+            messageDraftTextColor: messageDraftTextColor ?? self.messageDraftTextColor,
+            checkmarkColor: checkmarkColor ?? self.checkmarkColor,
+            pendingIndicatorColor: pendingIndicatorColor ?? self.pendingIndicatorColor,
+            failedFillColor: failedFillColor ?? self.failedFillColor,
+            failedForegroundColor: failedForegroundColor ?? self.failedForegroundColor,
+            muteIconColor: muteIconColor ?? self.muteIconColor,
+            unreadBadgeActiveBackgroundColor: unreadBadgeActiveBackgroundColor ?? self.unreadBadgeActiveBackgroundColor,
+            unreadBadgeActiveTextColor: unreadBadgeActiveTextColor ?? self.unreadBadgeActiveTextColor,
+            unreadBadgeInactiveBackgroundColor: unreadBadgeInactiveBackgroundColor ?? self.unreadBadgeInactiveBackgroundColor,
+            unreadBadgeInactiveTextColor: unreadBadgeInactiveTextColor ?? self.unreadBadgeInactiveTextColor,
+            reactionBadgeActiveBackgroundColor: reactionBadgeActiveBackgroundColor ?? self.reactionBadgeActiveBackgroundColor,
+            pinnedBadgeColor: pinnedBadgeColor ?? self.pinnedBadgeColor,
+            pinnedSearchBarColor: pinnedSearchBarColor ?? self.pinnedSearchBarColor,
+            regularSearchBarColor: regularSearchBarColor ?? self.regularSearchBarColor,
+            sectionHeaderFillColor: sectionHeaderFillColor ?? self.sectionHeaderFillColor,
+            sectionHeaderTextColor: sectionHeaderTextColor ?? self.sectionHeaderTextColor,
+            verifiedIconFillColor: verifiedIconFillColor ?? self.verifiedIconFillColor,
+            verifiedIconForegroundColor: verifiedIconForegroundColor ?? self.verifiedIconForegroundColor,
+            secretIconColor: secretIconColor ?? self.secretIconColor,
+            pinnedArchiveAvatarColor: pinnedArchiveAvatarColor ?? self.pinnedArchiveAvatarColor,
+            unpinnedArchiveAvatarColor: unpinnedArchiveAvatarColor ?? self.unpinnedArchiveAvatarColor,
+            onlineDotColor: onlineDotColor ?? self.onlineDotColor
+        )
     }
 }
 
@@ -1370,5 +1477,11 @@ public final class PresentationTheme: Equatable {
     
     public func withUpdated(preview: Bool) -> PresentationTheme {
         return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: preview)
+    }
+    
+    public func withInvertedBlocksBackground() -> PresentationTheme {
+        let list = self.list.withUpdated(blocksBackgroundColor: self.list.itemBlocksBackgroundColor, itemBlocksBackgroundColor: self.list.blocksBackgroundColor)
+        
+        return PresentationTheme(name: self.name, index: self.index, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: list, chatList: self.chatList, chat: self.chat, actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification, chart: self.chart, preview: self.preview)
     }
 }

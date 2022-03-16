@@ -31,10 +31,11 @@ public struct Font {
         case medium
         case semibold
         case bold
+        case heavy
         
         var isBold: Bool {
             switch self {
-                case .medium, .semibold, .bold:
+                case .medium, .semibold, .bold, .heavy:
                     return true
                 default:
                     return false
@@ -51,6 +52,8 @@ public struct Font {
                     return .semibold
                 case .bold:
                     return .bold
+                case .heavy:
+                    return .heavy
                 default:
                     return .regular
             }
@@ -183,6 +186,11 @@ public struct Font {
         } else {
             return CTFontCreateWithName("HelveticaNeue-Bold" as CFString, size, nil)
         }
+    }
+    
+    
+    public static func heavy(_ size: CGFloat) -> UIFont {
+        return self.with(size: size, design: .regular, weight: .heavy, traits: [])
     }
     
     public static func light(_ size: CGFloat) -> UIFont {

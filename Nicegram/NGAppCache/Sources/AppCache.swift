@@ -19,6 +19,9 @@ public final class AppCache {
     @UserDefaultsBacked(key: "wasLauchedBefore", storage: .standard, defaultValue: false)
     private static var _wasLauchedBefore: Bool
 
+    @UserDefaultsBacked(key: "hasUnlimPremium", storage: .standard, defaultValue: false)
+    private static var hasUnlimPremium: Bool
+
     public static var wasLauchedBefore: Bool {
         get {
             return _wasLauchedBefore
@@ -29,7 +32,7 @@ public final class AppCache {
     }
 
     public static var haveValidSubscription: Bool {
-        return currentProductID != nil
+        return currentProductID != nil || hasUnlimPremium
     }
 
     private init() {}

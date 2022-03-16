@@ -651,28 +651,49 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
                     if call !== strongSelf.groupCallController?.call {
-                        strongSelf.groupCallController?.dismiss(closing: true)
+                        strongSelf.groupCallController?.dismiss(closing: true, manual: false)
                         strongSelf.groupCallController = nil
                         strongSelf.hasOngoingCall.set(false)
                         
                         if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
                             mainWindow.hostView.containerView.endEditing(true)
-                            strongSelf.hasGroupCallOnScreenPromise.set(true)
-                            let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
-                            groupCallController.onViewDidAppear = { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
+                            
+                            if call.isStream {
+                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                let groupCallController = MediaStreamComponentController(call: call)
+                                groupCallController.onViewDidAppear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    }
                                 }
-                            }
-                            groupCallController.onViewDidDisappear = { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                groupCallController.onViewDidDisappear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                    }
                                 }
+                                groupCallController.navigationPresentation = .flatModal
+                                groupCallController.parentNavigationController = navigationController
+                                strongSelf.groupCallController = groupCallController
+                                navigationController.pushViewController(groupCallController)
+                            } else {
+                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                let groupCallController = VoiceChatControllerImpl(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                                groupCallController.onViewDidAppear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    }
+                                }
+                                groupCallController.onViewDidDisappear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                    }
+                                }
+                                groupCallController.navigationPresentation = .flatModal
+                                groupCallController.parentNavigationController = navigationController
+                                strongSelf.groupCallController = groupCallController
+                                navigationController.pushViewController(groupCallController)
                             }
-                            groupCallController.navigationPresentation = .flatModal
-                            groupCallController.parentNavigationController = navigationController
-                            strongSelf.groupCallController = groupCallController
-                            navigationController.pushViewController(groupCallController)
+                                
                             strongSelf.hasOngoingCall.set(true)
                         } else {
                             strongSelf.hasOngoingCall.set(false)
@@ -912,10 +933,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     appliedVoip = self.voipNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
                     |> mapToSignal { token -> Signal<Never, NoError> in
-                        guard let _ = token else {
+                        guard let token = token else {
                             return .complete()
                         }
-                        return .complete() // account.engine.accountData.registerNotificationToken(token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                        return account.engine.accountData.registerNotificationToken(token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
                     }
                 }
                 
@@ -1127,6 +1148,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func navigateToChatController(_ params: NavigateToChatControllerParams) {
         navigateToChatControllerImpl(params)
+    }
+    
+    public func openStorageUsage(context: AccountContext) {
+        guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
+            return
+        }
+        
+        let controller = storageUsageController(context: context, isModal: true)
+        navigationController.pushViewController(controller)
     }
     
     public func openLocationScreen(context: AccountContext, messageId: MessageId, navigationController: NavigationController) {

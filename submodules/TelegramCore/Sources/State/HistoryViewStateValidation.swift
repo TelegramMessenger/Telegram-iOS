@@ -139,7 +139,7 @@ final class HistoryViewStateValidationContexts {
     
     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput? = nil) {
         assert(self.queue.isCurrent())
-        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
+        guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.unseenReaction || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {
             if self.contexts[id] != nil {
                 self.contexts.removeValue(forKey: id)
             }
@@ -494,6 +494,8 @@ private func validateChannelMessagesBatch(postbox: Postbox, network: Network, ac
                     if let tag = tag {
                         if tag == MessageTags.unseenPersonalMessage {
                             requestSignal = network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1))
+                        } else if tag == MessageTags.unseenReaction {
+                            requestSignal = network.request(Api.functions.messages.getUnreadReactions(peer: inputPeer, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1))
                         } else if let filter = messageFilterForTagMask(tag) {
                             requestSignal = network.request(Api.functions.messages.search(flags: 0, peer: inputPeer, q: "", fromId: nil, topMsgId: nil, filter: filter, minDate: 0, maxDate: 0, offsetId: messageIds[messageIds.count - 1].id + 1, addOffset: 0, limit: Int32(messageIds.count), maxId: messageIds[messageIds.count - 1].id + 1, minId: messageIds[0].id - 1, hash: hash))
                         } else {

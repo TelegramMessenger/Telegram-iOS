@@ -544,11 +544,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         case let .reference(source):
             let transitionInfo = source.transitionInfo()
             if let transitionInfo = transitionInfo {
-                let referenceNode = transitionInfo.referenceNode
-                self.contentContainerNode.contentNode = .reference(node: referenceNode)
+                let referenceView = transitionInfo.referenceView
+                self.contentContainerNode.contentNode = .reference(view: referenceView)
                 self.contentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
                 self.customPosition = transitionInfo.customPosition
-                var projectedFrame = convertFrame(referenceNode.view.bounds, from: referenceNode.view, to: self.view)
+                var projectedFrame = convertFrame(referenceView.bounds, from: referenceView, to: self.view)
                 projectedFrame.origin.x += transitionInfo.insets.left
                 projectedFrame.size.width -= transitionInfo.insets.left + transitionInfo.insets.right
                 projectedFrame.origin.y += transitionInfo.insets.top
@@ -856,7 +856,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         switch self.source {
         case let .reference(source):
-            guard let maybeContentNode = self.contentContainerNode.contentNode, case let .reference(referenceNode) = maybeContentNode else {
+            guard let maybeContentNode = self.contentContainerNode.contentNode, case let .reference(referenceView) = maybeContentNode else {
                 return
             }
             
@@ -883,8 +883,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             
             self.scrollNode.view.setContentOffset(self.scrollNode.view.contentOffset, animated: false)
             
-            if let transitionInfo = transitionInfo, let parentSupernode = referenceNode.supernode {
-                self.originalProjectedContentViewFrame = (convertFrame(referenceNode.frame, from: parentSupernode.view, to: self.view), convertFrame(referenceNode.bounds, from: referenceNode.view, to: self.view))
+            if let transitionInfo = transitionInfo, let parentSuperview = referenceView.superview {
+                self.originalProjectedContentViewFrame = (convertFrame(referenceView.frame, from: parentSuperview, to: self.view), convertFrame(referenceView.bounds, from: referenceView, to: self.view))
                 
                 var updatedContentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
                 updatedContentAreaInScreenSpace.origin.x = 0.0
@@ -2027,13 +2027,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
 }
 
 public final class ContextControllerReferenceViewInfo {
-    public let referenceNode: ContextReferenceContentNode
+    public let referenceView: UIView
     public let contentAreaInScreenSpace: CGRect
     public let insets: UIEdgeInsets
     public let customPosition: CGPoint?
     
-    public init(referenceNode: ContextReferenceContentNode, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
-        self.referenceNode = referenceNode
+    public init(referenceView: UIView, contentAreaInScreenSpace: CGRect, insets: UIEdgeInsets = UIEdgeInsets(), customPosition: CGPoint? = nil) {
+        self.referenceView = referenceView
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.insets = insets
         self.customPosition = customPosition

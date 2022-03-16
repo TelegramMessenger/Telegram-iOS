@@ -329,7 +329,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     if previousCurrentGroupCall != nil && currentGroupCall == nil && availableState?.participantCount == 1 {
                         panelData = nil
                     } else {
-                        panelData = currentGroupCall != nil || (availableState?.participantCount == 0 && availableState?.info.scheduleTimestamp == nil) ? nil : availableState
+                        panelData = currentGroupCall != nil || (availableState?.participantCount == 0 && availableState?.info.scheduleTimestamp == nil && availableState?.info.isStream == false) ? nil : availableState
                     }
                     
                     let wasEmpty = strongSelf.groupCallPanelData == nil
@@ -420,7 +420,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                     strongSelf.joinGroupCall(
                         peerId: groupCallPanelData.peerId,
                         invite: nil,
-                        activeCall: EngineGroupCallDescription(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled)
+                        activeCall: EngineGroupCallDescription(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled, isStream: groupCallPanelData.info.isStream)
                     )
                 })
                 self.navigationBar?.additionalContentNode.addSubnode(groupCallAccessoryPanel)

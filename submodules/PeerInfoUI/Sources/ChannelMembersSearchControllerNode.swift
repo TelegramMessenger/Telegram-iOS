@@ -457,14 +457,14 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 var canInviteByLink = false
                 var isChannel = false
                 if let peer = peerViewMainPeer(peerView) {
+                    if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        isChannel = true
+                    }
                     if !(peer.addressName?.isEmpty ?? true) {
                         canInviteByLink = true
                     } else if let peer = peer as? TelegramChannel {
                         if peer.flags.contains(.isCreator) || (peer.adminRights?.rights.contains(.canInviteUsers) == true) {
                             canInviteByLink = true
-                        }
-                        if case .broadcast = peer.info {
-                            isChannel = true
                         }
                     } else if let peer = peer as? TelegramGroup {
                         if case .creator = peer.role {

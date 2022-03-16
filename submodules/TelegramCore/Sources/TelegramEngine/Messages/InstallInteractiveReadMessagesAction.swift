@@ -134,6 +134,7 @@ private final class StoreOrUpdateMessageActionImpl: StoreOrUpdateMessageAction {
                 inner: for attribute in message.attributes {
                     if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
                         readReactionIds[index.id] = attribute.recentPeers
+                        break inner
                     }
                 }
             }

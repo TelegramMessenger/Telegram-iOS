@@ -177,7 +177,9 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.extractedBackgroundImageNode = ASImageNode()
         self.extractedBackgroundImageNode.displaysAsynchronously = false
@@ -764,7 +766,13 @@ public class ItemListInviteRequestItemNode: ListViewItemNode, ItemListItemNode {
                         } else {
                             shimmerNode = ShimmerEffectNode()
                             strongSelf.placeholderNode = shimmerNode
-                            strongSelf.addSubnode(shimmerNode)
+                            if strongSelf.bottomStripeNode.supernode != nil {
+                                strongSelf.bottomStripeNode.removeFromSupernode()
+                                strongSelf.addSubnode(strongSelf.bottomStripeNode)
+                                strongSelf.insertSubnode(shimmerNode, belowSubnode: strongSelf.bottomStripeNode)
+                            } else {
+                                strongSelf.addSubnode(shimmerNode)
+                            }
                         }
                         shimmerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                         if let (rect, size) = strongSelf.absoluteLocation {

@@ -1,0 +1,281 @@
+stages:
+    - build
+    - test
+    - release
+
+.variables-debian-amd64: &variables-debian-amd64
+    _TRIPLET: ""
+    _PLATFORMSUFFIX: ""
+    _WRAPPER: ""
+
+.variables-debian-aarch64: &variables-debian-aarch64
+    _TRIPLET: ""
+    _PLATFORMSUFFIX: ""
+    _WRAPPER: ""
+
+.variables-win32: &variables-win32
+    _TRIPLET: "i686-w64-mingw32"
+    _PLATFORMSUFFIX: ".exe"
+    _WRAPPER: "wine"
+    _CONTRIB_URL: "https://artifacts.videolan.org/vlc/win32/"
+
+.variables-win64: &variables-win64
+    _TRIPLET: "x86_64-w64-mingw32"
+    _PLATFORMSUFFIX: ".exe"
+    _WRAPPER: "wine64"
+    _CONTRIB_URL: "https://artifacts.videolan.org/vlc/win64/"
+
+.variables-win-armv7: &variables-win-armv7
+    _TRIPLET: "armv7-w64-mingw32"
+    _PLATFORMSUFFIX: ".exe"
+    _WRAPPER: ""
+
+.variables-win-aarch64: &variables-win-aarch64
+    _TRIPLET: "aarch64-w64-mingw32"
+    _PLATFORMSUFFIX: ".exe"
+    _WRAPPER: ""
+
+.variables-macos-x86_64: &variables-macos-x86_64
+    _TRIPLET: "x86_64-apple-darwin19"
+    _PLATFORMSUFFIX: ""
+    _WRAPPER: ""
+    _CONTRIB_URL: "https://artifacts.videolan.org/vlc/macos-x86_64/"
+    _XCFLAGS: "-arch x86_64"
+    _XLDFLAGS: "-arch x86_64"
+
+.variables-macos-arm64: &variables-macos-arm64
+    _TRIPLET: "aarch64-apple-darwin19"
+    _PLATFORMSUFFIX: ""
+    _WRAPPER: ""
+    _CONTRIB_URL: "https://artifacts.videolan.org/vlc/macos-arm64/"
+    _XCFLAGS: "-arch arm64"
+    _XLDFLAGS: "-arch arm64"
+
+.build:
+    stage: build
+    script: |
+        set -x
+        LOCAL_INSTALL_DIR=`pwd`/local_install
+        export PKG_CONFIG_LIBDIR=${LOCAL_INSTALL_DIR}/lib/pkgconfig
+        git clone --depth 1 --branch master https://git.ffmpeg.org/ffmpeg.git ffmpeg
+        cd ffmpeg
+        ./configure --prefix="${LOCAL_INSTALL_DIR}" --enable-pic --disable-debug --extra-ldflags="-static" --disable-programs --disable-doc --disable-avdevice --disable-postproc --disable-avfilter --disable-network --disable-encoders --disable-muxers
+        make -j$(getconf _NPROCESSORS_ONLN)
+        make -j$(getconf _NPROCESSORS_ONLN) install
+        cd ..
+        git clone --depth 1 --branch master https://github.com/l-smash/l-smash.git lsmash
+        cd lsmash
+        ./configure --prefix="${LOCAL_INSTALL_DIR}" --extra-ldflags="-static"
+        make -j$(getconf _NPROCESSORS_ONLN)
+        make -j$(getconf _NPROCESSORS_ONLN) install
+        cd ..
+        ./configure --enable-pic --enable-strip --extra-ldflags="-static"
+        make -j$(getconf _NPROCESSORS_ONLN) x264 checkasm
+    artifacts:
+        name: "$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
+        paths:
+            - x264${_PLATFORMSUFFIX}
+            - checkasm8${_PLATFORMSUFFIX}
+            - checkasm10${_PLATFORMSUFFIX}
+        expire_in: 1 week
+
+build-debian-amd64:
+    extends: .build
+    image: registry.videolan.org/x264-debian-unstable:20211206140856
+    tags:
+        - docker
+        - amd64
+    variables: *variables-debian-amd64
+
+build-debian-aarch64:
+    extends: .build
+    image: registry.videolan.org/x264-debian-unstable-aarch64:20211206141032
+    tags:
+        - docker
+        - aarch64
+    variables: *variables-debian-aarch64
+
+.build-win:
+    extends: build-debian-amd64
+    script: |
+        set -x
+        LOCAL_INSTALL_DIR=`pwd`/${_TRIPLET}
+        export PKG_CONFIG_LIBDIR=${LOCAL_INSTALL_DIR}/lib/pkgconfig
+        curl -f -o vlc-contrib.txt ${_CONTRIB_URL}
+        CONTRIB_NAME=$(sed -n -e "s@.*href=\"\(vlc-contrib-${_TRIPLET}-[^\"]*\.tar\.bz2\)\".*@\1@p" vlc-contrib.txt | sed -n -e '1p')
+        curl -f -o vlc-contrib-${_TRIPLET}-latest.tar.bz2 ${_CONTRIB_URL}${CONTRIB_NAME}
+        bunzip2 vlc-contrib-${_TRIPLET}-latest.tar.bz2
+        tar xvf vlc-contrib-${_TRIPLET}-latest.tar
+        sed -i.bak -e "s#@@CONTRIB_PREFIX@@#${LOCAL_INSTALL_DIR}#g" ${PKG_CONFIG_LIBDIR}/*.pc
+        git clone --depth 1 --branch master https://github.com/l-smash/l-smash.git lsmash
+        cd lsmash
+        ./configure --prefix="${LOCAL_INSTALL_DIR}" --target-os="${_TRIPLET}" --cross-prefix="${_TRIPLET}-"
+        make -j$(getconf _NPROCESSORS_ONLN)
+        make -j$(getconf _NPROCESSORS_ONLN) install
+        cd ..
+        ./configure --host="${_TRIPLET}" --cross-prefix="${_TRIPLET}-" --enable-pic --enable-strip
+        make -j$(getconf _NPROCESSORS_ONLN) x264 checkasm
+
+build-win32:
+    extends: .build-win
+    variables: *variables-win32
+
+build-win64:
+    extends: .build-win
+    variables: *variables-win64
+
+.build-llvm-mingw:
+    extends: .build
+    image: registry.videolan.org/vlc-debian-llvm-mingw:20211020094514
+    tags:
+        - docker
+        - amd64
+    script: |
+        set -x
+        PKGCONFIG=pkg-config ./configure --host="${_TRIPLET}" --cross-prefix="${_TRIPLET}-" --enable-pic --enable-strip
+        make -j$(getconf _NPROCESSORS_ONLN) x264 checkasm
+
+build-llvm-mingw-armv7:
+    extends: .build-llvm-mingw
+    variables: *variables-win-armv7
+
+build-llvm-mingw-aarch64:
+    extends: .build-llvm-mingw
+    variables: *variables-win-aarch64
+
+.build-macos:
+    extends: .build
+    script: |
+        set -x
+        LOCAL_INSTALL_DIR=`pwd`/${_TRIPLET}
+        export PKG_CONFIG_LIBDIR=${LOCAL_INSTALL_DIR}/lib/pkgconfig
+        curl -f -o vlc-contrib.txt ${_CONTRIB_URL}
+        CONTRIB_NAME=$(sed -n -e "s@.*href=\"\(vlc-contrib-${_TRIPLET}-[^\"]*\.tar\.bz2\)\".*@\1@p" vlc-contrib.txt | sed -n -e '1p')
+        curl -f -o vlc-contrib-${_TRIPLET}-latest.tar.bz2 ${_CONTRIB_URL}${CONTRIB_NAME}
+        bunzip2 vlc-contrib-${_TRIPLET}-latest.tar.bz2
+        tar xvf vlc-contrib-${_TRIPLET}-latest.tar
+        sed -i.bak -e "s#@@CONTRIB_PREFIX@@#${LOCAL_INSTALL_DIR}#g" ${PKG_CONFIG_LIBDIR}/*.pc
+        git clone --depth 1 --branch master https://github.com/l-smash/l-smash.git lsmash
+        cd lsmash
+        ./configure --prefix="${LOCAL_INSTALL_DIR}" --target-os="${_TRIPLET}" --extra-cflags="${_XCFLAGS}" --extra-ldflags="${_XLDFLAGS}"
+        make -j$(getconf _NPROCESSORS_ONLN)
+        make -j$(getconf _NPROCESSORS_ONLN) install
+        cd ..
+        ./configure --host="${_TRIPLET}" --enable-pic --enable-strip
+        make -j$(getconf _NPROCESSORS_ONLN) x264 checkasm
+
+build-macos-x86_64:
+    extends: .build-macos
+    tags:
+        - amd64
+        - catalina
+    variables: *variables-macos-x86_64
+
+build-macos-arm64:
+    extends: .build-macos
+    tags:
+        - amd64
+        - catalina
+    variables: *variables-macos-arm64
+
+.test: &test
+    stage: test
+    script: |
+        set -x
+        ${_WRAPPER} ./checkasm8${_PLATFORMSUFFIX}
+        ${_WRAPPER} ./checkasm10${_PLATFORMSUFFIX}
+    artifacts:
+        expire_in: 10 minutes
+
+test-debian-amd64:
+    <<: *test
+    extends: build-debian-amd64
+    dependencies:
+        - build-debian-amd64
+    variables: *variables-debian-amd64
+
+test-debian-aarch64:
+    <<: *test
+    extends: build-debian-aarch64
+    dependencies:
+        - build-debian-aarch64
+    variables: *variables-debian-aarch64
+
+test-win32:
+    <<: *test
+    extends: build-win32
+    dependencies:
+        - build-win32
+    variables: *variables-win32
+
+test-win64:
+    <<: *test
+    extends: build-win64
+    dependencies:
+        - build-win64
+    variables: *variables-win64
+
+test-macos-x86_64:
+    <<: *test
+    extends: build-macos-x86_64
+    dependencies:
+        - build-macos-x86_64
+    variables: *variables-macos-x86_64
+
+.release: &release
+    stage: release
+    script: |
+        set -x
+        _VERSION=$(./version.sh | grep _VERSION -| cut -d\  -f4-| sed 's, ,-,g' | sed 's,",,')
+        mv x264${_PLATFORMSUFFIX} x264-${_VERSION}${_PLATFORMSUFFIX}
+    when: manual
+    only:
+        - master@videolan/x264
+        - stable@videolan/x264
+    artifacts:
+        name: "$CI_PROJECT_PATH_SLUG-$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
+        paths:
+            - x264-*${_PLATFORMSUFFIX}
+        expire_in: '10 minutes'
+
+release-debian-amd64:
+    <<: *release
+    extends: build-debian-amd64
+    dependencies:
+        - build-debian-amd64
+    variables: *variables-debian-amd64
+
+release-debian-aarch64:
+    <<: *release
+    extends: build-debian-aarch64
+    dependencies:
+        - build-debian-aarch64
+    variables: *variables-debian-aarch64
+
+release-win32:
+    <<: *release
+    extends: build-win32
+    dependencies:
+        - build-win32
+    variables: *variables-win32
+
+release-win64:
+    <<: *release
+    extends: build-win64
+    dependencies:
+        - build-win64
+    variables: *variables-win64
+
+release-macos-x86_64:
+    <<: *release
+    extends: build-macos-x86_64
+    dependencies:
+        - build-macos-x86_64
+    variables: *variables-macos-x86_64
+
+release-macos-arm64:
+    <<: *release
+    extends: build-macos-arm64
+    dependencies:
+        - build-macos-arm64
+    variables: *variables-macos-arm64

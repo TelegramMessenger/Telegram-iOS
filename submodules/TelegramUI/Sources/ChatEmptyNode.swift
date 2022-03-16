@@ -10,6 +10,7 @@ import AppBundle
 import LocalizedPeerData
 import TelegramStringFormatting
 import AccountContext
+import ChatPresentationInterfaceState
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize

@@ -14,7 +14,7 @@ import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AppBundle
-import GZip
+import ZipArchive
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -259,13 +259,25 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         }
                                     }
 
-                                    let gzippedData = TGGZipData(rawLogData, 1.0)
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                                    
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
 
                                     let id = Int64.random(in: Int64.min ... Int64.max)
                                     let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.gz")])
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
@@ -413,13 +425,25 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         }
                                     }
 
-                                    let gzippedData = TGGZipData(rawLogData, 1.0)
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                                    
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
 
                                     let id = Int64.random(in: Int64.min ... Int64.max)
                                     let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.gz")])
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
@@ -485,13 +509,25 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         }
                                     }
 
-                                    let gzippedData = TGGZipData(rawLogData, 1.0)
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                                    
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
 
                                     let id = Int64.random(in: Int64.min ... Int64.max)
                                     let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
                                     context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
 
-                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.gz")])
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
                                     let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
 
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
@@ -968,7 +1004,9 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     if isMainApp {
         entries.append(.enableRaiseToSpeak(presentationData.theme, mediaInputSettings.enableRaiseToSpeak))
         entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
+        #if DEBUG
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
+        #endif
     }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     if isMainApp {
@@ -1105,4 +1143,62 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         return controller?.navigationController as? NavigationController
     }
     return controller
+}
+
+public func triggerDebugSendLogsUI(context: AccountContext, additionalInfo: String = "", pushController: @escaping (ViewController) -> Void) {
+    let _ = (Logger.shared.collectLogs()
+    |> deliverOnMainQueue).start(next: { logs in
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+        controller.peerSelected = { [weak controller] peer in
+            let peerId = peer.id
+
+            if let strongController = controller {
+                strongController.dismiss()
+
+                let lineFeed = "\n".data(using: .utf8)!
+                var rawLogData: Data = Data()
+                for (name, path) in logs {
+                    if !rawLogData.isEmpty {
+                        rawLogData.append(lineFeed)
+                        rawLogData.append(lineFeed)
+                    }
+
+                    rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                        rawLogData.append(data)
+                    }
+                }
+                
+                if !additionalInfo.isEmpty {
+                    rawLogData.append("------ Additional Info ------\n".data(using: .utf8)!)
+                    rawLogData.append("\(additionalInfo)".data(using: .utf8)!)
+                }
+                
+                let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                
+                let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                
+                SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                    return
+                }
+                
+                TempBox.shared.dispose(tempSource)
+                TempBox.shared.dispose(tempZip)
+
+                let id = Int64.random(in: Int64.min ... Int64.max)
+                let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
+                context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
+                let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+
+                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+            }
+        }
+        pushController(controller)
+    })
 }

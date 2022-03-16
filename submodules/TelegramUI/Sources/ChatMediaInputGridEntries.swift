@@ -5,6 +5,7 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import MergeLists
+import ChatPresentationInterfaceState
 
 enum ChatMediaInputGridEntryStableId: Equatable, Hashable {
     case search

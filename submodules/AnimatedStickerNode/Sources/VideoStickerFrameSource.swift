@@ -44,7 +44,7 @@ private final class VideoStickerFrameSourceCache {
         self.width = width
         self.height = height
         
-        let version: Int = 1
+        let version: Int = 3
         self.path = "\(pathPrefix)_\(width)x\(height)-v\(version).vstickerframecache"
         var file = ManagedFile(queue: queue, path: self.path, mode: .readwrite)
         if let file = file {
@@ -189,7 +189,7 @@ private final class VideoStickerFrameSourceCache {
         
         let queue = self.queue
         self.storeQueue.async { [weak self] in
-            let compressedData = compressFrame(width: width, height: height, rgbData: rgbData)
+            let compressedData = compressFrame(width: width, height: height, rgbData: rgbData, unpremultiply: false)
             
             queue.async {
                 guard let strongSelf = self else {
@@ -270,6 +270,8 @@ private final class VideoStickerFrameSourceCache {
     }
 }
 
+private let useCache = true
+
 final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
     private let queue: Queue
     private let path: String
@@ -299,7 +301,7 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
             VideoStickerFrameSourceCache(queue: queue, pathPrefix: cachePathPrefix, width: width, height: height)
         }
         
-        if let cache = self.cache, cache.frameCount > 0 {
+        if useCache, let cache = self.cache, cache.frameCount > 0 {
             self.source = nil
             self.frameRate = Int(cache.frameRate)
             self.frameCount = Int(cache.frameCount)
@@ -325,7 +327,7 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
 
         self.currentFrame += 1
         if draw {
-            if let cache = self.cache, let yuvData = cache.readUncompressedYuvaFrame(index: frameIndex) {
+            if useCache, let cache = self.cache, let yuvData = cache.readUncompressedYuvaFrame(index: frameIndex) {
                 return AnimatedStickerFrame(data: yuvData, type: .yuva, width: self.width, height: self.height, bytesPerRow: self.width * 2, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
             } else if let source = self.source {
                 let frameAndLoop = source.readFrame(maxPts: nil)
@@ -376,8 +378,8 @@ final class VideoStickerDirectFrameSource: AnimatedStickerFrameSource {
                 }
 
                 self.cache?.storeUncompressedRgbFrame(index: frameIndex, rgbData: frameData)
-                
-                return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount)
+                                
+                return AnimatedStickerFrame(data: frameData, type: .argb, width: self.width, height: self.height, bytesPerRow: self.bytesPerRow, index: frameIndex, isLastFrame: frameIndex == self.frameCount - 1, totalFrames: self.frameCount, multiplyAlpha: true)
             } else {
                 return nil
             }

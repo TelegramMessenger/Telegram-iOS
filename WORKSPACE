@@ -72,19 +72,6 @@ http_archive(
 )
 
 http_archive(
-        name = "FacebookSDK",
-        urls = ["https://github.com/facebook/facebook-ios-sdk/releases/download/v12.3.2/FacebookSDK-Static_XCFramework.zip"],
-        build_file = "@//third-party/Facebook:BUILD",
-)
-
-http_archive(
-        name = "AppsFlyerSDK",
-        urls = ["https://github.com/AppsFlyerSDK/AppsFlyerFramework/releases/download/6.5.2/AppsFlyerLib.xcframework.zip"],
-        build_file = "@//third-party/AppsFlyer:BUILD",
-	sha256 = "da29b80c0296688488468e642094ec9a022b50319faff2ff9c05a24b13b061e6",
-)
-
-http_archive(
     name = "cgrindel_rules_spm",
     sha256 = "cbe5d5dccdc8d5aa300e1538c4214f44a1266895d9817e8279a9335bcbee2f1e",
     strip_prefix = "rules_spm-0.7.0",

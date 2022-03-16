@@ -868,6 +868,20 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         }
                     }
                     
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                    if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                        transition.updateAlpha(node: forwardBackgroundNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                        transition.updateAlpha(node: replyBackgroundNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    if let forwardInfoNode = strongSelf.forwardInfoNode {
+                        transition.updateAlpha(node: forwardInfoNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    if let replyInfoNode = strongSelf.replyInfoNode {
+                        transition.updateAlpha(node: replyInfoNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    
                     if let (_, f) = strongSelf.awaitingAppliedReaction {
                         strongSelf.awaitingAppliedReaction = nil
                         

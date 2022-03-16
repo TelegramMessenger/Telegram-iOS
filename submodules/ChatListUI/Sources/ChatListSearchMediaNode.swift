@@ -165,7 +165,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 messageMediaFileCancelInteractiveFetch(context: self.context, messageId: message.id, file: file)
             case .Local:
                 self.interaction.openMessage(message)
-            case .Remote:
+            case .Remote, .Paused:
                 self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: self.context, message: message, file: file, userInitiated: true).start())
             }
         }
@@ -236,7 +236,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                                 statusState = .progress(color: .white, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                             case .Local:
                                 statusState = .none
-                            case .Remote:
+                            case .Remote, .Paused:
                                 statusState = .download(.white)
                             }
                         }
@@ -270,7 +270,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                                         mediaDownloadState = .compactFetching(progress: 0.0)
                                     case .Local:
                                         badgeContent = .text(inset: 0.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
-                                    case .Remote:
+                                    case .Remote, .Paused:
                                         badgeContent = .text(inset: 12.0, backgroundColor: mediaBadgeBackgroundColor, foregroundColor: mediaBadgeTextColor, text: NSAttributedString(string: durationString))
                                         mediaDownloadState = .compactRemote
                                 }
@@ -702,7 +702,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
             var index: UInt32 = 0
             if let entries = entries {   
                 for entry in entries {
-                    if case let .message(message, _, _, _, _, _, _) = entry {
+                    if case let .message(message, _, _, _, _, _, _, _, _, _, _) = entry {
                         self.mediaItems.append(VisualMediaItem(message: message._asMessage(), index: nil))
                     }
                     index += 1

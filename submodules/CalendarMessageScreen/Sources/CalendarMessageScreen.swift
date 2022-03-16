@@ -285,47 +285,6 @@ private final class DayEnvironment: Equatable {
     }
 }
 
-private final class ImageComponent: Component {
-    let image: UIImage?
-
-    init(
-        image: UIImage?
-    ) {
-        self.image = image
-    }
-
-    static func ==(lhs: ImageComponent, rhs: ImageComponent) -> Bool {
-        if lhs.image !== rhs.image {
-            return false
-        }
-        return true
-    }
-
-    final class View: UIImageView {
-        init() {
-            super.init(frame: CGRect())
-        }
-
-        required init?(coder aDecoder: NSCoder) {
-            preconditionFailure()
-        }
-
-        func update(component: ImageComponent, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            self.image = component.image
-
-            return availableSize
-        }
-    }
-
-    func makeView() -> View {
-        return View()
-    }
-
-    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
-    }
-}
-
 private final class DayComponent: Component {
     typealias EnvironmentType = DayEnvironment
 
@@ -655,7 +614,7 @@ private final class DayComponent: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DayEnvironment>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -894,7 +853,7 @@ private final class MonthComponent: CombinedComponent {
 
                     let selectionRect = CGRect(origin: CGPoint(x: minX, y: minY), size: CGSize(width: maxX - minX, height: maxY - minY))
                     let selection = selections[lineIndex].update(
-                        component: AnyComponent(ImageComponent(image: dayEnvironment.imageCache.monthSelection(leftRadius: selectionRadius, rightRadius: selectionRadius, maxRadius: selectionRadius, color: monthSelectionColor))),
+                        component: AnyComponent(Image(image: dayEnvironment.imageCache.monthSelection(leftRadius: selectionRadius, rightRadius: selectionRadius, maxRadius: selectionRadius, color: monthSelectionColor))),
                         availableSize: selectionRect.size,
                         transition: .immediate
                     )

@@ -2,6 +2,14 @@ import Foundation
 import UIKit
 import TelegramCore
 
+private let whitelistedHosts: Set<String> = Set([
+    "telegram.org",
+    "t.me",
+    "telegram.me",
+    "telegra.ph",
+    "telesco.pe"
+])
+
 private let dataDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link]).rawValue)
 private let dataAndPhoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.link, .phoneNumber]).rawValue)
 private let phoneNumberDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType([.phoneNumber]).rawValue)
@@ -190,10 +198,14 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
                                     return
                                 }
                                 if url.scheme != "tg" {
-                                    guard let host = url.host?.lowercased() else {
+                                    guard var host = url.host?.lowercased() else {
                                         return
                                     }
-                                    if host == "telegram.org" || host == "t.me" {
+                                    let www = "www."
+                                    if host.hasPrefix(www) {
+                                        host.removeFirst(www.count)
+                                    }
+                                    if whitelistedHosts.contains(host) {
                                     } else {
                                         return
                                     }

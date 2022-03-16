@@ -30,9 +30,9 @@ final class GameControllerNode: ViewControllerTracingNode {
     private let context: AccountContext
     var presentationData: PresentationData
     private let present: (ViewController, Any?) -> Void
-    private let message: EngineMessage
+    private let message: EngineMessage?
     
-    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: EngineMessage) {
+    init(context: AccountContext, presentationData: PresentationData, url: String, present: @escaping (ViewController, Any?) -> Void, message: EngineMessage?) {
         self.context = context
         self.presentationData = presentationData
         self.present = present
@@ -107,18 +107,21 @@ final class GameControllerNode: ViewControllerTracingNode {
     }
     
     private func shareData() -> (EnginePeer, String)? {
+        guard let message = self.message else {
+            return nil
+        }
         var botPeer: EnginePeer?
         var gameName: String?
-        for media in self.message.media {
+        for media in message.media {
             if let game = media as? TelegramMediaGame {
-                inner: for attribute in self.message.attributes {
+                inner: for attribute in message.attributes {
                     if let attribute = attribute as? InlineBotMessageAttribute, let peerId = attribute.peerId {
-                        botPeer = self.message.peers[peerId].flatMap(EnginePeer.init)
+                        botPeer = message.peers[peerId].flatMap(EnginePeer.init)
                         break inner
                     }
                 }
                 if botPeer == nil {
-                    botPeer = self.message.author
+                    botPeer = message.author
                 }
                 
                 gameName = game.name
@@ -144,8 +147,8 @@ final class GameControllerNode: ViewControllerTracingNode {
             if let (botPeer, gameName) = self.shareData(), let addressName = botPeer.addressName, !addressName.isEmpty, !gameName.isEmpty {
                 if eventName == "share_score" {
                     self.present(ShareController(context: self.context, subject: .fromExternal({ [weak self] peerIds, text, account, _ in
-                        if let strongSelf = self {
-                            let signals = peerIds.map { TelegramEngine(account: account).messages.forwardGameWithScore(messageId: strongSelf.message.id, to: $0, as: nil) }
+                        if let strongSelf = self, let message = strongSelf.message {
+                            let signals = peerIds.map { TelegramEngine(account: account).messages.forwardGameWithScore(messageId: message.id, to: $0, as: nil) }
                             return .single(.preparing)
                             |> then(
                                 combineLatest(signals)

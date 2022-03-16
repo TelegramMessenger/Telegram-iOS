@@ -47,7 +47,7 @@ open class NGLoadingIndicator: UIView {
         containerView.addSubview(self)
 
         UIView.animate(withDuration: 0.3) {
-            self.backgroundColor = .black.withAlphaComponent(0.4)
+            self.backgroundColor = .black.withAlphaComponent(0.5)
         } completion: { _ in
             self.isAnimating = true
             self.nicegramAnimationView.play()

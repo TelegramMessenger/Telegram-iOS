@@ -64,7 +64,7 @@ public final class MultilineText: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -126,7 +126,7 @@ public final class LottieAnimationComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -249,7 +249,7 @@ private final class ScrollingTooltipAnimationComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -400,7 +400,7 @@ public final class TooltipComponent: Component {
         return View()
     }
 
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -476,7 +476,7 @@ private final class RoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -550,7 +550,7 @@ private final class ShadowRoundedRectangle: Component {
         return View()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
@@ -701,7 +701,7 @@ public final class RollingText: Component {
         return View()
     }
     
-    public func update(view: View, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize)
     }
 }
@@ -753,6 +753,8 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
         let textYear = Child(RollingText.self)
 
         return { context in
+            context.view.clipsToBounds = true
+            
             let date = context.component.date
             
             let components = date.0.components(separatedBy: " ")
@@ -828,7 +830,7 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
             context.add(textYear
                 .position(CGPoint(x: yearTextFrame.midX, y: yearTextFrame.midY))
             )
-
+            
             return rect.size
         }
     }
@@ -1099,7 +1101,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.updateLineIndicator(transition: transition)
     }
 
-    func feedbackTap() {
+    public func feedbackTap() {
         self.hapticFeedback.tap()
     }
 

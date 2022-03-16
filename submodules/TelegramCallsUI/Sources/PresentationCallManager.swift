@@ -687,7 +687,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 peerId: peerId,
                 isChannel: isChannel,
                 invite: nil,
-                joinAsPeerId: nil
+                joinAsPeerId: nil,
+                isStream: false
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))
@@ -849,7 +850,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                 peerId: peerId,
                 isChannel: isChannel,
                 invite: invite,
-                joinAsPeerId: joinAsPeerId
+                joinAsPeerId: joinAsPeerId,
+                isStream: initialCall.isStream ?? false
             )
             strongSelf.updateCurrentGroupCall(call)
             strongSelf.currentGroupCallPromise.set(.single(call))

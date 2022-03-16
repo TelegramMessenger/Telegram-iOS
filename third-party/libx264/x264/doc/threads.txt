@@ -1,0 +1,95 @@
+Historical notes:
+Slice-based threads was the original threading model of x264.  It was replaced with frame-based threads in r607.  This document was originally written at that time.  Slice-based threading was brought back (as an optional mode) in r1364 for low-latency encoding.  Furthermore, frame-based threading was modified significantly in r1246, with the addition of threaded lookahead.
+
+Old threading method: slice-based
+application calls x264
+x264 runs B-adapt and ratecontrol (serial)
+split frame into several slices, and spawn a thread for each slice
+wait until all threads are done
+deblock and hpel filter (serial)
+return to application
+In x264cli, there is one additional thread to decode the input.
+
+New threading method: frame-based
+application calls x264
+x264 requests a frame from lookahead, which runs B-adapt and ratecontrol parallel to the current thread, separated by a buffer of size sync-lookahead
+spawn a thread for this frame
+thread runs encode, deblock, hpel filter
+meanwhile x264 waits for the oldest thread to finish
+return to application, but the rest of the threads continue running in the background
+No additional threads are needed to decode the input, unless decoding is slower than slice+deblock+hpel, in which case an additional input thread would allow decoding in parallel.
+
+Penalties for slice-based threading:
+Each slice adds some bitrate (or equivalently reduces quality), for a variety of reasons: the slice header costs some bits, cabac contexts are reset, mvs and intra samples can't be predicted across the slice boundary.
+In CBR mode, multiple slices encode simultaneously, thus increasing the maximum misprediction possible with VBV.
+Some parts of the encoder are serial, so it doesn't scale well with lots of cpus.
+
+Some numbers on penalties for slicing:
+Tested at 720p with 45 slices (one per mb row) to maximize the total cost for easy measurement. Averaged over 4 movies at crf20 and crf30. Total cost: +30% bitrate at constant psnr.
+I enabled the various components of slicing one at a time, and measured the portion of that cost they contribute:
+    * 34% intra prediction
+    * 25% redundant slice headers, nal headers, and rounding to whole bytes
+    * 16% mv prediction
+    * 16% reset cabac contexts
+    * 6% deblocking between slices (you don't strictly have to turn this off just for standard compliance, but you do if you want to use slices for decoder multithreading)
+    * 2% cabac neighbors (cbp, skip, etc)
+The proportional cost of redundant headers should certainly depend on bitrate (since the header size is constant and everything else depends on bitrate). Deblocking should too (due to varying deblock strength).
+But none of the proportions should depend strongly on the number of slices: some are triggered per slice while some are triggered per macroblock-that's-on-the-edge-of-a-slice, but as long as there's no more than 1 slice per row, the relative frequency of those two conditions is determined solely by the image width.
+
+
+Penalties for frame-base threading:
+To allow encoding of multiple frames in parallel, we have to ensure that any given macroblock uses motion vectors only from pieces of the reference frames that have been encoded already. This is usually not noticeable, but can matter for very fast upward motion.
+We have to commit to one frame type before starting on the frame. Thus scenecut detection must run during the lowres pre-motion-estimation along with B-adapt, which makes it faster but less accurate than re-encoding the whole frame.
+Ratecontrol gets delayed feedback, since it has to plan frame N before frame N-1 finishes.
+
+Benchmarks:
+cpu: 8core Nehalem (2x E5520) 2.27GHz, hyperthreading disabled
+kernel: linux 2.6.34.7, 64-bit
+x264: r1732 b20059aa
+input: http://media.xiph.org/video/derf/y4m/1080p/park_joy_1080p.y4m
+
+NOTE: the "thread count" listed below does not count the lookahead thread, only encoding threads.  This is why for "veryfast", the speedup for 2 and 3 threads exceeds the logical limit.
+
+threads  speedup       psnr
+      slice frame   slice  frame
+x264 --preset veryfast --tune psnr --crf 30
+ 1:   1.00x 1.00x  +0.000 +0.000
+ 2:   1.41x 2.29x  -0.005 -0.002
+ 3:   1.70x 3.65x  -0.035 +0.000
+ 4:   1.96x 3.97x  -0.029 -0.001
+ 5:   2.10x 3.98x  -0.047 -0.002
+ 6:   2.29x 3.97x  -0.060 +0.001
+ 7:   2.36x 3.98x  -0.057 -0.001
+ 8:   2.43x 3.98x  -0.067 -0.001
+ 9:         3.96x         +0.000
+10:         3.99x         +0.000
+11:         4.00x         +0.001
+12:         4.00x         +0.001
+
+x264 --preset medium --tune psnr --crf 30
+ 1:   1.00x 1.00x  +0.000 +0.000
+ 2:   1.54x 1.59x  -0.002 -0.003
+ 3:   2.01x 2.81x  -0.005 +0.000
+ 4:   2.51x 3.11x  -0.009 +0.000
+ 5:   2.89x 4.20x  -0.012 -0.000
+ 6:   3.27x 4.50x  -0.016 -0.000
+ 7:   3.58x 5.45x  -0.019 -0.002
+ 8:   3.79x 5.76x  -0.015 -0.002
+ 9:         6.49x         -0.000
+10:         6.64x         -0.000
+11:         6.94x         +0.000
+12:         6.96x         +0.000
+
+x264 --preset slower --tune psnr --crf 30
+ 1:   1.00x 1.00x  +0.000 +0.000
+ 2:   1.54x 1.83x  +0.000 +0.002
+ 3:   1.98x 2.21x  -0.006 +0.002
+ 4:   2.50x 2.61x  -0.011 +0.002
+ 5:   2.93x 3.94x  -0.018 +0.003
+ 6:   3.45x 4.19x  -0.024 +0.001
+ 7:   3.84x 4.52x  -0.028 -0.001
+ 8:   4.13x 5.04x  -0.026 -0.001
+ 9:         6.15x         +0.001
+10:         6.24x         +0.001
+11:         6.55x         -0.001
+12:         6.89x         -0.001

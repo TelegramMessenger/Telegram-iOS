@@ -61,6 +61,10 @@ public final class NavigationBarTheme {
         self.badgeTextColor = badgeTextColor
     }
     
+    public func withUpdatedBackgroundColor(_ color: UIColor) -> NavigationBarTheme {
+        return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: color, enableBackgroundBlur: false, separatorColor: self.separatorColor, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
+    }
+    
     public func withUpdatedSeparatorColor(_ color: UIColor) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: self.buttonColor, disabledButtonColor: self.disabledButtonColor, primaryTextColor: self.primaryTextColor, backgroundColor: self.backgroundColor, enableBackgroundBlur: self.enableBackgroundBlur, separatorColor: color, badgeBackgroundColor: self.badgeBackgroundColor, badgeStrokeColor: self.badgeStrokeColor, badgeTextColor: self.badgeTextColor)
     }
@@ -83,26 +87,6 @@ public final class NavigationBarPresentationData {
     public init(theme: NavigationBarTheme, strings: NavigationBarStrings) {
         self.theme = theme
         self.strings = strings
-    }
-}
-
-private func backArrowImage(color: UIColor) -> UIImage? {
-    var red: CGFloat = 0.0
-    var green: CGFloat = 0.0
-    var blue: CGFloat = 0.0
-    var alpha: CGFloat = 0.0
-    color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-    
-    let key = (Int32(alpha * 255.0) << 24) | (Int32(red * 255.0) << 16) | (Int32(green * 255.0) << 8) | Int32(blue * 255.0)
-    if let image = backArrowImageCache[key] {
-        return image
-    } else {
-        if let image = NavigationBarTheme.generateBackArrowImage(color: color) {
-            backArrowImageCache[key] = image
-            return image
-        } else {
-            return nil
-        }
     }
 }
 
@@ -277,6 +261,26 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
+    }
+    
+    static func backArrowImage(color: UIColor) -> UIImage? {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        var alpha: CGFloat = 0.0
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        let key = (Int32(alpha * 255.0) << 24) | (Int32(red * 255.0) << 16) | (Int32(green * 255.0) << 8) | Int32(blue * 255.0)
+        if let image = backArrowImageCache[key] {
+            return image
+        } else {
+            if let image = NavigationBarTheme.generateBackArrowImage(color: color) {
+                backArrowImageCache[key] = image
+                return image
+            } else {
+                return nil
+            }
+        }
     }
 
     public static let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
@@ -880,7 +884,7 @@ open class NavigationBar: ASDisplayNode {
         self.rightButtonNode.color = self.presentationData.theme.buttonColor
         self.rightButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
         self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
-        self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
+        self.backButtonArrow.image = NavigationBar.backArrowImage(color: self.presentationData.theme.buttonColor)
         if let title = self.title {
             self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
             self.titleNode.accessibilityLabel = title
@@ -973,7 +977,7 @@ open class NavigationBar: ASDisplayNode {
             self.rightButtonNode.color = self.presentationData.theme.buttonColor
             self.rightButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor
             self.rightButtonNode.rippleColor = self.presentationData.theme.primaryTextColor.withAlphaComponent(0.05)
-            self.backButtonArrow.image = backArrowImage(color: self.presentationData.theme.buttonColor)
+            self.backButtonArrow.image = NavigationBar.backArrowImage(color: self.presentationData.theme.buttonColor)
             if let title = self.title {
                 self.titleNode.attributedText = NSAttributedString(string: title, font: NavigationBar.titleFont, textColor: self.presentationData.theme.primaryTextColor)
                 self.titleNode.accessibilityLabel = title
@@ -1052,7 +1056,7 @@ open class NavigationBar: ASDisplayNode {
         var rightTitleInset: CGFloat = rightInset + 1.0
         if self.backButtonNode.supernode != nil {
             let backButtonSize = self.backButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
-            leftTitleInset += backButtonSize.width + backButtonInset + 1.0
+            leftTitleInset = backButtonSize.width + backButtonInset + 1.0
             
             let topHitTestSlop = (nominalHeight - backButtonSize.height) * 0.5
             self.backButtonNode.hitTestSlop = UIEdgeInsets(top: -topHitTestSlop, left: -27.0, bottom: -topHitTestSlop, right: -8.0)
@@ -1104,7 +1108,12 @@ open class NavigationBar: ASDisplayNode {
             }
         } else if self.leftButtonNode.supernode != nil {
             let leftButtonSize = self.leftButtonNode.updateLayout(constrainedSize: CGSize(width: size.width, height: nominalHeight), isLandscape: isLandscape)
-            leftTitleInset += leftButtonSize.width + leftButtonInset + 1.0
+            leftTitleInset = leftButtonSize.width + leftButtonInset + 1.0
+            
+            var transition = transition
+            if self.leftButtonNode.frame.width.isZero {
+                transition = .immediate
+            }
             
             self.leftButtonNode.alpha = 1.0
             transition.updateFrame(node: self.leftButtonNode, frame: CGRect(origin: CGPoint(x: leftButtonInset, y: contentVerticalOrigin + floor((nominalHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
@@ -1116,8 +1125,13 @@ open class NavigationBar: ASDisplayNode {
         
         if self.rightButtonNode.supernode != nil {
             let rightButtonSize = self.rightButtonNode.updateLayout(constrainedSize: (CGSize(width: size.width, height: nominalHeight)), isLandscape: isLandscape)
-            rightTitleInset += rightButtonSize.width + leftButtonInset + 1.0
+            rightTitleInset = rightButtonSize.width + leftButtonInset + 1.0
             self.rightButtonNode.alpha = 1.0
+            
+            var transition = transition
+            if self.rightButtonNode.frame.width.isZero {
+                transition = .immediate
+            }
             transition.updateFrame(node: self.rightButtonNode, frame: CGRect(origin: CGPoint(x: size.width - leftButtonInset - rightButtonSize.width, y: contentVerticalOrigin + floor((nominalHeight - rightButtonSize.height) / 2.0)), size: rightButtonSize))
         }
         
@@ -1182,6 +1196,10 @@ open class NavigationBar: ASDisplayNode {
                         self.titleNode.alpha = progress * progress
                 }
             } else {
+                var transition = transition
+                if self.titleNode.frame.width.isZero {
+                    transition = .immediate
+                }
                 self.titleNode.alpha = 1.0
                 transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: contentVerticalOrigin + floorToScreenPixels((nominalHeight - titleSize.height) / 2.0)), size: titleSize))
             }
@@ -1296,7 +1314,7 @@ open class NavigationBar: ASDisplayNode {
     public func makeTransitionBackArrowNode(accentColor: UIColor) -> ASDisplayNode? {
         if self.backButtonArrow.supernode != nil {
             let node = ASImageNode()
-            node.image = backArrowImage(color: accentColor)
+            node.image = NavigationBar.backArrowImage(color: accentColor)
             node.frame = self.backButtonArrow.frame
             node.displayWithoutProcessing = true
             node.displaysAsynchronously = false
@@ -1319,6 +1337,8 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public var intrinsicCanTransitionInline: Bool = true
+    
+    public var passthroughTouches = true
     
     public var canTransitionInline: Bool {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
@@ -1456,7 +1476,8 @@ open class NavigationBar: ASDisplayNode {
             return nil
         }
         
-        if result == self.view || result == self.buttonsContainerNode.view {
+        
+        if self.passthroughTouches && (result == self.view || result == self.buttonsContainerNode.view) {
             return nil
         }
         

@@ -326,7 +326,7 @@ static id<TGNavigationBarMusicPlayerProvider> _musicPlayerProvider;
     }
     
     [super setFrame:frame];
-    
+     
     if (_statusBarBackgroundView != nil && _statusBarBackgroundView.superview != nil)
     {
         _statusBarBackgroundView.frame = CGRectMake(0, -self.frame.origin.y, self.frame.size.width, 20);

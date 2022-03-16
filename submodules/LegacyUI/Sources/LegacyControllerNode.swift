@@ -8,8 +8,9 @@ final class LegacyControllerNode: ASDisplayNode {
     
     var controllerView: UIView? {
         didSet {
-            if let controllerView = self.controllerView, let containerLayout = self.containerLayout {
-                controllerView.frame = CGRect(origin: CGPoint(), size: containerLayout.size)
+            if let controllerView = self.controllerView, let layout = self.containerLayout {
+                let size = CGSize(width: layout.size.width - layout.intrinsicInsets.left - layout.intrinsicInsets.right, height: layout.size.height)
+                controllerView.frame = CGRect(origin: CGPoint(x: layout.intrinsicInsets.left, y: 0.0), size: size)
             }
         }
     }
@@ -21,13 +22,14 @@ final class LegacyControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.clipsToBounds = true
+//        self.clipsToBounds = true
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = layout
+        let size = CGSize(width: layout.size.width - layout.intrinsicInsets.left - layout.intrinsicInsets.right, height: layout.size.height)
         if let controllerView = self.controllerView {
-            controllerView.frame = CGRect(origin: CGPoint(), size: layout.size)
+            controllerView.frame = CGRect(origin: CGPoint(x: layout.intrinsicInsets.left, y: 0.0), size: size)
         }
     }
     

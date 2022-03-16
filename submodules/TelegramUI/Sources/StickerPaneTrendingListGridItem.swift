@@ -275,7 +275,6 @@ private final class FeaturedPackItemNode: ListViewItemNode {
         
         if self.currentThumbnailItem != thumbnailItem {
             self.currentThumbnailItem = thumbnailItem
-            let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
             if let thumbnailItem = thumbnailItem {
                 switch thumbnailItem {
                     case let .still(representation):
@@ -283,7 +282,8 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: representation.resource, nilIfEmpty: true))
-                    case let .animated(resource, _, isVideo):
+                    case let .animated(resource, dimensions, isVideo):
+                        imageSize = dimensions.cgSize.aspectFitted(boundingImageSize)
                         let imageApply = self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
                         imageApply()
                         self.imageNode.setSignal(chatMessageStickerPackThumbnail(postbox: account.postbox, resource: resource, animated: true, nilIfEmpty: true))
@@ -297,6 +297,7 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                             animatedStickerNode = AnimatedStickerNode()
                             animatedStickerNode.started = { [weak self] in
                                 self?.imageNode.isHidden = true
+                                self?.removePlaceholder(animated: false)
                             }
                             self.animatedStickerNode = animatedStickerNode
                             if let placeholderNode = self.placeholderNode {
@@ -312,11 +313,21 @@ private final class FeaturedPackItemNode: ListViewItemNode {
                     self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
                 }
             }
-                        
-            if let placeholderNode = self.placeholderNode {
-                let imageSize = boundingImageSize
-                placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: info.immediateThumbnailData, size: imageSize, imageSize: thumbnailDimensions.cgSize)
+        }
+        
+        if let placeholderNode = self.placeholderNode {
+            var imageSize = PixelDimensions(width: 512, height: 512)
+            var immediateThumbnailData: Data?
+            if let data = info.immediateThumbnailData {
+                if info.flags.contains(.isVideo) {
+                    imageSize = PixelDimensions(width: 100, height: 100)
+                }
+                immediateThumbnailData = data
+            } else if let data = item?.file.immediateThumbnailData {
+                immediateThumbnailData = data
             }
+            
+            placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: immediateThumbnailData, size: boundingImageSize, imageSize: imageSize.cgSize)
         }
         
         self.containerNode.frame = CGRect(origin: CGPoint(), size: boundingSize)

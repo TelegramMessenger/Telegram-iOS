@@ -17,6 +17,7 @@ import ConfettiEffect
 import WallpaperBackgroundNode
 import GridMessageSelectionNode
 import SparseItemGrid
+import ChatPresentationInterfaceState
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

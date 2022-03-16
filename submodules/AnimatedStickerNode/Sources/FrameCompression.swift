@@ -2,7 +2,7 @@ import Foundation
 import Compression
 import YuvConversion
 
-func compressFrame(width: Int, height: Int, rgbData: Data) -> Data? {
+func compressFrame(width: Int, height: Int, rgbData: Data, unpremultiply: Bool) -> Data? {
     let bytesPerRow = rgbData.count / height
     
     let yuvaPixelsPerAlphaRow = (Int(width) + 1) & (~1)
@@ -26,7 +26,7 @@ func compressFrame(width: Int, height: Int, rgbData: Data) -> Data? {
     var rgbData = rgbData
     rgbData.withUnsafeMutableBytes { (buffer: UnsafeMutableRawBufferPointer) -> Void in
         if let baseAddress = buffer.baseAddress {
-            encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), baseAddress.assumingMemoryBound(to: UInt8.self), Int32(width), Int32(height), Int32(bytesPerRow))
+            encodeRGBAToYUVA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), baseAddress.assumingMemoryBound(to: UInt8.self), Int32(width), Int32(height), Int32(bytesPerRow), unpremultiply)
         }
     }
     

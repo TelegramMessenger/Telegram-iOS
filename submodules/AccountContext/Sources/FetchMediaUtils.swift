@@ -93,3 +93,10 @@ public func messageMediaFileStatus(context: AccountContext, messageId: MessageId
     }
     |> distinctUntilChanged
 }
+
+public func messageMediaImageStatus(context: AccountContext, messageId: MessageId, image: TelegramMediaImage) -> Signal<MediaResourceStatus, NoError> {
+    guard let representation = image.representations.last else {
+        return .single(.Remote(progress: 0.0))
+    }
+    return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: representation.resource)
+}

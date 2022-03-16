@@ -1531,7 +1531,6 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         TGMediaPickerGalleryModel *model = [[TGMediaPickerGalleryModel alloc] initWithContext:windowContext items:galleryItems focusItem:focusItem selectionContext:_items.count > 1 ? selectionContext : nil editingContext:editingContext hasCaptions:self.allowCaptions allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:_intent == TGCameraControllerPassportIntent || _intent == TGCameraControllerPassportIdIntent || _intent == TGCameraControllerPassportMultipleIntent inhibitDocumentCaptions:self.inhibitDocumentCaptions hasSelectionPanel:true hasCamera:hasCamera recipientName:self.recipientName];
         model.inhibitMute = self.inhibitMute;
         model.controller = galleryController;
-        model.suggestionContext = self.suggestionContext;
         model.stickersContext = self.stickersContext;
         
         __weak TGModernGalleryController *weakGalleryController = galleryController;
@@ -1619,7 +1618,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 if (strongSelf == nil)
                     return;
                 
-                strongSelf.presentScheduleController(^(int32_t time) {
+                strongSelf.presentScheduleController(true, ^(int32_t time) {
                     __strong TGCameraController *strongSelf = weakSelf;
                     __strong TGMediaPickerGalleryModel *strongModel = weakModel;
                     
@@ -2226,11 +2225,21 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 
     if (!CGRectEqualToRect(fromFrame, CGRectZero))
     {
+        __weak TGCameraController *weakSelf = self;
         POPSpringAnimation *frameAnimation = [POPSpringAnimation animationWithPropertyNamed:kPOPViewFrame];
         frameAnimation.fromValue = [NSValue valueWithCGRect:fromFrame];
         frameAnimation.toValue = [NSValue valueWithCGRect:toFrame];
         frameAnimation.springSpeed = 20;
         frameAnimation.springBounciness = 1;
+        frameAnimation.completionBlock = ^(POPAnimation *anim, BOOL finished) {
+            __strong TGCameraController *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (strongSelf.finishedTransitionIn != NULL) {
+                ;strongSelf.finishedTransitionIn();
+            }
+        };
         [_previewView pop_addAnimation:frameAnimation forKey:@"frame"];
         
         POPSpringAnimation *cornersFrameAnimation = [POPSpringAnimation animationWithPropertyNamed:kPOPViewFrame];
@@ -2292,6 +2301,9 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
             __strong TGCameraController *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
+            
+            if (strongSelf.finishedTransitionOut != nil)
+                strongSelf.finishedTransitionOut();
             
             [strongSelf dismiss];
         }];
@@ -2371,13 +2383,13 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 {
     self.view.userInteractionEnabled = false;
     
-    const CGFloat minVelocity = 2000.0f;
+    const CGFloat minVelocity = 4000.0f;
     if (ABS(velocity) < minVelocity)
         velocity = (velocity < 0.0f ? -1.0f : 1.0f) * minVelocity;
     CGFloat distance = (velocity < FLT_EPSILON ? -1.0f : 1.0f) * self.view.frame.size.height;
     CGRect targetFrame = (CGRect){{_previewView.frame.origin.x, distance}, _previewView.frame.size};
     
-    [UIView animateWithDuration:ABS(distance / velocity) animations:^
+    [UIView animateWithDuration:ABS(distance / velocity) delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:^
     {
         _previewView.frame = targetFrame;
         _cornersView.frame = targetFrame;

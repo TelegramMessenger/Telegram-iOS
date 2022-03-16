@@ -527,7 +527,7 @@ final class WebSearchVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 switch fetchStatus {
                     case .Local:
                         videoNode.togglePlayPause()
-                    case .Remote:
+                    case .Remote, .Paused:
                         if self.requiresDownload {
                             self.fetchControls?.fetch()
                         } else {

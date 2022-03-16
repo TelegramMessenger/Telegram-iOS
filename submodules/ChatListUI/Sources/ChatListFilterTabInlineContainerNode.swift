@@ -35,9 +35,9 @@ private final class ItemNodeDeleteButtonNode: HighlightableButtonNode {
             self.theme = theme
             self.contentImageNode.image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(theme.rootController.navigationBar.clearButtonBackgroundColor.cgColor)
+                context.setFillColor(UIColor(rgb: 0xbbbbbb).cgColor)
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                context.setStrokeColor(theme.rootController.navigationBar.clearButtonForegroundColor.cgColor)
+                context.setStrokeColor(UIColor(rgb: 0xffffff).cgColor)
                 context.setLineWidth(1.5)
                 context.setLineCap(.round)
                 context.move(to: CGPoint(x: 6.38, y: 6.38))
@@ -581,15 +581,9 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
                 self.itemsBackgroundView.effect = UIBlurEffect(style: .light)
             }
             
-            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: presentationData.theme.rootController.tabBar.backgroundColor)
+            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: UIColor(rgb: 0xf1f1f1))
             
-            let selectedFilterColor: UIColor
-            if presentationData.theme.rootController.keyboardColor == .dark {
-                selectedFilterColor = presentationData.theme.list.itemAccentColor
-            } else {
-                selectedFilterColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
-            }
-            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: selectedFilterColor)
+            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: UIColor(rgb: 0xbbbbbb))
         }
         
         if isReordering {

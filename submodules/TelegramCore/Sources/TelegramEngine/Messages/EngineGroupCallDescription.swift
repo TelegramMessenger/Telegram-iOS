@@ -6,19 +6,22 @@ public final class EngineGroupCallDescription {
     public let title: String?
     public let scheduleTimestamp: Int32?
     public let subscribedToScheduled: Bool
+    public let isStream: Bool?
 
     public init(
         id: Int64,
         accessHash: Int64,
         title: String?,
         scheduleTimestamp: Int32?,
-        subscribedToScheduled: Bool
+        subscribedToScheduled: Bool,
+        isStream: Bool?
     ) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
         self.scheduleTimestamp = scheduleTimestamp
         self.subscribedToScheduled = subscribedToScheduled
+        self.isStream = isStream
     }
 }
 
@@ -29,7 +32,8 @@ public extension EngineGroupCallDescription {
             accessHash: activeCall.accessHash,
             title: activeCall.title,
             scheduleTimestamp: activeCall.scheduleTimestamp,
-            subscribedToScheduled: activeCall.subscribedToScheduled
+            subscribedToScheduled: activeCall.subscribedToScheduled,
+            isStream: activeCall.isStream
         )
     }
 }

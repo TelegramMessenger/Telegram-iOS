@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -21,13 +22,6 @@ import GridMessageSelectionNode
 import AppBundle
 import Markdown
 import WallpaperBackgroundNode
-import SwiftSignalKit
-
-
-
-
-
-
 // MARK: Nicegram Imports
 import OverlayStatusController
 import PresentationDataUtils
@@ -38,9 +32,6 @@ import NGUI
 import NGWebUtils
 import SettingsUI
 import TelegramCore
-import SwiftSignalKit
-
-
 import NaturalLanguage
 //
 
@@ -51,6 +42,8 @@ func detectedLanguage(for string: String) -> String? {
     guard let languageCode = recognizer.dominantLanguage?.rawValue else { return nil }
     return languageCode
 }
+import ChatPresentationInterfaceState
+import ChatMessageBackground
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -830,6 +823,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
+    func animateContentFromGroupedMediaInput(transition: CombinedTransition) -> [CGRect] {
+        self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        
+        var rects: [CGRect] = []
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageMediaBubbleContentNode {
+                rects.append(contentNode.frame.offsetBy(dx: -self.clippingNode.frame.minX, dy: 0.0))
+            }
+        }
+        return rects
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -875,7 +880,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     return .waitForSingleTap
                 }
                 if let forwardInfoNode = strongSelf.forwardInfoNode, forwardInfoNode.frame.contains(point) {
-                    return .waitForSingleTap
+                    if forwardInfoNode.hasAction(at: strongSelf.view.convert(point, to: forwardInfoNode.view)) {
+                        return .fail
+                    } else {
+                        return .waitForSingleTap
+                    }
                 }
                 for contentNode in strongSelf.contentNodes {
                     let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
@@ -1200,9 +1209,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         } else if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == item.message.id {
             needsShareButton = false
-            if !needTrButton {
-                allowFullWidth = true
-            }
+            allowFullWidth = true
         } else if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
             needsShareButton = false
         } else if item.message.id.peerId == item.context.account.peerId {

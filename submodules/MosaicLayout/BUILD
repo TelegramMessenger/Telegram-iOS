@@ -9,6 +9,9 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
+    deps = [
+        "//submodules/Display:Display",
+    ],
     visibility = [
         "//visibility:public",
     ],

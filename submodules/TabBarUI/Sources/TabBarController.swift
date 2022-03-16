@@ -125,11 +125,11 @@ open class TabBarControllerImpl: ViewController, TabBarController {
     
     private var theme: TabBarControllerTheme
     private var showTabNames: Bool
-    
+
     public init(navigationBarPresentationData: NavigationBarPresentationData, theme: TabBarControllerTheme, showTabNames: Bool) {
         self.theme = theme
         self.showTabNames = showTabNames
-        
+
         super.init(navigationBarPresentationData: nil)
         
         self.scrollToTop = { [weak self] in

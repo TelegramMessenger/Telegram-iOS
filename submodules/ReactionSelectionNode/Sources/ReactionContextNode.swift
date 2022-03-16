@@ -573,7 +573,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         if self.didTriggerExpandedReaction {
             effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * 0.5, dy: -expandedFrame.height * 0.5).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
         } else {
-            effectFrame = expandedFrame.insetBy(dx: -60.0, dy: -60.0)
+            effectFrame = expandedFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
         }
         
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
@@ -635,6 +635,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 targetView.imageView.alpha = 0.0
                 targetView.addSubnode(itemNode)
                 itemNode.frame = targetView.bounds
+                
+                if strongSelf.hapticFeedback == nil {
+                    strongSelf.hapticFeedback = HapticFeedback()
+                }
+                strongSelf.hapticFeedback?.tap()
             })
         })
         
@@ -952,7 +957,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         if isLarge {
             effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * 0.5, dy: -expandedFrame.height * 0.5).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
         } else {
-            effectFrame = expandedFrame.insetBy(dx: -60.0, dy: -60.0)
+            effectFrame = expandedFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
         }
         
         if !self.itemNodeIsEmbedded {

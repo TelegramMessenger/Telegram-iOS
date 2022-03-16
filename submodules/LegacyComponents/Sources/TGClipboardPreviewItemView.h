@@ -2,7 +2,6 @@
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
-@class TGSuggestionContext;
 
 @protocol TGPhotoPaintStickersContext;
 
@@ -20,7 +19,6 @@
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
 @property (nonatomic, copy) void (^selectionChanged)(NSUInteger);

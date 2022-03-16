@@ -4,11 +4,7 @@ import AsyncDisplayKit
 import Postbox
 import SwiftSignalKit
 import Display
-
-public enum ChatHistoryNodeHistoryState: Equatable {
-    case loading
-    case loaded(isEmpty: Bool)
-}
+import ChatPresentationInterfaceState
 
 public enum ChatHistoryNodeLoadState: Equatable {
     public enum EmptyType: Equatable {

@@ -1673,10 +1673,12 @@ public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId
                 switch status {
                 case .Local:
                     return .Local
-                case .Remote:
-                    return .Remote
+                case let .Remote(progress):
+                    return .Remote(progress: progress)
                 case let .Fetching(isActive, progress):
                     return .Fetching(isActive: isActive, progress: max(progress, 0.0))
+                case let .Paused(progress):
+                    return .Paused(progress: progress)
                 }
             }
             |> distinctUntilChanged
@@ -1768,7 +1770,7 @@ public func chatMessageWebFileCancelInteractiveFetch(account: Account, image: Te
     return account.postbox.mediaBox.cancelInteractiveResourceFetch(image.resource)
 }
 
-public func chatWebpageSnippetFileData(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<Data?, NoError> {
+public func chatWebpageSnippetFileData(account: Account, mediaReference: AnyMediaReference, resource: MediaResource) -> Signal<Data?, NoError> {
     let resourceData = account.postbox.mediaBox.resourceData(resource)
         |> map { next in
             return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
@@ -1782,7 +1784,7 @@ public func chatWebpageSnippetFileData(account: Account, fileReference: FileMedi
         }, completed: {
             subscriber.putCompletion()
         }))
-        disposable.add(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource)).start())
+        disposable.add(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: mediaReference.resourceReference(resource)).start())
         return disposable
     }
 }
@@ -1810,8 +1812,8 @@ public func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageM
     }
 }
 
-public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = chatWebpageSnippetFileData(account: account, fileReference: fileReference, resource: representation.resource)
+public func chatWebpageSnippetFile(account: Account, mediaReference: AnyMediaReference, representation: TelegramMediaImageRepresentation) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = chatWebpageSnippetFileData(account: account, mediaReference: mediaReference, resource: representation.resource)
     
     return signal |> map { fullSizeData in
         return { arguments in
@@ -1835,6 +1837,11 @@ public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaRef
                 
                 context.withFlippedContext { c in
                     c.setBlendMode(.copy)
+                    if let emptyColor = arguments.emptyColor {
+                        c.setFillColor(emptyColor.cgColor)
+                        c.fill(arguments.drawingRect)
+                    }
+                    
                     if arguments.boundingSize.width > arguments.imageSize.width || arguments.boundingSize.height > arguments.imageSize.height {
                         c.fill(arguments.drawingRect)
                     }
@@ -1847,7 +1854,21 @@ public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaRef
                 
                 return context
             } else {
-                return nil
+                if let emptyColor = arguments.emptyColor {
+                    let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                    
+                    context.withFlippedContext { c in
+                        c.setBlendMode(.copy)
+                        c.setFillColor(emptyColor.cgColor)
+                        c.fill(arguments.drawingRect)
+                    }
+                    
+                    addCorners(context, arguments: arguments)
+                    
+                    return context
+                } else {
+                    return nil
+                }
             }
         }
     }

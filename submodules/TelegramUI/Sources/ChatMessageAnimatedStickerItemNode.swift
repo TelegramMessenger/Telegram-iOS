@@ -26,6 +26,7 @@ import WallpaperBackgroundNode
 import LocalMediaResources
 import AppBundle
 import LottieMeshSwift
+import ChatPresentationInterfaceState
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -440,7 +441,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 self.animationNode = animationNode
             }
         } else {
-            let animationNode = AnimatedStickerNode()
+            let animationNode = AnimatedStickerNode(useMetalCache: item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers)
             animationNode.started = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.imageNode.alpha = 0.0
@@ -1585,7 +1586,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
 
-        if #available(iOS 13.0, *), item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: file.resource) {
+        if #available(iOS 13.0, *), !"".isEmpty, item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: file.resource) {
             var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
             if let current = self.overlayMeshAnimationNode {
                 overlayMeshAnimationNode = current

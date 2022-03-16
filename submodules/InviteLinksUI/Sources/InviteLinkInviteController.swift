@@ -201,6 +201,7 @@ public final class InviteLinkInviteController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = Node(context: self.context, presentationData: self.presentationData, peerId: self.peerId, controller: self)
     }
+
     private var didAppearOnce: Bool = false
     private var isDismissed: Bool = false
     public override func viewDidAppear(_ animated: Bool) {

@@ -39,6 +39,8 @@ private func render(width: Int, height: Int, bytesPerRow: Int, data: Data, type:
                     }
                     memcpy(pixelData, bytes, data.count)
                 }
+            case .dct:
+                break
         }
     })
 

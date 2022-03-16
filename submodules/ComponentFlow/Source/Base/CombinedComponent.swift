@@ -175,6 +175,7 @@ public final class _UpdatedChildComponent {
 
     var _removed: Bool = false
     var _position: CGPoint?
+    var _scale: CGFloat?
     var _opacity: CGFloat?
     var _cornerRadius: CGFloat?
     var _clipsToBounds: Bool?
@@ -239,6 +240,11 @@ public final class _UpdatedChildComponent {
         return self
     }
 
+    @discardableResult public func scale(_ scale: CGFloat) -> _UpdatedChildComponent {
+        self._scale = scale
+        return self
+    }
+    
     @discardableResult public func opacity(_ opacity: CGFloat) -> _UpdatedChildComponent {
         self._opacity = opacity
         return self
@@ -469,6 +475,7 @@ private class _AnyCombinedComponentContext {
                 } else {
                     let gestureInstance = gesture.create()
                     self.gestures[gesture.id.id] = gestureInstance
+                    self.view.isUserInteractionEnabled = true
                     self.view.addGestureRecognizer(gestureInstance)
                 }
             }
@@ -610,7 +617,7 @@ public extension CombinedComponent {
         return UIView()
     }
 
-    func update(view: View, availableSize: CGSize, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    func update(view: View, availableSize: CGSize, state: State, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         let context = view.getCombinedComponentContext(Self.self)
         
         let storedBody: Body
@@ -683,7 +690,13 @@ public extension CombinedComponent {
 
                         view.insertSubview(updatedChild.view, at: index)
 
-                        updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
+                        if let scale = updatedChild._scale {
+                            updatedChild.view.bounds = CGRect(origin: CGPoint(), size: updatedChild.size)
+                            updatedChild.view.center = updatedChild._position ?? CGPoint()
+                            updatedChild.view.transform = CGAffineTransform(scaleX: scale, y: scale)
+                        } else {
+                            updatedChild.view.frame = updatedChild.size.centered(around: updatedChild._position ?? CGPoint())
+                        }
                         updatedChild.view.alpha = updatedChild._opacity ?? 1.0
                         updatedChild.view.clipsToBounds = updatedChild._clipsToBounds ?? false
                         updatedChild.view.layer.cornerRadius = updatedChild._cornerRadius ?? 0.0
@@ -809,5 +822,9 @@ public extension CombinedComponent {
 
     static func Guide() -> _ChildComponentGuide {
         return _ChildComponentGuide()
+    }
+    
+    static func StoredActionSlot<Arguments>(_ argumentsType: Arguments.Type) -> ActionSlot<Arguments> {
+        return ActionSlot<Arguments>()
     }
 }

@@ -144,12 +144,12 @@ public final class VoiceChatJoinScreen: ViewController {
                         defaultJoinAsPeerId = cachedData.callJoinPeerId
                     }
                     
-                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled)
+                    let activeCall = CachedChannelData.ActiveCall(id: call.info.id, accessHash: call.info.accessHash, title: call.info.title, scheduleTimestamp: call.info.scheduleTimestamp, subscribedToScheduled: call.info.subscribedToScheduled, isStream: call.info.isStream)
                     if availablePeers.count > 0 && defaultJoinAsPeerId == nil {
                         strongSelf.dismiss()
                         strongSelf.join(activeCall)
                     } else {
-                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount)
+                        strongSelf.controllerNode.setPeer(call: activeCall, peer: peer, title: call.info.title, memberCount: call.info.participantCount, isStream: call.info.isStream)
                     }
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -632,7 +632,7 @@ public final class VoiceChatJoinScreen: ViewController {
             }))
         }
         
-        func setPeer(call: CachedChannelData.ActiveCall, peer: Peer, title: String?, memberCount: Int) {
+        func setPeer(call: CachedChannelData.ActiveCall, peer: Peer, title: String?, memberCount: Int, isStream: Bool) {
             self.call = call
             
             let transition = ContainedViewLayoutTransition.animated(duration: 0.22, curve: .easeInOut)
@@ -643,7 +643,7 @@ public final class VoiceChatJoinScreen: ViewController {
             self.actionButtonNode.isEnabled = true
             self.actionButtonNode.setTitle(self.asSpeaker ? self.presentationData.strings.Invitation_JoinVoiceChatAsSpeaker : self.presentationData.strings.Invitation_JoinVoiceChatAsListener, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.standardActionTextColor, for: .normal)
             
-            self.transitionToContentNode(VoiceChatPreviewContentNode(context: self.context, peer: peer, title: title, memberCount: memberCount, theme: self.presentationData.theme, strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder))
+            self.transitionToContentNode(VoiceChatPreviewContentNode(context: self.context, peer: peer, title: title, memberCount: memberCount, isStream: isStream, theme: self.presentationData.theme, strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder))
         }
     }
 }
@@ -657,7 +657,7 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
     private let titleNode: ImmediateTextNode
     private let countNode: ImmediateTextNode
     
-    init(context: AccountContext, peer: Peer, title: String?, memberCount: Int, theme: PresentationTheme, strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) {
+    init(context: AccountContext, peer: Peer, title: String?, memberCount: Int, isStream: Bool, theme: PresentationTheme, strings: PresentationStrings, displayOrder: PresentationPersonNameOrder) {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 4
@@ -677,7 +677,13 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         self.addSubnode(self.countNode)
 
         self.countNode.isHidden = memberCount == 0
-        self.countNode.attributedText = NSAttributedString(string: memberCount == 0 ? "" : strings.VoiceChat_Panel_Members(Int32(memberCount)), font: Font.regular(16.0), textColor: theme.actionSheet.secondaryTextColor)
+        let text: String
+        if isStream {
+            text = memberCount == 0 ? "" : strings.LiveStream_ViewerCount(Int32(memberCount))
+        } else {
+            text = memberCount == 0 ? "" : strings.VoiceChat_Panel_Members(Int32(memberCount))
+        }
+        self.countNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: theme.actionSheet.secondaryTextColor)
     }
     
     func activate() {

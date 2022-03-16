@@ -5,6 +5,7 @@ import Display
 import AsyncDisplayKit
 import YuvConversion
 import MediaResources
+import AnimationCompression
 
 private let sharedQueue = Queue()
 
@@ -72,17 +73,18 @@ public final class AnimatedStickerFrame {
     let index: Int
     let isLastFrame: Bool
     let totalFrames: Int
+    let multiplyAlpha: Bool
     
-    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, index: Int, isLastFrame: Bool, totalFrames: Int) {
+    init(data: Data, type: AnimationRendererFrameType, width: Int, height: Int, bytesPerRow: Int, index: Int, isLastFrame: Bool, totalFrames: Int, multiplyAlpha: Bool = false) {
         self.data = data
         self.type = type
         self.width = width
         self.height = height
-        assert(bytesPerRow > 0)
         self.bytesPerRow = bytesPerRow
         self.index = index
         self.isLastFrame = isLastFrame
         self.totalFrames = totalFrames
+        self.multiplyAlpha = multiplyAlpha
     }
 }
 
@@ -169,7 +171,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var directData: (Data, String, Int, Int, String?, EmojiFitzModifier?, Bool)?
     private var cachedData: (Data, Bool, EmojiFitzModifier?)?
     
-    private var renderer: (AnimationRenderer & ASDisplayNode)?
+    private let useMetalCache: Bool
+    private var renderer: AnimationRendererPool.Holder?
     
     public var isPlaying: Bool = false
     private var currentLoopCount: Int = 0
@@ -206,9 +209,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var overlayColor: (UIColor?, Bool)? = nil
     private var size: CGSize?
     
-    override public init() {
+    public init(useMetalCache: Bool = false) {
         self.queue = sharedQueue
         self.eventsNode = AnimatedStickerNodeDisplayEvents()
+        
+        self.useMetalCache = useMetalCache
         
         super.init()
         
@@ -227,30 +232,42 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.timer.swap(nil)?.invalidate()
     }
     
+    private static let hardwareRendererPool = AnimationRendererPool(generate: {
+        if #available(iOS 10.0, *) {
+            return CompressedAnimationRenderer()
+        } else {
+            return SoftwareAnimationRenderer()
+        }
+    })
+    
+    private static let softwareRendererPool = AnimationRendererPool(generate: {
+        return SoftwareAnimationRenderer()
+    })
+    
     private weak var nodeToCopyFrameFrom: AnimatedStickerNode?
     override public func didLoad() {
         super.didLoad()
         
-        #if targetEnvironment(simulator)
-        self.renderer = SoftwareAnimationRenderer()
-        #else
-        self.renderer = SoftwareAnimationRenderer()
-        //self.renderer = MetalAnimationRenderer()
-        #endif
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: self.size ?? self.bounds.size)
-        if let contents = self.nodeToCopyFrameFrom?.renderer?.contents {
-            self.renderer?.contents = contents
+        if #available(iOS 10.0, *), (self.useMetalCache/* || "".isEmpty*/) {
+            self.renderer = AnimatedStickerNode.hardwareRendererPool.take()
+        } else {
+            self.renderer = AnimatedStickerNode.softwareRendererPool.take()
+            if let contents = self.nodeToCopyFrameFrom?.renderer?.renderer.contents {
+                self.renderer?.renderer.contents = contents
+            }
         }
+        
+        self.renderer?.renderer.frame = CGRect(origin: CGPoint(), size: self.size ?? self.bounds.size)
         if let (overlayColor, replace) = self.overlayColor {
-            self.renderer?.setOverlayColor(overlayColor, replace: replace, animated: false)
+            self.renderer?.renderer.setOverlayColor(overlayColor, replace: replace, animated: false)
         }
         self.nodeToCopyFrameFrom = nil
-        self.addSubnode(self.renderer!)
+        self.addSubnode(self.renderer!.renderer)
     }
     
     public func cloneCurrentFrame(from otherNode: AnimatedStickerNode?) {
-        if let renderer = self.renderer {
-            if let contents = otherNode?.renderer?.contents {
+        if let renderer = self.renderer?.renderer as? SoftwareAnimationRenderer, let otherRenderer = otherNode?.renderer?.renderer as? SoftwareAnimationRenderer {
+            if let contents = otherRenderer.contents {
                 renderer.contents = contents
             }
         } else {
@@ -375,6 +392,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             let queue = self.queue
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
+            let useMetalCache = self.useMetalCache
             self.queue.async { [weak self] in
                 var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
                 if maybeFrameSource == nil {
@@ -383,7 +401,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         if directData.6 {
                             maybeFrameSource = VideoStickerDirectFrameSource(queue: queue, path: directData.1, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                         } else {
-                            maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
+                            maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5)
                         }
                     } else if let (cachedData, cachedDataComplete, _) = cachedData {
                         if #available(iOS 9.0, *) {
@@ -422,7 +440,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                                 return
                             }
                             
-                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                            strongSelf.renderer?.renderer.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -480,6 +498,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             let queue = self.queue
             let timerHolder = self.timer
             let frameSourceHolder = self.frameSource
+            let useMetalCache = self.useMetalCache
             self.queue.async { [weak self] in
                 var maybeFrameSource: AnimatedStickerFrameSource?
                 let notifyUpdated: (() -> Void)? = nil
@@ -487,7 +506,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     if directData.6 {
                         maybeFrameSource = VideoStickerDirectFrameSource(queue: queue, path: directData.1, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                     } else {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5)
                     }
                 } else if let (cachedData, cachedDataComplete, _) = cachedData {
                     if #available(iOS 9.0, *) {
@@ -524,10 +543,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             guard let strongSelf = self else {
                                 return
                             }
-
-                            assert(frame.bytesPerRow != 0)
                             
-                            strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                            strongSelf.renderer?.renderer.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -599,6 +616,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         let queue = self.queue
         let frameSourceHolder = self.frameSource
         let timerHolder = self.timer
+        let useMetalCache = self.useMetalCache
         self.queue.async { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource? = frameSourceHolder.with { $0 }?.syncWith { $0 }.value
             if case .timestamp = position {
@@ -607,7 +625,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     if directData.6 {
                         maybeFrameSource = VideoStickerDirectFrameSource(queue: queue, path: directData.1, width: directData.2, height: directData.3, cachePathPrefix: directData.4)
                     } else {
-                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, fitzModifier: directData.5)
+                        maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3, cachePathPrefix: directData.4, useMetalCache: useMetalCache, fitzModifier: directData.5)
                     }
                     if case .end = position {
                         maybeFrameSource?.skipToEnd()
@@ -679,7 +697,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         return
                     }
                     
-                    strongSelf.renderer?.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, completion: {
+                    strongSelf.renderer?.renderer.render(queue: strongSelf.queue, width: frame.width, height: frame.height, bytesPerRow: frame.bytesPerRow, data: frame.data, type: frame.type, mulAlpha: frame.multiplyAlpha, completion: {
                         guard let strongSelf = self else {
                             return
                         }
@@ -709,11 +727,11 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     public func updateLayout(size: CGSize) {
         self.size = size
-        self.renderer?.frame = CGRect(origin: CGPoint(), size: size)
+        self.renderer?.renderer.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
         self.overlayColor = (color, replace)
-        self.renderer?.setOverlayColor(color, replace: replace, animated: animated)
+        self.renderer?.renderer.setOverlayColor(color, replace: replace, animated: animated)
     }
 }

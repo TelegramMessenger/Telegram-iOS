@@ -531,6 +531,9 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 {
     TGDispatchOnMainThread(^
     {
+        if (!_subscribedForCameraChanges) {
+            return;
+        }
         if ([keyPath isEqualToString:PGCameraAdjustingFocusKey])
         {
             bool adjustingFocus = [[change objectForKey:NSKeyValueChangeNewKey] isEqualToNumber:@YES];

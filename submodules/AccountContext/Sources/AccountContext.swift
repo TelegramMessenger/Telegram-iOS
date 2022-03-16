@@ -501,6 +501,7 @@ public final class ContactSelectionControllerParams {
 public enum ChatListSearchFilter: Equatable {
     case chats
     case media
+    case downloads
     case links
     case files
     case music
@@ -514,14 +515,16 @@ public enum ChatListSearchFilter: Equatable {
                 return 0
             case .media:
                 return 1
-            case .links:
+            case .downloads:
                 return 2
-            case .files:
+            case .links:
                 return 3
-            case .music:
+            case .files:
                 return 4
-            case .voice:
+            case .music:
                 return 5
+            case .voice:
+                return 6
             case let .peer(peerId, _, _, _):
                 return peerId.id._internalGetInt64Value()
             case let .date(_, date, _):
@@ -616,6 +619,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController
     func makePrivacyAndSecurityController(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
+    func openStorageUsage(context: AccountContext)
     func openLocationScreen(context: AccountContext, messageId: MessageId, navigationController: NavigationController)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: EnginePeer.Id, messageIds: Set<EngineMessage.Id>) -> Signal<ChatAvailableMessageActions, NoError>
