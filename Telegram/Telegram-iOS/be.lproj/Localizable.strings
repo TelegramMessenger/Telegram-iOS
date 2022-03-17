@@ -9,3 +9,11 @@
 "PasscodeSettings.AllFakePasscodesWillBeDeleted" = "Усе несапраўдныя кады доступу будць выдалены. Жадаеце працягнуць?";
 
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
+
+"PasscodeSettings.BadAttempts" = "Няўдалыя спробы ўвода кода блакіроўкі";
+"PasscodeSettings.BadAttempts.Help" = "Паглядзіце ўсе няўдалыя спробы ўводу кода блакіроўкі.";
+"PasscodeSettings.BadAttempts.AppLogin" = "Разблакіроўка дадатка";
+"PasscodeSettings.BadAttempts.SettingsLogin" = "Уваход у налады кода блакіроўкі";
+"PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
+"PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
+"PasscodeSettings.BadAttempts.ClearConfiramtion" = "Ачысціць няўдалыя спробы разблакіроўкі?";

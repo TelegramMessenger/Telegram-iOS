@@ -177,6 +177,8 @@ public final class PasscodeEntryController: ViewController {
             } else {
                 strongSelf.appLockContext.failedUnlockAttempt()
                 strongSelf.controllerNode.animateError()
+                
+                addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
             }
         }
         self.controllerNode.requestBiometrics = { [weak self] in
@@ -289,4 +291,14 @@ public final class PasscodeEntryController: ViewController {
             strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
         }
     }
+}
+
+public func addBadPasscodeAttempt(accountManager: AccountManager<TelegramAccountManagerTypes>, bpa: BadPasscodeAttempt) {
+    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: accountManager, { passcodeSettings in
+        var badPasscodeAttempts = passcodeSettings.badPasscodeAttempts
+        let removeBeforeDate = CFAbsoluteTimeGetCurrent() - 30 * 24 * 60 * 60 // remove records older than 30 days
+        badPasscodeAttempts.removeAll(where: { $0.date < removeBeforeDate })
+        badPasscodeAttempts.append(bpa)
+        return passcodeSettings.withUpdatedBadPasscodeAttempts(badPasscodeAttempts)
+    }).start()
 }

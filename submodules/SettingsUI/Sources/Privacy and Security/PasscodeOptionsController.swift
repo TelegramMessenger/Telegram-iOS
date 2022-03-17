@@ -23,14 +23,16 @@ private final class PasscodeOptionsControllerArguments {
     let changeTouchId: (Bool) -> Void
     let changeFakePasscode: (Int) -> Void
     let addFakePasscode: () -> Void
+    let openBadPasscodeAttempts: () -> Void
     
-    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, changeFakePasscode: @escaping (Int) -> Void, addFakePasscode: @escaping () -> Void) {
+    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, changeFakePasscode: @escaping (Int) -> Void, addFakePasscode: @escaping () -> Void, openBadPasscodeAttempts: @escaping () -> Void) {
         self.turnPasscodeOff = turnPasscodeOff
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout
         self.changeTouchId = changeTouchId
         self.changeFakePasscode = changeFakePasscode
         self.addFakePasscode = addFakePasscode
+        self.openBadPasscodeAttempts = openBadPasscodeAttempts
     }
 }
 
@@ -38,6 +40,7 @@ private enum PasscodeOptionsSection: Int32 {
     case setting
     case options
     case partisan
+    case partisan_badPasscodeAttempts
 }
 
 private enum PasscodeOptionsEntry: ItemListNodeEntry {
@@ -50,6 +53,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
         case changeFakePasscode(Int)
         case addFakePasscode
         case fakePasscodeInfo
+        case badPasscodeAttempts
+        case badPasscodeAttemptsInfo
 
         private var order: Int32 {
             switch self {
@@ -69,6 +74,10 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                     return 6
                 case .fakePasscodeInfo:
                     return 7
+                case .badPasscodeAttempts:
+                    return 8
+                case .badPasscodeAttemptsInfo:
+                    return 9
             }
         }
 
@@ -93,6 +102,9 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     case addFakePasscode(PresentationTheme, String)
     case fakePasscodeInfo(PresentationTheme, String)
     
+    case badPasscodeAttempts(PresentationTheme, String, Int)
+    case badPasscodeAttemptsInfo(PresentationTheme, String)
+    
     var section: ItemListSectionId {
         switch self {
             case .togglePasscode, .changePasscode, .settingInfo:
@@ -101,6 +113,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return PasscodeOptionsSection.options.rawValue
             case .changeFakePasscode, .addFakePasscode, .fakePasscodeInfo:
                 return PasscodeOptionsSection.partisan.rawValue
+            case .badPasscodeAttempts, .badPasscodeAttemptsInfo:
+                return PasscodeOptionsSection.partisan_badPasscodeAttempts.rawValue
         }
     }
     
@@ -122,6 +136,10 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return .addFakePasscode
             case .fakePasscodeInfo:
                 return .fakePasscodeInfo
+            case .badPasscodeAttempts:
+                return .badPasscodeAttempts
+            case .badPasscodeAttemptsInfo:
+                return .badPasscodeAttemptsInfo
         }
     }
     
@@ -175,6 +193,18 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .badPasscodeAttempts(lhsTheme, lhsText, lhsValue):
+                if case let .badPasscodeAttempts(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .badPasscodeAttemptsInfo(lhsTheme, lhsText):
+                if case let .badPasscodeAttemptsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -214,6 +244,12 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                     arguments.addFakePasscode()
                 })
             case let .fakePasscodeInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+            case let .badPasscodeAttempts(_, title, value):
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, enabled: value > 0, label: "\(value)", sectionId: self.section, style: .blocks, action: {
+                    arguments.openBadPasscodeAttempts()
+                })
+            case let .badPasscodeAttemptsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -295,6 +331,9 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
             }
             entries.append(.addFakePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_AddFakePasscode))
             entries.append(.fakePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeHelp))
+            
+            entries.append(.badPasscodeAttempts(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts, passcodeOptionsData.presentationSettings.badPasscodeAttempts.count))
+            entries.append(.badPasscodeAttemptsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_BadAttempts_Help))
     }
     
     return entries
@@ -492,6 +531,21 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     }
             }
         }
+    }, openBadPasscodeAttempts: {
+        let bpaController = BadPasscodeAttemptsController(context: context)
+        bpaController.clear = {
+            let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedBadPasscodeAttempts([]))))
+                
+                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                    return current.withUpdatedBadPasscodeAttempts([])
+                }).start()
+            })
+            
+            popControllerImpl?()
+        }
+        
+        pushControllerImpl?(bpaController)
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get()) |> deliverOnMainQueue
@@ -560,6 +614,8 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
                 let succeed = challenge.check(passcode: passcode) { code in normalizeArabicNumeralString(code, type: .western) } == .full // TODO allow proceed and sync the logic with Android
                 if succeed {
                     completion(true)
+                } else {
+                    addBadPasscodeAttempt(accountManager: context.sharedContext.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.PasscodeSettingsType, isFakePasscode: false))
                 }
                 return succeed
             }
