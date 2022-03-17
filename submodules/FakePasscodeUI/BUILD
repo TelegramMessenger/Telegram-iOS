@@ -20,6 +20,7 @@ swift_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/PasscodeUI:PasscodeUI",
         "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
+        "//submodules/AvatarNode:AvatarNode",
     ],
     visibility = [
         "//visibility:public",

@@ -22,6 +22,24 @@ public struct FakePasscodeAccountActionSettings: Codable, Equatable {
     }
 }
 
+public struct FakePasscodeSmsActionSettings: Codable, Equatable {
+    public init() {
+
+    }
+
+    public init(from decoder: Decoder) throws {
+        let _ = try decoder.container(keyedBy: StringCodingKey.self)
+
+        // TODO Implement
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var _ = encoder.container(keyedBy: StringCodingKey.self)
+
+        // TODO Implement
+    }
+}
+
 
 public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably replace with some PartisanSettings structure, and put [FakePasscodeSettings] under it because PostboxDecoder cannot decode Arrays directly and we need some structure to hold it
     public var settings: [FakePasscodeSettings]
@@ -54,32 +72,32 @@ public struct FakePasscodeSettings: Codable, Equatable {
     public let clearAfterActivation: Bool
     public let deleteOtherPasscodes: Bool
     public let activationMessage: String?
-    public let badPasscodeActivation: String?
-    public let fakePasscodeSms: Int32
+    public let activationAttempts: Int32
+    public let smsActions: FakePasscodeSmsActionSettings?
     public let clearCache: Bool
     public let clearProxies: Bool
-    public let accountAction: FakePasscodeAccountActionSettings?
+    public let accountActions: FakePasscodeAccountActionSettings?
 
     public static var defaultSettings: FakePasscodeSettings {
-        return FakePasscodeSettings(name: "New Fake Passcode", allowLogin: false, clearAfterActivation: false, deleteOtherPasscodes: false, activationMessage: nil, badPasscodeActivation: nil, fakePasscodeSms: 0, clearCache: false, clearProxies: false, accountAction: FakePasscodeAccountActionSettings())
+        return FakePasscodeSettings(name: "New Fake Passcode")
     }
 
     public init(name: String) {
-        self.init(name: name, allowLogin: false, clearAfterActivation: false, deleteOtherPasscodes: false, activationMessage: nil, badPasscodeActivation: nil, fakePasscodeSms: 0, clearCache: false, clearProxies: false, accountAction: FakePasscodeAccountActionSettings())
+        self.init(name: name, allowLogin: false, clearAfterActivation: false, deleteOtherPasscodes: false, activationMessage: nil, activationAttempts: -1, smsActions: FakePasscodeSmsActionSettings(), clearCache: false, clearProxies: false, accountActions: FakePasscodeAccountActionSettings())
     }
 
-    public init(name: String, allowLogin: Bool, clearAfterActivation: Bool, deleteOtherPasscodes: Bool, activationMessage: String?, badPasscodeActivation: String?, fakePasscodeSms: Int32, clearCache: Bool, clearProxies: Bool, accountAction: FakePasscodeAccountActionSettings?) {
+    public init(name: String, allowLogin: Bool, clearAfterActivation: Bool, deleteOtherPasscodes: Bool, activationMessage: String?, activationAttempts: Int32, smsActions: FakePasscodeSmsActionSettings?, clearCache: Bool, clearProxies: Bool, accountActions: FakePasscodeAccountActionSettings?) {
         self.name = name
         // public var passcode: String
         self.allowLogin = allowLogin
         self.clearAfterActivation = clearAfterActivation
         self.deleteOtherPasscodes = deleteOtherPasscodes
         self.activationMessage = activationMessage
-        self.badPasscodeActivation = badPasscodeActivation
-        self.fakePasscodeSms = fakePasscodeSms
+        self.activationAttempts = activationAttempts
+        self.smsActions = smsActions
         self.clearCache = clearCache
         self.clearProxies = clearProxies
-        self.accountAction = accountAction
+        self.accountActions = accountActions
     }
 
     public init(from decoder: Decoder) throws {
@@ -90,11 +108,11 @@ public struct FakePasscodeSettings: Codable, Equatable {
         self.clearAfterActivation = (try container.decode(Int32.self, forKey: "caa")) != 0
         self.deleteOtherPasscodes = (try container.decode(Int32.self, forKey: "dop")) != 0
         self.activationMessage = (try container.decodeIfPresent(String.self, forKey: "am"))
-        self.badPasscodeActivation = (try container.decodeIfPresent(String.self, forKey: "bpa"))
-        self.fakePasscodeSms = try container.decode(Int32.self, forKey: "fps")
+        self.activationAttempts = try container.decode(Int32.self, forKey: "bpa")
+        self.smsActions = try container.decodeIfPresent(FakePasscodeSmsActionSettings.self, forKey: "fps")
         self.clearCache = (try container.decode(Int32.self, forKey: "cc")) != 0
         self.clearProxies = (try container.decode(Int32.self, forKey: "cp")) != 0
-        self.accountAction = try container.decodeIfPresent(FakePasscodeAccountActionSettings.self, forKey: "aa")
+        self.accountActions = try container.decodeIfPresent(FakePasscodeAccountActionSettings.self, forKey: "aa")
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -105,23 +123,55 @@ public struct FakePasscodeSettings: Codable, Equatable {
         try container.encode((self.clearAfterActivation ? 1 : 0) as Int32, forKey: "caa")
         try container.encode((self.deleteOtherPasscodes ? 1 : 0) as Int32, forKey: "dop")
         try container.encodeIfPresent(self.activationMessage, forKey: "am")
-        try container.encodeIfPresent(self.badPasscodeActivation, forKey: "bpa")
-        try container.encode(self.fakePasscodeSms, forKey: "fps")
+        try container.encodeIfPresent(self.activationAttempts, forKey: "bpa")
+        try container.encodeIfPresent(self.smsActions, forKey: "fps")
         try container.encode((self.clearCache ? 1 : 0) as Int32, forKey: "cc")
         try container.encode((self.clearProxies ? 1 : 0) as Int32, forKey: "cp")
-        try container.encodeIfPresent(self.accountAction, forKey: "aa")
+        try container.encodeIfPresent(self.accountActions, forKey: "aa")
     }
 
     public static func ==(lhs: FakePasscodeSettings, rhs: FakePasscodeSettings) -> Bool {
-        return lhs.name == rhs.name && lhs.allowLogin == rhs.allowLogin && lhs.clearAfterActivation == rhs.clearAfterActivation && lhs.deleteOtherPasscodes == rhs.deleteOtherPasscodes && lhs.activationMessage == rhs.activationMessage && lhs.badPasscodeActivation == rhs.badPasscodeActivation && lhs.fakePasscodeSms == rhs.fakePasscodeSms && lhs.clearCache == rhs.clearCache && lhs.clearProxies == rhs.clearProxies && lhs.accountAction == rhs.accountAction
+        return lhs.name == rhs.name && lhs.allowLogin == rhs.allowLogin && lhs.clearAfterActivation == rhs.clearAfterActivation && lhs.deleteOtherPasscodes == rhs.deleteOtherPasscodes && lhs.activationMessage == rhs.activationMessage && lhs.activationAttempts == rhs.activationAttempts && lhs.smsActions == rhs.smsActions && lhs.clearCache == rhs.clearCache && lhs.clearProxies == rhs.clearProxies && lhs.accountActions == rhs.accountActions
     }
 
     public func withUpdatedName(_ name: String) -> FakePasscodeSettings {
-        return FakePasscodeSettings(name: name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, badPasscodeActivation: self.badPasscodeActivation, fakePasscodeSms: self.fakePasscodeSms, clearCache: self.clearCache, clearProxies: self.clearProxies, accountAction: self.accountAction)
+        return FakePasscodeSettings(name: name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
     }
 
     public func withUpdatedAllowLogin(_ allowLogin: Bool) -> FakePasscodeSettings {
-        return FakePasscodeSettings(name: self.name, allowLogin: allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, badPasscodeActivation: self.badPasscodeActivation, fakePasscodeSms: self.fakePasscodeSms, clearCache: self.clearCache, clearProxies: self.clearProxies, accountAction: self.accountAction)
+        return FakePasscodeSettings(name: self.name, allowLogin: allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedClearAfterActivation(_ clearAfterActivation: Bool) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedDeleteOtherPasscodes(_ deleteOtherPasscodes: Bool) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedActivationMessage(_ activationMessage: String) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedBadPasscodeActivation(_ activationAttempts: Int32) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedSms(_ smsActions: FakePasscodeSmsActionSettings?) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: self.deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedClearCache(_ clearCache: Bool) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: clearCache, clearProxies: self.clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedClearProxies(_ clearProxies: Bool) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: clearProxies, accountActions: self.accountActions)
+    }
+
+    public func withUpdatedAccountActions(_ clearProxies: Bool) -> FakePasscodeSettings {
+        return FakePasscodeSettings(name: self.name, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: accountActions)
     }
 }
 
