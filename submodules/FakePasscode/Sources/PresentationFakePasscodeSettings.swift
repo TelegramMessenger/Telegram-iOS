@@ -1,3 +1,0 @@
-import Foundation
-
-// filter logic

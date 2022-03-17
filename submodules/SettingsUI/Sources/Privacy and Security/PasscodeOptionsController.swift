@@ -15,14 +15,16 @@ import LocalAuth
 import PasscodeUI
 import TelegramStringFormatting
 import TelegramIntents
+import FakePasscode
 import FakePasscodeUI
+
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void
     let changePasscode: () -> Void
     let changePasscodeTimeout: () -> Void
     let changeTouchId: (Bool) -> Void
-    let changeFakePasscode: (Int) -> Void
+    let openFakePasscodeOptions: (Int) -> Void
     let addFakePasscode: () -> Void
     let openBadPasscodeAttempts: () -> Void
     
@@ -31,7 +33,7 @@ private final class PasscodeOptionsControllerArguments {
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout
         self.changeTouchId = changeTouchId
-        self.changeFakePasscode = changeFakePasscode
+        self.openFakePasscodeOptions = openFakePasscodeOptions
         self.addFakePasscode = addFakePasscode
         self.openBadPasscodeAttempts = openBadPasscodeAttempts
     }
@@ -51,7 +53,7 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
         case settingInfo
         case autoLock
         case touchId
-        case changeFakePasscode(Int)
+        case openFakePasscodeOptions(Int)
         case addFakePasscode
         case fakePasscodeInfo
         case badPasscodeAttempts
@@ -69,7 +71,7 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                     return 3
                 case .touchId:
                     return 4
-                case .changeFakePasscode(_):
+                case .openFakePasscodeOptions(_):
                     return 5
                 case .addFakePasscode:
                     return 6
@@ -84,7 +86,7 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
 
         static func <(lsid: StableId, rsid: StableId) -> Bool {
             switch (lsid, rsid) {
-            case (.changeFakePasscode(let lidx), .changeFakePasscode(let ridx)):
+            case (.openFakePasscodeOptions(let lidx), .openFakePasscodeOptions(let ridx)):
                 return lidx < ridx
             default:
                 return lsid.order < rsid.order
@@ -99,7 +101,7 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
     case autoLock(PresentationTheme, String, String)
     case touchId(PresentationTheme, String, Bool)
 
-    case changeFakePasscode(PresentationTheme, String, Int)
+    case openFakePasscodeOptions(PresentationTheme, String, Int)
     case addFakePasscode(PresentationTheme, String)
     case fakePasscodeInfo(PresentationTheme, String)
     
@@ -112,7 +114,7 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return PasscodeOptionsSection.setting.rawValue
             case .autoLock, .touchId:
                 return PasscodeOptionsSection.options.rawValue
-            case .changeFakePasscode, .addFakePasscode, .fakePasscodeInfo:
+            case .openFakePasscodeOptions, .addFakePasscode, .fakePasscodeInfo:
                 return PasscodeOptionsSection.partisan.rawValue
             case .badPasscodeAttempts, .badPasscodeAttemptsInfo:
                 return PasscodeOptionsSection.partisan_badPasscodeAttempts.rawValue
@@ -131,8 +133,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return .autoLock
             case .touchId:
                 return .touchId
-            case .changeFakePasscode(_, _, let index):
-                return .changeFakePasscode(index)
+            case .openFakePasscodeOptions(_, _, let index):
+                return .openFakePasscodeOptions(index)
             case .addFakePasscode:
                 return .addFakePasscode
             case .fakePasscodeInfo:
@@ -176,8 +178,8 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .changeFakePasscode(lhsTheme, lhsText, lhsIdx):
-                if case let .changeFakePasscode(rhsTheme, rhsText, rhsIdx) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsIdx == rhsIdx {
+            case let .openFakePasscodeOptions(lhsTheme, lhsText, lhsIdx):
+                if case let .openFakePasscodeOptions(rhsTheme, rhsText, rhsIdx) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsIdx == rhsIdx {
                     return true
                 } else {
                     return false
@@ -236,9 +238,9 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.changeTouchId(value)
                 })
-            case let .changeFakePasscode(_, title, index):
+            case let .openFakePasscodeOptions(_, title, index):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    arguments.changeFakePasscode(index)
+                    arguments.openFakePasscodeOptions(index)
                 })
             case let .addFakePasscode(_, title):
                 return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -328,7 +330,7 @@ private func passcodeOptionsControllerEntries(presentationData: PresentationData
             }
 
             for (index, _) in fakeCodes.enumerated() {
-                entries.append(.changeFakePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscode(index + 1).string, index))
+                entries.append(.openFakePasscodeOptions(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscode(index + 1).string, index))
             }
             entries.append(.addFakePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_AddFakePasscode))
             entries.append(.fakePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeHelp))
@@ -436,6 +438,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                             passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData)))
                         })
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.fakePasscodeSettings, { entry in
+                            return PreferencesEntry(FakePasscodeSettingsHolder.defaultSettings)
+                        })
                     }) |> deliverOnMainQueue).start(next: { _ in
                     }, error: { _ in
                     }, completed: {
@@ -502,17 +507,18 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 return current.withUpdatedEnableBiometrics(value)
             }).start()
         })
-    }, changeFakePasscode: { index in
+    }, openFakePasscodeOptions: { index in
         let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index)
         pushControllerImpl?(fakeOptionsController)
     }, addFakePasscode: {
-        fakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { oldChallengeData, newPasscode, numerical in
+        fakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
             switch oldChallengeData {
                 case .none:
                     assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
                     return oldChallengeData
                 case .numericalPassword(let code, var fakes), .plaintextPassword(let code, var fakes):
                     fakes.append(newPasscode)
+
                     let updatedData : PostboxAccessChallengeData
                     if numerical {
                         updatedData = PostboxAccessChallengeData.numericalPassword(value: code, fakeValue: fakes)
@@ -522,6 +528,16 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
 
                     let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                         passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData)))
+                    })
+
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.fakePasscodeSettings, { entry in
+                        var settings : [FakePasscodeSettings]
+                        if let holder = entry?.get(FakePasscodeSettingsHolder.self) {
+                            settings = holder.settings
+                        } else {
+                            settings = []
+                        }
+                        return PreferencesEntry(FakePasscodeSettingsHolder(settings: settings + [FakePasscodeSettings(name: presentationData.strings.PasscodeSettings_FakePasscode(fakes.count).string)]))
                     })
 
                     return updatedData
