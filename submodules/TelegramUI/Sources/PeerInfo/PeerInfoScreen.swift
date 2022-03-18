@@ -63,7 +63,7 @@ import PasswordSetupUI
 import CalendarMessageScreen
 import TooltipUI
 import QrCodeUI
-import Translate
+import TranslateUI
 import ChatPresentationInterfaceState
 import CreateExternalMediaStreamScreen
 

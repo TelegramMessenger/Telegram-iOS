@@ -16,7 +16,7 @@ import OpenInExternalAppUI
 import LocationUI
 import UndoUI
 import ContextUI
-import Translate
+import TranslateUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var controller: InstantPageController?

@@ -5,6 +5,7 @@ public final class Button: Component {
     public let content: AnyComponent<Empty>
     public let minSize: CGSize?
     public let tag: AnyObject?
+    public let automaticHighlight: Bool
     public let action: () -> Void
 
     convenience public init(
@@ -15,6 +16,7 @@ public final class Button: Component {
             content: content,
             minSize: nil,
             tag: nil,
+            automaticHighlight: true,
             action: action
         )
     }
@@ -23,11 +25,13 @@ public final class Button: Component {
         content: AnyComponent<Empty>,
         minSize: CGSize?,
         tag: AnyObject? = nil,
+        automaticHighlight: Bool = true,
         action: @escaping () -> Void
     ) {
         self.content = content
         self.minSize = nil
         self.tag = tag
+        self.automaticHighlight = automaticHighlight
         self.action = action
     }
     
@@ -36,6 +40,7 @@ public final class Button: Component {
             content: self.content,
             minSize: minSize,
             tag: self.tag,
+            automaticHighlight: self.automaticHighlight,
             action: self.action
         )
     }
@@ -45,6 +50,7 @@ public final class Button: Component {
             content: self.content,
             minSize: self.minSize,
             tag: tag,
+            automaticHighlight: self.automaticHighlight,
             action: self.action
         )
     }
@@ -59,6 +65,9 @@ public final class Button: Component {
         if lhs.tag !== rhs.tag {
             return false
         }
+        if lhs.automaticHighlight != rhs.automaticHighlight {
+            return false
+        }
         return true
     }
     
@@ -68,6 +77,9 @@ public final class Button: Component {
         private var component: Button?
         private var currentIsHighlighted: Bool = false {
             didSet {
+                guard let component = self.component, component.automaticHighlight else {
+                    return
+                }
                 if self.currentIsHighlighted != oldValue {
                     self.contentView.alpha = self.currentIsHighlighted ? 0.6 : 1.0
                 }

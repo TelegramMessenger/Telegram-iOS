@@ -60,7 +60,7 @@ import InviteLinksUI
 import Markdown
 import TelegramPermissionsUI
 import Speak
-import Translate
+import TranslateUI
 import UniversalMediaPlayer
 import WallpaperBackgroundNode
 import ChatListUI
@@ -2927,7 +2927,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     window.rootViewController?.present(controller, animated: true)
                 }
             case .speak:
-                speakText(text.string)
+                let _ = speakText(text.string)
             case .translate:
                 let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
                 |> take(1)
@@ -2941,7 +2941,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
                     
-                    translateText(context: context, text: text.string, fromLang: language)
+                    let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
+                    controller.pushController = { [weak self] c in
+                        self?.effectiveNavigationController?._keepModalDismissProgress = true
+                        self?.push(c)
+                    }
+                    controller.presentController = { [weak self] c in
+                        self?.present(c, in: .window(.root))
+                    }
+                    strongSelf.present(controller, in: .window(.root))
                 })
             }
         }, displayImportedMessageTooltip: { [weak self] _ in
@@ -10699,7 +10707,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if inputIsActive {
-            Queue.mainQueue().after(0.1, {
+            Queue.mainQueue().after(0.15, {
                 present()
             })
         } else {

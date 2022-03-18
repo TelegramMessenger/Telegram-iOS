@@ -434,9 +434,9 @@ public class AttachmentController: ViewController {
             self.animating = true
             if case .regular = layout.metrics.widthClass {
                 self.layer.allowsGroupOpacity = true
-                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
-                    let _ = self.container.dismiss(transition: .immediate, completion: completion)
-                    self.animating = false
+                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+                    let _ = self?.container.dismiss(transition: .immediate, completion: completion)
+                    self?.animating = false
                 })
             } else {
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
@@ -513,7 +513,6 @@ public class AttachmentController: ViewController {
                 self.wrapperNode.view.mask = nil
             }
             
-            
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
             let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
             var panelTransition = transition
@@ -581,6 +580,10 @@ public class AttachmentController: ViewController {
         }
     }
     
+    deinit {
+        print()
+    }
+    
     public required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
@@ -594,11 +597,15 @@ public class AttachmentController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    public func _dismiss() {
+        super.dismiss(animated: false, completion: {})
+    }
+    
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         if flag {
-            self.node.animateOut(completion: {
-                super.dismiss(animated: false, completion: {})
+            self.node.animateOut(completion: { [weak self] in
+                self?._dismiss()
                 completion?()
             })
         } else {

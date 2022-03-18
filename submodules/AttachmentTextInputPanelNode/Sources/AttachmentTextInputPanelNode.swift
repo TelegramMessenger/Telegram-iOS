@@ -1143,7 +1143,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        speakText(text)
+        let _ = speakText(text)
         
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()
