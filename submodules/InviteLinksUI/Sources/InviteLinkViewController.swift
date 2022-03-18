@@ -473,7 +473,7 @@ public final class InviteLinkViewController: ViewController {
         
             self.interaction = InviteLinkViewInteraction(context: context, openPeer: { [weak self] peerId in
                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), keepStack: .always))
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), keepStack: .always))
                 }
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link

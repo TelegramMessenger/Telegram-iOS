@@ -490,7 +490,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
         }))
     }, contextAction: { peer, node, gesture in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
         chatController.canReadHistory.set(false)
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: peerNearbyContextMenuItems(context: context, peerId: peer.id, present: { c in
             presentControllerImpl?(c, nil)
@@ -604,7 +604,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     }
     navigateToChatImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
         }
     }
     pushControllerImpl = { [weak controller] c in

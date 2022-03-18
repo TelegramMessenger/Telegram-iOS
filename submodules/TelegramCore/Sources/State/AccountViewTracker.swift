@@ -183,18 +183,20 @@ private func fetchPoll(account: Account, messageId: MessageId) -> Signal<Void, N
 private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocationInput, additionalData: [AdditionalMessageHistoryViewData]) -> [AdditionalMessageHistoryViewData] {
     var result = additionalData
     switch chatLocation {
-        case let .peer(peerId):
-            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
-                    result.append(.peerChatState(peerId))
-                }
+    case let .peer(peerId):
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
+                result.append(.peerChatState(peerId))
             }
-        case let .external(peerId, _, _):
-            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
-                    result.append(.peerChatState(peerId))
-                }
+        }
+    case let .thread(peerId, _, _):
+        if peerId.namespace == Namespaces.Peer.CloudChannel {
+            if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
+                result.append(.peerChatState(peerId))
             }
+        }
+    case .feed:
+        break
     }
     return result
 }
@@ -1474,7 +1476,7 @@ public final class AccountViewTracker {
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    } else if case let .external(peerId, _, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
+                    } else if case let .thread(peerId, _, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     }
                 }
@@ -1485,27 +1487,31 @@ public final class AccountViewTracker {
                     strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
                     strongSelf.updatePolls(viewId: viewId, messageIds: [], messages: [:])
                     switch chatLocation {
-                        case let .peer(peerId):
-                            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
-                            }
-                        case let .external(peerId, _, _):
-                            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
-                            }
+                    case let .peer(peerId):
+                        if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                        }
+                    case let .thread(peerId, _, _):
+                        if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
+                        }
+                    case .feed:
+                        break
                     }
                 }
             }
         })
         
-        let peerId: PeerId
+        let peerId: PeerId?
         switch chatLocation {
         case let .peer(peerIdValue):
             peerId = peerIdValue
-        case let .external(peerIdValue, _, _):
+        case let .thread(peerIdValue, _, _):
             peerId = peerIdValue
+        case .feed:
+            peerId = nil
         }
-        if peerId.namespace == Namespaces.Peer.CloudChannel {
+        if let peerId = peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
             return Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> { subscriber in
                 let combinedDisposable = MetaDisposable()
                 self.queue.async {

@@ -251,7 +251,7 @@ private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId
     let loadedOnce = Atomic<Bool>(value: false)
     return combineLatest(queue: .mainQueue(), tags.map { tagAndKey -> Signal<(PeerInfoPaneKey, PaneState), NoError> in
         let (tag, key) = tagAndKey
-        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 20, clipHoles: false, fixedCombinedReadStates: nil, tagMask: tag)
+        return context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId), index: .upperBound, anchorIndex: .upperBound, count: 20, clipHoles: false, fixedCombinedReadStates: nil, tagMask: tag)
         |> map { (view, _, _) -> (PeerInfoPaneKey, PaneState) in
             if view.entries.isEmpty {
                 if view.isLoading {

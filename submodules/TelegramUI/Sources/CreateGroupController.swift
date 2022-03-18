@@ -510,7 +510,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             dismissImpl?()
                         })
                     } else {
-                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(peerId))
+                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: peerId))
                         replaceControllerImpl?(controller)
                     }
                 }

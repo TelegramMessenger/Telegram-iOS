@@ -452,7 +452,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.presentationInterfaceState = presentationInterfaceState
 
         var hasSpoilers = true
-        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+        if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
             hasSpoilers = false
         }
         self.inputMenu = TextInputMenu(hasSpoilers: hasSpoilers)

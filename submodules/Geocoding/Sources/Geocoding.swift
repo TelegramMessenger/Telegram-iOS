@@ -71,7 +71,12 @@ public func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signa
         let geocoder = CLGeocoder()
         geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), completionHandler: { placemarks, _ in
             if let placemarks = placemarks, let placemark = placemarks.first {
-                let result = ReverseGeocodedPlacemark(street: placemark.thoroughfare, city: placemark.locality, country: placemark.country)
+                let result: ReverseGeocodedPlacemark
+                if placemark.thoroughfare == nil && placemark.locality == nil && placemark.country == nil {
+                    result = ReverseGeocodedPlacemark(street: placemark.name, city: nil, country: nil)
+                } else {
+                    result = ReverseGeocodedPlacemark(street: placemark.thoroughfare, city: placemark.locality, country: placemark.country)
+                }
                 subscriber.putNext(result)
                 subscriber.putCompletion()
             } else {

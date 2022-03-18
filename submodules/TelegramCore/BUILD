@@ -20,6 +20,7 @@ swift_library(
         "//submodules/NetworkLogging:NetworkLogging",
         "//submodules/Reachability:Reachability",
         "//submodules/ManagedFile:ManagedFile",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

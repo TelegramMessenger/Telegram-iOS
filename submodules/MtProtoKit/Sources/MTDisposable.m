@@ -31,7 +31,7 @@
         {
             if (block != nil)
             {
-                __strong id strongBlock = (__bridge_transfer id)block;
+                __unused __strong id strongBlock = (__bridge_transfer id)block;
                 strongBlock = nil;
             }
         }

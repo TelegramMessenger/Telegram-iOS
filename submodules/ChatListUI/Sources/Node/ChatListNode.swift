@@ -1938,7 +1938,7 @@ public final class ChatListNode: ListView {
             }
             switch chatListView.filteredEntries[entryCount - i - 1] {
                 case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _, _, _, _, _):
-                    if interaction.highlightedChatLocation?.location == ChatLocation.peer(peer.peerId) {
+                    if interaction.highlightedChatLocation?.location == ChatLocation.peer(id: peer.peerId) {
                         current = (index, peer.peer!, entryCount - i - 1)
                         break outer
                     }

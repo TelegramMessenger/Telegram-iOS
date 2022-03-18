@@ -42,7 +42,7 @@ public enum ChatListItemContent {
     public var chatLocation: ChatLocation? {
         switch self {
             case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _):
-                return .peer(peer.peerId)
+                return .peer(id: peer.peerId)
             case .groupReference:
                 return nil
         }

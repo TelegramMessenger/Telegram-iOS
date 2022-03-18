@@ -151,14 +151,14 @@ final class ChatInfoTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let updatedButtons: [ChatInfoTitleButton]
         switch interfaceState.chatLocation {
-            case .peer:
-                if let peer = interfaceState.renderedPeer?.peer {
-                    updatedButtons = peerButtons(peer, interfaceState: interfaceState)
-                } else {
-                    updatedButtons = []
-                }
-            case .replyThread:
+        case .peer:
+            if let peer = interfaceState.renderedPeer?.peer {
+                updatedButtons = peerButtons(peer, interfaceState: interfaceState)
+            } else {
                 updatedButtons = []
+            }
+        case .replyThread, .feed:
+            updatedButtons = []
         }
         
         var buttonsUpdated = false

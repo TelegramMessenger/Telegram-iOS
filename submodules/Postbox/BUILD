@@ -16,6 +16,7 @@ swift_library(
         "//submodules/MurMurHash32:MurMurHash32",
         "//submodules/StringTransliteration:StringTransliteration",
         "//submodules/ManagedFile:ManagedFile",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

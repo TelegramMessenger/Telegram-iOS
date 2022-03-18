@@ -559,14 +559,14 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
             case let .index(index):
                 switch self.messagesLocation {
                     case let .messages(chatLocation, tagMask, _):
-                        let inputIndex: Signal<MessageIndex, NoError>
+                        let inputIndex: Signal<MessageIndex?, NoError>
                         let looping = self.looping
                         switch self.order {
                             case .regular, .reversed:
                                 inputIndex = .single(index)
                             case .random:
                                 var playbackStack = self.playbackStack
-                                inputIndex = self.context.account.postbox.transaction { transaction -> MessageIndex in
+                                inputIndex = self.context.account.postbox.transaction { transaction -> MessageIndex? in
                                     if case let .random(previous) = navigation, previous {
                                         let _ = playbackStack.pop()
                                         while true {
@@ -579,11 +579,19 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                             }
                                         }
                                     }
-                                    return transaction.findRandomMessage(peerId: chatLocation.peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                    
+                                    if let peerId = chatLocation.peerId {
+                                        return transaction.findRandomMessage(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: tagMask, ignoreIds: (playbackStack.ids, playbackStack.set)) ?? index
+                                    } else {
+                                        return nil
+                                    }
                                 }
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
+                            guard let inputIndex = inputIndex else {
+                                return .single(nil)
+                            }
                             return self.context.account.postbox.aroundMessageHistoryViewForLocation(self.context.chatLocationInput(for: chatLocation, contextHolder: self.chatLocationContextHolder ?? Atomic<ChatLocationContextHolder?>(value: nil)), anchor: .index(inputIndex), ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, appendMessagesFromTheSameGroup: false, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition

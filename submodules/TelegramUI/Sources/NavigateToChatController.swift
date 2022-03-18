@@ -136,14 +136,16 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let item = item as? ChatMessageNotificationItem {
                     for message in item.messages {
                         switch params.chatLocation {
-                            case let .peer(peerId):
-                                if message.id.peerId == peerId {
-                                    return true
-                                }
-                            case let .replyThread(replyThreadMessage):
-                                if message.id.peerId == replyThreadMessage.messageId.peerId {
-                                    return true
-                                }
+                        case let .peer(peerId):
+                            if message.id.peerId == peerId {
+                                return true
+                            }
+                        case let .replyThread(replyThreadMessage):
+                            if message.id.peerId == replyThreadMessage.messageId.peerId {
+                                return true
+                            }
+                        case .feed:
+                            break
                         }
                     }
                 }

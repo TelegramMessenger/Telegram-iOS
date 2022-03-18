@@ -1337,10 +1337,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let chatLocation: ChatLocation
         if messages.count > 1 {
             content = .group(messages: messages.map { ($0, true, .none, entryAttributes, nil) })
-            chatLocation = .peer(messages.first!.id.peerId)
+            chatLocation = .peer(id: messages.first!.id.peerId)
         } else {
             content = .message(message: messages.first!, read: true, selection: .none, attributes: entryAttributes, location: nil)
-            chatLocation = .peer(messages.first!.id.peerId)
+            chatLocation = .peer(id: messages.first!.id.peerId)
         }
         
         return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)

@@ -477,11 +477,9 @@ public class ReplyThreadHistoryContext {
             self.impl.with { impl in
                 let stateDisposable = impl.state.get().start(next: { state in
                     subscriber.putNext(MessageHistoryViewExternalInput(
-                        peerId: state.messageId.peerId,
-                        threadId: makeMessageThreadId(state.messageId),
+                        content: .thread(peerId: state.messageId.peerId, id: makeMessageThreadId(state.messageId), holes: state.holeIndices),
                         maxReadIncomingMessageId: state.maxReadIncomingMessageId,
-                        maxReadOutgoingMessageId: state.maxReadOutgoingMessageId,
-                        holes: state.holeIndices
+                        maxReadOutgoingMessageId: state.maxReadOutgoingMessageId
                     ))
                 })
                 disposable.set(stateDisposable)
@@ -804,13 +802,15 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     
                     let testView = transaction.getMessagesHistoryViewState(
                         input: .external(MessageHistoryViewExternalInput(
-                            peerId: commentsPeerId,
-                            threadId: makeMessageThreadId(threadMessageId),
+                            content: .thread(
+                                peerId: commentsPeerId,
+                                id: makeMessageThreadId(threadMessageId),
+                                holes: [
+                                    Namespaces.Message.Cloud: holes
+                                ]
+                            ),
                             maxReadIncomingMessageId: nil,
-                            maxReadOutgoingMessageId: nil,
-                            holes: [
-                                Namespaces.Message.Cloud: holes
-                            ]
+                            maxReadOutgoingMessageId: nil
                         )),
                         ignoreMessagesInTimestampRange: nil,
                         count: 40,

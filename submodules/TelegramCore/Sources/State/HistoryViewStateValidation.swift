@@ -156,7 +156,7 @@ final class HistoryViewStateValidationContexts {
             }
         }
         
-        if let location = location, case let .external(peerId, threadId, _) = location {
+        if let location = location, case let .thread(peerId, threadId, _) = location {
             var rangesToInvalidate: [[MessageId]] = []
             let addToRange: (MessageId, inout [[MessageId]]) -> Void = { id, ranges in
                 if ranges.isEmpty {
