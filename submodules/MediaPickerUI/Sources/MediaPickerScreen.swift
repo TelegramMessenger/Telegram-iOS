@@ -128,6 +128,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     public var presentWebSearch: (MediaGroupsScreen) -> Void = { _ in }
     public var getCaptionPanelView: () -> TGCaptionPanelView? = { return nil }
     
+    private var completed = false
     public var legacyCompletion: (_ signals: [Any], _ silently: Bool, _ scheduleTime: Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void = { _, _, _, _, _ in }
     
     public var requestAttachmentMenuExpansion: () -> Void = { }
@@ -671,10 +672,13 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         }
         
         fileprivate func send(asFile: Bool = false, silently: Bool, scheduleTime: Int32?, animated: Bool, completion: @escaping () -> Void) {
-            self.controller?.dismissAllTooltips()
+            guard let controller = self.controller, !controller.completed else {
+                return
+            }
+            controller.dismissAllTooltips()
             
             var hasHeic = false
-            let allItems = self.controller?.interaction?.selectionState?.selectedItems() ?? []
+            let allItems = controller.interaction?.selectionState?.selectedItems() ?? []
             for item in allItems {
                 if item is TGCameraCapturedVideo {
                 } else if let asset = item as? TGMediaAsset, asset.uniformTypeIdentifier.contains("heic") {
@@ -684,10 +688,11 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             let proceed: (Bool) -> Void = { convertToJpeg in
-                guard let signals = TGMediaAssetsController.resultSignals(for: self.controller?.interaction?.selectionState, editingContext: self.controller?.interaction?.editingState, intent: asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, storeAssets: true, convertToJpeg: convertToJpeg, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: true) else {
+                guard let signals = TGMediaAssetsController.resultSignals(for: controller.interaction?.selectionState, editingContext: controller.interaction?.editingState, intent: asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, storeAssets: true, convertToJpeg: convertToJpeg, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: true) else {
                     return
                 }
-                self.controller?.legacyCompletion(signals, silently, scheduleTime, { [weak self] identifier in
+                controller.completed = true
+                controller.legacyCompletion(signals, silently, scheduleTime, { [weak self] identifier in
                     return !asFile ? self?.getItemSnapshot(identifier) : nil
                 }, { [weak self] in
                     completion()
@@ -696,7 +701,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             if asFile && hasHeic {
-                self.controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.MediaPicker_JpegConversionText, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.MediaPicker_KeepHeic, action: {
+                controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.MediaPicker_JpegConversionText, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.MediaPicker_KeepHeic, action: {
                     proceed(false)
                 }), TextAlertAction(type: .genericAction, title: self.presentationData.strings.MediaPicker_ConvertToJpeg, action: {
                     proceed(true)

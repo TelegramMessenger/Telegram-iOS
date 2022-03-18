@@ -1093,7 +1093,7 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
     }
-    
+        
     public func getChatListNamespaceEntries(groupId: PeerGroupId, namespace: MessageId.Namespace, summaryTag: MessageTags?) -> [ChatListNamespaceEntry] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {

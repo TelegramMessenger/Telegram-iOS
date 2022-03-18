@@ -918,10 +918,19 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             } else {
                 if user.flags.contains(.isSupport) || data.isContact {
                 } else {
-                    items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: user.botInfo != nil ? presentationData.strings.Bot_Stop : presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
-                        interaction.updateBlocked(true)
-                    }))
+                    if user.botInfo == nil {
+                        items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 4, text: presentationData.strings.Conversation_BlockUser, color: .destructive, action: {
+                            interaction.updateBlocked(true)
+                        }))
+                    }
                 }
+            }
+            
+            if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
+                    interaction.openAddBotToGroup()
+                }))
+                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 6, text: presentationData.strings.Bot_AddToChatInfo))
             }
         }
         
@@ -939,12 +948,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     } else if let channel = data.peer as? TelegramChannel {
         let ItemUsername = 1
         let ItemAbout = 2
-        let ItemAdmins = 3
-        let ItemMembers = 4
-        let ItemMemberRequests = 5
-        let ItemBanned = 6
-        let ItemLocationHeader = 7
-        let ItemLocation = 8
+        let ItemLocationHeader = 3
+        let ItemLocation = 4
         
         if let location = (data.cachedData as? CachedChannelData)?.peerGeoLocation {
             items[.groupLocation]!.append(PeerInfoScreenHeaderItem(id: ItemLocationHeader, text: presentationData.strings.GroupInfo_Location.uppercased()))
@@ -1000,37 +1005,6 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
-            }
-            
-            if case .broadcast = channel.info {
-                var canEditMembers = false
-                if channel.hasPermission(.banMembers) {
-                    canEditMembers = true
-                }
-                if canEditMembers {
-                    if channel.adminRights != nil || channel.flags.contains(.isCreator) {
-                        let adminCount = cachedData.participantsSummary.adminCount ?? 0
-                        let memberCount = cachedData.participantsSummary.memberCount ?? 0
-                        let bannedCount = cachedData.participantsSummary.kickedCount ?? 0
-                        
-                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
-                            interaction.openParticipantsSection(.admins)
-                        }))
-                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
-                            interaction.openParticipantsSection(.members)
-                        }))
-                        
-                        if let count = data.requests?.count, count > 0 {
-                            items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
-                                interaction.openParticipantsSection(.memberRequests)
-                            }))
-                        }
-                        
-                        items[.peerInfo]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
-                            interaction.openParticipantsSection(.banned)
-                        }))
-                    }
-                }
             }
         }
     } else if let group = data.peer as? TelegramGroup {
@@ -1143,6 +1117,11 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemDeleteChannel = 6
                 let ItemReactions = 7
                 
+                let ItemAdmins = 8
+                let ItemMembers = 9
+                let ItemMemberRequests = 10
+                let ItemBanned = 11
+                
                 let isCreator = channel.flags.contains(.isCreator)
                 
                 if isCreator {
@@ -1218,6 +1197,44 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         interaction.editingToggleMessageSignatures(value)
                     }))
                     items[.peerSettings]!.append(PeerInfoScreenCommentItem(id: ItemSignMessagesHelp, text: presentationData.strings.Channel_SignMessages_Help))
+                }
+                
+                var canEditMembers = false
+                if channel.hasPermission(.banMembers) {
+                    canEditMembers = true
+                }
+                if canEditMembers {
+                    if channel.adminRights != nil || channel.flags.contains(.isCreator) {
+                        let adminCount: Int32
+                        let memberCount: Int32
+                        let bannedCount: Int32
+                        if let cachedData = data.cachedData as? CachedChannelData {
+                            adminCount = cachedData.participantsSummary.adminCount ?? 0
+                            memberCount = cachedData.participantsSummary.memberCount ?? 0
+                            bannedCount = cachedData.participantsSummary.kickedCount ?? 0
+                        } else {
+                            adminCount = 0
+                            memberCount = 0
+                            bannedCount = 0
+                        }
+                        
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
+                            interaction.openParticipantsSection(.admins)
+                        }))
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                            interaction.openParticipantsSection(.members)
+                        }))
+                        
+                        if let count = data.requests?.count, count > 0 {
+                            items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
+                                interaction.openParticipantsSection(.memberRequests)
+                            }))
+                        }
+                        
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
+                            interaction.openParticipantsSection(.banned)
+                        }))
+                    }
                 }
                 
                 if isCreator {
@@ -2248,6 +2265,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
+        }, openAddToChat: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -3654,15 +3672,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 if let user = peer as? TelegramUser {
-                    if let botInfo = user.botInfo {
-                        if botInfo.flags.contains(.worksWithGroups) {
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_InviteBotToGroup, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: theme.contextMenu.primaryColor)
-                            }, action: { [weak self] _, f in
-                                f(.dismissWithoutContent)
-                                self?.openAddBotToGroup()
-                            })))
-                        }
+                    if let _ = user.botInfo {
                         if user.username != nil {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_ShareBot, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
@@ -3886,6 +3896,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             self.openChatWithMessageSearch()
         case .leave:
             self.openLeavePeer()
+        case .stop:
+            self.updateBlocked(block: true)
         }
     }
     
@@ -4775,7 +4787,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         guard let controller = self.controller else {
             return
         }
-        context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
+        self.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
         }, sendFile: nil,
         sendSticker: nil,
         requestMessageActionUrlAuth: nil,
@@ -6106,7 +6118,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             transition.updateAlpha(node: navigationBar, alpha: 1.0)
         }
     }
-
 
     private weak var mediaGalleryContextMenu: ContextController?
 

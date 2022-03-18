@@ -12,6 +12,7 @@ import UrlEscaping
 import PassportUI
 import UrlHandling
 import OpenInExternalAppUI
+import BrowserUI
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -732,6 +733,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 let _ = (settings
                 |> deliverOnMainQueue).start(next: { settings in
                     if settings.defaultWebBrowser == nil {
+//                        let controller = BrowserScreen(context: context, subject: .webPage(parsedUrl.absoluteString))
+//                        navigationController?.pushViewController(controller)
                         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                             if let window = navigationController?.view.window {
                                 let controller = SFSafariViewController(url: parsedUrl)

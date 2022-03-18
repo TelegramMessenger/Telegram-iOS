@@ -3290,6 +3290,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
+        }, openAddToChat: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            let peerId = strongSelf.presentationInterfaceState.chatLocation.peerId
+            strongSelf.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.effectiveNavigationController, openPeer: { id, navigation in
+            }, sendFile: nil,
+            sendSticker: nil,
+            requestMessageActionUrlAuth: nil,
+            joinVoiceChat: nil,
+            present: { [weak self] c, a in
+                self?.present(c, in: .window(.root), with: a)
+            }, dismissInput: { [weak self] in
+                self?.view.endEditing(true)
+            }, contentContext: nil)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

@@ -292,6 +292,9 @@ public class AttachmentController: ViewController {
         
         func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) -> Bool {
             guard self.currentType != type else {
+                if self.animating {
+                    return false
+                }
                 if let controller = self.currentControllers.last {
                     controller.scrollToTopWithTabBar?()
                     controller.requestAttachmentMenuExpansion()
@@ -356,8 +359,6 @@ public class AttachmentController: ViewController {
             snapshotView.frame = self.container.container.frame
             self.container.clipNode.view.addSubview(snapshotView)
             
-            self.animating = true
-            
             let _ = (controller.ready.get()
             |> filter {
                 $0
@@ -383,13 +384,10 @@ public class AttachmentController: ViewController {
                             strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: targetPosition), to: NSValue(cgPoint: initialPosition), keyPath: "position", duration: 0.4, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, completion: { [weak self] finished in
                                 if finished {
                                     self?.container.clipNode.layer.removeAllAnimations()
-                                    self?.animating = false
                                 }
                             })
                         }
                     })
-                } else {
-                    strongSelf.animating = false
                 }
                 
                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.23, removeOnCompletion: false, completion: { [weak snapshotView] _ in
