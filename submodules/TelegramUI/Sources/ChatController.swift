@@ -3302,7 +3302,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let peerId = strongSelf.presentationInterfaceState.chatLocation.peerId
+            guard let peerId = strongSelf.presentationInterfaceState.chatLocation.peerId else {
+                return
+            }
             strongSelf.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.effectiveNavigationController, openPeer: { id, navigation in
             }, sendFile: nil,
             sendSticker: nil,
