@@ -30,15 +30,16 @@ private func generateInstantVideoBackground(fillColor: UIColor, strokeColor: UIC
 private func generateActionPhotoBackground(fillColor: UIColor, strokeColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 214.0, height: 214.0), rotatedContext: { size, context in
         let lineWidth: CGFloat = 0.5
+        let cornerRadius: CGFloat = 16.0
         
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         context.setFillColor(strokeColor.cgColor)
-        let strokePath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: 15.0)
+        let strokePath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: cornerRadius)
         context.addPath(strokePath.cgPath)
         context.fillPath()
         context.setFillColor(fillColor.cgColor)
-        let fillPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)), cornerRadius: 15.0)
+        let fillPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: lineWidth, y: lineWidth), size: CGSize(width: size.width - lineWidth * 2.0, height: size.height - lineWidth * 2.0)), cornerRadius: cornerRadius)
         context.addPath(fillPath.cgPath)
         context.fillPath()
     })

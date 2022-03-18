@@ -16,7 +16,7 @@ import PresentationDataUtils
 import ImageContentAnalysis
 import TextSelectionNode
 import Speak
-import Translate
+import TranslateUI
 import ShareController
 import UndoUI
 
@@ -352,7 +352,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                             window.rootViewController?.present(controller, animated: true)
                                                         }
                                                     case .speak:
-                                                        speakText(string)
+                                                        let _ = speakText(string)
                                                     case .translate:
                                                         translateText(context: strongSelf.context, text: string)
                                                     }

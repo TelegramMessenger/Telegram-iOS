@@ -10,14 +10,21 @@ import ActivityIndicator
 import ChatListSearchItemNode
 import ShimmerEffect
 
-struct LocalizationListItemEditing: Equatable {
+public struct LocalizationListItemEditing: Equatable {
     let editable: Bool
     let editing: Bool
     let revealed: Bool
     let reorderable: Bool
+    
+    public init(editable: Bool, editing: Bool, revealed: Bool, reorderable: Bool) {
+        self.editable = editable
+        self.editing = editing
+        self.revealed = revealed
+        self.reorderable = reorderable
+    }
 }
 
-class LocalizationListItem: ListViewItem, ItemListItem {
+public class LocalizationListItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let id: String
     let title: String
@@ -26,13 +33,14 @@ class LocalizationListItem: ListViewItem, ItemListItem {
     let activity: Bool
     let loading: Bool
     let editing: LocalizationListItemEditing
-    let sectionId: ItemListSectionId
+    let enabled: Bool
+    public let sectionId: ItemListSectionId
     let alwaysPlain: Bool
     let action: () -> Void
     let setItemWithRevealedOptions: (String?, String?) -> Void
     let removeItem: (String) -> Void
     
-    init(presentationData: ItemListPresentationData, id: String, title: String, subtitle: String, checked: Bool, activity: Bool, loading: Bool, editing: LocalizationListItemEditing, sectionId: ItemListSectionId, alwaysPlain: Bool, action: @escaping () -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) {
+    public init(presentationData: ItemListPresentationData, id: String, title: String, subtitle: String, checked: Bool, activity: Bool, loading: Bool, editing: LocalizationListItemEditing, enabled: Bool = true, sectionId: ItemListSectionId, alwaysPlain: Bool, action: @escaping () -> Void, setItemWithRevealedOptions: @escaping (String?, String?) -> Void, removeItem: @escaping (String) -> Void) {
         self.presentationData = presentationData
         self.id = id
         self.title = title
@@ -41,6 +49,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         self.activity = activity
         self.loading = loading
         self.editing = editing
+        self.enabled = enabled
         self.sectionId = sectionId
         self.alwaysPlain = alwaysPlain
         self.action = action
@@ -48,7 +57,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         self.removeItem = removeItem
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = LocalizationListItemNode()
             var neighbors = itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem)
@@ -68,7 +77,7 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? LocalizationListItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -89,9 +98,9 @@ class LocalizationListItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    public var selectable: Bool = true
     
-    func selected(listView: ListView){
+    public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
         self.action()
     }
