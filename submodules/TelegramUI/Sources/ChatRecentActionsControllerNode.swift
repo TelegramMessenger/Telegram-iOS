@@ -768,7 +768,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), peekData: peekData, animated: true))
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), peekData: peekData, animated: true))
                 } else {
                     if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                         strongSelf.pushController(infoController)
@@ -890,11 +890,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case let .channelMessage(peerId, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
                         }
                    case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(message: replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                         }
                     case let .stickerPack(name):
                         let packReference: StickerPackReference = .name(name)

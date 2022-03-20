@@ -1242,11 +1242,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             switch navigation {
                                 case let .chat(_, subject, peekData):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, peekData: peekData))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: subject, peekData: peekData))
                                     }
                                 case let .withBotStartPayload(botStart):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: botStart, keepStack: .always))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: botStart, keepStack: .always))
                                     }
                                 case .info:
                                     let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)

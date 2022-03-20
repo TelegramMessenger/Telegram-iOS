@@ -766,6 +766,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         
                         if !isBroadcastChannel {
                             hasAvatar = true
+                        } else if case .feed = item.chatLocation {
+                            hasAvatar = true
                         }
                     }
                 } else if incoming {
@@ -790,6 +792,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 } else if incoming {
                     hasAvatar = true
                 }
+            case .feed:
+                hasAvatar = true
             }
             
             if hasAvatar {

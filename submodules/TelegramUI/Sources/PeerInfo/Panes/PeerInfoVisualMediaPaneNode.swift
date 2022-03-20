@@ -1698,7 +1698,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
 
         self.itemGridBinding = SparseItemGridBindingImpl(
             context: context,
-            chatLocation: .peer(peerId),
+            chatLocation: .peer(id: peerId),
             useListItems: useListItems,
             listItemInteraction: listItemInteraction,
             chatControllerInteraction: chatControllerInteraction,

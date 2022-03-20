@@ -66,7 +66,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     
     private func updateFromView() -> Bool {
         let closestHole: MessageOfInterestHole?
-        if let (hole, direction, _) = self.wrappedView.firstHole() {
+        if let (hole, direction, _, _) = self.wrappedView.firstHole() {
             closestHole = MessageOfInterestHole(hole: hole, direction: direction)
         } else {
             closestHole = nil

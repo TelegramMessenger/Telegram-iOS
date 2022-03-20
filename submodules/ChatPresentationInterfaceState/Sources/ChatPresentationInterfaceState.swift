@@ -8,12 +8,14 @@ import AccountContext
 import ChatInterfaceState
 
 public extension ChatLocation {
-    var peerId: PeerId {
+    var peerId: PeerId? {
         switch self {
         case let .peer(peerId):
             return peerId
         case let .replyThread(replyThreadMessage):
             return replyThreadMessage.messageId.peerId
+        case .feed:
+            return nil
         }
     }
 }

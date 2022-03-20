@@ -196,7 +196,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 |> deliverOnMainQueue).start(next: { peerId in
                     if let peerId = peerId, let navigationController = navigationController {
                         dismissImpl?()
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
                     }
                 }))
             })

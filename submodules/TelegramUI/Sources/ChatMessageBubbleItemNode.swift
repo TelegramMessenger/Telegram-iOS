@@ -1043,7 +1043,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var hasAvatar = false
         
         var allowFullWidth = false
-        let chatLocationPeerId: PeerId = item.chatLocation.peerId
+        let chatLocationPeerId: PeerId = item.chatLocation.peerId ?? item.content.firstMessage.id.peerId
         
         do {
             let peerId = chatLocationPeerId
@@ -1107,6 +1107,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     if !isBroadcastChannel {
                         hasAvatar = item.content.firstMessage.effectivelyIncoming(item.context.account.peerId)
+                    } else if case .feed = item.chatLocation {
+                        hasAvatar = true
                     }
                 }
             } else if incoming {

@@ -374,7 +374,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                     }
                                 }, completed: {
                                     if let navigationController = (chatListController?.navigationController as? NavigationController) {
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
                                     }
                                 }))
                                 f(.default)

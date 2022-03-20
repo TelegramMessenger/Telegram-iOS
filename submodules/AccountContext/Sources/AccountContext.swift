@@ -267,8 +267,9 @@ public enum ChatSearchDomain: Equatable {
 }
 
 public enum ChatLocation: Equatable {
-    case peer(PeerId)
-    case replyThread(ChatReplyThreadMessage)
+    case peer(id: PeerId)
+    case replyThread(message: ChatReplyThreadMessage)
+    case feed(id: Int32)
 }
 
 public final class NavigateToChatControllerParams {

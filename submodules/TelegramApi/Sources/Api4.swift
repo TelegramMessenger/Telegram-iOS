@@ -621,6 +621,104 @@ public struct upload {
 }
 }
 public extension Api {
+public struct feed {
+    public enum FeedMessages: TypeConstructorDescription {
+        case feedMessagesNotModified
+        case feedMessages(flags: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, readMaxPosition: Api.FeedPosition?, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .feedMessagesNotModified:
+                    if boxed {
+                        buffer.appendInt32(-619039485)
+                    }
+                    
+                    break
+                case .feedMessages(let flags, let maxPosition, let minPosition, let readMaxPosition, let messages, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-587770695)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {maxPosition!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {minPosition!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {readMaxPosition!.serialize(buffer, true)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .feedMessagesNotModified:
+                return ("feedMessagesNotModified", [])
+                case .feedMessages(let flags, let maxPosition, let minPosition, let readMaxPosition, let messages, let chats, let users):
+                return ("feedMessages", [("flags", flags), ("maxPosition", maxPosition), ("minPosition", minPosition), ("readMaxPosition", readMaxPosition), ("messages", messages), ("chats", chats), ("users", users)])
+    }
+    }
+    
+        public static func parse_feedMessagesNotModified(_ reader: BufferReader) -> FeedMessages? {
+            return Api.feed.FeedMessages.feedMessagesNotModified
+        }
+        public static func parse_feedMessages(_ reader: BufferReader) -> FeedMessages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.FeedPosition?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+            } }
+            var _3: Api.FeedPosition?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+            } }
+            var _4: Api.FeedPosition?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.FeedPosition
+            } }
+            var _5: [Api.Message]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Message.self)
+            }
+            var _6: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _7: [Api.User]?
+            if let _ = reader.readInt32() {
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.feed.FeedMessages.feedMessages(flags: _1!, maxPosition: _2, minPosition: _3, readMaxPosition: _4, messages: _5!, chats: _6!, users: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+}
+public extension Api {
 public struct stickers {
     public enum SuggestedShortName: TypeConstructorDescription {
         case suggestedShortName(shortName: String)
@@ -6860,6 +6958,43 @@ public extension Api {
                         var result: [Api.FileHash]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.FileHash.self)
+                        }
+                        return result
+                    })
+                }
+            }
+            public struct feed {
+                public static func getFeed(flags: Int32, filterId: Int32, offsetPosition: Api.FeedPosition?, addOffset: Int32, limit: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.FeedMessages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2121717715)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(filterId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {offsetPosition!.serialize(buffer, true)}
+                    serializeInt32(addOffset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {maxPosition!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {minPosition!.serialize(buffer, true)}
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "feed.getFeed", parameters: [("flags", flags), ("filterId", filterId), ("offsetPosition", offsetPosition), ("addOffset", addOffset), ("limit", limit), ("maxPosition", maxPosition), ("minPosition", minPosition), ("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.feed.FeedMessages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.feed.FeedMessages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.feed.FeedMessages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func readFeed(filterId: Int32, maxPosition: Api.FeedPosition) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1271479809)
+                    serializeInt32(filterId, buffer: buffer, boxed: false)
+                    maxPosition.serialize(buffer, true)
+                    return (FunctionDescription(name: "feed.readFeed", parameters: [("filterId", filterId), ("maxPosition", maxPosition)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

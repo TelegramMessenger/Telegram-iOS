@@ -112,7 +112,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                             |> deliverOnMainQueue).start(next: { result in
                                 if let navigationController = navigationController {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
                                 }
                                 switch result {
                                     case let .channelParticipant(participant):
@@ -293,10 +293,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         return currentState.withUpdatedComposeInputState(textInputState)
                     })
                     |> deliverOnMainQueue).start(completed: {
-                        navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
+                        navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(id: peerId)))
                     })
                 } else {
-                    navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
+                    navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(id: peerId)))
                 }
             }
             
@@ -524,7 +524,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .joinVoiceChat(peerId, invite):
             dismissInput()
             if let navigationController = navigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), completion: { chatController in
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), completion: { chatController in
                     guard let chatController = chatController as? ChatControllerImpl else {
                         return
                     }

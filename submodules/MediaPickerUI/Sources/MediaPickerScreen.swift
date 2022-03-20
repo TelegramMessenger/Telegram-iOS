@@ -603,7 +603,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             var hasTimer = false
-            if controller.chatLocation?.peerId != controller.context.account.peerId && controller.chatLocation?.peerId.namespace == Namespaces.Peer.CloudUser {
+            if controller.chatLocation?.peerId != controller.context.account.peerId && controller.chatLocation?.peerId?.namespace == Namespaces.Peer.CloudUser {
                 hasTimer = true
             }
             
@@ -642,7 +642,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             var hasTimer = false
-            if controller.chatLocation?.peerId != controller.context.account.peerId && controller.chatLocation?.peerId.namespace == Namespaces.Peer.CloudUser {
+            if controller.chatLocation?.peerId != controller.context.account.peerId && controller.chatLocation?.peerId?.namespace == Namespaces.Peer.CloudUser {
                 hasTimer = true
             }
             

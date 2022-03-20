@@ -259,20 +259,22 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {
-        case .peer:
-            if let channel = peer as? TelegramChannel {
-                if case .member = channel.participationStatus {
-                    canReply = channel.hasPermission(.sendMessages)
-                }
-            } else if let group = peer as? TelegramGroup {
-                if case .Member = group.membership {
-                    canReply = true
-                }
-            } else {
+    case .peer:
+        if let channel = peer as? TelegramChannel {
+            if case .member = channel.participationStatus {
+                canReply = channel.hasPermission(.sendMessages)
+            }
+        } else if let group = peer as? TelegramGroup {
+            if case .Member = group.membership {
                 canReply = true
             }
-        case .replyThread:
+        } else {
             canReply = true
+        }
+    case .replyThread:
+        canReply = true
+    case .feed:
+        canReply = false
     }
     return canReply
 }
@@ -481,29 +483,29 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         canPin = false
     } else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
-            case .peer, .replyThread:
-                if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
-                    if !isAction {
-                        canPin = channel.hasPermission(.pinMessages)
-                    }
-                } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
-                    if !isAction {
-                        switch group.role {
-                            case .creator, .admin:
-                                canPin = true
-                            default:
-                                if let defaultBannedRights = group.defaultBannedRights {
-                                    canPin = !defaultBannedRights.flags.contains(.banPinMessages)
-                                } else {
-                                    canPin = true
-                                }
+        case .peer, .replyThread, .feed:
+            if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
+                if !isAction {
+                    canPin = channel.hasPermission(.pinMessages)
+                }
+            } else if let group = messages[0].peers[messages[0].id.peerId] as? TelegramGroup {
+                if !isAction {
+                    switch group.role {
+                    case .creator, .admin:
+                        canPin = true
+                    default:
+                        if let defaultBannedRights = group.defaultBannedRights {
+                            canPin = !defaultBannedRights.flags.contains(.banPinMessages)
+                        } else {
+                            canPin = true
                         }
                     }
-                } else if let _ = messages[0].peers[messages[0].id.peerId] as? TelegramUser, chatPresentationInterfaceState.explicitelyCanPinMessages {
-                    if !isAction {
-                        canPin = true
-                    }
                 }
+            } else if let _ = messages[0].peers[messages[0].id.peerId] as? TelegramUser, chatPresentationInterfaceState.explicitelyCanPinMessages {
+                if !isAction {
+                    canPin = true
+                }
+            }
         }
     } else {
         canReply = false

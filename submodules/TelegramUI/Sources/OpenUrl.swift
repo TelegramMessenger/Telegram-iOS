@@ -201,12 +201,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         case let .chat(_, subject, peekData):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, peekData: peekData))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), subject: subject, peekData: peekData))
                             }
                         case let .withBotStartPayload(payload):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: payload))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), botStart: payload))
                             }
                         default:
                             break

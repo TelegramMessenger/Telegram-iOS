@@ -274,13 +274,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             let avatarInset: CGFloat
             var hasAvatar = false
             
-            let messagePeerId: PeerId
-            switch item.chatLocation {
-            case let .peer(peerId):
-                messagePeerId = peerId
-            case let .replyThread(replyThreadMessage):
-                messagePeerId = replyThreadMessage.messageId.peerId
-            }
+            let messagePeerId = item.chatLocation.peerId ?? item.content.firstMessage.id.peerId
             
             do {
                 if messagePeerId != item.context.account.peerId {
@@ -295,6 +289,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         }
                         
                         if !isBroadcastChannel {
+                            hasAvatar = true
+                        } else if case .feed = item.chatLocation {
                             hasAvatar = true
                         }
                     }
