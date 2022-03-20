@@ -266,6 +266,7 @@ swift_library(
         "//submodules/ChatMessageBackground:ChatMessageBackground",
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
         "//submodules/TranslateUI:TranslateUI",
+        "//submodules/BrowserUI:BrowserUI",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
