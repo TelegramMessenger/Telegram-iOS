@@ -354,7 +354,10 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                     case .speak:
                                                         let _ = speakText(string)
                                                     case .translate:
-                                                        translateText(context: strongSelf.context, text: string)
+                                                        if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
+                                                            let controller = TranslateScreen(context: strongSelf.context, text: string, fromLanguage: nil)
+                                                            parentController.present(controller, in: .window(.root))
+                                                        }
                                                     }
                                                 })
                                                 recognizedContentNode.barcodeAction = { [weak self] payload, rect in

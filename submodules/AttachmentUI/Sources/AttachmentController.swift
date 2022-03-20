@@ -279,6 +279,9 @@ public class AttachmentController: ViewController {
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard !self.isDismissing else {
+                return
+            }
             if case .ended = recognizer.state {
                 if let controller = self.currentControllers.last {
                     controller.requestDismiss(completion: { [weak self] in
