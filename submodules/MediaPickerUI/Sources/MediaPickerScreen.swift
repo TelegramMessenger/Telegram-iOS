@@ -247,7 +247,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             self.gridNode.visibleContentOffsetChanged = { [weak self] _ in
                 self?.updateNavigation(transition: .immediate)
-                self?.updateScrollingArea()
             }
             
             self.hiddenMediaDisposable = (self.hiddenMediaId.get()
@@ -405,14 +404,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             guard let (layout, _) = self.validLayout else {
                 return
             }
-            
+
             var tag: Int32?
             self.gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? MediaPickerGridItemNode {
                     tag = itemNode.tag
                 }
             }
-            
+
             let dateString = tag.flatMap { self.scrollerTextForTag(tag: $0) }
             if self.currentScrollingTag != tag {
                 self.currentScrollingTag = tag
@@ -420,7 +419,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     self.scrollingArea.feedbackTap()
                 }
             }
-        
+
             self.scrollingArea.update(
                 containerSize: layout.size,
                 containerInsets: self.gridNode.gridLayout.insets,
