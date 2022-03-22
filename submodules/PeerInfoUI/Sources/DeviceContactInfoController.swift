@@ -1072,7 +1072,8 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
             if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName, _) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
                 var urls = filteredData.urls
                 if let createForPeer = createForPeer {
-                    let appProfile = DeviceContactUrlData(appProfile: createForPeer.id)
+                    let addressName: String = createForPeer.addressName ?? ""
+                    let appProfile = DeviceContactUrlData(addressName: addressName)
                     var found = false
                     for url in urls {
                         if url.label == appProfile.label && url.value == appProfile.value {
