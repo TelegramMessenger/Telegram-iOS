@@ -15,6 +15,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/ImageCompression:ImageCompression",
         "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/ImageResize:ImageResize",
     ],
     visibility = [
         "//visibility:public",
