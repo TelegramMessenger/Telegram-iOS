@@ -364,6 +364,10 @@ UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size) {
     int32_t width;
     int32_t height;
     
+    if (data.length < 4 * 2) {
+        return nil;
+    }
+    
     [data getBytes:&width range:NSMakeRange(ptr, sizeof(width))];
     ptr += sizeof(width);
     [data getBytes:&height range:NSMakeRange(ptr, sizeof(height))];
