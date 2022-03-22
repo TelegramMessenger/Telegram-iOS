@@ -588,50 +588,31 @@ public class TranslateScreen: ViewController {
         
         private var isDismissing = false
         func animateIn() {
-            guard let (layout, _) = self.currentLayout else {
-                return
-            }
+            ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
             
-            if case .regular = layout.metrics.widthClass {
-                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 0.1)
-            } else {
-                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
-                
-                let targetPosition = self.containerView.center
-                let startPosition = targetPosition.offsetBy(dx: 0.0, dy: self.bounds.height)
-                
-                self.containerView.center = startPosition
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
-                transition.animateView(allowUserInteraction: true, {
-                    self.containerView.center = targetPosition
-                }, completion: { _ in
-                })
-            }
+            let targetPosition = self.containerView.center
+            let startPosition = targetPosition.offsetBy(dx: 0.0, dy: self.bounds.height)
+            
+            self.containerView.center = startPosition
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
+            transition.animateView(allowUserInteraction: true, {
+                self.containerView.center = targetPosition
+            }, completion: { _ in
+            })
         }
         
         func animateOut(completion: @escaping () -> Void = {}) {
             self.isDismissing = true
             
-            guard let (layout, _) = self.currentLayout else {
-                return
-            }
+            let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+            positionTransition.updatePosition(layer: self.containerView.layer, position: CGPoint(x: self.containerView.center.x, y: self.bounds.height + self.containerView.bounds.height / 2.0), completion: { [weak self] _ in
+                self?.controller?.dismiss(animated: false, completion: completion)
+            })
+            let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+            alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
             
-            if case .regular = layout.metrics.widthClass {
-                self.layer.allowsGroupOpacity = true
-                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
-                    self?.controller?.dismiss(animated: false, completion: completion)
-                })
-            } else {
-                let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                positionTransition.updatePosition(layer: self.containerView.layer, position: CGPoint(x: self.containerView.center.x, y: self.bounds.height + self.containerView.bounds.height / 2.0), completion: { [weak self] _ in
-                    self?.controller?.dismiss(animated: false, completion: completion)
-                })
-                let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
-                
-                if !self.temporaryDismiss {
-                    self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
-                }
+            if !self.temporaryDismiss {
+                self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
             }
         }
                 
@@ -668,6 +649,7 @@ public class TranslateScreen: ViewController {
             
             let clipFrame: CGRect
             if layout.metrics.widthClass == .compact {
+                self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.25)
                 if isLandscape {
                     self.containerView.layer.cornerRadius = 0.0
                 } else {
@@ -701,13 +683,19 @@ public class TranslateScreen: ViewController {
                     clipFrame = CGRect(x: containerFrame.minX, y: containerFrame.minY, width: containerFrame.width, height: containerFrame.height)
                 }
             } else {
-                let unscaledFrame = CGRect(origin: CGPoint(), size: layout.size)
-                clipFrame = unscaledFrame
+                self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
+                self.containerView.layer.cornerRadius = 10.0
+                
+                let verticalInset: CGFloat = 44.0
+                
+                let maxSide = max(layout.size.width, layout.size.height)
+                let minSide = min(layout.size.width, layout.size.height)
+                let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
+                clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
             }
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
-            transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
             
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: 0.0,
@@ -729,6 +717,7 @@ public class TranslateScreen: ViewController {
                 forceUpdate: true,
                 containerSize: CGSize(width: clipFrame.size.width, height: 10000.0)
             )
+            transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
             
             self.scrollView.contentSize = contentSize
         }
@@ -892,7 +881,7 @@ public class TranslateScreen: ViewController {
                     let topInset: CGFloat = edgeTopInset
 
                     var dismissing = false
-                    if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 600.0) {
+                    if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
                         self.controller?.dismiss(animated: true, completion: nil)
                         dismissing = true
                     } else if self.isExpanded {
@@ -981,7 +970,11 @@ public class TranslateScreen: ViewController {
     
     public convenience init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let toLanguage = toLanguage ?? presentationData.strings.baseLanguageCode
+        var toLanguage = toLanguage ?? presentationData.strings.baseLanguageCode
+        
+        if toLanguage == fromLanguage {
+            toLanguage = "en"
+        }
         
         var copyTranslationImpl: ((String) -> Void)?
         var changeLanguageImpl: ((String, String, @escaping (String, String) -> Void) -> Void)?
@@ -1084,11 +1077,22 @@ public class TranslateScreen: ViewController {
     override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         var navigationLayout = self.navigationLayout(layout: layout)
         var navigationFrame = navigationLayout.navigationFrame
+        
+        var layout = layout
+        if case .regular = layout.metrics.widthClass {
+            let verticalInset: CGFloat = 44.0
+            let maxSide = max(layout.size.width, layout.size.height)
+            let minSide = min(layout.size.width, layout.size.height)
+            let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
+            let clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
+            navigationFrame.size.width = clipFrame.width
+            layout.size = clipFrame.size
+        }
+        
         navigationFrame.size.height = 56.0
         navigationLayout.navigationFrame = navigationFrame
         navigationLayout.defaultContentHeight = 56.0
         
-        var layout = layout
         layout.statusBarHeight = nil
         
         self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, transition: transition)
