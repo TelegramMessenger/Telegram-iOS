@@ -21,8 +21,6 @@ import SparseItemGrid
 import UndoUI
 import PresentationDataUtils
 
-let overflowInset: CGFloat = 0.0
-
 final class MediaPickerInteraction {
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void
     let openSelectedMedia: (TGMediaSelectableItem, UIImage?) -> Void
@@ -248,7 +246,6 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             self.gridNode.visibleContentOffsetChanged = { [weak self] _ in
                 self?.updateNavigation(transition: .immediate)
-                self?.updateScrollingArea()
             }
             
             self.hiddenMediaDisposable = (self.hiddenMediaId.get()
@@ -325,7 +322,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             
             if self.controller?.collection != nil {
                 self.gridNode.view.interactiveTransitionGestureRecognizerTest = { point -> Bool in
-                    return point.x > 44.0 + overflowInset
+                    return point.x > 44.0
                 }
             }
             
@@ -380,7 +377,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }
             if self.controller?.collection != nil {
-                self.selectionGesture?.sideInset = 44.0 + overflowInset
+                self.selectionGesture?.sideInset = 44.0
             }
         }
         
@@ -406,14 +403,14 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             guard let (layout, _) = self.validLayout else {
                 return
             }
-            
+
             var tag: Int32?
             self.gridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? MediaPickerGridItemNode {
                     tag = itemNode.tag
                 }
             }
-            
+
             let dateString = tag.flatMap { self.scrollerTextForTag(tag: $0) }
             if self.currentScrollingTag != tag {
                 self.currentScrollingTag = tag
@@ -421,7 +418,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     self.scrollingArea.feedbackTap()
                 }
             }
-        
+
             self.scrollingArea.update(
                 containerSize: layout.size,
                 containerInsets: self.gridNode.gridLayout.insets,
@@ -848,7 +845,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             insets.top += navigationBarHeight
             
             let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height))
-            let innerBounds = CGRect(origin: CGPoint(x: -overflowInset, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
+            let innerBounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height))
             
             let itemsPerRow: Int
             if case .compact = layout.metrics.widthClass {
@@ -955,7 +952,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             transition.updateFrame(node: self.backgroundNode, frame: innerBounds)
             self.backgroundNode.update(size: bounds.size, transition: transition)
             
-            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: overflowInset, y: 0.0), size: CGSize(width: bounds.width - overflowInset * 2.0, height: bounds.height)))
+            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: bounds.height)))
             
             self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: bounds.size, insets: gridInsets, scrollIndicatorInsets: nil, preloadSize: itemWidth, type: .fixed(itemSize: CGSize(width: itemWidth, height: itemWidth), fillWidth: true, lineSpacing: itemSpacing, itemSpacing: itemSpacing), cutout: cameraRect), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, updateOpaqueState: nil, synchronousLoads: false), completion: { [weak self] _ in
                 guard let strongSelf = self else {
@@ -1060,6 +1057,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     private let groupedPromise = ValuePromise<Bool>(true)
     
+    private var isDismissing = false
+    
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, bannedSendMedia: (Int32, Bool)?, collection: PHAssetCollection? = nil, editingContext: TGMediaEditingContext? = nil, selectionContext: TGMediaSelectionContext? = nil) {
         self.context = context
         
@@ -1160,7 +1159,8 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 }
             }
         }, sendSelected: { [weak self] currentItem, silently, scheduleTime, animated, completion in
-            if let strongSelf = self, let selectionState = strongSelf.interaction?.selectionState {
+            if let strongSelf = self, let selectionState = strongSelf.interaction?.selectionState, !strongSelf.isDismissing {
+                strongSelf.isDismissing = true
                 if let currentItem = currentItem {
                     selectionState.setItem(currentItem, selected: true)
                 }
@@ -1285,11 +1285,15 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     public func requestDismiss(completion: @escaping () -> Void) {
         if let selectionState = self.interaction?.selectionState, selectionState.count() > 0 {
+            self.isDismissing = true
             let controller = textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Attachment_CancelSelectionAlertText, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertNo, action: {
                 
             }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Attachment_CancelSelectionAlertYes, action: {
                 completion()
             })])
+            controller.dismissed = { [weak self] in
+                self?.isDismissing = false
+            }
             self.present(controller, in: .window(.root))
         } else {
             completion()

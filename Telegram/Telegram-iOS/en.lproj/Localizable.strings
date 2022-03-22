@@ -7365,3 +7365,38 @@ Sorry for the inconvenience.";
 "CreateExternalStream.StreamKey" = "stream key";
 "CreateExternalStream.StartStreamingInfo" = "Once you start broadcasting in your streaming\napp, tap Start Streaming below.";
 "CreateExternalStream.StartStreaming" = "Start Streaming";
+
+"Translate.Title" = "Translate";
+"Translate.CopyTranslation" = "Copy Translation";
+"Translate.ChangeLanguage" = "Change Language";
+"Translate.More" = "more";
+"Translate.Languages.Title" = "Languages";
+"Translate.Languages.Original" = "Original";
+"Translate.Languages.Translation" = "Translation";
+
+"Bot.AddToChat" = "Add to Group or Channel";
+"Bot.AddToChatInfo" = "This bot is able to manage a group or channel.";
+
+"Bot.AddToChat.Title" = "Add to Group or Channel";
+"Bot.AddToChat.MyChannels" = "CHANNEL I MANAGE";
+"Bot.AddToChat.MyGroups" = "GROUPS I MANAGE";
+"Bot.AddToChat.OtherGroups" = "GROUPS";
+
+"Bot.AddToChat.Add.Title" = "Add Bot";
+"Bot.AddToChat.Add.AdminRights" = "Admin Rights";
+"Bot.AddToChat.Add.AddAsAdmin" = "Add Bot as Admin";
+"Bot.AddToChat.Add.AddAsMember" = "Add Bot as Member";
+
+"Bot.AddToChat.Add.AdminAlertTitle" = "Add Bot as Admin?";
+"Bot.AddToChat.Add.AdminAlertTextGroup" = "Are you sure you want to add the bot as an admin in the group **%@**?";
+"Bot.AddToChat.Add.AdminAlertTextChannel" = "Are you sure you want to add the bot as an admin in the channel **%@**?";
+"Bot.AddToChat.Add.AdminAlertAdd" = "Add as Admin";
+
+"Bot.AddToChat.Add.MemberAlertTitle" = "Add Bot as Member?";
+"Bot.AddToChat.Add.MemberAlertTextGroup" = "Are you sure you want to add the bot as a member in the group **%@**?";
+"Bot.AddToChat.Add.MemberAlertTextChannel" = "Are you sure you want to add the bot as a member in the channel **%@**?";
+"Bot.AddToChat.Add.MemberAlertAdd" = "Add as Member";
+
+"PeerInfo.ButtonStop" = "Stop";
+
+"Localization.ShowTranslateInfoExtended" = "Show 'Translate' button in the message context menu.\n\nGoogle may have access to the messages you translate.";
