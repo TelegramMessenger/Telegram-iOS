@@ -2265,7 +2265,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
-        }, openAddToChat: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -4787,7 +4786,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         guard let controller = self.controller else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
+        self.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: "", adminRights: nil), context: self.context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
         }, sendFile: nil,
         sendSticker: nil,
         requestMessageActionUrlAuth: nil,
@@ -5648,7 +5647,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.openTips()
             case .phoneNumber:
                 if let user = self.data?.peer as? TelegramUser, let phoneNumber = user.phone {
-                    self.controller?.push(ChangePhoneNumberIntroController(context: self.context, phoneNumber: phoneNumber))
+                    let introController = PrivacyIntroController(context: self.context, mode: .changePhoneNumber(phoneNumber), proceedAction: { [weak self] in
+                        if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                            navigationController.replaceTopController(ChangePhoneNumberController(context: strongSelf.context), animated: true)
+                        }
+                    })
+                    self.controller?.push(introController)
                 }
             case .username:
                 self.controller?.push(usernameSetupController(context: self.context))

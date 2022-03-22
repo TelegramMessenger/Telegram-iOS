@@ -6,15 +6,15 @@ import TelegramPresentationData
 import ManagedAnimationNode
 import ContextUI
 
-final class MediaPickerMoreButtonNode: ASDisplayNode {
-    class MoreIconNode: ManagedAnimationNode {
-        enum State: Equatable {
+public final class MoreButtonNode: ASDisplayNode {
+    public class MoreIconNode: ManagedAnimationNode {
+        public enum State: Equatable {
             case more
             case search
         }
         
         private let duration: Double = 0.21
-        var iconState: State = .search
+        public var iconState: State = .search
         
         init() {
             super.init(size: CGSize(width: 30.0, height: 30.0))
@@ -28,7 +28,7 @@ final class MediaPickerMoreButtonNode: ASDisplayNode {
             }
         }
         
-        func enqueueState(_ state: State, animated: Bool) {
+        public func enqueueState(_ state: State, animated: Bool) {
             guard self.iconState != state else {
                 return
             }
@@ -67,20 +67,20 @@ final class MediaPickerMoreButtonNode: ASDisplayNode {
         }
     }
 
-    var action: ((ASDisplayNode, ContextGesture?) -> Void)?
+    public var action: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     private let containerNode: ContextControllerSourceNode
-    let contextSourceNode: ContextReferenceContentNode
+    public let contextSourceNode: ContextReferenceContentNode
     private let buttonNode: HighlightableButtonNode
-    let iconNode: MoreIconNode
+    public let iconNode: MoreIconNode
     
-    var theme: PresentationTheme {
+    public var theme: PresentationTheme {
         didSet {
             self.iconNode.customColor = self.theme.rootController.navigationBar.buttonColor
         }
     }
     
-    init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme) {
         self.theme = theme
         
         self.contextSourceNode = ContextReferenceContentNode()

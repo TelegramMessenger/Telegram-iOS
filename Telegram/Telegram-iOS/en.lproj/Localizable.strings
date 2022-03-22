@@ -7400,3 +7400,10 @@ Sorry for the inconvenience.";
 "PeerInfo.ButtonStop" = "Stop";
 
 "Localization.ShowTranslateInfoExtended" = "Show 'Translate' button in the message context menu.\n\nGoogle may have access to the messages you translate.";
+
+"WebApp.OpenBot" = "Open Bot";
+"WebApp.ReloadPage" = "Reload Page";
+"WebApp.RemoveBot" = "Remove Bot";
+
+"WebApp.AddToAttachmentText" = "%@ asks your permission to be added as an option to your attachments menu so you access it from any chat.";
+"WebApp.AddToAttachmentAdd" = "Add";

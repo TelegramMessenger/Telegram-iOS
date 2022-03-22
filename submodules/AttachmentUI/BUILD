@@ -27,6 +27,8 @@ swift_library(
         "//submodules/AttachmentTextInputPanelNode:AttachmentTextInputPanelNode",
         "//submodules/ChatSendMessageActionUI:ChatSendMessageActionUI",
         "//submodules/ChatTextLinkEditUI:ChatTextLinkEditUI",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
     ],
     visibility = [
         "//visibility:public",

@@ -193,7 +193,9 @@ private func profileSearchableItems(context: AccountContext, canAddAccount: Bool
             return (transaction.getPeer(context.account.peerId) as? TelegramUser)?.phone ?? ""
         }
         |> deliverOnMainQueue).start(next: { phoneNumber in
-            present(.push, ChangePhoneNumberIntroController(context: context, phoneNumber: formatPhoneNumber(phoneNumber)))
+            present(.push, PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
+                present(.push, ChangePhoneNumberController(context: context))
+            }))
         })
     }))
     items.append(SettingsSearchableItem(id: .profile(3), title: strings.Settings_Username, alternate: synonyms(strings.SettingsSearch_Synonyms_EditProfile_Username), icon: icon, breadcrumbs: [strings.EditProfile_Title], present: { context, _, present in
