@@ -279,12 +279,18 @@ private struct PasscodeOptionsData: Equatable {
         return lhs.accessChallenge == rhs.accessChallenge && lhs.presentationSettings == rhs.presentationSettings && lhs.fakePasscodeSettings == rhs.fakePasscodeSettings
     }
     
-    func withUpdatedAccessChallenge(_ accessChallenge: PostboxAccessChallengeData) -> PasscodeOptionsData {
-        return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: self.presentationSettings, fakePasscodeSettings: self.fakePasscodeSettings)
+    func withUpdatedAccessChallenge(_ accessChallenge: PostboxAccessChallengeData, _ settings: [FakePasscodeSettings] = []) -> PasscodeOptionsData {
+        return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: self.presentationSettings, fakePasscodeSettings: settings)
     }
     
     func withUpdatedPresentationSettings(_ presentationSettings: PresentationPasscodeSettings) -> PasscodeOptionsData {
         return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: self.fakePasscodeSettings)
+    }
+
+    func withUpdatedFakePasscodeSettings(index: Int, settings: FakePasscodeSettings) -> PasscodeOptionsData {
+        var fakePasscodeSettings = self.fakePasscodeSettings
+        fakePasscodeSettings[index] = settings
+        return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
     }
 }
 
@@ -375,6 +381,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 let challenge = PostboxAccessChallengeData.none
                 let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.fakePasscodeSettings, { entry in
+                        return PreferencesEntry(FakePasscodeSettingsHolder.defaultSettings)
+                    })
                 }).start()
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
@@ -511,10 +520,15 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }).start()
         })
     }, openFakePasscodeOptions: { index in
-        let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index)
+        let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index, updatedSettingsName: { index, settings in
+
+            let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                passcodeOptionsDataPromise?.set(.single(data.withUpdatedFakePasscodeSettings(index: index, settings: settings)))
+            })
+        })
         pushControllerImpl?(fakeOptionsController)
     }, addFakePasscode: {
-        fakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
+        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
             switch oldChallengeData {
                 case .none:
                     assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
@@ -529,9 +543,6 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         updatedData = PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
                     }
 
-                    let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                        passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData)))
-                    })
 
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.fakePasscodeSettings, { entry in
                         var settings : [FakePasscodeSettings]
@@ -540,8 +551,17 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         } else {
                             settings = []
                         }
-                        return PreferencesEntry(FakePasscodeSettingsHolder(settings: settings + [FakePasscodeSettings(name: presentationData.strings.PasscodeSettings_FakePasscode(fakes.count).string)]))
+
+                        settings += [FakePasscodeSettings(name: presentationData.strings.PasscodeSettings_FakePasscode(fakes.count).string)]
+
+                        let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+                            passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(updatedData, settings)))
+                        })
+
+                        return PreferencesEntry(FakePasscodeSettingsHolder(settings: settings))
                     })
+
+
 
                     return updatedData
             }

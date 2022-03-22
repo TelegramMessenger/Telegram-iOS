@@ -21,6 +21,7 @@ swift_library(
         "//submodules/PasscodeUI:PasscodeUI",
         "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
         "//submodules/AvatarNode:AvatarNode",
+        "//submodules/ImageResize:ImageResize",
     ],
     visibility = [
         "//visibility:public",

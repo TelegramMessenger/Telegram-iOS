@@ -14,15 +14,18 @@ import TelegramStringFormatting
 import PasscodeUI
 import FakePasscode
 import AvatarNode
+import ImageResize
 
 private final class FakePasscodeOptionsControllerArguments {
     let account: Account
     let changeName: (String) -> Void
+    let commitName: () -> Void
     let changePasscode: () -> Void
     let allowLogin: (Bool) -> Void
     let clearAfterActivation: (Bool) -> Void
     let deleteOtherPasscodes: (Bool) -> Void
     let activationMessage: (String) -> Void
+    let commitActivationMessage: () -> Void
     let badPasscodeActivation: () -> Void
     let smsActions: () -> Void
     let clearCache: (Bool) -> Void
@@ -30,14 +33,16 @@ private final class FakePasscodeOptionsControllerArguments {
     let accountActions: () -> Void
     let deletePasscode: () -> Void
 
-    init(account: Account, changeName: @escaping (String) -> Void, changePasscode: @escaping () -> Void, allowLogin: @escaping (Bool) -> Void, clearAfterActivation: @escaping (Bool) -> Void, deleteOtherPasscodes: @escaping (Bool) -> Void, activationMessage: @escaping (String) -> Void, badPasscodeActivation: @escaping () -> Void, smsActions: @escaping () -> Void, clearCache: @escaping (Bool) -> Void, clearProxies: @escaping (Bool) -> Void, accountActions: @escaping () -> Void, deletePasscode: @escaping () -> Void) {
+    init(account: Account, changeName: @escaping (String) -> Void, commitName: @escaping () -> Void,  changePasscode: @escaping () -> Void, allowLogin: @escaping (Bool) -> Void, clearAfterActivation: @escaping (Bool) -> Void, deleteOtherPasscodes: @escaping (Bool) -> Void, activationMessage: @escaping (String) -> Void, commitActivationMessage: @escaping () -> Void, badPasscodeActivation: @escaping () -> Void, smsActions: @escaping () -> Void, clearCache: @escaping (Bool) -> Void, clearProxies: @escaping (Bool) -> Void, accountActions: @escaping () -> Void, deletePasscode: @escaping () -> Void) {
         self.account = account
         self.changeName = changeName
+        self.commitName = commitName
         self.changePasscode = changePasscode
         self.allowLogin = allowLogin
         self.clearAfterActivation = clearAfterActivation
         self.deleteOtherPasscodes = deleteOtherPasscodes
         self.activationMessage = activationMessage
+        self.commitActivationMessage = commitActivationMessage
         self.badPasscodeActivation = badPasscodeActivation
         self.smsActions = smsActions
         self.clearCache = clearCache
@@ -165,9 +170,12 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
         let arguments = arguments as! FakePasscodeOptionsControllerArguments
         switch self {
             case let .changeName(_, title, name):
-            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: ""), text: name, placeholder: title, type: .regular(capitalization: true, autocorrection: false), clearType: .always, maxLength: 12, sectionId: self.section, textUpdated: { value in
+            return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: ""), text: name, placeholder: title, type: .regular(capitalization: true, autocorrection: false), clearType: .always, sectionId: self.section, textUpdated: { value in
                     arguments.changeName(value)
-                    // FIXME use custom state to avoid unncecessary updates look at ResetPasswordController
+                }, updatedFocus: { focused in
+                    if !focused {
+                        arguments.commitName()
+                    }
                 }, action: {}, cleared: {})
             case let .changePasscode(_, text):
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -188,9 +196,12 @@ private enum FakePasscodeOptionsEntry: ItemListNodeEntry, Equatable {
                     arguments.deleteOtherPasscodes(updatedValue)
                 })
             case let .activationMessage(_, title, value):
-                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: ""), text: value, placeholder: title, type: .regular(capitalization: true, autocorrection: false), clearType: .always, maxLength: 12, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(presentationData: presentationData, title: NSAttributedString(string: ""), text: value, placeholder: title, type: .regular(capitalization: true, autocorrection: false), clearType: .always, sectionId: self.section, textUpdated: { value in
                     arguments.activationMessage(value)
-                    // FIXME use custom state to avoid unncecessary updates look at ResetPasswordController
+                }, updatedFocus: { focused in
+                    if !focused {
+                        arguments.commitActivationMessage()
+                    }
                 }, action: {}, cleared: {})
             case let .badPasscodeActivation(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -245,9 +256,8 @@ private struct FakePasscodeOptionsData: Equatable {
 }
 
 private struct FakePasscodeOptionsControllerState: Equatable {
-    static func ==(lhs: FakePasscodeOptionsControllerState, rhs: FakePasscodeOptionsControllerState) -> Bool {
-        return true
-    }
+    var name: String?
+    var activationMessage: String?
 }
 
 private func fakePasscodeOptionsControllerEntries(presentationData: PresentationData, settings: FakePasscodeSettings, displayName: String, avatar: UIImage?) -> [FakePasscodeOptionsEntry] {
@@ -266,7 +276,7 @@ private func fakePasscodeOptionsControllerEntries(presentationData: Presentation
         .badPasscodeActivation(presentationData.theme, presentationData.strings.PasscodeSettings_BadPasscodeTriesToActivate, String(settings.activationAttempts)),
         .badPasscodeActivationInfo(presentationData.theme, presentationData.strings.PasscodeSettings_BadPasscodeTriesToActivateHelp),
         .actionsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsTitle),
-        .smsActions(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeSmsActionTitle, 0 /* FIXME */),
+        .smsActions(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeSmsActionTitle, 0 /* TODO implement */),
         .clearCache(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearCache),
         .clearProxies(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearProxies),
         .actionsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsHelp),
@@ -280,10 +290,12 @@ private func fakePasscodeOptionsControllerEntries(presentationData: Presentation
     return entries
 }
 
-public func fakePasscodeOptionsController(context: AccountContext, index: Int) -> ViewController {
-    let initialState = FakePasscodeOptionsControllerState()
-
-    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
+public func fakePasscodeOptionsController(context: AccountContext, index: Int, updatedSettingsName: @escaping (Int, FakePasscodeSettings) -> Void) -> ViewController {
+    let statePromise = ValuePromise(FakePasscodeOptionsControllerState(), ignoreRepeated: true)
+    let stateValue = Atomic(value: FakePasscodeOptionsControllerState())
+    let updateState: ((FakePasscodeOptionsControllerState) -> FakePasscodeOptionsControllerState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
 
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
@@ -296,19 +308,34 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int) -
         return (transaction.getAccessChallengeData(), passcodeSettings)
     }
     |> map { accessChallenge, passcodeSettings -> FakePasscodeOptionsData in
+        updateState { state in
+            var state = state
+            state.name = passcodeSettings.name
+            state.activationMessage = passcodeSettings.activationMessage
+            return state
+        }
         return FakePasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: passcodeSettings)
     })
 
     let arguments = FakePasscodeOptionsControllerArguments(account: context.account, changeName: { value in
-        let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-            passcodeOptionsDataPromise?.set(.single(data.withUpdatedSettings(data.settings.withUpdatedName(value))))
-
-            let _ = updateFakePasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, index: index, { current in
-                return current.withUpdatedName(value)
-            }).start()
-        })
+        updateState { state in
+            var state = state
+            state.name = value
+            return state
+        }
+    }, commitName: {
+        updateSettings(context: context, index: index, passcodeOptionsDataPromise) { settings in
+            stateValue.with({ state in
+                guard let name = state.name else {
+                    return settings
+                }
+                let newSettings = settings.withUpdatedName(name)
+                updatedSettingsName(index, newSettings)
+                return newSettings
+            })
+        }
     }, changePasscode: {
-        fakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
+        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
             switch oldChallengeData {
                 case .none:
                     assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
@@ -335,7 +362,20 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int) -
             return settings.withUpdatedDeleteOtherPasscodes(enabled)
         }
     }, activationMessage: { message in
-        // TODO implement
+        updateState { state in
+            var state = state
+            state.activationMessage = message
+            return state
+        }
+    }, commitActivationMessage: {
+        updateSettings(context: context, index: index, passcodeOptionsDataPromise) { settings in
+            stateValue.with({ state in
+                guard let message = state.activationMessage else {
+                    return settings
+                }
+                return settings.withUpdatedActivationMessage(message)
+            })
+        }
     }, badPasscodeActivation: {
         // TODO implement
     }, smsActions: {
@@ -354,28 +394,29 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int) -
         // TODO delete fake passcode
     })
 
-    let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId)
+    let accountPeerSignal = context.account.postbox.loadedPeerWithId(context.account.peerId)
     |> take(1)
 
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get(), accountPeer) |> deliverOnMainQueue
-        |> map { presentationData, state, optionsData, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let accountAvatarSignal = accountPeerSignal |> deliverOnMainQueue |> mapToSignal { accountPeer -> Signal<(UIImage, UIImage)?, NoError> in
+        let peer = EnginePeer(accountPeer)
+        let peerRef = PeerReference(peer._asPeer())
+        let avatarSignal = peerAvatarImage(account: context.account, peerReference: peerRef, authorOfMessage: nil, representation: peer.profileImageRepresentations.last) ?? .single(nil)
+
+        return avatarSignal
+    }
+
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), passcodeOptionsDataPromise.get(), accountPeerSignal, accountAvatarSignal) |> deliverOnMainQueue
+        |> map { presentationData, state, optionsData, accountPeer, accountAvatar -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let title = optionsData.settings.name
 
             let peer = EnginePeer(accountPeer)
             let displayName = peer.compactDisplayTitle
-            let avatar = peerAvatarImage(account: context.account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.first) ?? .single(nil)
 
-            let _ = (avatar |> deliverOnMainQueue).start(next: { imageVersions in
-
-                let image = imageVersions?.0
-                if let image = image {
-                    print(image)
-                    // FIXME cannot make it work due to missunderstanding SSignalKit ((
-                }
-            })
+            let avatarSize: CGFloat = 32.0
+            let avatar = resizedImage(accountAvatar?.1, for: CGSize(width: avatarSize, height: avatarSize))
 
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: fakePasscodeOptionsControllerEntries(presentationData: presentationData, settings: optionsData.settings, displayName: displayName, avatar: nil), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: fakePasscodeOptionsControllerEntries(presentationData: presentationData, settings: optionsData.settings, displayName: displayName, avatar: avatar), style: .blocks, emptyStateItem: nil, animateChanges: false)
 
             return (controllerState, (listState, arguments))
         } |> afterDisposed {
@@ -392,7 +433,7 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int) -
     return controller
 }
 
-public func fakePasscodeSetupController(context: AccountContext, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping (AccountManagerModifier<TelegramAccountManagerTypes>, PostboxAccessChallengeData, String, Bool) -> PostboxAccessChallengeData) {
+public func pushFakePasscodeSetupController(context: AccountContext, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping (AccountManagerModifier<TelegramAccountManagerTypes>, PostboxAccessChallengeData, String, Bool) -> PostboxAccessChallengeData) {
     let _ = (context.sharedContext.accountManager.transaction({ transaction -> (PasscodeEntryFieldType, [String]) in
         let data = transaction.getAccessChallengeData()
         switch data {
