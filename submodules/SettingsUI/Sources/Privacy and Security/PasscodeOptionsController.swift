@@ -28,7 +28,7 @@ private final class PasscodeOptionsControllerArguments {
     let addFakePasscode: () -> Void
     let openBadPasscodeAttempts: () -> Void
     
-    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, changeFakePasscode: @escaping (Int) -> Void, addFakePasscode: @escaping () -> Void, openBadPasscodeAttempts: @escaping () -> Void) {
+    init(turnPasscodeOff: @escaping () -> Void, changePasscode: @escaping () -> Void, changePasscodeTimeout: @escaping () -> Void, changeTouchId: @escaping (Bool) -> Void, openFakePasscodeOptions: @escaping (Int) -> Void, addFakePasscode: @escaping () -> Void, openBadPasscodeAttempts: @escaping () -> Void) {
         self.turnPasscodeOff = turnPasscodeOff
         self.changePasscode = changePasscode
         self.changePasscodeTimeout = changePasscodeTimeout

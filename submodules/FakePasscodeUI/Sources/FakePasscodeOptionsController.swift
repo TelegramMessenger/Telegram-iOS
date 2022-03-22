@@ -14,7 +14,7 @@ import TelegramStringFormatting
 import PasscodeUI
 import FakePasscode
 import AvatarNode
-import ImageResize
+import LocalMediaResources
 
 private final class FakePasscodeOptionsControllerArguments {
     let account: Account
