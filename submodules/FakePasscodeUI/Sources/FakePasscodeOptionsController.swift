@@ -265,26 +265,27 @@ private func fakePasscodeOptionsControllerEntries(presentationData: Presentation
         .changeName(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChangeName, settings.name),
         .changePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChange),
         .changeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeChangeHelp),
-        .allowLogin(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAllowLogin, settings.allowLogin),
-        .allowLoginInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAllowLoginHelp),
-        .clearAfterActivation(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeClearAfterActivation, settings.clearAfterActivation),
-        .clearAfterActivationInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeClearAfterActivationHelp),
-        .deleteOtherPasscodes(presentationData.theme, presentationData.strings.PasscodeSettings_DeleteOtherPasscodesAfterActivation, settings.deleteOtherPasscodes),
-        .deleteOtherPasscodesInfo(presentationData.theme, presentationData.strings.PasscodeSettings_DeleteOtherPasscodesAfterActivationHelp),
-        .activationMessage(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActivationMessage, settings.activationMessage ?? ""),
-        .activationMessageInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActivationMessageHelp),
-        .badPasscodeActivation(presentationData.theme, presentationData.strings.PasscodeSettings_BadPasscodeTriesToActivate, String(settings.activationAttempts)),
-        .badPasscodeActivationInfo(presentationData.theme, presentationData.strings.PasscodeSettings_BadPasscodeTriesToActivateHelp),
-        .actionsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsTitle),
-        .smsActions(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeSmsActionTitle, 0 /* TODO implement */),
-        .clearCache(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearCache),
-        .clearProxies(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearProxies),
-        .actionsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsHelp),
-        .accountsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsTitle),
-        .accountActions(presentationData.theme, displayName, avatar),
-        .accountsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsHelp),
-        .deletePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDelete),
-        .deletePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDeleteHelp)
+        // TODO uncomment sections bellow once implemented
+        // .allowLogin(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAllowLogin, settings.allowLogin),
+        // .allowLoginInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAllowLoginHelp),
+        // .clearAfterActivation(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeClearAfterActivation, settings.clearAfterActivation),
+        // .clearAfterActivationInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeClearAfterActivationHelp),
+        // .deleteOtherPasscodes(presentationData.theme, presentationData.strings.PasscodeSettings_DeleteOtherPasscodesAfterActivation, settings.deleteOtherPasscodes),
+        // .deleteOtherPasscodesInfo(presentationData.theme, presentationData.strings.PasscodeSettings_DeleteOtherPasscodesAfterActivationHelp),
+        // .activationMessage(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActivationMessage, settings.activationMessage ?? ""),
+        // .activationMessageInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActivationMessageHelp),
+        // .badPasscodeActivation(presentationData.theme, presentationData.strings.PasscodeSettings_BadPasscodeTriesToActivate, String(settings.activationAttempts)),
+        // .badPasscodeActivationInfo(presentationData.theme, presentationData.strings.PasscodeSettings_BadPasscodeTriesToActivateHelp),
+        // .actionsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsTitle),
+        // .smsActions(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeSmsActionTitle, 0 /* TODO implement */),
+        // .clearCache(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearCache),
+        // .clearProxies(presentationData.theme, presentationData.strings.PasscodeSettings_ClearTelegramCache, settings.clearProxies),
+        // .actionsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeActionsHelp),
+        // .accountsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsTitle),
+        // .accountActions(presentationData.theme, displayName, avatar),
+        // .accountsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsHelp),
+        // .deletePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDelete),
+        // .deletePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDeleteHelp)
     ]
 
     return entries
@@ -335,7 +336,7 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
             })
         }
     }, changePasscode: {
-        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
+        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl, challengeDataUpdate: { transaction, oldChallengeData, newPasscode, numerical in
             switch oldChallengeData {
                 case .none:
                     assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
@@ -348,7 +349,7 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
                         return PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
                     }
             }
-        }
+        })
     }, allowLogin: { enabled in
         updateSettings(context: context, index: index, passcodeOptionsDataPromise) { settings in
             return settings.withUpdatedAllowLogin(enabled)
@@ -433,7 +434,7 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
     return controller
 }
 
-public func pushFakePasscodeSetupController(context: AccountContext, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping (AccountManagerModifier<TelegramAccountManagerTypes>, PostboxAccessChallengeData, String, Bool) -> PostboxAccessChallengeData) {
+public func pushFakePasscodeSetupController(context: AccountContext, pushController: ((ViewController) -> Void)?, popController: (() -> Void)?, challengeDataUpdate: @escaping ((AccountManagerModifier<TelegramAccountManagerTypes>, PostboxAccessChallengeData, String, Bool) -> PostboxAccessChallengeData), completed: (() -> Void)? = nil) {
     let _ = (context.sharedContext.accountManager.transaction({ transaction -> (PasscodeEntryFieldType, [String]) in
         let data = transaction.getAccessChallengeData()
         switch data {
@@ -456,14 +457,14 @@ public func pushFakePasscodeSetupController(context: AccountContext, pushControl
             return nil
         }
         setupController.complete = { newPasscode, numerical in
-            let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
+            let _ = (context.sharedContext.accountManager.transaction({ transaction in
                 let data = transaction.getAccessChallengeData()
                 let updatedData = challengeDataUpdate(transaction, data, newPasscode, numerical)
                 transaction.setAccessChallengeData(updatedData)
-            }) |> deliverOnMainQueue).start(next: { _ in
+            }) |> deliverOnMainQueue).start(next: {
             }, error: { _ in
             }, completed: {
-                popController?()
+                completed?()
             })
         }
         pushController?(setupController)

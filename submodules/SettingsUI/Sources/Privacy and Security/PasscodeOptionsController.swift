@@ -17,6 +17,7 @@ import TelegramStringFormatting
 import TelegramIntents
 import FakePasscode
 import FakePasscodeUI
+import ItemListPeerActionItem
 
 
 private final class PasscodeOptionsControllerArguments {
@@ -42,8 +43,9 @@ private final class PasscodeOptionsControllerArguments {
 private enum PasscodeOptionsSection: Int32 {
     case setting
     case options
-    case partisan
-    case partisan_badPasscodeAttempts
+    // partisan settings:
+    case fakePasscodes
+    case badPasscodeAttempts
 }
 
 private enum PasscodeOptionsEntry: ItemListNodeEntry {
@@ -114,10 +116,10 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return PasscodeOptionsSection.setting.rawValue
             case .autoLock, .touchId:
                 return PasscodeOptionsSection.options.rawValue
-            case .openFakePasscodeOptions, .addFakePasscode, .fakePasscodeInfo:
-                return PasscodeOptionsSection.partisan.rawValue
+            case .openFakePasscodeOptions, .fakePasscodeInfo, .addFakePasscode:
+                return PasscodeOptionsSection.fakePasscodes.rawValue
             case .badPasscodeAttempts, .badPasscodeAttemptsInfo:
-                return PasscodeOptionsSection.partisan_badPasscodeAttempts.rawValue
+                return PasscodeOptionsSection.badPasscodeAttempts.rawValue
         }
     }
     
@@ -133,10 +135,10 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                 return .autoLock
             case .touchId:
                 return .touchId
-            case .openFakePasscodeOptions(_, _, let index):
-                return .openFakePasscodeOptions(index)
             case .addFakePasscode:
                 return .addFakePasscode
+            case .openFakePasscodeOptions(_, _, let index):
+                return .openFakePasscodeOptions(index)
             case .fakePasscodeInfo:
                 return .fakePasscodeInfo
             case .badPasscodeAttempts:
@@ -239,11 +241,11 @@ private enum PasscodeOptionsEntry: ItemListNodeEntry {
                     arguments.changeTouchId(value)
                 })
             case let .openFakePasscodeOptions(_, title, index):
-                return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openFakePasscodeOptions(index)
                 })
             case let .addFakePasscode(_, title):
-                return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: presentationData.theme.list.itemAccentColor), title: title, sectionId: self.section, height: .generic, action: {
                     arguments.addFakePasscode()
                 })
             case let .fakePasscodeInfo(_, text):
@@ -520,15 +522,11 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }).start()
         })
     }, openFakePasscodeOptions: { index in
-        let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index, updatedSettingsName: { index, settings in
-
-            let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-                passcodeOptionsDataPromise?.set(.single(data.withUpdatedFakePasscodeSettings(index: index, settings: settings)))
-            })
-        })
+        let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index, passcodeOptionsDataPromise: passcodeOptionsDataPromise)
         pushControllerImpl?(fakeOptionsController)
     }, addFakePasscode: {
-        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl) { transaction, oldChallengeData, newPasscode, numerical in
+        var index = Int()
+        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl, challengeDataUpdate: { (transaction, oldChallengeData, newPasscode, numerical) in
             switch oldChallengeData {
                 case .none:
                     assertionFailure("Fake passcodes shouldn't be available without the 'regular' passcode enabled")
@@ -543,6 +541,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         updatedData = PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
                     }
 
+                    index = fakes.count - 1
 
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.fakePasscodeSettings, { entry in
                         var settings : [FakePasscodeSettings]
@@ -561,11 +560,12 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                         return PreferencesEntry(FakePasscodeSettingsHolder(settings: settings))
                     })
 
-
-
                     return updatedData
             }
-        }
+        }, completed: {
+            let fakeOptionsController = fakePasscodeOptionsController(context: context, index: index, passcodeOptionsDataPromise: passcodeOptionsDataPromise)
+            replaceTopControllerImpl?(fakeOptionsController, true)
+        })
     }, openBadPasscodeAttempts: {
         let bpaController = BadPasscodeAttemptsController(context: context)
         bpaController.clear = {
@@ -701,4 +701,14 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             return controller
         }
     }
+}
+
+private func fakePasscodeOptionsController(context: AccountContext, index: Int, passcodeOptionsDataPromise: Promise<PasscodeOptionsData>) -> ViewController {
+    let controller = fakePasscodeOptionsController(context: context, index: index, updatedSettingsName: { index, settings in
+
+        let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+            passcodeOptionsDataPromise?.set(.single(data.withUpdatedFakePasscodeSettings(index: index, settings: settings)))
+        })
+    })
+    return controller
 }

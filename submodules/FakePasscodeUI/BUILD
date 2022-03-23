@@ -22,6 +22,7 @@ swift_library(
         "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LocalMediaResources:LocalMediaResources",
+        "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
     ],
     visibility = [
         "//visibility:public",
