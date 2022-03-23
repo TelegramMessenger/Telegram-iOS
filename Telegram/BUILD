@@ -1943,23 +1943,6 @@ ios_application(
     ],
 )
 
-swift_library(
-    name = "UITestsLib",
-    module_name = "UITestsLib",
-    srcs = glob(["UITests/**/*.swift"]),
-    deps = [
-        "//submodules/TelegramUI:TelegramUI",
-    ],
-)
-
-ios_ui_test(
-    name = "UITests",
-    minimum_os_version = "9.0",
-    deps = [":UITestsLib"],
-    infoplists = [":UITestsLib/Info.plist"],
-    test_host = ":Telegram",
-)
-
 # Temporary targets used to simplify webrtc build tests
 
 ios_application(
