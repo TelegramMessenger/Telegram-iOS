@@ -610,6 +610,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var domain: String?
                         var start: String?
                         var startGroup: String?
+                        var admin: String?
                         var game: String?
                         var post: String?
                         var voiceChat: String?
@@ -624,6 +625,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         start = value
                                     } else if queryItem.name == "startgroup" {
                                         startGroup = value
+                                    } else if queryItem.name == "admin" {
+                                        admin = value
                                     } else if queryItem.name == "game" {
                                         game = value
                                     } else if queryItem.name == "post" {
@@ -648,6 +651,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 result += "?start=\(start)"
                             } else if let startGroup = startGroup {
                                 result += "?startgroup=\(startGroup)"
+                                if let admin = admin {
+                                    result += "&admin=\(admin)"
+                                }
                             } else if let game = game {
                                 result += "?game=\(game)"
                             } else if let voiceChat = voiceChat {

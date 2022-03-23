@@ -90,7 +90,7 @@ private final class AttachButtonComponent: CombinedComponent {
                 imageName = "Chat/Attach Menu/Poll"
             case let .app(appName):
                 name = appName
-                imageName = nil
+                imageName = "Chat List/Tabs/IconSettings"
             }
             
             let image = imageName.flatMap { UIImage(bundleImageName: $0)?.withRenderingMode(.alwaysTemplate) }

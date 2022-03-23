@@ -115,7 +115,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let collection: PHAssetCollection?
     
     private let titleView: MediaPickerTitleView
-    private let moreButtonNode: MediaPickerMoreButtonNode
+    private let moreButtonNode: MoreButtonNode
     
     public weak var webSearchController: WebSearchController?
     
@@ -1078,7 +1078,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.titleView = MediaPickerTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Attachment_AllMedia, self.presentationData.strings.Attachment_SelectedMedia(1)], selectedIndex: 0)
         self.titleView.title = collection?.localizedTitle ?? presentationData.strings.Attachment_Gallery
         
-        self.moreButtonNode = MediaPickerMoreButtonNode(theme: self.presentationData.theme)
+        self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
                 
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
         

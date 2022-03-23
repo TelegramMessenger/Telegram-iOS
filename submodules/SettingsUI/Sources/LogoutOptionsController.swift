@@ -152,7 +152,10 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         pushControllerImpl?(storageUsageController(context: context))
         dismissImpl?()
     }, changePhoneNumber: {
-        pushControllerImpl?(ChangePhoneNumberIntroController(context: context, phoneNumber: phoneNumber))
+        let introController = PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
+            replaceTopControllerImpl?(ChangePhoneNumberController(context: context))
+        })
+        pushControllerImpl?(introController)
         dismissImpl?()
     }, contactSupport: { [weak navigationController] in
         let supportPeer = Promise<PeerId?>()

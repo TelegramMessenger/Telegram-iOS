@@ -75,6 +75,7 @@ import ChatPresentationInterfaceState
 import Pasteboard
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
+import WebUI
 
 #if DEBUG
 import os.signpost
@@ -3298,23 +3299,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
-        }, openAddToChat: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            guard let peerId = strongSelf.presentationInterfaceState.chatLocation.peerId else {
-                return
-            }
-            strongSelf.context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.effectiveNavigationController, openPeer: { id, navigation in
-            }, sendFile: nil,
-            sendSticker: nil,
-            requestMessageActionUrlAuth: nil,
-            joinVoiceChat: nil,
-            present: { [weak self] c, a in
-                self?.present(c, in: .window(.root), with: a)
-            }, dismissInput: { [weak self] in
-                self?.view.endEditing(true)
-            }, contentContext: nil)
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -10435,6 +10419,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if canSendPolls {
             availableTabs.insert(.poll, at: availableTabs.count - 1)
         }
+//        availableTabs.insert(.app("Web App"), at: 1)
         
         let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
         
@@ -10700,7 +10685,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             case .app:
-                return
+                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, url: "", message: nil)
+                completion(controller, nil)
+                strongSelf.controllerNavigationDisposable.set(nil)
             }
         }
         let present = {

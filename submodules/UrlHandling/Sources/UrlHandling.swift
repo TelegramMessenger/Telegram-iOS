@@ -19,9 +19,53 @@ private let baseTelegraPhPaths = [
     "telegram.org/tour/"
 ]
 
+extension ResolvedBotAdminRights {
+    init?(_ string: String) {
+        var rawValue: UInt32 = 0
+        
+        let components = string.lowercased().components(separatedBy: "+")
+        if components.contains("change_info") {
+            rawValue |= ResolvedBotAdminRights.changeInfo.rawValue
+        }
+        if components.contains("post_messages") {
+            rawValue |= ResolvedBotAdminRights.postMessages.rawValue
+        }
+        if components.contains("delete_messages") {
+            rawValue |= ResolvedBotAdminRights.deleteMessages.rawValue
+        }
+        if components.contains("restrict_members") {
+            rawValue |= ResolvedBotAdminRights.restrictMembers.rawValue
+        }
+        if components.contains("invite_users") {
+            rawValue |= ResolvedBotAdminRights.inviteUsers.rawValue
+        }
+        if components.contains("pin_messages") {
+            rawValue |= ResolvedBotAdminRights.pinMessages.rawValue
+        }
+        if components.contains("promote_members") {
+            rawValue |= ResolvedBotAdminRights.promoteMembers.rawValue
+        }
+        if components.contains("manage_video_chats") {
+            rawValue |= ResolvedBotAdminRights.manageVideoChats.rawValue
+        }
+        if components.contains("manage_chat") {
+            rawValue |= ResolvedBotAdminRights.manageChat.rawValue
+        }
+        if components.contains("anonymous") {
+            rawValue |= ResolvedBotAdminRights.canBeAnonymous.rawValue
+        }
+                
+        if rawValue != 0 {
+            self.init(rawValue: rawValue)
+        } else {
+            return nil
+        }
+    }
+}
+
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
-    case groupBotStart(String)
+    case groupBotStart(String, ResolvedBotAdminRights?)
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
@@ -141,7 +185,14 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 if queryItem.name == "start" {
                                     return .peerName(peerName, .botStart(value))
                                 } else if queryItem.name == "startgroup" {
-                                    return .peerName(peerName, .groupBotStart(value))
+                                    var botAdminRights: ResolvedBotAdminRights?
+                                    for queryItem in queryItems {
+                                        if queryItem.name == "admin", let value = queryItem.value {
+                                            botAdminRights = ResolvedBotAdminRights(value)
+                                            break
+                                        }
+                                    }
+                                    return .peerName(peerName, .groupBotStart(value, botAdminRights))
                                 } else if queryItem.name == "game" {
                                     return nil
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
@@ -378,8 +429,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         switch parameter {
                             case let .botStart(payload):
                                 return .single(.botStart(peerId: peer.id, payload: payload))
-                            case let .groupBotStart(payload):
-                                return .single(.groupBotStart(peerId: peer.id, payload: payload))
+                            case let .groupBotStart(payload, adminRights):
+                                return .single(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights))
                             case let .channelMessage(id, timecode):
                                 return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
                             case let .replyThread(id, replyId):

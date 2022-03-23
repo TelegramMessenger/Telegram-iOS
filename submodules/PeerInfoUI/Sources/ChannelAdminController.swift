@@ -585,12 +585,6 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 ]
         }
         
-        if invite {
-            maskRightsFlags.remove(.canManageCalls)
-            maskRightsFlags.remove(.canBeAnonymous)
-            maskRightsFlags.remove(.canAddAdmins)
-        }
-        
         if isCreator {
             if isGroup {
                 entries.append(.rightsTitle(presentationData.theme, presentationData.strings.Channel_EditAdmin_PermissionsHeader))
@@ -747,24 +741,18 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 
                 let isGroup = true
                 let isChannel = false
-                var maskRightsFlags: TelegramChatAdminRightsFlags = .groupSpecific
+                let maskRightsFlags: TelegramChatAdminRightsFlags = .groupSpecific
                 let rightsOrder: [TelegramChatAdminRightsFlags] = [
-                        .canChangeInfo,
-                        .canDeleteMessages,
-                        .canBanUsers,
-                        .canInviteUsers,
-                        .canPinMessages,
-                        .canManageCalls,
-                        .canBeAnonymous,
-                        .canAddAdmins
-                    ]
-                
-                if invite {
-                    maskRightsFlags.remove(.canManageCalls)
-                    maskRightsFlags.remove(.canBeAnonymous)
-                    maskRightsFlags.remove(.canAddAdmins)
-                }
-                
+                    .canChangeInfo,
+                    .canDeleteMessages,
+                    .canBanUsers,
+                    .canInviteUsers,
+                    .canPinMessages,
+                    .canManageCalls,
+                    .canBeAnonymous,
+                    .canAddAdmins
+                ]
+                                
                 let accountUserRightsFlags: TelegramChatAdminRightsFlags = maskRightsFlags
             
                 let currentRightsFlags: TelegramChatAdminRightsFlags
@@ -812,11 +800,17 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
     return entries
 }
 
-public func channelAdminController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, invite: Bool = false, updated: @escaping (TelegramChatAdminRights?) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
+public func channelAdminController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, adminId: PeerId, initialParticipant: ChannelParticipant?, invite: Bool = false, initialAdminRights: TelegramChatAdminRightsFlags? = nil, updated: @escaping (TelegramChatAdminRights?) -> Void, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, transferedOwnership: @escaping (PeerId) -> Void) -> ViewController {
     let statePromise = ValuePromise(ChannelAdminControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelAdminControllerState())
     let updateState: ((ChannelAdminControllerState) -> ChannelAdminControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    if let initialAdminRights = initialAdminRights {
+        updateState {
+            return $0.withUpdatedUpdatedFlags(initialAdminRights)
+        }
     }
     
     let actionsDisposable = DisposableSet()

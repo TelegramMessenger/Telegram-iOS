@@ -168,13 +168,73 @@ public enum ResolvedUrlSettingsSection {
     case devices
 }
 
+public struct ResolvedBotAdminRights: OptionSet {
+    public var rawValue: UInt32
+    
+    public init(rawValue: UInt32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let changeInfo = ResolvedBotAdminRights(rawValue: 1)
+    public static let postMessages = ResolvedBotAdminRights(rawValue: 2)
+    public static let editMessages = ResolvedBotAdminRights(rawValue: 4)
+    public static let deleteMessages = ResolvedBotAdminRights(rawValue: 16)
+    public static let restrictMembers = ResolvedBotAdminRights(rawValue: 32)
+    public static let inviteUsers = ResolvedBotAdminRights(rawValue: 64)
+    public static let pinMessages = ResolvedBotAdminRights(rawValue: 128)
+    public static let promoteMembers = ResolvedBotAdminRights(rawValue: 256)
+    public static let manageVideoChats = ResolvedBotAdminRights(rawValue: 512)
+    public static let manageChat = ResolvedBotAdminRights(rawValue: 1024)
+    public static let canBeAnonymous = ResolvedBotAdminRights(rawValue: 2048)
+    
+    public var chatAdminRights: TelegramChatAdminRightsFlags {
+        var flags = TelegramChatAdminRightsFlags()
+        
+        if self.contains(ResolvedBotAdminRights.changeInfo) {
+            flags.insert(.canChangeInfo)
+        }
+        if self.contains(ResolvedBotAdminRights.postMessages) {
+            flags.insert(.canPostMessages)
+        }
+        if self.contains(ResolvedBotAdminRights.editMessages) {
+            flags.insert(.canEditMessages)
+        }
+        if self.contains(ResolvedBotAdminRights.deleteMessages) {
+            flags.insert(.canDeleteMessages)
+        }
+        if self.contains(ResolvedBotAdminRights.restrictMembers) {
+            flags.insert(.canBanUsers)
+        }
+        if self.contains(ResolvedBotAdminRights.inviteUsers) {
+            flags.insert(.canInviteUsers)
+        }
+        if self.contains(ResolvedBotAdminRights.pinMessages) {
+            flags.insert(.canPinMessages)
+        }
+        if self.contains(ResolvedBotAdminRights.promoteMembers) {
+            flags.insert(.canAddAdmins)
+        }
+        if self.contains(ResolvedBotAdminRights.manageVideoChats) {
+            flags.insert(.canManageCalls)
+        }
+        if self.contains(ResolvedBotAdminRights.canBeAnonymous) {
+            flags.insert(.canBeAnonymous)
+        }
+        return flags
+    }
+}
+
 public enum ResolvedUrl {
     case externalUrl(String)
     case urlAuth(String)
     case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
     case inaccessiblePeer
     case botStart(peerId: PeerId, payload: String)
-    case groupBotStart(peerId: PeerId, payload: String)
+    case groupBotStart(peerId: PeerId, payload: String, adminRights: ResolvedBotAdminRights?)
     case channelMessage(peerId: PeerId, messageId: MessageId, timecode: Double?)
     case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
     case stickerPack(name: String)
