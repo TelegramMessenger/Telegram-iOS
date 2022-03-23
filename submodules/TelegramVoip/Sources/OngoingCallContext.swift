@@ -728,6 +728,18 @@ public final class OngoingCallContext {
                         filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
                     }
                     
+                    /*#if DEBUG
+                    filteredConnections.removeAll()
+                    filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(
+                        connectionId: 1,
+                        hasStun: true,
+                        hasTurn: true, ip: "178.62.7.192",
+                        port: 1400,
+                        username: "user",
+                        password: "user")
+                    )
+                    #endif*/
+                    
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
                     }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "")
