@@ -114,6 +114,19 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
                 return .restricted(passcode: fakeCode)
         }
     }
+
+    public func removeFakePasscode(at index: Int) -> PostboxAccessChallengeData {
+        switch self {
+            case .none:
+                return self
+            case .numericalPassword(let code, var fakeCodes):
+                fakeCodes.remove(at: index)
+                return .numericalPassword(value: code, fakeValue: fakeCodes)
+            case .plaintextPassword(let code, var fakeCodes):
+                fakeCodes.remove(at: index)
+                return .plaintextPassword(value: code, fakeValue: fakeCodes)
+        }
+    }
     
     public var isLockable: Bool {
         if case .none = self {

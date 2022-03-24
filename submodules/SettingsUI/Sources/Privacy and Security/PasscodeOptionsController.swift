@@ -289,10 +289,16 @@ private struct PasscodeOptionsData: Equatable {
         return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: self.fakePasscodeSettings)
     }
 
-    func withUpdatedFakePasscodeSettings(index: Int, settings: FakePasscodeSettings) -> PasscodeOptionsData {
+    func withUpdatedFakePasscodeSettings(index: Int, settings: FakePasscodeSettings?) -> PasscodeOptionsData {
         var fakePasscodeSettings = self.fakePasscodeSettings
-        fakePasscodeSettings[index] = settings
-        return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
+        var accessChallenge = self.accessChallenge
+        if let settings = settings {
+            fakePasscodeSettings[index] = settings
+        } else {
+            fakePasscodeSettings.remove(at: index)
+            accessChallenge = accessChallenge.removeFakePasscode(at: index)
+        }
+        return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
     }
 }
 
@@ -704,11 +710,12 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
 }
 
 private func fakePasscodeOptionsController(context: AccountContext, index: Int, passcodeOptionsDataPromise: Promise<PasscodeOptionsData>) -> ViewController {
-    let controller = fakePasscodeOptionsController(context: context, index: index, updatedSettingsName: { index, settings in
-
+    let controller = fakePasscodeOptionsController(context: context, index: index, updatedSettings: { index, settings in
         let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-            passcodeOptionsDataPromise?.set(.single(data.withUpdatedFakePasscodeSettings(index: index, settings: settings)))
+            let newData = data.withUpdatedFakePasscodeSettings(index: index, settings: settings)
+            passcodeOptionsDataPromise?.set(.single(newData))
         })
+
     })
     return controller
 }

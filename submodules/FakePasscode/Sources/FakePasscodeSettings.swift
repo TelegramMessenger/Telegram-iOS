@@ -175,20 +175,26 @@ public struct FakePasscodeSettings: Codable, Equatable {
     }
 }
 
-public func updateFakePasscodeSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, index: Int, _ f: @escaping (FakePasscodeSettings) -> FakePasscodeSettings) -> Signal<Void, NoError> {
+public func updateFakePasscodeSettingsInteractively(accountManager: AccountManager<TelegramAccountManagerTypes>, index: Int, _ f: @escaping (FakePasscodeSettings) -> FakePasscodeSettings?) -> Signal<Void, NoError> {
     return accountManager.transaction { transaction -> Void in
         updateFakePasscodeSettingsInternal(transaction: transaction, index: index, f)
     }
 }
 
-public func updateFakePasscodeSettingsInternal(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, index: Int, _ f: @escaping (FakePasscodeSettings) -> FakePasscodeSettings) {
+public func updateFakePasscodeSettingsInternal(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, index: Int, _ f: @escaping (FakePasscodeSettings) -> FakePasscodeSettings?) {
+
     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.fakePasscodeSettings, { entry in
         if var holder = entry?.get(FakePasscodeSettingsHolder.self) {
-            holder.settings[index] = f(holder.settings[index])
+            if let updatedSettings = f(holder.settings[index]) {
+                holder.settings[index] = updatedSettings
+            } else {
+                holder.settings.remove(at: index)
+                transaction.setAccessChallengeData(transaction.getAccessChallengeData().removeFakePasscode(at: index))
+            }
             return PreferencesEntry(holder)
         } else {
             assertionFailure("FakePasscodeSettingsHolder should exists at this moment")
-            let settings = f(FakePasscodeSettings.defaultSettings)
+            let settings = f(FakePasscodeSettings.defaultSettings) ?? FakePasscodeSettings.defaultSettings
             return PreferencesEntry(FakePasscodeSettingsHolder(settings: [settings]))
         }
     })
