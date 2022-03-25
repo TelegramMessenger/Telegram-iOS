@@ -926,24 +926,25 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
             }
             
+            if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
+                items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 5, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
+                    interaction.openEncryptionKey()
+                }))
+            }
+            
+            if user.botInfo != nil, !user.isVerified {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
+                    interaction.openReport(false)
+                }))
+            }
+            
             if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
                     interaction.openAddBotToGroup()
                 }))
-                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 6, text: presentationData.strings.Bot_AddToChatInfo))
+                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
             }
-        }
-        
-        if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
-            items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 6, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
-                interaction.openEncryptionKey()
-            }))
-        }
-        
-        if user.botInfo != nil, !user.isVerified {
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.ReportPeer_Report, action: {
-                interaction.openReport(false)
-            }))
+            
         }
     } else if let channel = data.peer as? TelegramChannel {
         let ItemUsername = 1

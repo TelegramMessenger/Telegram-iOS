@@ -292,6 +292,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1885586395] = { return Api.Update.parse_updatePendingJoinRequests($0) }
     dict[299870598] = { return Api.Update.parse_updateBotChatInviteRequester($0) }
     dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
+    dict[397910539] = { return Api.Update.parse_updateAttachMenuBots($0) }
     dict[1951948721] = { return Api.Update.parse_updateReadFeed($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
@@ -323,6 +324,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1144565411] = { return Api.KeyboardButton.parse_keyboardButtonRequestPoll($0) }
     dict[-376962181] = { return Api.KeyboardButton.parse_inputKeyboardButtonUserProfile($0) }
     dict[814112961] = { return Api.KeyboardButton.parse_keyboardButtonUserProfile($0) }
+    dict[326529584] = { return Api.KeyboardButton.parse_keyboardButtonWebView($0) }
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[997004590] = { return Api.users.UserFull.parse_userFull($0) }
     dict[1679398724] = { return Api.SecureFile.parse_secureFileEmpty($0) }
@@ -391,6 +393,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1798033689] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilterEmpty($0) }
     dict[-847783593] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilter($0) }
     dict[-219353309] = { return Api.ChatAdminWithInvites.parse_chatAdminWithInvites($0) }
+    dict[-729926056] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
     dict[2004110666] = { return Api.DialogFilterSuggested.parse_dialogFilterSuggested($0) }
     dict[326715557] = { return Api.auth.PasswordRecovery.parse_passwordRecovery($0) }
     dict[-1803769784] = { return Api.messages.BotResults.parse_botResults($0) }
@@ -425,6 +428,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[341499403] = { return Api.Contact.parse_contact($0) }
     dict[-1078332329] = { return Api.help.PassportConfig.parse_passportConfigNotModified($0) }
     dict[-1600596305] = { return Api.help.PassportConfig.parse_passportConfig($0) }
+    dict[202659196] = { return Api.WebViewResult.parse_webViewResultUrl($0) }
+    dict[-1312107643] = { return Api.WebViewResult.parse_webViewResultConfirmationRequired($0) }
     dict[1648543603] = { return Api.FileHash.parse_fileHash($0) }
     dict[295067450] = { return Api.BotInlineResult.parse_botInlineResult($0) }
     dict[400266251] = { return Api.BotInlineResult.parse_botInlineMediaResult($0) }
@@ -844,6 +849,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1462213465] = { return Api.InputBotInlineResult.parse_inputBotInlineResultPhoto($0) }
     dict[-459324] = { return Api.InputBotInlineResult.parse_inputBotInlineResultDocument($0) }
     dict[1336154098] = { return Api.InputBotInlineResult.parse_inputBotInlineResultGame($0) }
+    dict[-237467044] = { return Api.AttachMenuBots.parse_attachMenuBotsNotModified($0) }
+    dict[1011024320] = { return Api.AttachMenuBots.parse_attachMenuBots($0) }
     dict[1352683077] = { return Api.account.PrivacyRules.parse_privacyRules($0) }
     dict[-123988] = { return Api.PrivacyRule.parse_privacyValueAllowContacts($0) }
     dict[1698855810] = { return Api.PrivacyRule.parse_privacyValueAllowAll($0) }
@@ -962,6 +969,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[512177195] = { return Api.Document.parse_document($0) }
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
     dict[-1493633966] = { return Api.WebAuthorization.parse_webAuthorization($0) }
+    dict[-1428220517] = { return Api.messages.WebViewResult.parse_webViewResult($0) }
     dict[-1052885936] = { return Api.ImportedContact.parse_importedContact($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     return dict
@@ -1223,6 +1231,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ChatAdminWithInvites:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.AttachMenuBot:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.DialogFilterSuggested:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.auth.PasswordRecovery:
@@ -1246,6 +1256,8 @@ public struct Api {
             case let _1 as Api.Contact:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PassportConfig:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.WebViewResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.FileHash:
                 _1.serialize(buffer, boxed)
@@ -1629,6 +1641,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputBotInlineResult:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.AttachMenuBots:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.account.PrivacyRules:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyRule:
@@ -1698,6 +1712,8 @@ public struct Api {
             case let _1 as Api.messages.HighScores:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WebAuthorization:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.WebViewResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ImportedContact:
                 _1.serialize(buffer, boxed)

@@ -88,7 +88,7 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
-            case let .app(appName):
+            case let .app(_, appName, _):
                 name = appName
                 imageName = "Chat List/Tabs/IconSettings"
             }

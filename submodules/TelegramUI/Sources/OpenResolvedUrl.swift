@@ -25,6 +25,7 @@ import UndoUI
 import ImportStickerPackUI
 import PeerInfoUI
 import Markdown
+import WebUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -546,5 +547,29 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller, nil)
                 }
             }
+        case let .setAttach(peerId):
+            let presentError: (String) -> Void = { errorText in
+                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+            }
+            let _ = (context.engine.messages.attachMenuBots()
+            |> deliverOnMainQueue).start(next: { attachMenuBots in
+                if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == peerId }) {
+                    presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
+                } else {
+                    let _ = (context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> deliverOnMainQueue).start(next: { peer in
+                        if let peer = peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canBeAddedToAttachMenu) {
+                            let controller = addWebAppToAttachmentController(sharedContext: context.sharedContext, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: {
+                                let _ = context.engine.messages.addBotToAttachMenu(peerId: peerId).start()
+                            })
+                            present(controller, nil)
+                        } else {
+                            presentError(presentationData.strings.Login_UnknownError)
+                        }
+                    })
+                }
+            })
     }
 }

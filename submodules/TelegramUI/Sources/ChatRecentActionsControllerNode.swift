@@ -937,6 +937,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }), .window(.root), nil)
                     case .importStickers:
                         break
+                    case .setAttach:
+                        break
                 }
             }
         }))

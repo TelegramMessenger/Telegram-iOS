@@ -15,9 +15,11 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/AccountContext:AccountContext",
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/CounterContollerTitleView:CounterContollerTitleView",
+        "//submodules/HexColor:HexColor",
     ],
     visibility = [
         "//visibility:public",

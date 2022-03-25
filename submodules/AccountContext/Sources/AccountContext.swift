@@ -188,10 +188,10 @@ public struct ResolvedBotAdminRights: OptionSet {
     public static let pinMessages = ResolvedBotAdminRights(rawValue: 128)
     public static let promoteMembers = ResolvedBotAdminRights(rawValue: 256)
     public static let manageVideoChats = ResolvedBotAdminRights(rawValue: 512)
-    public static let manageChat = ResolvedBotAdminRights(rawValue: 1024)
-    public static let canBeAnonymous = ResolvedBotAdminRights(rawValue: 2048)
+    public static let canBeAnonymous = ResolvedBotAdminRights(rawValue: 1024)
+    public static let manageChat = ResolvedBotAdminRights(rawValue: 2048)
     
-    public var chatAdminRights: TelegramChatAdminRightsFlags {
+    public var chatAdminRights: TelegramChatAdminRightsFlags? {
         var flags = TelegramChatAdminRightsFlags()
         
         if self.contains(ResolvedBotAdminRights.changeInfo) {
@@ -224,6 +224,11 @@ public struct ResolvedBotAdminRights: OptionSet {
         if self.contains(ResolvedBotAdminRights.canBeAnonymous) {
             flags.insert(.canBeAnonymous)
         }
+        
+        if flags.isEmpty && !self.contains(ResolvedBotAdminRights.manageChat) {
+            return nil
+        }
+        
         return flags
     }
 }
@@ -253,6 +258,7 @@ public enum ResolvedUrl {
     case settings(ResolvedUrlSettingsSection)
     case joinVoiceChat(PeerId, String?)
     case importStickers
+    case setAttach(PeerId)
 }
 
 public enum NavigateToChatKeepStack {

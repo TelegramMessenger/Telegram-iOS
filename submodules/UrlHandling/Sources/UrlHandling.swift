@@ -42,7 +42,7 @@ extension ResolvedBotAdminRights {
         if components.contains("pin_messages") {
             rawValue |= ResolvedBotAdminRights.pinMessages.rawValue
         }
-        if components.contains("promote_members") {
+        if components.contains("promotѲe_members") {
             rawValue |= ResolvedBotAdminRights.promoteMembers.rawValue
         }
         if components.contains("manage_video_chats") {
@@ -66,6 +66,7 @@ extension ResolvedBotAdminRights {
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String, ResolvedBotAdminRights?)
+    case attachBotStart(String)
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
@@ -86,6 +87,7 @@ public enum ParsedInternalUrl {
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
     case phone(String)
+    case setAttach(String)
 }
 
 private enum ParsedUrl {
@@ -182,7 +184,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
-                                if queryItem.name == "start" {
+                                if queryItem.name == "attach" {
+                                    return .peerName(peerName, .attachBotStart(value))
+                                } else if queryItem.name == "start" {
                                     return .peerName(peerName, .botStart(value))
                                 } else if queryItem.name == "startgroup" {
                                     var botAdminRights: ResolvedBotAdminRights?
@@ -200,6 +204,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peerName(peerName, .voiceChat(nil))
+                            } else if queryItem.name == "setattach" {
+                                return .setAttach(peerName)
                             }
                         }
                     }
@@ -431,6 +437,19 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.botStart(peerId: peer.id, payload: payload))
                             case let .groupBotStart(payload, adminRights):
                                 return .single(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights))
+                            case let .attachBotStart(name):
+                                return context.engine.peers.resolvePeerByName(name: name)
+                                |> take(1)
+                                |> mapToSignal { botPeer -> Signal<Peer?, NoError> in
+                                    return .single(botPeer?._asPeer())
+                                }
+                                |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
+                                    if let _ = botPeer {
+                                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                    } else {
+                                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                    }
+                                }
                             case let .channelMessage(id, timecode):
                                 return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
                             case let .replyThread(id, replyId):
@@ -523,6 +542,19 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             return .single(.wallpaper(parameter))
         case let .theme(slug):
             return .single(.theme(slug))
+        case let .setAttach(name):
+            return context.engine.peers.resolvePeerByName(name: name)
+            |> take(1)
+            |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                return .single(peer?._asPeer())
+            }
+            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+                if let peer = peer {
+                    return .single(.setAttach(peer.id))
+                } else {
+                    return .single(.inaccessiblePeer)
+                }
+            }
     }
 }
 

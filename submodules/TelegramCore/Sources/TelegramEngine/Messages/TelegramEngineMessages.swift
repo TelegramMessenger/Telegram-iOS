@@ -160,8 +160,8 @@ public extension TelegramEngine {
             return _internal_exportMessageLink(account: self.account, peerId: peerId, messageId: messageId, isThread: isThread)
         }
 
-        public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, replyToMessageId: MessageId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
-            return _internal_enqueueOutgoingMessageWithChatContextResult(account: self.account, to: peerId, results: results, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
+        public func enqueueOutgoingMessageWithChatContextResult(to peerId: PeerId, botId: PeerId, result: ChatContextResult, replyToMessageId: MessageId? = nil, hideVia: Bool = false, silentPosting: Bool = false, scheduleTime: Int32? = nil, correlationId: Int64? = nil) -> Bool {
+            return _internal_enqueueOutgoingMessageWithChatContextResult(account: self.account, to: peerId, botId: botId, result: result, replyToMessageId: replyToMessageId, hideVia: hideVia, silentPosting: silentPosting, scheduleTime: scheduleTime, correlationId: correlationId)
         }
 
         public func requestChatContextResults(botId: PeerId, peerId: PeerId, query: String, location: Signal<(Double, Double)?, NoError> = .single(nil), offset: String, incompleteResults: Bool = false, staleCachedResults: Bool = false) -> Signal<RequestChatContextResultsResult?, RequestChatContextResultsError> {
@@ -316,6 +316,26 @@ public extension TelegramEngine {
         
         public func translate(text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
+        }
+        
+        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, peerId: peerId, botId: botId, url: url, themeParams: themeParams)
+        }
+        
+        public func getWebViewResult(peerId: PeerId, botId: PeerId, queryId: Int64) -> Signal<ChatContextResult, GetWebViewResultError> {
+            return _internal_getWebViewResult(postbox: self.account.postbox, network: self.account.network, peerId: peerId, botId: botId, queryId: queryId)
+        }
+        
+        public func addBotToAttachMenu(peerId: PeerId) -> Signal<Bool, NoError> {
+            return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+        
+        public func removeBotFromAttachMenu(peerId: PeerId) -> Signal<Bool, NoError> {
+            return _internal_removeBotFromAttachMenu(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        }
+        
+        public func attachMenuBots() -> Signal<[AttachMenuBot], NoError> {
+            return _internal_attachMenuBots(postbox: self.account.postbox)
         }
     }
 }

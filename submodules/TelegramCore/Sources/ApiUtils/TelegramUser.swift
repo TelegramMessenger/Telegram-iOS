@@ -64,6 +64,9 @@ extension TelegramUser {
                 if (flags & (1 << 21)) != 0 {
                     botFlags.insert(.requiresGeolocationForInlineRequests)
                 }
+                if (flags & (1 << 27)) != 0 {
+                    botFlags.insert(.canBeAddedToAttachMenu)
+                }
                 botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
             }
             
@@ -117,6 +120,9 @@ extension TelegramUser {
                             }
                             if (flags & (1 << 21)) != 0 {
                                 botFlags.insert(.requiresGeolocationForInlineRequests)
+                            }
+                            if (flags & (1 << 27)) != 0 {
+                                botFlags.insert(.canBeAddedToAttachMenu)
                             }
                             botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
                         }

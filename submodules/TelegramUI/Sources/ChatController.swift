@@ -10415,11 +10415,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        var availableTabs: [AttachmentButtonType] = [.gallery, .file, .location, .contact]
+        var availableButtons: [AttachmentButtonType] = [.gallery, .file, .location, .contact]
         if canSendPolls {
-            availableTabs.insert(.poll, at: availableTabs.count - 1)
+            availableButtons.insert(.poll, at: availableButtons.count - 1)
         }
-//        availableTabs.insert(.app("Web App"), at: 1)
+        
+        let presentationData = self.presentationData
+        
+        let buttons: Signal<[AttachmentButtonType], NoError>
+        if let _ = peer as? TelegramUser {
+            buttons = .single(availableButtons)
+            |> then(
+                self.context.engine.messages.attachMenuBots()
+                |> map { attachMenuBots in
+                    var buttons = availableButtons
+                    for bot in attachMenuBots.reversed() {
+                        let peerTitle = EnginePeer(bot.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        buttons.insert(.app(bot.peer.id, peerTitle, bot.icon), at: 1)
+                    }
+                    return buttons
+                }
+            )
+        } else {
+            buttons = .single(availableButtons)
+        }
         
         let inputText = self.presentationInterfaceState.interfaceState.effectiveInputState.inputText
         
@@ -10427,7 +10446,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let currentFilesController = Atomic<AttachmentContainable?>(value: nil)
         let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
         
-        let attachmentController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, chatLocation: self.chatLocation, buttons: availableTabs)
+        let attachmentController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, chatLocation: self.chatLocation, buttons: buttons)
         attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
             guard let strongSelf = self else {
                 return
@@ -10684,8 +10703,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let controller = strongSelf.configurePollCreation()
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
-            case .app:
-                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, url: "", message: nil)
+            case let .app(botId, botName, _):
+                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil)
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             }
@@ -12222,7 +12241,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
         let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
 
-        if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, results: results, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
+        if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in

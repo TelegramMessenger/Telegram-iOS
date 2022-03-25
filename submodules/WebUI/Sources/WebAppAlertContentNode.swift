@@ -12,6 +12,7 @@ import AppBundle
 
 private final class WebAppAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
+    private let peerName: String
     
     private let textNode: ASTextNode
     private let iconNode: ASImageNode
@@ -26,8 +27,9 @@ private final class WebAppAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, actions: [TextAlertAction]) {
         self.strings = strings
+        self.peerName = peerName
     
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 0
@@ -72,7 +74,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.textNode.attributedText = NSAttributedString(string: strings.WebApp_AddToAttachmentText("Web App").string, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: strings.WebApp_AddToAttachmentText(self.peerName).string, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Bot Payments/BotLogo"), color: theme.accentColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
@@ -197,7 +199,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
     }
 }
 
-func addWebAppToAttachmentController(sharedContext: SharedAccountContext) -> AlertController {
+public func addWebAppToAttachmentController(sharedContext: SharedAccountContext, peerName: String, completion: @escaping () -> Void) -> AlertController {
     let presentationData = sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
@@ -209,9 +211,10 @@ func addWebAppToAttachmentController(sharedContext: SharedAccountContext) -> Ale
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_AddToAttachmentAdd, action: {
         dismissImpl?(true)
       
+        completion()
     })]
     
-    contentNode = WebAppAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, actions: actions)
+    contentNode = WebAppAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in

@@ -83,6 +83,7 @@ public struct Namespaces {
         public static let cachedSendAsPeers: Int8 = 18
         public static let availableReactions: Int8 = 19
         public static let resolvedByPhonePeers: Int8 = 20
+        public static let attachMenuBots: Int8 = 21
     }
     
     public struct UnorderedItemList {

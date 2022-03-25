@@ -17,7 +17,7 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(String)
+    case app(PeerId, String, TelegramMediaFile?)
 }
 
 public protocol AttachmentContainable: ViewController {
@@ -97,7 +97,7 @@ public class AttachmentController: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation
-    private let buttons: [AttachmentButtonType]
+    private var buttons: [AttachmentButtonType]
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         get {
@@ -564,11 +564,13 @@ public class AttachmentController: ViewController {
         completion(nil, nil)
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType]) {
+    private var buttonsDisposable: Disposable?
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: Signal<[AttachmentButtonType], NoError>) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
-        self.buttons = buttons
+        self.buttons = []
         
         super.init(navigationBarPresentationData: nil)
         
@@ -581,10 +583,21 @@ public class AttachmentController: ViewController {
                 strongSelf.node.scrollToTop()
             }
         }
+        
+        self.buttonsDisposable = (buttons
+        |> deliverOnMainQueue).start(next: { [weak self] buttons in
+            if let strongSelf = self {
+                let previousButtons = strongSelf.buttons
+                strongSelf.buttons = buttons
+                if let layout = strongSelf.validLayout {
+                    strongSelf.containerLayoutUpdated(layout, transition: !previousButtons.isEmpty ? .animated(duration: 0.2, curve: .easeInOut) : .immediate)
+                }
+            }
+        })
     }
     
     deinit {
-        print()
+        self.buttonsDisposable?.dispose()
     }
     
     public required init(coder aDecoder: NSCoder) {
@@ -621,9 +634,12 @@ public class AttachmentController: ViewController {
         return false
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
-
+        
+        self.validLayout = layout
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
 }

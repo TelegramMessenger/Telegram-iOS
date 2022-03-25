@@ -112,7 +112,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
                 case .openUserProfile:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingProfileIconImage : graphics.chatBubbleActionButtonOutgoingProfileIconImage
-                case .openWebApp:
+                case .openWebView:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingWebAppIconImage : graphics.chatBubbleActionButtonOutgoingWebAppIconImage
                 default:
                     iconImage = nil
