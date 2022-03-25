@@ -1129,6 +1129,13 @@
 
 "Time.MediumDate" = "%1$@ at %2$@";
 
+"MuteFor.Minutes_1" = "Mute for 1 minute";
+"MuteFor.Minutes_2" = "Mute for 2 minutes";
+"MuteFor.Minutes_3_10" = "Mute for %@ minutes";
+"MuteFor.Minutes_any" = "Mute for %@ minutes";
+"MuteFor.Minutes_many" = "Mute for %@ minutes";
+"MuteFor.Minutes_0" = "Mute for %@ minutes";
+
 "MuteFor.Hours_1" = "Mute for 1 hour";
 "MuteFor.Hours_2" = "Mute for 2 hours";
 "MuteFor.Hours_3_10" = "Mute for %@ hours";
