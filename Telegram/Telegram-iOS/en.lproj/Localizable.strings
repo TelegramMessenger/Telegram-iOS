@@ -7417,3 +7417,5 @@ Sorry for the inconvenience.";
 
 "WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added in the attachment menu.";
 
+"WebApp.MessagePreview" = "Message Preview";
+"WebApp.Send" = "Send";

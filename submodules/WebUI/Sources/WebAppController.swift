@@ -241,8 +241,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.sendEvent(name: "theme_changed", data: themeParamsString)
         }
         
+        private weak var currentAlertController: AlertController?
         private func handleSendResultMessage() {
-            guard let controller = self.controller, let queryId = self.queryId else {
+            guard let controller = self.controller, let queryId = self.queryId, self.currentAlertController == nil else {
                 return
             }
 
@@ -252,17 +253,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     return
                 }
                 
-                controller.present(textAlertController(context: strongSelf.context, updatedPresentationData: controller.updatedPresentationData, title: nil, text: "Send result?", actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: { [weak self] in
+                let alertController = webAppPreviewResultController(context: strongSelf.context, to: controller.peerId, botId: controller.botId, result: result, completion: { [weak self] in
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
                     let _ = strongSelf.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: controller.peerId, botId: controller.botId, result: result)
                     controller.dismiss()
-                })]), in: .window(.root))
+                })
+                controller.present(alertController, in: .window(.root))
+                strongSelf.currentAlertController = alertController
             })
         }
     }
-
     
     private var controllerNode: Node {
         return self.displayNode as! Node
