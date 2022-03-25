@@ -11,14 +11,15 @@ import AccountContext
 import AppBundle
 import PhotoResources
 
-private final class WebAppAlertContentNode: AlertContentNode {
-    private let strings: PresentationStrings
-    private let peerName: String
-    private let peerIcon: TelegramMediaFile
+private final class WebAppPreviewContentNode: AlertContentNode {
+    private let context: AccountContext
+    private let presentationData: PresentationData
+    private let result: ChatContextResult
+    private let outgoingMessage: EnqueueMessage?
+    private var previewItem: ListViewItem?
+    private var previewNode: ListViewItemNode?
     
-    private let textNode: ASTextNode
-    private let appIconNode: ASImageNode
-    private let iconNode: ASImageNode
+    private let titleNode: ASTextNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -28,26 +29,20 @@ private final class WebAppAlertContentNode: AlertContentNode {
     
     private var iconDisposable: Disposable?
     
+    
+    
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(account: Account, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, peerIcon: TelegramMediaFile, actions: [TextAlertAction]) {
-        self.strings = strings
-        self.peerName = peerName
-        self.peerIcon = peerIcon
-        
-        self.textNode = ASTextNode()
-        self.textNode.maximumNumberOfLines = 0
-       
-        self.appIconNode = ASImageNode()
-        self.appIconNode.displaysAsynchronously = false
-        self.appIconNode.displayWithoutProcessing = true
-       
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.displayWithoutProcessing = true
-       
+    init(context: AccountContext, theme: AlertControllerTheme, presentationData: PresentationData, to peerId: PeerId, botId: PeerId, result: ChatContextResult, actions: [TextAlertAction]) {
+        self.context = context
+        self.presentationData = presentationData
+        self.result = result
+                
+        self.titleNode = ASTextNode()
+        self.titleNode.maximumNumberOfLines = 0
+              
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         
@@ -65,11 +60,11 @@ private final class WebAppAlertContentNode: AlertContentNode {
         }
         self.actionVerticalSeparators = actionVerticalSeparators
         
+        self.outgoingMessage = self.context.engine.messages.outgoingMessageWithChatContextResult(to: peerId, botId: botId, result: result, replyToMessageId: nil, hideVia: true, silentPosting: false, scheduleTime: nil, correlationId: nil)
+        
         super.init()
         
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.appIconNode)
-        self.addSubnode(self.iconNode)
+        self.addSubnode(self.titleNode)
     
         self.addSubnode(self.actionNodesSeparator)
         
@@ -80,30 +75,28 @@ private final class WebAppAlertContentNode: AlertContentNode {
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
-        
+                
         self.updateTheme(theme)
         
-        self.iconDisposable = (svgIconImageFile(account: account, fileReference: .standalone(media: peerIcon))
-        |> deliverOnMainQueue).start(next: { [weak self] transform in
-            if let strongSelf = self {
-                let availableSize = CGSize(width: 48.0, height: 48.0)
-                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
-                let drawingContext = transform(arguments)
-                let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
-                strongSelf.appIconNode.image = generateTintedImage(image: image, color: theme.accentColor, backgroundColor: nil)
+        if let outgoingMessage = self.outgoingMessage, case let .message(text, attributes, mediaReference, _, _, _) = outgoingMessage {
+            let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
+            var peers = SimpleDictionary<PeerId, Peer>()
+            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            
+            var media: [Media] = []
+            if let mediaReference = mediaReference {
+                media.append(mediaReference.media)
             }
-        })
-    }
-    
-    deinit {
-        self.iconDisposable?.dispose()
+            
+            let previewMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: scheduleWhenOnlineTimestamp, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: text, attributes: attributes, media: media, peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+            
+            let previewItem = context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [previewMessage], theme: presentationData.theme.withUpdated(preview: true), strings: presentationData.strings, wallpaper: .color(0xffffff), fontSize: presentationData.chatFontSize, chatBubbleCorners: presentationData.chatBubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: nil, availableReactions: nil, isCentered: true)
+            self.previewItem = previewItem
+        }
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.textNode.attributedText = NSAttributedString(string: strings.WebApp_AddToAttachmentText(self.peerName).string, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        
-        self.appIconNode.image = generateTintedImage(image: self.appIconNode.image, color: theme.accentColor)
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/BotPlus"), color: theme.accentColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.WebApp_MessagePreview, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -120,22 +113,51 @@ private final class WebAppAlertContentNode: AlertContentNode {
     
     override func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         var size = size
-        size.width = min(size.width , 270.0)
+        size.width = min(size.width , 290.0)
         
         self.validLayout = size
         
         var origin: CGPoint = CGPoint(x: 0.0, y: 20.0)
+                
+        let textSize = self.titleNode.measure(size)
+        var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize)
+        origin.y += textSize.height + 12.0
         
         var iconSize = CGSize()
         var iconFrame = CGRect()
-        if let icon = self.iconNode.image {
-            iconSize = icon.size
-            iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - iconSize.width) / 2.0), y: origin.y), size: iconSize)
-            origin.y += iconSize.height + 16.0
+
+        let sideInset: CGFloat = 0.0
+        let params = ListViewItemLayoutParams(width: size.width, leftInset: sideInset, rightInset: sideInset, availableHeight: size.height)
+        if let previewItem = self.previewItem {
+            if let previewNode = self.previewNode {
+                previewItem.updateNode(async: { $0() }, node: {
+                    return previewNode
+                }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                    let nodeFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: layout.size.height))
+                    
+                    previewNode.contentSize = layout.contentSize
+                    previewNode.insets = layout.insets
+                    previewNode.frame = nodeFrame
+                    previewNode.isUserInteractionEnabled = false
+                    
+                    apply(ListViewItemApply(isOnScreen: true))
+                })
+            } else {
+                var itemNode: ListViewItemNode?
+                previewItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { node, apply in
+                    itemNode = node
+                    apply().1(ListViewItemApply(isOnScreen: true))
+                })
+                itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
+                itemNode!.isUserInteractionEnabled = false
+                self.addSubnode(itemNode!)
+                self.previewNode = itemNode
+            }
+            iconSize = CGSize(width: 0.0, height: self.previewNode?.frame.height ?? 0.0)
+            
+            self.previewNode?.frame = CGRect(x: 4.0, y: origin.y, width: size.width, height: iconSize.height)
+            origin.y += iconSize.height
         }
-        
-        let textSize = self.textNode.measure(size)
-        var textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize)
         
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
@@ -159,7 +181,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
         let insets = UIEdgeInsets(top: 18.0, left: 18.0, bottom: 18.0, right: 18.0)
         
         var contentWidth = max(textSize.width, minActionsWidth)
-        contentWidth = max(contentWidth, 234.0)
+        contentWidth = max(contentWidth, 260.0)
         
         var actionsHeight: CGFloat = 0.0
         switch effectiveActionLayout {
@@ -218,33 +240,29 @@ private final class WebAppAlertContentNode: AlertContentNode {
         }
         
         iconFrame.origin.x = floorToScreenPixels((resultSize.width - iconFrame.width) / 2.0) + 19.0
-        
-        transition.updateFrame(node: self.appIconNode, frame: CGRect(x: iconFrame.minX - 50.0, y: iconFrame.minY + 3.0, width: 42.0, height: 42.0))
-        transition.updateFrame(node: self.iconNode, frame: iconFrame)
-       
+    
+    
         textFrame.origin.x = floorToScreenPixels((resultSize.width - textFrame.width) / 2.0)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
+        transition.updateFrame(node: self.titleNode, frame: textFrame)
         
         return resultSize
     }
 }
 
-public func addWebAppToAttachmentController(context: AccountContext, peerName: String, peerIcon: TelegramMediaFile, completion: @escaping () -> Void) -> AlertController {
+public func webAppPreviewResultController(context: AccountContext, to peerId: PeerId, botId: PeerId, result: ChatContextResult, completion: @escaping () -> Void) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let theme = presentationData.theme
-    let strings = presentationData.strings
-    
+
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: WebAppAlertContentNode?
+    var contentNode: WebAppPreviewContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_AddToAttachmentAdd, action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_Send, action: {
         dismissImpl?(true)
       
         completion()
     })]
     
-    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, peerIcon: peerIcon, actions: actions)
+    contentNode = WebAppPreviewContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), presentationData: presentationData, to: peerId, botId: botId, result: result, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in
