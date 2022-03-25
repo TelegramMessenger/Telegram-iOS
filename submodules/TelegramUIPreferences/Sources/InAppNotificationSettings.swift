@@ -37,12 +37,13 @@ public struct InAppNotificationSettings: Codable, Equatable {
     public var totalUnreadCountIncludeTags: PeerSummaryCounterTags
     public var displayNameOnLockscreen: Bool
     public var displayNotificationsFromAllAccounts: Bool
+    public var customSound: String?
     
     public static var defaultSettings: InAppNotificationSettings {
-        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true)
+        return InAppNotificationSettings(playSounds: true, vibrate: false, displayPreviews: true, totalUnreadCountDisplayStyle: .filtered, totalUnreadCountDisplayCategory: .messages, totalUnreadCountIncludeTags: .all, displayNameOnLockscreen: true, displayNotificationsFromAllAccounts: true, customSound: nil)
     }
     
-    public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool) {
+    public init(playSounds: Bool, vibrate: Bool, displayPreviews: Bool, totalUnreadCountDisplayStyle: TotalUnreadCountDisplayStyle, totalUnreadCountDisplayCategory: TotalUnreadCountDisplayCategory, totalUnreadCountIncludeTags: PeerSummaryCounterTags, displayNameOnLockscreen: Bool, displayNotificationsFromAllAccounts: Bool, customSound: String?) {
         self.playSounds = playSounds
         self.vibrate = vibrate
         self.displayPreviews = displayPreviews
@@ -51,6 +52,7 @@ public struct InAppNotificationSettings: Codable, Equatable {
         self.totalUnreadCountIncludeTags = totalUnreadCountIncludeTags
         self.displayNameOnLockscreen = displayNameOnLockscreen
         self.displayNotificationsFromAllAccounts = displayNotificationsFromAllAccounts
+        self.customSound = customSound
     }
     
     public init(from decoder: Decoder) throws {
@@ -83,6 +85,8 @@ public struct InAppNotificationSettings: Codable, Equatable {
         }
         self.displayNameOnLockscreen = (try container.decodeIfPresent(Int32.self, forKey: "displayNameOnLockscreen") ?? 1) != 0
         self.displayNotificationsFromAllAccounts = (try container.decodeIfPresent(Int32.self, forKey: "displayNotificationsFromAllAccounts") ?? 1) != 0
+        
+        self.customSound = try container.decodeIfPresent(String.self, forKey: "customSound")
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -96,6 +100,7 @@ public struct InAppNotificationSettings: Codable, Equatable {
         try container.encode(self.totalUnreadCountIncludeTags.rawValue, forKey: "totalUnreadCountIncludeTags_2")
         try container.encode((self.displayNameOnLockscreen ? 1 : 0) as Int32, forKey: "displayNameOnLockscreen")
         try container.encode((self.displayNotificationsFromAllAccounts ? 1 : 0) as Int32, forKey: "displayNotificationsFromAllAccounts")
+        try container.encodeIfPresent(self.customSound, forKey: "customSound")
     }
 }
 
