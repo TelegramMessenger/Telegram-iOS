@@ -29,10 +29,14 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
 }
 
 private func generateThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
+    var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
+    if backgroundColor == 0x000000 {
+        backgroundColor = presentationTheme.list.itemBlocksBackgroundColor.rgb
+    }
     return [
-        "bg_color": Int32(bitPattern: presentationTheme.list.plainBackgroundColor.rgb),
+        "bg_color": Int32(bitPattern: backgroundColor),
         "text_color": Int32(bitPattern: presentationTheme.list.itemPrimaryTextColor.rgb),
-        "hint_color": Int32(bitPattern: presentationTheme.list.blocksBackgroundColor.rgb),
+        "hint_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
         "link_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
         "button_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.fillColor.rgb),
         "button_text_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.foregroundColor.rgb)
@@ -45,7 +49,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     
-    private class Node: ViewControllerTracingNode {
+    private class Node: ViewControllerTracingNode, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
         private var webView: WKWebView?
@@ -55,7 +59,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private let present: (ViewController, Any?) -> Void
         private var queryId: Int64?
         
-        init(context: AccountContext, controller: WebAppController, presentationData: PresentationData, peerId: PeerId, botId: PeerId, url: String?, present: @escaping (ViewController, Any?) -> Void) {
+        init(context: AccountContext, controller: WebAppController, presentationData: PresentationData, peerId: PeerId, botId: PeerId, url: String?, queryId: Int64?, present: @escaping (ViewController, Any?) -> Void) {
             self.context = context
             self.controller = controller
             self.presentationData = presentationData
@@ -65,23 +69,29 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             self.backgroundColor = .white
             
+            let configuration = WKWebViewConfiguration()
+            let userController = WKUserContentController()
+            
             let js = "var TelegramWebviewProxyProto = function() {}; " +
                 "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
                 "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +
                 "}; " +
             "var TelegramWebviewProxy = new TelegramWebviewProxyProto();"
-            
-            let configuration = WKWebViewConfiguration()
-            let userController = WKUserContentController()
-            
+                        
             let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
             userController.addUserScript(userScript)
-            
             userController.add(WeakGameScriptMessageHandler { [weak self] message in
                 if let strongSelf = self {
                     strongSelf.handleScriptMessage(message)
                 }
             }, name: "performAction")
+            
+            let selectionString = "var css = '*{-webkit-touch-callout:none;-webkit-user-select:none}';"
+                    + " var head = document.head || document.getElementsByTagName('head')[0];"
+                    + " var style = document.createElement('style'); style.type = 'text/css';" +
+                    " style.appendChild(document.createTextNode(css)); head.appendChild(style);"
+            let selectionScript: WKUserScript = WKUserScript(source: selectionString, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+            userController.addUserScript(selectionScript)
             
             configuration.userContentController = userController
             
@@ -104,25 +114,39 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
                 return point.x > 30.0
             }
+            webView.allowsBackForwardNavigationGestures = false
             
+            webView.scrollView.delegate = self
             self.view.addSubview(webView)
             self.webView = webView
             
-            let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateThemeParams(presentationData.theme))
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                guard let strongSelf = self else {
-                    return
+            if let url = url, let queryId = queryId {
+                self.queryId = queryId
+                if let parsedUrl = URL(string: url) {
+                    self.webView?.load(URLRequest(url: parsedUrl))
                 }
-                switch result {
-                    case let .webViewResult(queryId, url):
-                        if let parsedUrl = URL(string: url) {
-                            strongSelf.queryId = queryId
-                            strongSelf.webView?.load(URLRequest(url: parsedUrl))
-                        }
-                    case .requestConfirmation:
-                        break
-                }
-            })
+            } else {
+                let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateThemeParams(presentationData.theme))
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    switch result {
+                        case let .webViewResult(queryId, url):
+                            if let parsedUrl = URL(string: url) {
+                                strongSelf.queryId = queryId
+                                strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                            }
+                        case .requestConfirmation:
+                            break
+                    }
+                })
+            }
+        }
+        
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            let contentOffset = scrollView.contentOffset.y
+            self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -220,22 +244,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let peerId: PeerId
     private let botId: PeerId
     private let url: String?
+    private let queryId: Int64?
     
     private var presentationData: PresentationData
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?) {
         self.context = context
         self.peerId = peerId
         self.botId = botId
         self.url = url
+        self.queryId = queryId
         
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
         var theme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.plainBackgroundColor)
+        if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
+            theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.itemBlocksBackgroundColor)
+        } else {
+            theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.plainBackgroundColor)
+        }
         let navigationBarPresentationData = NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "", close: ""))
         
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
@@ -267,7 +297,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 strongSelf.presentationData = presentationData
                 
                 var theme = NavigationBarTheme(rootControllerTheme: presentationData.theme)
-                theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.plainBackgroundColor)
+                if presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
+                    theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.itemBlocksBackgroundColor)
+                } else {
+                    theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.plainBackgroundColor)
+                }
                 let navigationBarPresentationData = NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "", close: ""))
                 strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 strongSelf.titleView?.theme = presentationData.theme
@@ -296,47 +330,60 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
         let context = self.context
-        var items: [ContextMenuItem] = []
+        let presentationData = self.presentationData
         
-        if self.botId != self.peerId {
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebApp_OpenBot, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
+        let peerId = self.peerId
+        let botId = self.botId
+        
+        let items = context.engine.messages.attachMenuBots()
+        |> map { attachMenuBots -> ContextController.Items in
+            var items: [ContextMenuItem] = []
+            if peerId != botId {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_OpenBot, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
+                }, action: { _, f in
+                    f(.default)
+                    
+    //                if let strongSelf = self {
+    //                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf., context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId)))
+    //                }
+                })))
+            }
+            
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebApp_ReloadPage, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
                 f(.default)
                 
-//                if let strongSelf = self {
-//                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf., context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId)))
-//                }
+                
             })))
-        }
-    
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebApp_ReloadPage, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
-        }, action: { _, f in
-            f(.default)
             
-            
-        })))
-        
-        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-        }, action: { [weak self] _, f in
-            f(.default)
-            
-            if let strongSelf = self {
-                let _ = context.engine.messages.removeBotFromAttachMenu(peerId: strongSelf.botId).start()
-                strongSelf.dismiss()
+            if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == botId}) {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    if let strongSelf = self {
+                        let _ = context.engine.messages.removeBotFromAttachMenu(peerId: strongSelf.botId).start()
+                        strongSelf.dismiss()
+                    }
+                })))
             }
-        })))
-    
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(WebAppContextReferenceContentSource(controller: self, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            
+            return ContextController.Items(content: .list(items))
+        }
+        
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(WebAppContextReferenceContentSource(controller: self, sourceNode: node)), items: items, gesture: gesture)
         self.presentInGlobalOverlay(contextController)
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, controller: self, presentationData: self.presentationData, peerId: self.peerId, botId: self.botId, url: self.url, present: { [weak self] c, a in
+        self.displayNode = Node(context: self.context, controller: self, presentationData: self.presentationData, peerId: self.peerId, botId: self.botId, url: self.url, queryId: self.queryId, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         })
+        
+        self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

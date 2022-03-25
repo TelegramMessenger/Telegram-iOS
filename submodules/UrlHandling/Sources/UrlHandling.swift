@@ -42,7 +42,7 @@ extension ResolvedBotAdminRights {
         if components.contains("pin_messages") {
             rawValue |= ResolvedBotAdminRights.pinMessages.rawValue
         }
-        if components.contains("promotѲe_members") {
+        if components.contains("promote_members") {
             rawValue |= ResolvedBotAdminRights.promoteMembers.rawValue
         }
         if components.contains("manage_video_chats") {
