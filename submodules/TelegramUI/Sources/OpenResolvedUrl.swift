@@ -45,7 +45,7 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
 
 func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)? = nil, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?) {
     let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    if case let .chat(maybeUpdatedPresentationData) = urlContext {
+    if case let .chat(_, maybeUpdatedPresentationData) = urlContext {
         updatedPresentationData = maybeUpdatedPresentationData
     } else {
         updatedPresentationData = nil
@@ -560,14 +560,28 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
                     )
                     |> deliverOnMainQueue).start(next: { peer in
-                        if let peer = peer, case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canBeAddedToAttachMenu) {
-                            let controller = addWebAppToAttachmentController(sharedContext: context.sharedContext, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: {
-                                let _ = context.engine.messages.addBotToAttachMenu(peerId: peerId).start()
-                            })
-                            present(controller, nil)
-                        } else {
-                            presentError(presentationData.strings.Login_UnknownError)
+                        guard let peer = peer else {
+                            return
                         }
+                        let _ = (context.engine.messages.requestWebView(peerId: peer.id, botId: peer.id, url: nil, themeParams: nil)
+                        |> deliverOnMainQueue).start(next: { result in
+                            if case let .requestConfirmation(botIcon) = result {
+                                if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canBeAddedToAttachMenu) {
+                                    let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: botIcon, completion: {
+                                        let _ = context.engine.messages.addBotToAttachMenu(peerId: peerId).start()
+                                        
+                                        Queue.mainQueue().after(1.0, {
+                                            if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
+                                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotId: peer.id, useExisting: true))
+                                            }
+                                        })
+                                    })
+                                    present(controller, nil)
+                                } else {
+                                    presentError(presentationData.strings.Login_UnknownError)
+                                }
+                            }
+                        })
                     })
                 }
             })

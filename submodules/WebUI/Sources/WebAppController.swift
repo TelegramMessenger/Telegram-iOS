@@ -28,7 +28,7 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
-private func generateThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
+public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
     var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
     if backgroundColor == 0x000000 {
         backgroundColor = presentationTheme.list.itemBlocksBackgroundColor.rgb
@@ -67,8 +67,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             super.init()
             
-            self.backgroundColor = .white
-            
+            if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
+                self.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+            } else {
+                self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            }
+                        
             let configuration = WKWebViewConfiguration()
             let userController = WKUserContentController()
             
@@ -105,6 +109,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             let webView = WKWebView(frame: CGRect(), configuration: configuration)
+            webView.isOpaque = false
+            webView.backgroundColor = .clear
+            
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 webView.allowsLinkPreview = false
             }
@@ -115,9 +122,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return point.x > 30.0
             }
             webView.allowsBackForwardNavigationGestures = false
-            
             webView.scrollView.delegate = self
-            self.view.addSubview(webView)
             self.webView = webView
             
             if let url = url, let queryId = queryId {
@@ -126,7 +131,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.webView?.load(URLRequest(url: parsedUrl))
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateThemeParams(presentationData.theme))
+                let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateWebAppThemeParams(presentationData.theme))
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -144,6 +149,26 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        override func didLoad() {
+            super.didLoad()
+            
+            guard let webView = self.webView else {
+                return
+            }
+            self.view.addSubview(webView)
+            
+            if #available(iOS 11.0, *) {
+                let webScrollView = webView.subviews.compactMap { $0 as? UIScrollView }.first
+                Queue.mainQueue().after(0.1, {
+                    let contentView = webScrollView?.subviews.first(where: { $0.interactions.count > 1 })
+                    guard let dragInteraction = (contentView?.interactions.compactMap { $0 as? UIDragInteraction }.first) else {
+                        return
+                    }
+                    contentView?.removeInteraction(dragInteraction)
+                })
+            }
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
@@ -151,7 +176,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             if let webView = self.webView {
-                webView.frame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
+                webView.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
             }
         }
         
@@ -194,7 +219,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
         func updatePresentationData(_ presentationData: PresentationData) {
             self.presentationData = presentationData
             
-            let themeParams = generateThemeParams(presentationData.theme)
+            if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
+                self.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+            } else {
+                self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            }
+            
+            let themeParams = generateWebAppThemeParams(presentationData.theme)
             var themeParamsString = "{"
             for (key, value) in themeParams {
                 if let value = value as? Int32 {

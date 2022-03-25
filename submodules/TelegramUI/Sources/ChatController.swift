@@ -219,6 +219,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     public let chatLocation: ChatLocation
     public let subject: ChatControllerSubject?
     private let botStart: ChatControllerInitialBotStart?
+    private var attachBotId: PeerId?
     
     private let peerDisposable = MetaDisposable()
     private let titleDisposable = MetaDisposable()
@@ -499,7 +500,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var inviteRequestsContext: PeerInvitationImportersContext?
     private var inviteRequestsDisposable = MetaDisposable()
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = []) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotId: PeerId? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = []) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -509,6 +510,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatLocationContextHolder = chatLocationContextHolder
         self.subject = subject
         self.botStart = botStart
+        self.attachBotId = attachBotId
         self.peekData = peekData
         self.currentChatListFilter = chatListFilter
         self.chatNavigationStack = chatNavigationStack
@@ -3348,7 +3350,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, themeParams: nil)
+            strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
             |> afterDisposed {
                 updateProgress()
             })
@@ -9114,6 +9116,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             self.chatDisplayNode.historyNode.preloadPages = true
         }
+        
+        if let attachBotId = self.attachBotId {
+            self.attachBotId = nil
+            self.presentAttachmentBot(botId: attachBotId)
+        }
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -10455,7 +10462,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?) {
+    public func presentAttachmentBot(botId: PeerId) {
+        self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil, botId: botId)
+    }
+    
+    private func presentAttachmentMenu(editMediaOptions: MessageMediaEditingOptions?, editMediaReference: AnyMediaReference?, botId: PeerId? = nil) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -10493,6 +10504,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let presentationData = self.presentationData
         
+        var switchToBotImpl: ((AttachmentButtonType) -> Void)?
+        var switchToBotId = botId
         let buttons: Signal<[AttachmentButtonType], NoError>
         if let _ = peer as? TelegramUser {
             buttons = .single(availableButtons)
@@ -10506,7 +10519,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     return buttons
                 }
-            )
+            ) |> afterNext { buttons in
+                if let botId = switchToBotId, let button = buttons.first(where: {
+                    if case let .app(otherBotId, _,_) = $0, botId == otherBotId {
+                        return true
+                    } else {
+                        return false
+                    }
+                }) {
+                    Queue.mainQueue().justDispatch {
+                        switchToBotImpl?(button)
+                    }
+                    switchToBotId = nil
+                }
+            }
         } else {
             buttons = .single(availableButtons)
         }
@@ -10518,6 +10544,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let currentLocationController = Atomic<AttachmentContainable?>(value: nil)
         
         let attachmentController = AttachmentController(context: self.context, updatedPresentationData: self.updatedPresentationData, chatLocation: self.chatLocation, buttons: buttons)
+        switchToBotImpl = { [weak attachmentController] button in
+            attachmentController?.switchTo(button)
+        }
         attachmentController.requestController = { [weak self, weak attachmentController] type, completion in
             guard let strongSelf = self else {
                 return
@@ -13783,6 +13812,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                             $0.updatedBotStartPayload(botStart.payload)
                         })
+                    case .withAttachBot:
+                        self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil)
                     default:
                         break
                 }
@@ -13837,6 +13868,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             case let .withBotStartPayload(botStart):
                                 self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(id: peerId), botStart: botStart))
+                            case let .withAttachBot(botId):
+                                if let navigationController = self.effectiveNavigationController {
+                                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(id: peerId), attachBotId: botId))
+                                }
                         }
                     }
                 } else {
@@ -14261,7 +14296,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?) {
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, openPeer: { [weak self] peerId, navigation in
+        guard let peerId = self.chatLocation.peerId else {
+            return
+        }
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -14293,6 +14331,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     } else if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: startPayload))
+                    }
+                case let .withAttachBot(botId):
+                    if let navigationController = strongSelf.effectiveNavigationController {
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), attachBotId: botId))
                     }
                 default:
                     break

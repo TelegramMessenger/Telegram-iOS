@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/CounterContollerTitleView:CounterContollerTitleView",
         "//submodules/HexColor:HexColor",
+        "//submodules/PhotoResources:PhotoResources",
     ],
     visibility = [
         "//visibility:public",

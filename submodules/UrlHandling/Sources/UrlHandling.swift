@@ -444,8 +444,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     return .single(botPeer?._asPeer())
                                 }
                                 |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
-                                    if let _ = botPeer {
-                                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                    if let botPeer = botPeer {
+                                        return .single(.peer(peer.id, .withAttachBot(botPeer.id)))
                                     } else {
                                         return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                     }

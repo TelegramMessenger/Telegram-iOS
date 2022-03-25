@@ -6,7 +6,7 @@ import MtProtoKit
 
 public enum RequestWebViewResult {
     case webViewResult(queryId: Int64, url: String)
-    case requestConfirmation
+    case requestConfirmation(botIcon: TelegramMediaFile)
 }
 
 public enum RequestWebViewError {
@@ -37,8 +37,8 @@ func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId
         }
         |> mapToSignal { result -> Signal<RequestWebViewResult, RequestWebViewError> in
             switch result {
-                case let .webViewResultConfirmationRequired(_, users):
-                    return postbox.transaction { transaction -> RequestWebViewResult in
+                case let .webViewResultConfirmationRequired(bot, users):
+                    return postbox.transaction { transaction -> Signal<RequestWebViewResult, RequestWebViewError> in
                         var peers: [Peer] = []
                         for user in users {
                             let telegramUser = TelegramUser(user: user)
@@ -47,9 +47,15 @@ func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId
                         updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                             return updated
                         })
-                        return .requestConfirmation
+                        
+                        if case let .attachMenuBot(_, attachMenuIcon) = bot, let icon = telegramMediaFileFromApiDocument(attachMenuIcon) {
+                            return .single(.requestConfirmation(botIcon: icon))
+                        } else {
+                            return .complete()
+                        }
                     }
                     |> castError(RequestWebViewError.self)
+                    |> switchToLatest
                 case let .webViewResultUrl(queryId, url):
                     return .single(.webViewResult(queryId: queryId, url: url))
             }

@@ -148,6 +148,7 @@ public enum ChatControllerInteractionNavigateToPeer {
     case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?, peekData: ChatPeekTimeout?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)
+    case withAttachBot(PeerId)
 }
 
 public struct ChatInterfaceForwardOptionsState: Codable, Equatable {

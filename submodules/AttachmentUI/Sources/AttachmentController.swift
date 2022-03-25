@@ -17,7 +17,7 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(PeerId, String, TelegramMediaFile?)
+    case app(PeerId, String, TelegramMediaFile)
 }
 
 public protocol AttachmentContainable: ViewController {
@@ -206,9 +206,9 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.panel.selectionChanged = { [weak self] type, ascending in
+            self.panel.selectionChanged = { [weak self] type in
                 if let strongSelf = self {
-                    return strongSelf.switchToController(type, ascending)
+                    return strongSelf.switchToController(type)
                 } else {
                     return false
                 }
@@ -268,7 +268,7 @@ public class AttachmentController: ViewController {
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
-            let _ = self.switchToController(.gallery, false)
+            let _ = self.switchToController(.gallery)
         }
         
         private func updateSelectionCount(_ count: Int) {
@@ -293,7 +293,26 @@ public class AttachmentController: ViewController {
             }
         }
         
-        func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) -> Bool {
+        func switchTo(_ type: AttachmentButtonType) {
+            guard let buttons = self.controller?.buttons else {
+                return
+            }
+            if case let .app(botId, _, _) = type {
+                let index = buttons.firstIndex(where: {
+                    if case let .app(otherBotId, _, _) = $0, otherBotId == botId {
+                        return true
+                    } else {
+                        return false
+                    }
+                })
+                if let index = index {
+                    self.panel.updateSelectedIndex(index)
+                    let _ = self.switchToController(buttons[index], animated: false)
+                }
+            }
+        }
+        
+        func switchToController(_ type: AttachmentButtonType, animated: Bool = true) -> Bool {
             guard self.currentType != type else {
                 if self.animating {
                     return false
@@ -338,13 +357,13 @@ public class AttachmentController: ViewController {
                         let previousController = strongSelf.currentControllers.last
                         strongSelf.currentControllers = [controller]
                         
-                        if previousType != nil {
+                        if previousType != nil && animated {
                             strongSelf.animateSwitchTransition(controller, previousController: previousController)
                         }
                         
                         if let layout = strongSelf.validLayout {
                             strongSelf.switchingController = true
-                            strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                            strongSelf.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
                             strongSelf.switchingController = false
                         }
                     }
@@ -611,6 +630,10 @@ public class AttachmentController: ViewController {
     open override func loadDisplayNode() {
         self.displayNode = Node(controller: self)
         self.displayNodeDidLoad()
+    }
+    
+    public func switchTo(_ type: AttachmentButtonType) {
+        (self.displayNode as! Node).switchTo(type)
     }
     
     public func _dismiss() {
