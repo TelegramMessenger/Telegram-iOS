@@ -12,10 +12,101 @@ import AttachmentTextInputPanelNode
 import ChatPresentationInterfaceState
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
+import PhotoResources
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let iconSize = CGSize(width: 30.0, height: 30.0)
 private let sideInset: CGFloat = 0.0
+
+private final class IconComponent: Component {
+    public let account: Account
+    public let name: String
+    public let file: TelegramMediaFile?
+    public let tintColor: UIColor?
+    
+    public init(account: Account, name: String, file: TelegramMediaFile?, tintColor: UIColor?) {
+        self.account = account
+        self.name = name
+        self.file = file
+        self.tintColor = tintColor
+    }
+    
+    public static func ==(lhs: IconComponent, rhs: IconComponent) -> Bool {
+        if lhs.account !== rhs.account {
+            return false
+        }
+        if lhs.name != rhs.name {
+            return false
+        }
+        if lhs.file?.fileId != rhs.file?.fileId {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
+            return false
+        }
+        return false
+    }
+    
+    public final class View: UIImageView {
+        private var component: IconComponent?
+        private var disposable: Disposable?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required public init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+        
+        func update(component: IconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            if self.component?.name != component.name || self.component?.file?.fileId != component.file?.fileId || self.component?.tintColor != component.tintColor {
+                if let file = component.file {
+                    let previousName = self.component?.name ?? ""
+                    if !previousName.isEmpty {
+                        self.image = nil
+                    }
+                    
+                    _ = freeMediaFileInteractiveFetched(account: component.account, fileReference: .standalone(media: file)).start()
+                    self.disposable = (svgIconImageFile(account: component.account, fileReference: .standalone(media: file), fetched: true)
+                    |> runOn(Queue.concurrentDefaultQueue())
+                    |> deliverOnMainQueue).start(next: { [weak self] transform in
+                        let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
+                        let drawingContext = transform(arguments)
+                        let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
+                        if let tintColor = component.tintColor {
+                            self?.image = generateTintedImage(image: image, color: tintColor, backgroundColor: nil)
+                        } else {
+                            self?.image = image
+                        }
+                    })
+                } else {
+                    if let tintColor = component.tintColor {
+                        self.image = generateTintedImage(image: UIImage(bundleImageName: component.name), color: tintColor, backgroundColor: nil)
+                    } else {
+                        self.image = UIImage(bundleImageName: component.name)
+                    }
+                }
+            }
+            self.component = component
+                        
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
 
 private final class AttachButtonComponent: CombinedComponent {
     let context: AccountContext
@@ -61,13 +152,14 @@ private final class AttachButtonComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let icon = Child(Image.self)
+        let icon = Child(IconComponent.self)
         let title = Child(Text.self)
         let button = Child(Rectangle.self)
 
         return { context in
             let name: String
-            let imageName: String?
+            let imageName: String
+            var imageFile: TelegramMediaFile?
             
             let component = context.component
             let strings = component.strings
@@ -88,20 +180,23 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
-            case let .app(appName):
+            case let .app(_, appName, appIcon):
                 name = appName
-                imageName = "Chat List/Tabs/IconSettings"
+                imageName = ""
+                imageFile = appIcon
             }
             
-            let image = imageName.flatMap { UIImage(bundleImageName: $0)?.withRenderingMode(.alwaysTemplate) }
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
             
+            let iconSize = CGSize(width: 30.0, height: 30.0)
             let icon = icon.update(
-                component: Image(
-                    image: image,
+                component: IconComponent(
+                    account: component.context.account,
+                    name: imageName,
+                    file: imageFile,
                     tintColor: tintColor
                 ),
-                availableSize: CGSize(width: 30.0, height: 30.0),
+                availableSize: iconSize,
                 transition: context.transition
             )
 
@@ -128,7 +223,7 @@ private final class AttachButtonComponent: CombinedComponent {
             let topInset: CGFloat = 4.0 + UIScreenPixel
             let spacing: CGFloat = 15.0 + UIScreenPixel
             
-            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0), y: topInset), size: icon.size)
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0), y: topInset), size: iconSize)
             let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - title.size.width) / 2.0), y: iconFrame.midY + spacing), size: title.size)
             
             context.add(title
@@ -174,7 +269,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var validLayout: ContainerViewLayout?
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
-    var selectionChanged: (AttachmentButtonType, Bool) -> Bool = { _, _ in return false }
+    var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
     var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
@@ -432,6 +527,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    func updateSelectedIndex(_ index: Int) {
+        self.selectedIndex = index
+        self.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+    }
+    
     func updateViews(transition: Transition) {
         guard let layout = self.validLayout else {
             return
@@ -480,8 +580,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     theme: self.presentationData.theme,
                     action: { [weak self] in
                         if let strongSelf = self {
-                            let ascending = i > strongSelf.selectedIndex
-                            if strongSelf.selectionChanged(type, ascending) {
+                            if strongSelf.selectionChanged(type) {
                                 strongSelf.selectedIndex = i
                                 strongSelf.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
                             }

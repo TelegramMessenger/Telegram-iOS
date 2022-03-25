@@ -208,6 +208,11 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let navigationController = navigationController {
                                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), botStart: payload))
                             }
+                        case let .withAttachBot(botId):
+                            context.sharedContext.applicationBindings.dismissNativeController()
+                            if let navigationController = navigationController {
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), attachBotId: botId))
+                            }
                         default:
                             break
                     }
@@ -614,6 +619,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var game: String?
                         var post: String?
                         var voiceChat: String?
+                        var attach: String?
+                        var setAttach: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -633,9 +640,13 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         post = value
                                     } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                         voiceChat = value
+                                    } else if queryItem.name == "attach" {
+                                        attach = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
+                                } else if queryItem.name == "setattach" {
+                                    setAttach = ""
                                 }
                             }
                         }
@@ -662,6 +673,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 } else {
                                     result += "?voicechat="
                                 }
+                            } else if let attach = attach {
+                                result += "?attach=\(attach)"
+                            } else if let _ = setAttach {
+                                result += "?setattach"
                             }
                             convertedUrl = result
                         }

@@ -4936,6 +4936,7 @@ public extension Api {
         case updatePendingJoinRequests(peer: Api.Peer, requestsPending: Int32, recentRequesters: [Int64])
         case updateBotChatInviteRequester(peer: Api.Peer, date: Int32, userId: Int64, about: String, invite: Api.ExportedChatInvite, qts: Int32)
         case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
+        case updateAttachMenuBots
         case updateReadFeed(flags: Int32, filterId: Int32, maxPosition: Api.FeedPosition, unreadCount: Int32?, unreadMutedCount: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -5782,6 +5783,12 @@ public extension Api {
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     reactions.serialize(buffer, true)
                     break
+                case .updateAttachMenuBots:
+                    if boxed {
+                        buffer.appendInt32(397910539)
+                    }
+                    
+                    break
                 case .updateReadFeed(let flags, let filterId, let maxPosition, let unreadCount, let unreadMutedCount):
                     if boxed {
                         buffer.appendInt32(1951948721)
@@ -5989,6 +5996,8 @@ public extension Api {
                 return ("updateBotChatInviteRequester", [("peer", peer), ("date", date), ("userId", userId), ("about", about), ("invite", invite), ("qts", qts)])
                 case .updateMessageReactions(let peer, let msgId, let reactions):
                 return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
+                case .updateAttachMenuBots:
+                return ("updateAttachMenuBots", [])
                 case .updateReadFeed(let flags, let filterId, let maxPosition, let unreadCount, let unreadMutedCount):
                 return ("updateReadFeed", [("flags", flags), ("filterId", filterId), ("maxPosition", maxPosition), ("unreadCount", unreadCount), ("unreadMutedCount", unreadMutedCount)])
     }
@@ -7722,6 +7731,9 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateAttachMenuBots(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateAttachMenuBots
+        }
         public static func parse_updateReadFeed(_ reader: BufferReader) -> Update? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -8253,6 +8265,7 @@ public extension Api {
         case keyboardButtonRequestPoll(flags: Int32, quiz: Api.Bool?, text: String)
         case inputKeyboardButtonUserProfile(text: String, userId: Api.InputUser)
         case keyboardButtonUserProfile(text: String, userId: Int64)
+        case keyboardButtonWebView(text: String, url: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -8351,6 +8364,13 @@ public extension Api {
                     serializeString(text, buffer: buffer, boxed: false)
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     break
+                case .keyboardButtonWebView(let text, let url):
+                    if boxed {
+                        buffer.appendInt32(326529584)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -8382,6 +8402,8 @@ public extension Api {
                 return ("inputKeyboardButtonUserProfile", [("text", text), ("userId", userId)])
                 case .keyboardButtonUserProfile(let text, let userId):
                 return ("keyboardButtonUserProfile", [("text", text), ("userId", userId)])
+                case .keyboardButtonWebView(let text, let url):
+                return ("keyboardButtonWebView", [("text", text), ("url", url)])
     }
     }
     
@@ -8580,6 +8602,20 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.KeyboardButton.keyboardButtonUserProfile(text: _1!, userId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_keyboardButtonWebView(_ reader: BufferReader) -> KeyboardButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.KeyboardButton.keyboardButtonWebView(text: _1!, url: _2!)
             }
             else {
                 return nil
@@ -10367,6 +10403,46 @@ public extension Api {
         }
     
     }
+    public enum AttachMenuBot: TypeConstructorDescription {
+        case attachMenuBot(botId: Int64, attachMenuIcon: Api.Document)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .attachMenuBot(let botId, let attachMenuIcon):
+                    if boxed {
+                        buffer.appendInt32(-729926056)
+                    }
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    attachMenuIcon.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .attachMenuBot(let botId, let attachMenuIcon):
+                return ("attachMenuBot", [("botId", botId), ("attachMenuIcon", attachMenuIcon)])
+    }
+    }
+    
+        public static func parse_attachMenuBot(_ reader: BufferReader) -> AttachMenuBot? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.Document?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Document
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.AttachMenuBot.attachMenuBot(botId: _1!, attachMenuIcon: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum DialogFilterSuggested: TypeConstructorDescription {
         case dialogFilterSuggested(filter: Api.DialogFilter, description: String)
     
@@ -11270,6 +11346,76 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.Contact.contact(userId: _1!, mutual: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum WebViewResult: TypeConstructorDescription {
+        case webViewResultUrl(queryId: Int64, url: String)
+        case webViewResultConfirmationRequired(bot: Api.AttachMenuBot, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .webViewResultUrl(let queryId, let url):
+                    if boxed {
+                        buffer.appendInt32(202659196)
+                    }
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+                case .webViewResultConfirmationRequired(let bot, let users):
+                    if boxed {
+                        buffer.appendInt32(-1312107643)
+                    }
+                    bot.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .webViewResultUrl(let queryId, let url):
+                return ("webViewResultUrl", [("queryId", queryId), ("url", url)])
+                case .webViewResultConfirmationRequired(let bot, let users):
+                return ("webViewResultConfirmationRequired", [("bot", bot), ("users", users)])
+    }
+    }
+    
+        public static func parse_webViewResultUrl(_ reader: BufferReader) -> WebViewResult? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.WebViewResult.webViewResultUrl(queryId: _1!, url: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_webViewResultConfirmationRequired(_ reader: BufferReader) -> WebViewResult? {
+            var _1: Api.AttachMenuBot?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.AttachMenuBot
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.WebViewResult.webViewResultConfirmationRequired(bot: _1!, users: _2!)
             }
             else {
                 return nil
@@ -21594,6 +21740,72 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.InputBotInlineResult.inputBotInlineResultGame(id: _1!, shortName: _2!, sendMessage: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum AttachMenuBots: TypeConstructorDescription {
+        case attachMenuBotsNotModified
+        case attachMenuBots(hash: Int64, bots: [Api.AttachMenuBot], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .attachMenuBotsNotModified:
+                    if boxed {
+                        buffer.appendInt32(-237467044)
+                    }
+                    
+                    break
+                case .attachMenuBots(let hash, let bots, let users):
+                    if boxed {
+                        buffer.appendInt32(1011024320)
+                    }
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(bots.count))
+                    for item in bots {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .attachMenuBotsNotModified:
+                return ("attachMenuBotsNotModified", [])
+                case .attachMenuBots(let hash, let bots, let users):
+                return ("attachMenuBots", [("hash", hash), ("bots", bots), ("users", users)])
+    }
+    }
+    
+        public static func parse_attachMenuBotsNotModified(_ reader: BufferReader) -> AttachMenuBots? {
+            return Api.AttachMenuBots.attachMenuBotsNotModified
+        }
+        public static func parse_attachMenuBots(_ reader: BufferReader) -> AttachMenuBots? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [Api.AttachMenuBot]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.AttachMenuBot.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.AttachMenuBots.attachMenuBots(hash: _1!, bots: _2!, users: _3!)
             }
             else {
                 return nil

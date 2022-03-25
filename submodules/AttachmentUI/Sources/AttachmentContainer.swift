@@ -123,6 +123,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             return true
         }
+        if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer {
+            return true
+        }
         return false
     }
     

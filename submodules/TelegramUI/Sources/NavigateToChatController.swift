@@ -61,6 +61,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                         return state.updatedBotStartPayload(botStart.payload)
                     })
                 }
+                if let botId = params.attachBotId {
+                    controller.presentAttachmentBot(botId: botId)
+                }
                 found = true
                 break
             }
@@ -76,8 +79,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     return state.updatedBotStartPayload(botStart.payload)
                 })
             }
+            if let botId = params.attachBotId {
+                controller.presentAttachmentBot(botId: botId)
+            }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotId: params.attachBotId, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {

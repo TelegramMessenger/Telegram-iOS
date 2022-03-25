@@ -532,6 +532,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
+        }, openWebView: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -936,6 +937,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in
                         }), .window(.root), nil)
                     case .importStickers:
+                        break
+                    case .setAttach:
                         break
                 }
             }

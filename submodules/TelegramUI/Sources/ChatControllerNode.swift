@@ -2568,13 +2568,25 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     self.historyNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
                     
+                    context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                    context.scaleBy(x: -1.0, y: -1.0)
+                    context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                    
+                    if let emptyNode = self.emptyNode {
+                        emptyNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+                    }
+                    
                     UIGraphicsPopContext()
                 }).flatMap(applyScreenshotEffectToImage)
                 let blurredHistoryNode = ASImageNode()
                 blurredHistoryNode.image = image
                 blurredHistoryNode.frame = self.historyNode.frame
                 self.blurredHistoryNode = blurredHistoryNode
-                self.historyNode.supernode?.insertSubnode(blurredHistoryNode, aboveSubnode: self.historyNode)
+                if let emptyNode = self.emptyNode {
+                    emptyNode.supernode?.insertSubnode(blurredHistoryNode, aboveSubnode: emptyNode)
+                } else {
+                    self.historyNode.supernode?.insertSubnode(blurredHistoryNode, aboveSubnode: self.historyNode)
+                }
             }
         } else {
             if let blurredHistoryNode = self.blurredHistoryNode {

@@ -926,24 +926,25 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 }
             }
             
+            if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
+                items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 5, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
+                    interaction.openEncryptionKey()
+                }))
+            }
+            
+            if user.botInfo != nil, !user.isVerified {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 6, text: presentationData.strings.ReportPeer_Report, action: {
+                    interaction.openReport(false)
+                }))
+            }
+            
             if let botInfo = user.botInfo, botInfo.flags.contains(.worksWithGroups) {
-                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
+                items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 7, text: presentationData.strings.Bot_AddToChat, color: .accent, action: {
                     interaction.openAddBotToGroup()
                 }))
-                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 6, text: presentationData.strings.Bot_AddToChatInfo))
+                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: 8, text: presentationData.strings.Bot_AddToChatInfo))
             }
-        }
-        
-        if let encryptionKeyFingerprint = data.encryptionKeyFingerprint {
-            items[.peerInfo]!.append(PeerInfoScreenDisclosureEncryptionKeyItem(id: 6, text: presentationData.strings.Profile_EncryptionKey, fingerprint: encryptionKeyFingerprint, action: {
-                interaction.openEncryptionKey()
-            }))
-        }
-        
-        if user.botInfo != nil, !user.isVerified {
-            items[.peerInfo]!.append(PeerInfoScreenActionItem(id: 5, text: presentationData.strings.ReportPeer_Report, action: {
-                interaction.openReport(false)
-            }))
+            
         }
     } else if let channel = data.peer as? TelegramChannel {
         let ItemUsername = 1
@@ -2265,6 +2266,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
+        }, openWebView: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -3284,7 +3286,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(updatedPresentationData: self.controller?.updatedPresentationData), navigationController: navigationController, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: self.peerId, updatedPresentationData: self.controller?.updatedPresentationData), navigationController: navigationController, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -3303,6 +3305,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }))
                 case let .withBotStartPayload(startPayload):
                     strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: startPayload))
+                case let .withAttachBot(botId):
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), attachBotId: botId))
                 default:
                     break
                 }
@@ -3378,6 +3382,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         case let .withBotStartPayload(startPayload):
             if let navigationController = self.controller?.navigationController as? NavigationController {
                 self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(id: peerId), botStart: startPayload))
+            }
+        case let .withAttachBot(botId):
+            if let navigationController = self.controller?.navigationController as? NavigationController {
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(id: peerId), attachBotId: botId))
             }
         }
     }

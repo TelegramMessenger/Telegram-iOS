@@ -17,6 +17,7 @@ import TinyThumbnail
 import ImageTransparency
 import AppBundle
 import MusicAlbumArtResources
+import Svg
 
 private enum ResourceFileData {
     case data(Data)
@@ -2269,6 +2270,44 @@ public func instantPageImageFile(account: Account, fileReference: FileMediaRefer
                         fullSizeImage = tintedImage
                     }
                     
+                    c.setBlendMode(.normal)
+                    c.interpolationQuality = .medium
+                    drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
+    }
+}
+
+public func svgIconImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: false)
+    |> map { value in
+        let fullSizePath = value._1
+        let fullSizeComplete = value._2
+        return { arguments in
+//            assertNotOnMainThread()
+            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            
+            let drawingRect = arguments.drawingRect
+            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+            
+            var fullSizeImage: UIImage?
+            let imageOrientation: UIImage.Orientation = .up
+            
+            if let fullSizePath = fullSizePath {
+                if fullSizeComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath)) {
+                    fullSizeImage = drawSvgImage(data, CGSize(width: 90.0, height: 90.0), .clear, .black, false)
+                }
+            }
+            
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            
+            context.withFlippedContext { c in
+                if let fullSizeImage = fullSizeImage?.cgImage {
                     c.setBlendMode(.normal)
                     c.interpolationQuality = .medium
                     drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)

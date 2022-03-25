@@ -9,11 +9,15 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import AppBundle
+import PhotoResources
 
 private final class WebAppAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
+    private let peerName: String
+    private let peerIcon: TelegramMediaFile
     
     private let textNode: ASTextNode
+    private let appIconNode: ASImageNode
     private let iconNode: ASImageNode
     
     private let actionNodesSeparator: ASDisplayNode
@@ -22,16 +26,24 @@ private final class WebAppAlertContentNode: AlertContentNode {
     
     private var validLayout: CGSize?
     
+    private var iconDisposable: Disposable?
+    
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
+    init(account: Account, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, peerIcon: TelegramMediaFile, actions: [TextAlertAction]) {
         self.strings = strings
-    
+        self.peerName = peerName
+        self.peerIcon = peerIcon
+        
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 0
-        
+       
+        self.appIconNode = ASImageNode()
+        self.appIconNode.displaysAsynchronously = false
+        self.appIconNode.displayWithoutProcessing = true
+       
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
@@ -56,6 +68,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
         super.init()
         
         self.addSubnode(self.textNode)
+        self.addSubnode(self.appIconNode)
         self.addSubnode(self.iconNode)
     
         self.addSubnode(self.actionNodesSeparator)
@@ -69,11 +82,24 @@ private final class WebAppAlertContentNode: AlertContentNode {
         }
         
         self.updateTheme(theme)
+        
+        self.iconDisposable = (svgIconImageFile(account: account, fileReference: .standalone(media: peerIcon))
+        |> deliverOnMainQueue).start(next: { [weak self] transform in
+            if let strongSelf = self {
+                let availableSize = CGSize(width: 48.0, height: 48.0)
+                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
+                let drawingContext = transform(arguments)
+                let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
+                strongSelf.appIconNode.image = generateTintedImage(image: image, color: theme.accentColor, backgroundColor: nil)
+            }
+        })
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
-        self.textNode.attributedText = NSAttributedString(string: strings.WebApp_AddToAttachmentText("Web App").string, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Bot Payments/BotLogo"), color: theme.accentColor)
+        self.textNode.attributedText = NSAttributedString(string: strings.WebApp_AddToAttachmentText(self.peerName).string, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        
+        self.appIconNode.image = generateTintedImage(image: self.appIconNode.image, color: theme.accentColor)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Attach Menu/BotPlus"), color: theme.accentColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -187,7 +213,9 @@ private final class WebAppAlertContentNode: AlertContentNode {
             nodeIndex += 1
         }
         
-        iconFrame.origin.x = floorToScreenPixels((resultSize.width - iconFrame.width) / 2.0)
+        iconFrame.origin.x = floorToScreenPixels((resultSize.width - iconFrame.width) / 2.0) + 19.0
+        
+        transition.updateFrame(node: self.appIconNode, frame: CGRect(x: iconFrame.minX - 50.0, y: iconFrame.minY + 3.0, width: 42.0, height: 42.0))
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
        
         textFrame.origin.x = floorToScreenPixels((resultSize.width - textFrame.width) / 2.0)
@@ -197,8 +225,8 @@ private final class WebAppAlertContentNode: AlertContentNode {
     }
 }
 
-func addWebAppToAttachmentController(sharedContext: SharedAccountContext) -> AlertController {
-    let presentationData = sharedContext.currentPresentationData.with { $0 }
+public func addWebAppToAttachmentController(context: AccountContext, peerName: String, peerIcon: TelegramMediaFile, completion: @escaping () -> Void) -> AlertController {
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
     
@@ -209,9 +237,10 @@ func addWebAppToAttachmentController(sharedContext: SharedAccountContext) -> Ale
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_AddToAttachmentAdd, action: {
         dismissImpl?(true)
       
+        completion()
     })]
     
-    contentNode = WebAppAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, actions: actions)
+    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, peerIcon: peerIcon, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in

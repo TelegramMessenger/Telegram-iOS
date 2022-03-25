@@ -4849,6 +4849,84 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func getAttachMenuBots(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.AttachMenuBots>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(385663691)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getAttachMenuBots", parameters: [("hash", hash)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.AttachMenuBots? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.AttachMenuBots?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.AttachMenuBots
+                        }
+                        return result
+                    })
+                }
+            
+                public static func toggleBotInAttachMenu(bot: Api.InputUser, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(451818415)
+                    bot.serialize(buffer, true)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.toggleBotInAttachMenu", parameters: [("bot", bot), ("enabled", enabled)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func requestWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, url: String?, themeParams: Api.DataJSON?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1585704741)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    bot.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {themeParams!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "messages.requestWebView", parameters: [("flags", flags), ("peer", peer), ("bot", bot), ("url", url), ("themeParams", themeParams)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewResult? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.WebViewResult?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.WebViewResult
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setWebViewResult(queryId: Int64, result: Api.InputBotInlineResult) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-467873507)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    result.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.setWebViewResult", parameters: [("queryId", queryId), ("result", result)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getWebViewResult(peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.WebViewResult>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(582402580)
+                    peer.serialize(buffer, true)
+                    bot.serialize(buffer, true)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getWebViewResult", parameters: [("peer", peer), ("bot", bot), ("queryId", queryId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.WebViewResult? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.WebViewResult?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.WebViewResult
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {

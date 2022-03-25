@@ -7414,3 +7414,6 @@ Sorry for the inconvenience.";
 
 "WebApp.AddToAttachmentText" = "%@ asks your permission to be added as an option to your attachments menu so you access it from any chat.";
 "WebApp.AddToAttachmentAdd" = "Add";
+
+"WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added in the attachment menu.";
+

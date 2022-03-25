@@ -29,6 +29,7 @@ swift_library(
         "//submodules/ChatTextLinkEditUI:ChatTextLinkEditUI",
         "//submodules/ContextUI:ContextUI",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/PhotoResources:PhotoResources",
     ],
     visibility = [
         "//visibility:public",
