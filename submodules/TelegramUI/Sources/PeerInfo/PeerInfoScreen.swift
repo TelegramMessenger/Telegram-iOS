@@ -3539,31 +3539,105 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 var items: [ContextMenuItem] = []
-                let muteValues: [(Int32, String)] = [
-                    (1 * 60 * 60, "Chat/Context Menu/Mute2h"),
-                    (2 * 24 * 60 * 60, "Chat/Context Menu/Mute2d"),
-                    (Int32.max, "Chat/Context Menu/Muted")
-                ]
-                for (delay, iconName) in muteValues {
-                    let title: String
-                    if delay == Int32.max {
-                        title = self.presentationData.strings.MuteFor_Forever
-                    } else {
-                        title = muteForIntervalString(strings: self.presentationData.strings, value: delay)
+                
+                items.append(.action(ContextMenuActionItem(text: "Mute for...", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Mute2d"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] c, _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    var subItems: [ContextMenuItem] = []
+                    
+                    subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Common_Back, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                    }, action: { c, _ in
+                        c.popItems()
+                    })))
+                    subItems.append(.separator)
+                    
+                    let presetValues: [Int32] = [
+                        1 * 60 * 60,
+                        8 * 60 * 60,
+                        1 * 24 * 60 * 60,
+                        7 * 24 * 60 * 60
+                    ]
+                    
+                    for value in presetValues {
+                        subItems.append(.action(ContextMenuActionItem(text: muteForIntervalString(strings: strongSelf.presentationData.strings, value: value), icon: { _ in
+                            return nil
+                        }, action: { _, f in
+                            f(.default)
+                            
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: value).start()
+                        })))
                     }
                     
-                    items.append(.action(ContextMenuActionItem(text: title, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: iconName), color: theme.contextMenu.primaryColor)
+                    //TODO:localize
+                    subItems.append(.action(ContextMenuActionItem(text: "Mute until...", icon: { _ in
+                        return nil
                     }, action: { _, f in
-                        f(.dismissWithoutContent)
+                        f(.default)
                         
-                        let _ = self.context.engine.peers.updatePeerMuteSetting(peerId: self.peerId, muteInterval: delay).start()
+                        self?.openCustomMute()
                     })))
+                    
+                    c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                })))
+
+                items.append(.separator)
+                
+                var isSoundEnabled = true
+                if let notificationSettings = self.data?.notificationSettings {
+                    switch notificationSettings.messageSound {
+                    case .none:
+                        isSoundEnabled = false
+                    default:
+                        break
+                    }
                 }
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Sound On", icon: { theme in
+                    if !isSoundEnabled {
+                        return nil
+                    }
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if isSoundEnabled {
+                        return
+                    }
+                    let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .default).start()
+                })))
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Sound Off", icon: { theme in
+                    if isSoundEnabled {
+                        return nil
+                    }
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !isSoundEnabled {
+                        return
+                    }
+                    let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .none).start()
+                })))
                 
                 items.append(.separator)
                 
-                items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_CustomizeNotifications, icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: "Customize", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, f in
                     f(.dismissWithoutContent)
@@ -3607,6 +3681,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })
                     exceptionController.navigationPresentation = .modal
                     controller.push(exceptionController)
+                })))
+                
+                //TODO:localize
+                items.append(.action(ContextMenuActionItem(text: "Mute Forever", textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: Int32.max).start()
                 })))
                 
                 self.view.endEditing(true)
@@ -3654,11 +3741,133 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 if canChangeColors {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_ChangeColors, icon: { theme in
                         generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
+                    }, action: { _, f in
                         f(.dismissWithoutContent)
                         
                         self?.openChatForThemeChange()
                     })))
+                }
+                
+                var currentAutoremoveTimeout: Int32?
+                if let cachedData = data.cachedData as? CachedUserData {
+                    switch cachedData.autoremoveTimeout {
+                    case let .known(value):
+                        currentAutoremoveTimeout = value?.peerValue
+                    case .unknown:
+                        break
+                    }
+                } else if let cachedData = data.cachedData as? CachedGroupData {
+                    switch cachedData.autoremoveTimeout {
+                    case let .known(value):
+                        currentAutoremoveTimeout = value?.peerValue
+                    case .unknown:
+                        break
+                    }
+                } else if let cachedData = data.cachedData as? CachedChannelData {
+                    switch cachedData.autoremoveTimeout {
+                    case let .known(value):
+                        currentAutoremoveTimeout = value?.peerValue
+                    case .unknown:
+                        break
+                    }
+                }
+                
+                var canSetupAutoremoveTimeout = false
+                
+                if let secretChat = peer as? TelegramSecretChat {
+                    currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
+                    canSetupAutoremoveTimeout = true
+                } else if let group = peer as? TelegramGroup {
+                    if case .creator = group.role {
+                        canSetupAutoremoveTimeout = true
+                    } else if case let .admin(rights, _) = group.role {
+                        if rights.rights.contains(.canDeleteMessages) {
+                            canSetupAutoremoveTimeout = true
+                        }
+                    }
+                } else if let user = peer as? TelegramUser {
+                    if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
+                        canSetupAutoremoveTimeout = true
+                    }
+                } else if let channel = peer as? TelegramChannel {
+                    if channel.hasPermission(.deleteAllMessages) {
+                        canSetupAutoremoveTimeout = true
+                    }
+                }
+                
+                if canSetupAutoremoveTimeout {
+                    //TODO:localize
+                    let strings = strongSelf.presentationData.strings
+                    items.append(.action(ContextMenuActionItem(text: currentAutoremoveTimeout == nil ? "Enable Auto-Delete" : "Adjust Auto-Delete", icon: { theme in
+                        if let currentAutoremoveTimeout = currentAutoremoveTimeout {
+                            let text = NSAttributedString(string: shortTimeIntervalString(strings: strings, value: currentAutoremoveTimeout), font: Font.regular(14.0), textColor: theme.contextMenu.primaryColor)
+                            let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                            return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                UIGraphicsPushContext(context)
+                                text.draw(in: bounds)
+                                UIGraphicsPopContext()
+                            })
+                        } else {
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor)
+                        }
+                    }, action: { [weak self] c, _ in
+                        var subItems: [ContextMenuItem] = []
+                        
+                        subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                        }, action: { c, _ in
+                            c.popItems()
+                        })))
+                        subItems.append(.separator)
+                        
+                        let presetValues: [Int32] = [
+                            60 * 60,
+                            24 * 60 * 60,
+                            7 * 24 * 60 * 60,
+                            31 * 24 * 60 * 60
+                        ]
+                        
+                        if let _ = currentAutoremoveTimeout {
+                            //TODO:localize
+                            subItems.append(.action(ContextMenuActionItem(text: "Disable", icon: { _ in
+                                return nil
+                            }, action: { _, f in
+                                f(.default)
+                                
+                                self?.setAutoremove(timeInterval: nil)
+                            })))
+                        }
+                        
+                        for value in presetValues {
+                            subItems.append(.action(ContextMenuActionItem(text: timeIntervalString(strings: strings, value: value), icon: { _ in
+                                return nil
+                            }, action: { _, f in
+                                f(.default)
+                                
+                                self?.setAutoremove(timeInterval: value)
+                            })))
+                        }
+                        
+                        //TODO:localize
+                        subItems.append(.action(ContextMenuActionItem(text: "Other...", icon: { _ in
+                            return nil
+                        }, action: { _, f in
+                            f(.default)
+                            
+                            self?.openAutoremove(currentValue: currentAutoremoveTimeout)
+                        })))
+                        
+                        subItems.append(.separator)
+                        
+                        //TODO:localize
+                        subItems.append(.action(ContextMenuActionItem(text: "Automatically delete messages sent in this chat after a certain period of time.", textLayout: .multiline, textFont: .small, icon: { _ in
+                            return nil
+                        }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                        
+                        c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                    })))
+                    items.append(.separator)
                 }
                 
                 if filteredButtons.contains(.call) {
@@ -3779,11 +3988,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             self?.openStartSecretChat()
                         })))
+                    }
+                    
+                    /*if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser {
+                        items.append(.action(ContextMenuActionItem(text: "", icon: { theme in
+                            generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.dismissWithoutContent)
+                            
+                            self?.openStartSecretChat()
+                        })))
+                    }*/
+                    
+                    if strongSelf.peerId.namespace == Namespaces.Peer.CloudUser && user.botInfo == nil && !user.flags.contains(.isSupport) {
                         if data.isContact {
                             if let cachedData = data.cachedData as? CachedUserData, cachedData.isBlocked {
                             } else {
-                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, icon: { theme in
-                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor)
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_BlockUser, textColor: .destructive, icon: { theme in
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.destructiveColor)
                                 }, action: { [weak self] _, f in
                                     f(.dismissWithoutContent)
                                     
@@ -3937,6 +4159,92 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(id: self.peerId), keepStack: .default, changeColors: true, completion: { _ in
             }))
         }
+    }
+    
+    private func openAutoremove(currentValue: Int32?) {
+        /*let controller = peerAutoremoveSetupScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, completion: { [weak self] updatedValue in
+            if case let .updated(value) = updatedValue {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var isOn: Bool = true
+                var text: String?
+                if let myValue = value.value {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").string
+                } else {
+                    isOn = false
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
+                }
+                if let text = text {
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+                }
+            }
+        })
+        self.controller?.view.endEditing(true)
+        self.controller?.push(controller)*/
+        
+        let controller = ChatTimerScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, style: .default, mode: .autoremove, currentTime: currentValue, dismissByTapOutside: true, completion: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = (strongSelf.context.engine.peers.setChatMessageAutoremoveTimeoutInteractively(peerId: strongSelf.peerId, timeout: value == 0 ? nil : value)
+            |> deliverOnMainQueue).start(completed: {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                var isOn: Bool = true
+                var text: String?
+                if value != 0 {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: value))").string
+                } else {
+                    isOn = false
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
+                }
+                if let text = text {
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+                }
+            })
+        })
+        self.controller?.view.endEditing(true)
+        self.controller?.present(controller, in: .window(.root))
+    }
+    
+    private func openCustomMute() {
+        let controller = ChatTimerScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, style: .default, mode: .mute, currentTime: nil, dismissByTapOutside: true, completion: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            if value <= 0 {
+                let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: nil).start()
+            } else {
+                let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: value).start()
+            }
+        })
+        self.controller?.view.endEditing(true)
+        self.controller?.present(controller, in: .window(.root))
+    }
+    
+    private func setAutoremove(timeInterval: Int32?) {
+        let _ = (self.context.engine.peers.setChatMessageAutoremoveTimeoutInteractively(peerId: self.peerId, timeout: timeInterval)
+        |> deliverOnMainQueue).start(completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var isOn: Bool = true
+            var text: String?
+            if let myValue = timeInterval {
+                text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").string
+            } else {
+                isOn = false
+                text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
+            }
+            if let text = text {
+                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+            }
+        })
     }
     
     private func openStartSecretChat() {

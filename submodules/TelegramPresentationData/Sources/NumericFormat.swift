@@ -119,7 +119,9 @@ public func shortTimeIntervalString(strings: PresentationStrings, value: Int32) 
 }
 
 public func muteForIntervalString(strings: PresentationStrings, value: Int32) -> String {
-    if value < 60 * 60 * 24 {
+    if value < 60 * 60 {
+        return strings.MuteFor_Minutes(max(1, value / (60)))
+    } else if value < 60 * 60 * 24 {
         return strings.MuteFor_Hours(max(1, value / (60 * 60)))
     } else {
         return strings.MuteFor_Days(max(1, value / (60 * 60 * 24)))

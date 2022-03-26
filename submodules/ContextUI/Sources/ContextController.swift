@@ -27,6 +27,7 @@ public enum ContextMenuActionItemTextLayout {
     case singleLine
     case twoLinesMax
     case secondLineWithValue(String)
+    case multiline
 }
 
 public enum ContextMenuActionItemTextColor {
@@ -43,6 +44,7 @@ public enum ContextMenuActionResult {
 
 public enum ContextMenuActionItemFont {
     case regular
+    case small
     case custom(UIFont)
 }
 
@@ -542,7 +544,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private func initializeContent() {
         switch self.source {
         case let .reference(source):
-            let transitionInfo = source.transitionInfo()
+            /*let transitionInfo = source.transitionInfo()
             if let transitionInfo = transitionInfo {
                 let referenceView = transitionInfo.referenceView
                 self.contentContainerNode.contentNode = .reference(view: referenceView)
@@ -554,7 +556,40 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 projectedFrame.origin.y += transitionInfo.insets.top
                 projectedFrame.size.width -= transitionInfo.insets.top + transitionInfo.insets.bottom
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
-            }
+            }*/
+            let presentationNode = ContextControllerExtractedPresentationNode(
+                getController: { [weak self] in
+                    return self?.getController()
+                },
+                requestUpdate: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let validLayout = strongSelf.validLayout {
+                        strongSelf.updateLayout(
+                            layout: validLayout,
+                            transition: transition,
+                            previousActionsContainerNode: nil
+                        )
+                    }
+                },
+                requestDismiss: { [weak self] result in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.dismissedForCancel?()
+                    strongSelf.beginDismiss(result)
+                },
+                requestAnimateOut: { [weak self] result, completion in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.animateOut(result: result, completion: completion)
+                },
+                source: .reference(source)
+            )
+            self.presentationNode = presentationNode
+            self.addSubnode(presentationNode)
         case let .extracted(source):
             let presentationNode = ContextControllerExtractedPresentationNode(
                 getController: { [weak self] in
@@ -585,7 +620,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                     strongSelf.animateOut(result: result, completion: completion)
                 },
-                source: source
+                source: .extracted(source)
             )
             self.presentationNode = presentationNode
             self.addSubnode(presentationNode)

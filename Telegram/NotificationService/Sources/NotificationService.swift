@@ -662,6 +662,7 @@ private final class NotificationServiceHandler {
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
             var recordId: AccountRecordId?
             var isCurrentAccount: Bool = false
+            var customSoundPath: String?
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {
@@ -680,6 +681,8 @@ private final class NotificationServiceHandler {
             }
 
             let inAppNotificationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+            
+            customSoundPath = inAppNotificationSettings.customSound
             
             let voiceCallSettings: VoiceCallSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
@@ -923,7 +926,11 @@ private final class NotificationServiceHandler {
                             }
 
                             if let sound = aps["sound"] as? String {
-                                content.sound = sound
+                                if let customSoundPath = customSoundPath {
+                                    content.sound = customSoundPath
+                                } else {
+                                    content.sound = sound
+                                }
                             }
 
                             if let category = aps["category"] as? String {
