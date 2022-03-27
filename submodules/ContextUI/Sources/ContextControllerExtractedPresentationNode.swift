@@ -711,6 +711,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 }
             }
             
+            let completeWithActionStack = contentNode == nil
+            
             if let contentNode = contentNode {
                 contentNode.containingNode.willUpdateIsExtractedToContextPreview?(false, transition)
                 
@@ -747,7 +749,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 timingFunction: timingFunction,
                 duration: duration,
                 delay: 0.0,
-                removeOnCompletion: false
+                removeOnCompletion: false,
+                completion: { _ in
+                    if completeWithActionStack {
+                        completion()
+                    }
+                }
             )
             
             let actionsSize = self.actionsStackNode.bounds.size
