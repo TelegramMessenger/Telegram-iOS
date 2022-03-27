@@ -3301,7 +3301,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
-        }, openWebView: { [weak self] url in
+        }, openWebView: { [weak self] url, simple in
             guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
@@ -3350,7 +3350,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
+            strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme), replyToMessageId: nil)
             |> afterDisposed {
                 updateProgress()
             })
@@ -10504,10 +10504,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let presentationData = self.presentationData
         
+        var isScheduledMessages = false
+        if case .scheduledMessages = self.presentationInterfaceState.subject {
+            isScheduledMessages = true
+        }
+        
         var switchToBotImpl: ((AttachmentButtonType) -> Void)?
         var switchToBotId = botId
         let buttons: Signal<[AttachmentButtonType], NoError>
-        if let _ = peer as? TelegramUser {
+        if let _ = peer as? TelegramUser, !isScheduledMessages {
             buttons = .single(availableButtons)
             |> then(
                 self.context.engine.messages.attachMenuBots()

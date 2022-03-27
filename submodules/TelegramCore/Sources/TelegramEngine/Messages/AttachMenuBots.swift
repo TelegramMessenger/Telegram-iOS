@@ -3,26 +3,34 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
+//# inactive:flags.0?true bot_id:long attach_menu_name:string attach_menu_icon:Document = AttachMenuBot;
 public final class AttachMenuBots: Equatable, Codable {
     public final class Bot: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
             case peerId
+            case name
             case icon
         }
         
         public let peerId: PeerId
+        public let name: String
         public let icon: TelegramMediaFile
         
         public init(
             peerId: PeerId,
+            name: String,
             icon: TelegramMediaFile
         ) {
             self.peerId = peerId
+            self.name = name
             self.icon = icon
         }
         
         public static func ==(lhs: Bot, rhs: Bot) -> Bool {
             if lhs.peerId != rhs.peerId {
+                return false
+            }
+            if lhs.name != rhs.name {
                 return false
             }
             if lhs.icon != rhs.icon {
@@ -37,6 +45,8 @@ public final class AttachMenuBots: Equatable, Codable {
             let peerIdValue = try container.decode(Int64.self, forKey: .peerId)
             self.peerId = PeerId(peerIdValue)
             
+            self.name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
+            
             let iconData = try container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .icon)
             self.icon = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: iconData.data)))
         }
@@ -45,6 +55,7 @@ public final class AttachMenuBots: Equatable, Codable {
             var container = encoder.container(keyedBy: CodingKeys.self)
             
             try container.encode(self.peerId.toInt64(), forKey: .peerId)
+            try container.encode(self.name, forKey: .name)
             try container.encode(PostboxEncoder().encodeObjectToRawData(self.icon), forKey: .icon)
         }
     }
@@ -148,9 +159,9 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network) -> Sig
                             var resultBots: [AttachMenuBots.Bot] = []
                             for bot in bots {
                                 switch bot {
-                                    case let .attachMenuBot(botId, attachMenuIcon):
+                                    case let .attachMenuBot(_, botId, name, attachMenuIcon):
                                         if let icon = telegramMediaFileFromApiDocument(attachMenuIcon) {
-                                            resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), icon: icon))
+                                            resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), name: name, icon: icon))
                                         }
                                 }
                             }

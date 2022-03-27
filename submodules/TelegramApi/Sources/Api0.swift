@@ -119,7 +119,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-567037804] = { return Api.VideoSize.parse_videoSize($0) }
     dict[-860107216] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
+    dict[-2010155333] = { return Api.SimpleWebViewResult.parse_simpleWebViewResultUrl($0) }
     dict[-209337866] = { return Api.LangPackDifference.parse_langPackDifference($0) }
+    dict[-1816172929] = { return Api.AttachMenuBotsBot.parse_attachMenuBotsBot($0) }
     dict[499236004] = { return Api.WallPaperSettings.parse_wallPaperSettings($0) }
     dict[-1519029347] = { return Api.EmojiURL.parse_emojiURL($0) }
     dict[-682079097] = { return Api.StatsGroupTopAdmin.parse_statsGroupTopAdmin($0) }
@@ -293,6 +295,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[299870598] = { return Api.Update.parse_updateBotChatInviteRequester($0) }
     dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
     dict[397910539] = { return Api.Update.parse_updateAttachMenuBots($0) }
+    dict[-118080598] = { return Api.Update.parse_updateWebViewResultSent($0) }
     dict[1951948721] = { return Api.Update.parse_updateReadFeed($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
@@ -325,6 +328,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-376962181] = { return Api.KeyboardButton.parse_inputKeyboardButtonUserProfile($0) }
     dict[814112961] = { return Api.KeyboardButton.parse_keyboardButtonUserProfile($0) }
     dict[326529584] = { return Api.KeyboardButton.parse_keyboardButtonWebView($0) }
+    dict[-1598009252] = { return Api.KeyboardButton.parse_keyboardButtonSimpleWebView($0) }
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[997004590] = { return Api.users.UserFull.parse_userFull($0) }
     dict[1679398724] = { return Api.SecureFile.parse_secureFileEmpty($0) }
@@ -393,7 +397,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1798033689] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilterEmpty($0) }
     dict[-847783593] = { return Api.ChannelMessagesFilter.parse_channelMessagesFilter($0) }
     dict[-219353309] = { return Api.ChatAdminWithInvites.parse_chatAdminWithInvites($0) }
-    dict[-729926056] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
+    dict[1340016040] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
     dict[2004110666] = { return Api.DialogFilterSuggested.parse_dialogFilterSuggested($0) }
     dict[326715557] = { return Api.auth.PasswordRecovery.parse_passwordRecovery($0) }
     dict[-1803769784] = { return Api.messages.BotResults.parse_botResults($0) }
@@ -658,6 +662,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1877614335] = { return Api.Updates.parse_updateShortSentMessage($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[-884757282] = { return Api.StatsAbsValueAndPrev.parse_statsAbsValueAndPrev($0) }
+    dict[211046684] = { return Api.WebViewMessageSent.parse_webViewMessageSent($0) }
     dict[1038967584] = { return Api.MessageMedia.parse_messageMediaEmpty($0) }
     dict[1766936791] = { return Api.MessageMedia.parse_messageMediaPhoto($0) }
     dict[1457575028] = { return Api.MessageMedia.parse_messageMediaGeo($0) }
@@ -892,6 +897,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
     dict[-1434950843] = { return Api.MessageAction.parse_messageActionSetChatTheme($0) }
     dict[-339958837] = { return Api.MessageAction.parse_messageActionChatJoinedByRequest($0) }
+    dict[1205698681] = { return Api.MessageAction.parse_messageActionWebViewDataSentMe($0) }
+    dict[-1262252875] = { return Api.MessageAction.parse_messageActionWebViewDataSent($0) }
     dict[1399245077] = { return Api.PhoneCall.parse_phoneCallEmpty($0) }
     dict[-987599081] = { return Api.PhoneCall.parse_phoneCallWaiting($0) }
     dict[347139340] = { return Api.PhoneCall.parse_phoneCallRequested($0) }
@@ -969,7 +976,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[512177195] = { return Api.Document.parse_document($0) }
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
     dict[-1493633966] = { return Api.WebAuthorization.parse_webAuthorization($0) }
-    dict[-1428220517] = { return Api.messages.WebViewResult.parse_webViewResult($0) }
     dict[-1052885936] = { return Api.ImportedContact.parse_importedContact($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     return dict
@@ -1099,7 +1105,11 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppUpdate:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.SimpleWebViewResult:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.LangPackDifference:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AttachMenuBotsBot:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WallPaperSettings:
                 _1.serialize(buffer, boxed)
@@ -1479,6 +1489,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsAbsValueAndPrev:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.WebViewMessageSent:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PaymentSavedCredentials:
@@ -1712,8 +1724,6 @@ public struct Api {
             case let _1 as Api.messages.HighScores:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WebAuthorization:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.messages.WebViewResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ImportedContact:
                 _1.serialize(buffer, boxed)

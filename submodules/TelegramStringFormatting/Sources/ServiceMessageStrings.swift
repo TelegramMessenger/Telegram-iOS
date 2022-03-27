@@ -631,6 +631,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     }
                 }
+            case let .webViewData(text):
+                attributedString = NSAttributedString(string: "Data for \(text) sent to bot", font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

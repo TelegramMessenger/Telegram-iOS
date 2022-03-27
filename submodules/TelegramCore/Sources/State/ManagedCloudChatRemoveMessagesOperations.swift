@@ -395,11 +395,16 @@ private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, 
         if operation.minTimestamp != nil {
             return .complete()
         } else {
-            return network.request(Api.functions.channels.deleteHistory(channel: inputChannel, maxId: operation.topMessageId.id))
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
+            let flags: Int32 = 0
+            return network.request(Api.functions.channels.deleteHistory(flags: flags, channel: inputChannel, maxId: operation.topMessageId.id))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                return .single(nil)
             }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
+            |> mapToSignal { updates -> Signal<Void, NoError> in
+                if let updates = updates {
+                    stateManager.addUpdates(updates)
+                }
                 return .complete()
             }
         }

@@ -133,7 +133,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.webView?.load(URLRequest(url: parsedUrl))
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateWebAppThemeParams(presentationData.theme))
+                let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: nil)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -217,7 +217,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             switch eventName {
-                case "webview_send_result_message":
+                case "webview_data_send":
                     self.handleSendResultMessage()
                 case "webview_close":
                     self.controller?.dismiss()
@@ -243,43 +243,46 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             let themeParams = generateWebAppThemeParams(presentationData.theme)
-            var themeParamsString = "{"
+            var themeParamsString = "{theme_params: {"
             for (key, value) in themeParams {
                 if let value = value as? Int32 {
                     let color = UIColor(rgb: UInt32(bitPattern: value))
                     
-                    if themeParamsString.count > 1 {
+                    if themeParamsString.count > 16 {
                         themeParamsString.append(", ")
                     }
                     themeParamsString.append("\"\(key)\": \"#\(color.hexString)\"")
                 }
             }
-            themeParamsString.append("}")
+            themeParamsString.append("}}")
             self.sendEvent(name: "theme_changed", data: themeParamsString)
         }
         
-        private weak var currentAlertController: AlertController?
         private func handleSendResultMessage() {
-            guard let controller = self.controller, let queryId = self.queryId, self.currentAlertController == nil else {
+            guard let controller = self.controller else {
                 return
             }
-
-            let _ = (self.context.engine.messages.getWebViewResult(peerId: controller.peerId, botId: controller.botId, queryId: queryId)
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                guard let strongSelf = self, let controller = strongSelf.controller else {
-                    return
-                }
-                
-                let alertController = webAppPreviewResultController(context: strongSelf.context, to: controller.peerId, botId: controller.botId, result: result, completion: { [weak self] in
-                    guard let strongSelf = self, let controller = strongSelf.controller else {
-                        return
-                    }
-                    let _ = strongSelf.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: controller.peerId, botId: controller.botId, result: result)
-                    controller.dismiss()
-                })
-                controller.present(alertController, in: .window(.root))
-                strongSelf.currentAlertController = alertController
-            })
+            controller.dismiss()
+//            guard let controller = self.controller, let queryId = self.queryId, self.currentAlertController == nil else {
+//                return
+//            }
+//
+//            let _ = (self.context.engine.messages.getWebViewResult(peerId: controller.peerId, botId: controller.botId, queryId: queryId)
+//            |> deliverOnMainQueue).start(next: { [weak self] result in
+//                guard let strongSelf = self, let controller = strongSelf.controller else {
+//                    return
+//                }
+//
+//                let alertController = webAppPreviewResultController(context: strongSelf.context, to: controller.peerId, botId: controller.botId, result: result, completion: { [weak self] in
+//                    guard let strongSelf = self, let controller = strongSelf.controller else {
+//                        return
+//                    }
+//                    let _ = strongSelf.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: controller.peerId, botId: controller.botId, result: result)
+//                    controller.dismiss()
+//                })
+//                controller.present(alertController, in: .window(.root))
+//                strongSelf.currentAlertController = alertController
+//            })
         }
     }
     

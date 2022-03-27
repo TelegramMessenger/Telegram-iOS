@@ -563,7 +563,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         guard let peer = peer else {
                             return
                         }
-                        let _ = (context.engine.messages.requestWebView(peerId: peer.id, botId: peer.id, url: nil, themeParams: nil)
+                        let _ = (context.engine.messages.requestWebView(peerId: peer.id, botId: peer.id, url: nil, themeParams: nil, replyToMessageId: nil)
                         |> deliverOnMainQueue).start(next: { result in
                             if case let .requestConfirmation(botIcon) = result {
                                 if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canBeAddedToAttachMenu) {

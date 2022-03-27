@@ -2702,51 +2702,5 @@ public struct messages {
         }
     
     }
-    public enum WebViewResult: TypeConstructorDescription {
-        case webViewResult(result: Api.BotInlineResult, users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .webViewResult(let result, let users):
-                    if boxed {
-                        buffer.appendInt32(-1428220517)
-                    }
-                    result.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .webViewResult(let result, let users):
-                return ("webViewResult", [("result", result), ("users", users)])
-    }
-    }
-    
-        public static func parse_webViewResult(_ reader: BufferReader) -> WebViewResult? {
-            var _1: Api.BotInlineResult?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.BotInlineResult
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.messages.WebViewResult.webViewResult(result: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
 }
 }
