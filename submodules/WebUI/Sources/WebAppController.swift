@@ -49,7 +49,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     
-    private class Node: ViewControllerTracingNode, UIScrollViewDelegate {
+    private class Node: ViewControllerTracingNode, WKNavigationDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
         private var webView: WKWebView?
@@ -109,8 +109,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             let webView = WKWebView(frame: CGRect(), configuration: configuration)
+            webView.alpha = 0.0
             webView.isOpaque = false
             webView.backgroundColor = .clear
+            webView.navigationDelegate = self
             
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 webView.allowsLinkPreview = false
@@ -167,6 +169,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     contentView?.removeInteraction(dragInteraction)
                 })
             }
+        }
+        
+        private var loadCount = 0
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            self.loadCount += 1
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            self.loadCount -= 1
+            
+            Queue.mainQueue().after(0.1, {
+                if self.loadCount == 0, let webView = self.webView {
+                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear).updateAlpha(layer: webView.layer, alpha: 1.0)
+                }
+            })
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
