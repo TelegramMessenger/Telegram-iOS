@@ -3301,7 +3301,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
-        }, openWebView: { [weak self] url, simple in
+        }, openWebView: { [weak self] buttonText, url, simple in
             guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
@@ -3350,28 +3350,48 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme), replyToMessageId: nil)
-            |> afterDisposed {
-                updateProgress()
-            })
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                guard let strongSelf = self else {
-                    return
-                }
-                switch result {
-                    case let .webViewResult(queryId, url):
-                        let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: queryId)
-                        controller.navigationPresentation = .modal
-                        strongSelf.push(controller)
-                    case .requestConfirmation:
-                        break
-                }
-            }, error: { [weak self] error in
-                if let strongSelf = self {
-                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                    })]), in: .window(.root))
-                }
-            }))
+            if simple {
+                strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestSimpleWebView(botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
+                |> afterDisposed {
+                    updateProgress()
+                })
+                |> deliverOnMainQueue).start(next: { [weak self] url in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil)
+                    controller.navigationPresentation = .modal
+                    strongSelf.push(controller)
+                }, error: { [weak self] error in
+                    if let strongSelf = self {
+                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        })]), in: .window(.root))
+                    }
+                }))
+            } else {
+                strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme), replyToMessageId: nil)
+                |> afterDisposed {
+                    updateProgress()
+                })
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    switch result {
+                        case let .webViewResult(queryId, url, keepAliveSignal):
+                            let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal)
+                            controller.navigationPresentation = .modal
+                            strongSelf.push(controller)
+                        case .requestConfirmation:
+                            break
+                    }
+                }, error: { [weak self] error in
+                    if let strongSelf = self {
+                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        })]), in: .window(.root))
+                    }
+                }))
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -10809,7 +10829,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             case let .app(botId, botName, _):
-                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil)
+                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil)
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             }

@@ -330,6 +330,11 @@ public extension TelegramEngine {
             return _internal_requestSimpleWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, url: url, themeParams: themeParams)
         }
                 
+        
+        public func sendWebViewData(botId: PeerId, buttonText: String, data: String) -> Signal<Never, SendWebViewDataError> {
+            return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
+        }
+        
         public func addBotToAttachMenu(peerId: PeerId) -> Signal<Bool, NoError> {
             return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
         }

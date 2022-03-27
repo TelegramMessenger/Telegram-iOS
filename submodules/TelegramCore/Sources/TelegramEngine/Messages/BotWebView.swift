@@ -13,7 +13,6 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
     }
-    
     return postbox.transaction { transaction -> Signal<String, RequestSimpleWebViewError> in
         guard let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
             return .fail(.generic)
@@ -38,13 +37,40 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
     |> switchToLatest
 }
 
+public enum KeepWebViewError {
+    case generic
+}
+
 public enum RequestWebViewResult {
-    case webViewResult(queryId: Int64, url: String)
+    case webViewResult(queryId: Int64, url: String, keepAliveSignal: Signal<Never, KeepWebViewError>)
     case requestConfirmation(botIcon: TelegramMediaFile)
 }
 
 public enum RequestWebViewError {
     case generic
+}
+
+private func keepWebView(network: Network, flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?) -> Signal<Never, KeepWebViewError> {
+    let poll = Signal<Never, KeepWebViewError> { subscriber in
+        let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyToMsgId: replyToMessageId?.id))
+        |> mapError { _ -> KeepWebViewError in
+            return .generic
+        }
+        |> ignoreValues
+        
+        return signal.start(error: { error in
+            subscriber.putError(error)
+        }, completed: {
+            subscriber.putCompletion()
+        })
+    }
+    
+    return (
+        .complete()
+        |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue())
+        |> then (poll)
+    )
+    |> restart
 }
 
 func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
@@ -54,7 +80,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId
     }
     
     return postbox.transaction { transaction -> Signal<RequestWebViewResult, RequestWebViewError> in
-        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let bot = transaction.getPeer(botId), let inputUser = apiInputUser(bot) else {
+        guard let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let bot = transaction.getPeer(botId), let inputBot = apiInputUser(bot) else {
             return .fail(.generic)
         }
 
@@ -70,7 +96,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId
             flags |= (1 << 0)
             replyToMsgId = replyToMessageId.id
         }
-        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputUser, url: url, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId))
+        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId))
         |> mapError { _ -> RequestWebViewError in
             return .generic
         }
@@ -96,10 +122,34 @@ func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId
                     |> castError(RequestWebViewError.self)
                     |> switchToLatest
                 case let .webViewResultUrl(queryId, url):
-                    return .single(.webViewResult(queryId: queryId, url: url))
+                    return .single(.webViewResult(queryId: queryId, url: url, keepAliveSignal: keepWebView(network: network, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId)))
             }
         }
     }
     |> castError(RequestWebViewError.self)
+    |> switchToLatest
+}
+
+public enum SendWebViewDataError {
+    case generic
+}
+
+func _internal_sendWebViewData(postbox: Postbox, network: Network, stateManager: AccountStateManager, botId: PeerId, buttonText: String, data: String) -> Signal<Never, SendWebViewDataError> {
+    return postbox.transaction { transaction -> Signal<Never, SendWebViewDataError> in
+        guard let bot = transaction.getPeer(botId), let inputBot = apiInputUser(bot) else {
+            return .fail(.generic)
+        }
+        
+        return network.request(Api.functions.messages.sendWebViewData(bot: inputBot, randomId: Int64.random(in: Int64.min ... Int64.max), buttonText: buttonText, data: data))
+        |> mapError { _ -> SendWebViewDataError in
+            return .generic
+        }
+        |> map { updates -> Api.Updates in
+            stateManager.addUpdates(updates)
+            return updates
+        }
+        |> ignoreValues
+    }
+    |> castError(SendWebViewDataError.self)
     |> switchToLatest
 }
