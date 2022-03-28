@@ -880,16 +880,17 @@ public extension Api {
 }
 public extension Api {
     enum ChatFull: TypeConstructorDescription {
-        case channelFull(flags: Int32, id: Int64, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int64?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int64?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, defaultSendAs: Api.Peer?, availableReactions: [String]?)
+        case channelFull(flags: Int32, flags2: Int32, id: Int64, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int64?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int64?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, defaultSendAs: Api.Peer?, availableReactions: [String]?)
         case chatFull(flags: Int32, id: Int64, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttlPeriod: Int32?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, availableReactions: [String]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let defaultSendAs, let availableReactions):
+                case .channelFull(let flags, let flags2, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let defaultSendAs, let availableReactions):
                     if boxed {
-                        buffer.appendInt32(-516145888)
+                        buffer.appendInt32(-362240487)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(flags2, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeString(about, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(participantsCount!, buffer: buffer, boxed: false)}
@@ -981,8 +982,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .channelFull(let flags, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let defaultSendAs, let availableReactions):
-                return ("channelFull", [("flags", String(describing: flags)), ("id", String(describing: id)), ("about", String(describing: about)), ("participantsCount", String(describing: participantsCount)), ("adminsCount", String(describing: adminsCount)), ("kickedCount", String(describing: kickedCount)), ("bannedCount", String(describing: bannedCount)), ("onlineCount", String(describing: onlineCount)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("chatPhoto", String(describing: chatPhoto)), ("notifySettings", String(describing: notifySettings)), ("exportedInvite", String(describing: exportedInvite)), ("botInfo", String(describing: botInfo)), ("migratedFromChatId", String(describing: migratedFromChatId)), ("migratedFromMaxId", String(describing: migratedFromMaxId)), ("pinnedMsgId", String(describing: pinnedMsgId)), ("stickerset", String(describing: stickerset)), ("availableMinId", String(describing: availableMinId)), ("folderId", String(describing: folderId)), ("linkedChatId", String(describing: linkedChatId)), ("location", String(describing: location)), ("slowmodeSeconds", String(describing: slowmodeSeconds)), ("slowmodeNextSendDate", String(describing: slowmodeNextSendDate)), ("statsDc", String(describing: statsDc)), ("pts", String(describing: pts)), ("call", String(describing: call)), ("ttlPeriod", String(describing: ttlPeriod)), ("pendingSuggestions", String(describing: pendingSuggestions)), ("groupcallDefaultJoinAs", String(describing: groupcallDefaultJoinAs)), ("themeEmoticon", String(describing: themeEmoticon)), ("requestsPending", String(describing: requestsPending)), ("recentRequesters", String(describing: recentRequesters)), ("defaultSendAs", String(describing: defaultSendAs)), ("availableReactions", String(describing: availableReactions))])
+                case .channelFull(let flags, let flags2, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let defaultSendAs, let availableReactions):
+                return ("channelFull", [("flags", String(describing: flags)), ("flags2", String(describing: flags2)), ("id", String(describing: id)), ("about", String(describing: about)), ("participantsCount", String(describing: participantsCount)), ("adminsCount", String(describing: adminsCount)), ("kickedCount", String(describing: kickedCount)), ("bannedCount", String(describing: bannedCount)), ("onlineCount", String(describing: onlineCount)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("chatPhoto", String(describing: chatPhoto)), ("notifySettings", String(describing: notifySettings)), ("exportedInvite", String(describing: exportedInvite)), ("botInfo", String(describing: botInfo)), ("migratedFromChatId", String(describing: migratedFromChatId)), ("migratedFromMaxId", String(describing: migratedFromMaxId)), ("pinnedMsgId", String(describing: pinnedMsgId)), ("stickerset", String(describing: stickerset)), ("availableMinId", String(describing: availableMinId)), ("folderId", String(describing: folderId)), ("linkedChatId", String(describing: linkedChatId)), ("location", String(describing: location)), ("slowmodeSeconds", String(describing: slowmodeSeconds)), ("slowmodeNextSendDate", String(describing: slowmodeNextSendDate)), ("statsDc", String(describing: statsDc)), ("pts", String(describing: pts)), ("call", String(describing: call)), ("ttlPeriod", String(describing: ttlPeriod)), ("pendingSuggestions", String(describing: pendingSuggestions)), ("groupcallDefaultJoinAs", String(describing: groupcallDefaultJoinAs)), ("themeEmoticon", String(describing: themeEmoticon)), ("requestsPending", String(describing: requestsPending)), ("recentRequesters", String(describing: recentRequesters)), ("defaultSendAs", String(describing: defaultSendAs)), ("availableReactions", String(describing: availableReactions))])
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttlPeriod, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let availableReactions):
                 return ("chatFull", [("flags", String(describing: flags)), ("id", String(describing: id)), ("about", String(describing: about)), ("participants", String(describing: participants)), ("chatPhoto", String(describing: chatPhoto)), ("notifySettings", String(describing: notifySettings)), ("exportedInvite", String(describing: exportedInvite)), ("botInfo", String(describing: botInfo)), ("pinnedMsgId", String(describing: pinnedMsgId)), ("folderId", String(describing: folderId)), ("call", String(describing: call)), ("ttlPeriod", String(describing: ttlPeriod)), ("groupcallDefaultJoinAs", String(describing: groupcallDefaultJoinAs)), ("themeEmoticon", String(describing: themeEmoticon)), ("requestsPending", String(describing: requestsPending)), ("recentRequesters", String(describing: recentRequesters)), ("availableReactions", String(describing: availableReactions))])
     }
@@ -991,138 +992,141 @@ public extension Api {
         public static func parse_channelFull(_ reader: BufferReader) -> ChatFull? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
             var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
             var _6: Int32?
-            if Int(_1!) & Int(1 << 2) != 0 {_6 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = reader.readInt32() }
             var _7: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_7 = reader.readInt32() }
             var _8: Int32?
-            if Int(_1!) & Int(1 << 13) != 0 {_8 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 2) != 0 {_8 = reader.readInt32() }
             var _9: Int32?
-            _9 = reader.readInt32()
+            if Int(_1!) & Int(1 << 13) != 0 {_9 = reader.readInt32() }
             var _10: Int32?
             _10 = reader.readInt32()
             var _11: Int32?
             _11 = reader.readInt32()
-            var _12: Api.Photo?
+            var _12: Int32?
+            _12 = reader.readInt32()
+            var _13: Api.Photo?
             if let signature = reader.readInt32() {
-                _12 = Api.parse(reader, signature: signature) as? Api.Photo
+                _13 = Api.parse(reader, signature: signature) as? Api.Photo
             }
-            var _13: Api.PeerNotifySettings?
+            var _14: Api.PeerNotifySettings?
             if let signature = reader.readInt32() {
-                _13 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+                _14 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
-            var _14: Api.ExportedChatInvite?
+            var _15: Api.ExportedChatInvite?
             if Int(_1!) & Int(1 << 23) != 0 {if let signature = reader.readInt32() {
-                _14 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
+                _15 = Api.parse(reader, signature: signature) as? Api.ExportedChatInvite
             } }
-            var _15: [Api.BotInfo]?
+            var _16: [Api.BotInfo]?
             if let _ = reader.readInt32() {
-                _15 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInfo.self)
+                _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotInfo.self)
             }
-            var _16: Int64?
-            if Int(_1!) & Int(1 << 4) != 0 {_16 = reader.readInt64() }
-            var _17: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_17 = reader.readInt32() }
+            var _17: Int64?
+            if Int(_1!) & Int(1 << 4) != 0 {_17 = reader.readInt64() }
             var _18: Int32?
-            if Int(_1!) & Int(1 << 5) != 0 {_18 = reader.readInt32() }
-            var _19: Api.StickerSet?
+            if Int(_1!) & Int(1 << 4) != 0 {_18 = reader.readInt32() }
+            var _19: Int32?
+            if Int(_1!) & Int(1 << 5) != 0 {_19 = reader.readInt32() }
+            var _20: Api.StickerSet?
             if Int(_1!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
-                _19 = Api.parse(reader, signature: signature) as? Api.StickerSet
+                _20 = Api.parse(reader, signature: signature) as? Api.StickerSet
             } }
-            var _20: Int32?
-            if Int(_1!) & Int(1 << 9) != 0 {_20 = reader.readInt32() }
             var _21: Int32?
-            if Int(_1!) & Int(1 << 11) != 0 {_21 = reader.readInt32() }
-            var _22: Int64?
-            if Int(_1!) & Int(1 << 14) != 0 {_22 = reader.readInt64() }
-            var _23: Api.ChannelLocation?
+            if Int(_1!) & Int(1 << 9) != 0 {_21 = reader.readInt32() }
+            var _22: Int32?
+            if Int(_1!) & Int(1 << 11) != 0 {_22 = reader.readInt32() }
+            var _23: Int64?
+            if Int(_1!) & Int(1 << 14) != 0 {_23 = reader.readInt64() }
+            var _24: Api.ChannelLocation?
             if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
-                _23 = Api.parse(reader, signature: signature) as? Api.ChannelLocation
+                _24 = Api.parse(reader, signature: signature) as? Api.ChannelLocation
             } }
-            var _24: Int32?
-            if Int(_1!) & Int(1 << 17) != 0 {_24 = reader.readInt32() }
             var _25: Int32?
-            if Int(_1!) & Int(1 << 18) != 0 {_25 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 17) != 0 {_25 = reader.readInt32() }
             var _26: Int32?
-            if Int(_1!) & Int(1 << 12) != 0 {_26 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 18) != 0 {_26 = reader.readInt32() }
             var _27: Int32?
-            _27 = reader.readInt32()
-            var _28: Api.InputGroupCall?
+            if Int(_1!) & Int(1 << 12) != 0 {_27 = reader.readInt32() }
+            var _28: Int32?
+            _28 = reader.readInt32()
+            var _29: Api.InputGroupCall?
             if Int(_1!) & Int(1 << 21) != 0 {if let signature = reader.readInt32() {
-                _28 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
+                _29 = Api.parse(reader, signature: signature) as? Api.InputGroupCall
             } }
-            var _29: Int32?
-            if Int(_1!) & Int(1 << 24) != 0 {_29 = reader.readInt32() }
-            var _30: [String]?
+            var _30: Int32?
+            if Int(_1!) & Int(1 << 24) != 0 {_30 = reader.readInt32() }
+            var _31: [String]?
             if Int(_1!) & Int(1 << 25) != 0 {if let _ = reader.readInt32() {
-                _30 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+                _31 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
             } }
-            var _31: Api.Peer?
+            var _32: Api.Peer?
             if Int(_1!) & Int(1 << 26) != 0 {if let signature = reader.readInt32() {
-                _31 = Api.parse(reader, signature: signature) as? Api.Peer
+                _32 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
-            var _32: String?
-            if Int(_1!) & Int(1 << 27) != 0 {_32 = parseString(reader) }
-            var _33: Int32?
-            if Int(_1!) & Int(1 << 28) != 0 {_33 = reader.readInt32() }
-            var _34: [Int64]?
+            var _33: String?
+            if Int(_1!) & Int(1 << 27) != 0 {_33 = parseString(reader) }
+            var _34: Int32?
+            if Int(_1!) & Int(1 << 28) != 0 {_34 = reader.readInt32() }
+            var _35: [Int64]?
             if Int(_1!) & Int(1 << 28) != 0 {if let _ = reader.readInt32() {
-                _34 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
+                _35 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             } }
-            var _35: Api.Peer?
+            var _36: Api.Peer?
             if Int(_1!) & Int(1 << 29) != 0 {if let signature = reader.readInt32() {
-                _35 = Api.parse(reader, signature: signature) as? Api.Peer
+                _36 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
-            var _36: [String]?
+            var _37: [String]?
             if Int(_1!) & Int(1 << 30) != 0 {if let _ = reader.readInt32() {
-                _36 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+                _37 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 13) == 0) || _8 != nil
-            let _c9 = _9 != nil
+            let _c8 = (Int(_1!) & Int(1 << 2) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 13) == 0) || _9 != nil
             let _c10 = _10 != nil
             let _c11 = _11 != nil
             let _c12 = _12 != nil
             let _c13 = _13 != nil
-            let _c14 = (Int(_1!) & Int(1 << 23) == 0) || _14 != nil
-            let _c15 = _15 != nil
-            let _c16 = (Int(_1!) & Int(1 << 4) == 0) || _16 != nil
+            let _c14 = _14 != nil
+            let _c15 = (Int(_1!) & Int(1 << 23) == 0) || _15 != nil
+            let _c16 = _16 != nil
             let _c17 = (Int(_1!) & Int(1 << 4) == 0) || _17 != nil
-            let _c18 = (Int(_1!) & Int(1 << 5) == 0) || _18 != nil
-            let _c19 = (Int(_1!) & Int(1 << 8) == 0) || _19 != nil
-            let _c20 = (Int(_1!) & Int(1 << 9) == 0) || _20 != nil
-            let _c21 = (Int(_1!) & Int(1 << 11) == 0) || _21 != nil
-            let _c22 = (Int(_1!) & Int(1 << 14) == 0) || _22 != nil
-            let _c23 = (Int(_1!) & Int(1 << 15) == 0) || _23 != nil
-            let _c24 = (Int(_1!) & Int(1 << 17) == 0) || _24 != nil
-            let _c25 = (Int(_1!) & Int(1 << 18) == 0) || _25 != nil
-            let _c26 = (Int(_1!) & Int(1 << 12) == 0) || _26 != nil
-            let _c27 = _27 != nil
-            let _c28 = (Int(_1!) & Int(1 << 21) == 0) || _28 != nil
-            let _c29 = (Int(_1!) & Int(1 << 24) == 0) || _29 != nil
-            let _c30 = (Int(_1!) & Int(1 << 25) == 0) || _30 != nil
-            let _c31 = (Int(_1!) & Int(1 << 26) == 0) || _31 != nil
-            let _c32 = (Int(_1!) & Int(1 << 27) == 0) || _32 != nil
-            let _c33 = (Int(_1!) & Int(1 << 28) == 0) || _33 != nil
+            let _c18 = (Int(_1!) & Int(1 << 4) == 0) || _18 != nil
+            let _c19 = (Int(_1!) & Int(1 << 5) == 0) || _19 != nil
+            let _c20 = (Int(_1!) & Int(1 << 8) == 0) || _20 != nil
+            let _c21 = (Int(_1!) & Int(1 << 9) == 0) || _21 != nil
+            let _c22 = (Int(_1!) & Int(1 << 11) == 0) || _22 != nil
+            let _c23 = (Int(_1!) & Int(1 << 14) == 0) || _23 != nil
+            let _c24 = (Int(_1!) & Int(1 << 15) == 0) || _24 != nil
+            let _c25 = (Int(_1!) & Int(1 << 17) == 0) || _25 != nil
+            let _c26 = (Int(_1!) & Int(1 << 18) == 0) || _26 != nil
+            let _c27 = (Int(_1!) & Int(1 << 12) == 0) || _27 != nil
+            let _c28 = _28 != nil
+            let _c29 = (Int(_1!) & Int(1 << 21) == 0) || _29 != nil
+            let _c30 = (Int(_1!) & Int(1 << 24) == 0) || _30 != nil
+            let _c31 = (Int(_1!) & Int(1 << 25) == 0) || _31 != nil
+            let _c32 = (Int(_1!) & Int(1 << 26) == 0) || _32 != nil
+            let _c33 = (Int(_1!) & Int(1 << 27) == 0) || _33 != nil
             let _c34 = (Int(_1!) & Int(1 << 28) == 0) || _34 != nil
-            let _c35 = (Int(_1!) & Int(1 << 29) == 0) || _35 != nil
-            let _c36 = (Int(_1!) & Int(1 << 30) == 0) || _36 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 {
-                return Api.ChatFull.channelFull(flags: _1!, id: _2!, about: _3!, participantsCount: _4, adminsCount: _5, kickedCount: _6, bannedCount: _7, onlineCount: _8, readInboxMaxId: _9!, readOutboxMaxId: _10!, unreadCount: _11!, chatPhoto: _12!, notifySettings: _13!, exportedInvite: _14, botInfo: _15!, migratedFromChatId: _16, migratedFromMaxId: _17, pinnedMsgId: _18, stickerset: _19, availableMinId: _20, folderId: _21, linkedChatId: _22, location: _23, slowmodeSeconds: _24, slowmodeNextSendDate: _25, statsDc: _26, pts: _27!, call: _28, ttlPeriod: _29, pendingSuggestions: _30, groupcallDefaultJoinAs: _31, themeEmoticon: _32, requestsPending: _33, recentRequesters: _34, defaultSendAs: _35, availableReactions: _36)
+            let _c35 = (Int(_1!) & Int(1 << 28) == 0) || _35 != nil
+            let _c36 = (Int(_1!) & Int(1 << 29) == 0) || _36 != nil
+            let _c37 = (Int(_1!) & Int(1 << 30) == 0) || _37 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 {
+                return Api.ChatFull.channelFull(flags: _1!, flags2: _2!, id: _3!, about: _4!, participantsCount: _5, adminsCount: _6, kickedCount: _7, bannedCount: _8, onlineCount: _9, readInboxMaxId: _10!, readOutboxMaxId: _11!, unreadCount: _12!, chatPhoto: _13!, notifySettings: _14!, exportedInvite: _15, botInfo: _16!, migratedFromChatId: _17, migratedFromMaxId: _18, pinnedMsgId: _19, stickerset: _20, availableMinId: _21, folderId: _22, linkedChatId: _23, location: _24, slowmodeSeconds: _25, slowmodeNextSendDate: _26, statsDc: _27, pts: _28!, call: _29, ttlPeriod: _30, pendingSuggestions: _31, groupcallDefaultJoinAs: _32, themeEmoticon: _33, requestsPending: _34, recentRequesters: _35, defaultSendAs: _36, availableReactions: _37)
             }
             else {
                 return nil
