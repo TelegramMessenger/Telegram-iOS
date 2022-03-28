@@ -43,7 +43,9 @@ extension ReplyMarkupButton {
             case let .inputKeyboardButtonUserProfile(text, _):
                 self.init(title: text, titleWhenForwarded: nil, action: .openUserProfile(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0))))
             case let .keyboardButtonWebView(text, url):
-                self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url))
+                self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url, simple: false))
+            case let .keyboardButtonSimpleWebView(text, url):
+                self.init(title: text, titleWhenForwarded: nil, action: .openWebView(url: url, simple: true))
         }
     }
 }

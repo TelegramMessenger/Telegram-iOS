@@ -552,7 +552,7 @@ public final class PrincipalThemeAdditionalGraphics {
     public let chatBubbleActionButtonOutgoingProfileIconImage: UIImage
     public let chatBubbleActionButtonOutgoingAddToChatIconImage: UIImage
     public let chatBubbleActionButtonOutgoingWebAppIconImage: UIImage
-    
+        
     public let chatEmptyItemLockIcon: UIImage
     public let emptyChatListCheckIcon: UIImage
     

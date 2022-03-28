@@ -59,10 +59,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private let present: (ViewController, Any?) -> Void
         private var queryId: Int64?
         
-        init(context: AccountContext, controller: WebAppController, presentationData: PresentationData, peerId: PeerId, botId: PeerId, url: String?, queryId: Int64?, present: @escaping (ViewController, Any?) -> Void) {
+        private var keepAliveDisposable: Disposable?
+        
+        init(context: AccountContext, controller: WebAppController, present: @escaping (ViewController, Any?) -> Void) {
             self.context = context
             self.controller = controller
-            self.presentationData = presentationData
+            self.presentationData = controller.presentationData
             self.present = present
             
             super.init()
@@ -127,28 +129,46 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.scrollView.delegate = self
             self.webView = webView
             
-            if let url = url, let queryId = queryId {
+            if let url = controller.url, let queryId = controller.queryId, let keepAliveSignal = controller.keepAliveSignal {
                 self.queryId = queryId
                 if let parsedUrl = URL(string: url) {
                     self.webView?.load(URLRequest(url: parsedUrl))
                 }
+                
+                self.keepAliveDisposable = (keepAliveSignal
+                |> deliverOnMainQueue).start(error: { [weak self] _ in
+                    if let strongSelf = self {
+                        strongSelf.controller?.dismiss()
+                    }
+                })
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: peerId, botId: botId, url: url, themeParams: generateWebAppThemeParams(presentationData.theme))
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: nil)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
                     }
                     switch result {
-                        case let .webViewResult(queryId, url):
+                        case let .webViewResult(queryId, url, keepAliveSignal):
                             if let parsedUrl = URL(string: url) {
                                 strongSelf.queryId = queryId
                                 strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                                
+                                strongSelf.keepAliveDisposable = (keepAliveSignal
+                                |> deliverOnMainQueue).start(error: { [weak self] _ in
+                                    if let strongSelf = self {
+                                        strongSelf.controller?.dismiss()
+                                    }
+                                })
                             }
                         case .requestConfirmation:
                             break
                     }
                 })
             }
+        }
+        
+        deinit {
+            self.keepAliveDisposable?.dispose()
         }
         
         override func didLoad() {
@@ -217,12 +237,34 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             switch eventName {
-                case "webview_send_result_message":
-                    self.handleSendResultMessage()
+                case "webview_data_send":
+                    if let eventData = body["eventData"] as? String {
+                        self.handleSendData(data: eventData)
+                    }
                 case "webview_close":
                     self.controller?.dismiss()
                 default:
                     break
+            }
+        }
+        
+        private var dismissed = false
+        private func handleSendData(data string: String) {
+            guard let controller = self.controller, let buttonText = controller.buttonText, !self.dismissed else {
+                return
+            }
+            controller.dismiss()
+            
+            if let data = string.data(using: .utf8), let jsonArray = try? JSONSerialization.jsonObject(with: data, options : .allowFragments) as? [String: Any], let data = jsonArray["data"] {
+                var resultString: String?
+                if let string = data as? String {
+                    resultString = string
+                } else if let data1 = try? JSONSerialization.data(withJSONObject: data, options: JSONSerialization.WritingOptions.prettyPrinted), let convertedString = String(data: data1, encoding: String.Encoding.utf8) {
+                    resultString = convertedString
+                }
+                if let resultString = resultString {
+                    let _ = (self.context.engine.messages.sendWebViewData(botId: controller.botId, buttonText: buttonText, data: resultString)).start()
+                }
             }
         }
         
@@ -243,43 +285,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             let themeParams = generateWebAppThemeParams(presentationData.theme)
-            var themeParamsString = "{"
+            var themeParamsString = "{theme_params: {"
             for (key, value) in themeParams {
                 if let value = value as? Int32 {
                     let color = UIColor(rgb: UInt32(bitPattern: value))
                     
-                    if themeParamsString.count > 1 {
+                    if themeParamsString.count > 16 {
                         themeParamsString.append(", ")
                     }
                     themeParamsString.append("\"\(key)\": \"#\(color.hexString)\"")
                 }
             }
-            themeParamsString.append("}")
+            themeParamsString.append("}}")
             self.sendEvent(name: "theme_changed", data: themeParamsString)
-        }
-        
-        private weak var currentAlertController: AlertController?
-        private func handleSendResultMessage() {
-            guard let controller = self.controller, let queryId = self.queryId, self.currentAlertController == nil else {
-                return
-            }
-
-            let _ = (self.context.engine.messages.getWebViewResult(peerId: controller.peerId, botId: controller.botId, queryId: queryId)
-            |> deliverOnMainQueue).start(next: { [weak self] result in
-                guard let strongSelf = self, let controller = strongSelf.controller else {
-                    return
-                }
-                
-                let alertController = webAppPreviewResultController(context: strongSelf.context, to: controller.peerId, botId: controller.botId, result: result, completion: { [weak self] in
-                    guard let strongSelf = self, let controller = strongSelf.controller else {
-                        return
-                    }
-                    let _ = strongSelf.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: controller.peerId, botId: controller.botId, result: result)
-                    controller.dismiss()
-                })
-                controller.present(alertController, in: .window(.root))
-                strongSelf.currentAlertController = alertController
-            })
         }
     }
     
@@ -295,17 +313,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let botId: PeerId
     private let url: String?
     private let queryId: Int64?
+    private let buttonText: String?
+    private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     
     private var presentationData: PresentationData
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?) {
         self.context = context
         self.peerId = peerId
         self.botId = botId
         self.url = url
         self.queryId = queryId
+        self.buttonText = buttonText
+        self.keepAliveSignal = keepAliveSignal
         
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -429,7 +451,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, controller: self, presentationData: self.presentationData, peerId: self.peerId, botId: self.botId, url: self.url, queryId: self.queryId, present: { [weak self] c, a in
+        self.displayNode = Node(context: self.context, controller: self, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         })
         

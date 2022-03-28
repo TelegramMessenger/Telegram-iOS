@@ -322,12 +322,17 @@ public extension TelegramEngine {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
         
-        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?) -> Signal<RequestWebViewResult, RequestWebViewError> {
-            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, peerId: peerId, botId: botId, url: url, themeParams: themeParams)
+        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, peerId: peerId, botId: botId, url: url, themeParams: themeParams, replyToMessageId: replyToMessageId)
         }
         
-        public func getWebViewResult(peerId: PeerId, botId: PeerId, queryId: Int64) -> Signal<ChatContextResult, GetWebViewResultError> {
-            return _internal_getWebViewResult(postbox: self.account.postbox, network: self.account.network, peerId: peerId, botId: botId, queryId: queryId)
+        public func requestSimpleWebView(botId: PeerId, url: String, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {
+            return _internal_requestSimpleWebView(postbox: self.account.postbox, network: self.account.network, botId: botId, url: url, themeParams: themeParams)
+        }
+                
+        
+        public func sendWebViewData(botId: PeerId, buttonText: String, data: String) -> Signal<Never, SendWebViewDataError> {
+            return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
         }
         
         public func addBotToAttachMenu(peerId: PeerId) -> Signal<Bool, NoError> {
