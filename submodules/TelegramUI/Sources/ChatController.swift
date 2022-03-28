@@ -3359,7 +3359,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil)
+                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, replyToMessageId: nil, iconFile: nil)
+                    controller.getNavigationController = { [weak self] in
+                        return self?.effectiveNavigationController
+                    }
                     controller.navigationPresentation = .modal
                     strongSelf.push(controller)
                 }, error: { [weak self] error in
@@ -3379,7 +3382,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     switch result {
                         case let .webViewResult(queryId, url, keepAliveSignal):
-                            let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal)
+                            let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil, iconFile: nil)
+                            controller.getNavigationController = { [weak self] in
+                                return self?.effectiveNavigationController
+                            }
                             controller.navigationPresentation = .modal
                             strongSelf.push(controller)
                         case .requestConfirmation:
@@ -10828,8 +10834,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let controller = strongSelf.configurePollCreation()
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
-            case let .app(botId, botName, _):
-                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil)
+            case let .app(botId, botName, botIcon):
+                let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, replyToMessageId: replyMessageId, iconFile: botIcon)
+                controller.getNavigationController = { [weak self] in
+                    return self?.effectiveNavigationController
+                }
                 completion(controller, nil)
                 strongSelf.controllerNavigationDisposable.set(nil)
             }

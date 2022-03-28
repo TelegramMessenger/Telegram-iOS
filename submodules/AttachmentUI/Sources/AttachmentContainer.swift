@@ -10,6 +10,21 @@ import MapKit
 
 private let overflowInset: CGFloat = 0.0
 
+public func attachmentDefaultTopInset(layout: ContainerViewLayout?) -> CGFloat {
+    guard let layout = layout else {
+        return 210.0
+    }
+    if case .compact = layout.metrics.widthClass {
+        var factor: CGFloat = 0.2488
+        if layout.size.width <= 320.0 {
+            factor = 0.15
+        }
+        return floor(max(layout.size.width, layout.size.height) * factor)
+    } else {
+        return 210.0
+    }
+}
+
 final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     let wrappingNode: ASDisplayNode
     let clipNode: ASDisplayNode
@@ -130,29 +145,14 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
-    
-    private var defaultTopInset: CGFloat {
-        guard let (layout, _, _) = self.validLayout else{
-            return 210.0
-        }
-        if case .compact = layout.metrics.widthClass {
-            var factor: CGFloat = 0.2488
-            if layout.size.width <= 320.0 {
-                factor = 0.15
-            }
-            return floor(max(layout.size.width, layout.size.height) * factor)
-        } else {
-            return 210.0
-        }
-    }
-    
+
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         guard let (layout, controllers, coveredByModalTransition) = self.validLayout else {
             return
         }
         
         let isLandscape = layout.orientation == .landscape
-        let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
+        let edgeTopInset = isLandscape ? 0.0 : attachmentDefaultTopInset(layout: layout)
     
         switch recognizer.state {
             case .began:
@@ -349,6 +349,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 
         self.panGestureRecognizer?.isEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0)
 
+        let defaultTopInset = attachmentDefaultTopInset(layout: layout)
         let isLandscape = layout.orientation == .landscape
         let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
         

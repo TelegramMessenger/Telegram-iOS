@@ -1514,6 +1514,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions, eventTimestamp: updatesDate)
             case .updateAttachMenuBots:
                 updatedState.addUpdateAttachMenuBots()
+            case let .updateWebViewResultSent(_, _, queryId):
+                updatedState.addDismissWebView(queryId)
             default:
                 break
         }

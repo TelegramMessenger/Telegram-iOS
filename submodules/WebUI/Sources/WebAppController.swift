@@ -13,6 +13,8 @@ import CounterContollerTitleView
 import ContextUI
 import PresentationDataUtils
 import HexColor
+import ShimmerEffect
+import PhotoResources
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -52,13 +54,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private class Node: ViewControllerTracingNode, WKNavigationDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
-        private var webView: WKWebView?
+        fileprivate var webView: WKWebView?
+        
+        private var placeholderIcon: UIImage?
+        private var placeholderNode: ShimmerEffectNode?
         
         private let context: AccountContext
         var presentationData: PresentationData
         private let present: (ViewController, Any?) -> Void
         private var queryId: Int64?
         
+        private var iconDisposable: Disposable?
         private var keepAliveDisposable: Disposable?
         
         init(context: AccountContext, controller: WebAppController, present: @escaping (ViewController, Any?) -> Void) {
@@ -129,6 +135,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.scrollView.delegate = self
             self.webView = webView
             
+            let placeholderNode = ShimmerEffectNode()
+            self.addSubnode(placeholderNode)
+            self.placeholderNode = placeholderNode
+            
+            if let iconFile = controller.iconFile {
+                let _ = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
+                self.iconDisposable = (svgIconImageFile(account: self.context.account, fileReference: .standalone(media: iconFile))
+                |> deliverOnMainQueue).start(next: { [weak self] transform in
+                    if let strongSelf = self {
+                        let imageSize = CGSize(width: 75.0, height: 75.0)
+                        let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                        let drawingContext = transform(arguments)
+                        if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
+                            strongSelf.placeholderIcon = image
+                            
+                            strongSelf.updatePlaceholder()
+                        }
+                    }
+                })
+            }
+            
             if let url = controller.url, let queryId = controller.queryId, let keepAliveSignal = controller.keepAliveSignal {
                 self.queryId = queryId
                 if let parsedUrl = URL(string: url) {
@@ -140,9 +167,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let strongSelf = self {
                         strongSelf.controller?.dismiss()
                     }
+                }, completed: { [weak self] in
+                    if let strongSelf = self {
+                        strongSelf.controller?.dismiss()
+                    }
                 })
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: nil)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: controller.replyToMessageId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -158,6 +189,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     if let strongSelf = self {
                                         strongSelf.controller?.dismiss()
                                     }
+                                }, completed: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.controller?.dismiss()
+                                    }
                                 })
                             }
                         case .requestConfirmation:
@@ -168,6 +203,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         deinit {
+            self.iconDisposable?.dispose()
             self.keepAliveDisposable?.dispose()
         }
         
@@ -191,6 +227,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        private func updatePlaceholder() {
+            guard let image = self.placeholderIcon else {
+                return
+            }
+            let theme = self.presentationData.theme
+            self.placeholderNode?.update(backgroundColor: self.backgroundColor ?? .clear, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.image(image: image, rect: CGRect(origin: CGPoint(), size: image.size))], horizontal: true, size: image.size)
+        }
+        
         private var loadCount = 0
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             self.loadCount += 1
@@ -201,7 +245,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             Queue.mainQueue().after(0.1, {
                 if self.loadCount == 0, let webView = self.webView {
-                    ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear).updateAlpha(layer: webView.layer, alpha: 1.0)
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+                    transition.updateAlpha(layer: webView.layer, alpha: 1.0)
+                    if let placeholderNode = self.placeholderNode {
+                        self.placeholderNode = nil
+                        transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
+                            placeholderNode?.removeFromSupernode()
+                        })
+                    }
                 }
             })
         }
@@ -214,6 +265,21 @@ public final class WebAppController: ViewController, AttachmentContainable {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             if let webView = self.webView {
                 webView.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
+            }
+            
+            if let placeholderNode = self.placeholderNode {
+                let iconSize = CGSize(width: 75.0, height: 75.0)
+                
+                let height: CGFloat
+                if case .compact = layout.metrics.widthClass {
+                    height = layout.size.height - attachmentDefaultTopInset(layout: layout) - 56.0
+                } else {
+                    height = layout.size.height - 56.0
+                }
+                
+                let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - iconSize.width) / 2.0), y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
+                transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
+                placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
             }
         }
         
@@ -263,6 +329,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     resultString = convertedString
                 }
                 if let resultString = resultString {
+                    self.dismissed = true
                     let _ = (self.context.engine.messages.sendWebViewData(botId: controller.botId, buttonText: buttonText, data: resultString)).start()
                 }
             }
@@ -315,12 +382,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let queryId: Int64?
     private let buttonText: String?
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
+    private let replyToMessageId: MessageId?
+    private let iconFile: TelegramMediaFile?
     
     private var presentationData: PresentationData
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?) {
+    public var getNavigationController: () -> NavigationController? = { return nil }
+        
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, replyToMessageId: MessageId?, iconFile: TelegramMediaFile?) {
         self.context = context
         self.peerId = peerId
         self.botId = botId
@@ -328,6 +399,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.queryId = queryId
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
+        self.replyToMessageId = replyToMessageId
+        self.iconFile = iconFile
         
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -408,26 +481,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
         let botId = self.botId
         
         let items = context.engine.messages.attachMenuBots()
-        |> map { attachMenuBots -> ContextController.Items in
+        |> map { [weak self] attachMenuBots -> ContextController.Items in
             var items: [ContextMenuItem] = []
             if peerId != botId {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_OpenBot, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Bots"), color: theme.contextMenu.primaryColor)
-                }, action: { _, f in
+                }, action: { [weak self] _, f in
                     f(.default)
                     
-    //                if let strongSelf = self {
-    //                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf., context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId)))
-    //                }
+                    if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
+                        strongSelf.dismiss()
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: strongSelf.botId)))
+                    }
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.WebApp_ReloadPage, icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_ReloadPage, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
-            }, action: { _, f in
+            }, action: { [weak self] _, f in
                 f(.default)
                 
-                
+                self?.controllerNode.webView?.reload()
             })))
             
             if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == botId}) {

@@ -71,7 +71,7 @@ private final class IconComponent: Component {
                         self.image = nil
                     }
                     
-                    _ = freeMediaFileInteractiveFetched(account: component.account, fileReference: .standalone(media: file)).start()
+                    let _ = freeMediaFileInteractiveFetched(account: component.account, fileReference: .standalone(media: file)).start()
                     self.disposable = (svgIconImageFile(account: component.account, fileReference: .standalone(media: file), fetched: true)
                     |> runOn(Queue.concurrentDefaultQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] transform in

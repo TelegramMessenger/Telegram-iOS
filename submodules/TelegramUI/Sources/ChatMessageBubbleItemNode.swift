@@ -3160,16 +3160,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                     botAddressName = attribute.title
                                 }
                                 
-                                return .optionalAction({
-                                    if let botAddressName = botAddressName {
-                                        item.controllerInteraction.updateInputState { textInputState in
-                                            return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
-                                        }
-                                        item.controllerInteraction.updateInputMode { _ in
-                                            return .text
-                                        }
+                                if let peerId = attribute.peerId {
+                                    if let botPeer = item.message.peers[peerId] as? TelegramUser, let inlinePlaceholder = botPeer.botInfo?.inlinePlaceholder, !inlinePlaceholder.isEmpty {
+                                        return .optionalAction({
+                                            if let botAddressName = botAddressName {
+                                                item.controllerInteraction.updateInputState { textInputState in
+                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                                }
+                                                item.controllerInteraction.updateInputMode { _ in
+                                                    return .text
+                                                }
+                                            }
+                                        })
+                                    } else {
+                                        return .optionalAction({
+                                            item.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, item.message.peers[peerId])
+                                        })
                                     }
-                                })
+                                }
                             }
                         }
                     }

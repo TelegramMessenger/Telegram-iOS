@@ -50,30 +50,49 @@ public enum RequestWebViewError {
     case generic
 }
 
-private func keepWebView(network: Network, flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?) -> Signal<Never, KeepWebViewError> {
-    let poll = Signal<Never, KeepWebViewError> { subscriber in
-        let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyToMsgId: replyToMessageId?.id))
-        |> mapError { _ -> KeepWebViewError in
-            return .generic
+private func keepWebViewSignal(network: Network, stateManager: AccountStateManager, flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMessageId: MessageId?) -> Signal<Never, KeepWebViewError> {
+    let signal = Signal<Never, KeepWebViewError> { subscriber in
+        let poll = Signal<Never, KeepWebViewError> { subscriber in
+            let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyToMsgId: replyToMessageId?.id))
+            |> mapError { _ -> KeepWebViewError in
+                return .generic
+            }
+            |> ignoreValues
+            
+            return signal.start(error: { error in
+                subscriber.putError(error)
+            }, completed: {
+                subscriber.putCompletion()
+            })
         }
-        |> ignoreValues
+        let keepAliveSignal = (
+            .complete()
+            |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue())
+            |> then (poll)
+        )
+        |> restart
         
-        return signal.start(error: { error in
+        let pollDisposable = keepAliveSignal.start(error: { error in
             subscriber.putError(error)
-        }, completed: {
+        })
+        
+        let dismissDisposable = (stateManager.dismissBotWebViews
+        |> filter {
+            $0.contains(queryId)
+        }
+        |> take(1)).start(completed: {
             subscriber.putCompletion()
         })
+        
+        let disposableSet = DisposableSet()
+        disposableSet.add(pollDisposable)
+        disposableSet.add(dismissDisposable)
+        return disposableSet
     }
-    
-    return (
-        .complete()
-        |> suspendAwareDelay(60.0, queue: Queue.concurrentDefaultQueue())
-        |> then (poll)
-    )
-    |> restart
+    return signal
 }
 
-func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -122,7 +141,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, peerId: PeerId
                     |> castError(RequestWebViewError.self)
                     |> switchToLatest
                 case let .webViewResultUrl(queryId, url):
-                    return .single(.webViewResult(queryId: queryId, url: url, keepAliveSignal: keepWebView(network: network, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId)))
+                    return .single(.webViewResult(queryId: queryId, url: url, keepAliveSignal: keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId)))
             }
         }
     }
