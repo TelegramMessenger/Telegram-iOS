@@ -580,10 +580,16 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
             } else {
                 self.itemsBackgroundView.effect = UIBlurEffect(style: .light)
             }
+            // MARK: Nicegram change
+            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: presentationData.theme.rootController.tabBar.backgroundColor)
             
-            self.itemsBackgroundTintNode.image = generateStretchableFilledCircleImage(diameter: 40.0, color: UIColor(rgb: 0xf1f1f1))
-            
-            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: UIColor(rgb: 0xbbbbbb))
+            let selectedFilterColor: UIColor
+            if presentationData.theme.rootController.keyboardColor == .dark {
+                selectedFilterColor = presentationData.theme.list.itemAccentColor
+            } else {
+                selectedFilterColor = presentationData.theme.chatList.unreadBadgeInactiveBackgroundColor
+            }
+            self.selectedBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 32.0, color: selectedFilterColor)
         }
         
         if isReordering {

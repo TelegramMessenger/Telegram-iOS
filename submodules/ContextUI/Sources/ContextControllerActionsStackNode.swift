@@ -50,6 +50,9 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let highlightBackgroundNode: ASDisplayNode
     private let titleLabelNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
+    // MARK: BadgeNode and LabelNode are parts of Nicegram
+    private let badgeNode: ASImageNode
+    private let labelNode: ImmediateTextNode
     private let iconNode: ASImageNode
     
     private var iconDisposable: Disposable?
@@ -79,7 +82,14 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.subtitleNode.isAccessibilityElement = false
         self.subtitleNode.displaysAsynchronously = false
         self.subtitleNode.isUserInteractionEnabled = false
-        
+
+        self.badgeNode = ASImageNode()
+        self.badgeNode.isAccessibilityElement = false
+        self.badgeNode.isUserInteractionEnabled = false
+
+        self.labelNode = ImmediateTextNode()
+        self.labelNode.isUserInteractionEnabled = false
+
         self.iconNode = ASImageNode()
         self.iconNode.isAccessibilityElement = false
         self.iconNode.isUserInteractionEnabled = false
@@ -92,6 +102,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.addSubnode(self.highlightBackgroundNode)
         self.addSubnode(self.titleLabelNode)
         self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.badgeNode)
+        self.addSubnode(self.labelNode)
         self.addSubnode(self.iconNode)
         
         self.highligthedChanged = { [weak self] highlighted in
@@ -152,7 +164,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         let titleSubtitleSpacing: CGFloat = 1.0
         let iconSideInset: CGFloat = 12.0
         let standardIconWidth: CGFloat = 32.0
-        
+        let badgeSize = CGSize(width: 22.0, height: 22.0)
+
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
         var subtitle: String?
@@ -200,6 +213,19 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 textColor: subtitleColor
             )
         }
+        // MARK: BadgeNode and LabelNode are parts of Nicegram
+
+        var badgeImage: UIImage?
+        if let badge = self.item.badge {
+            badgeImage = generateStretchableFilledCircleImage(diameter: badgeSize.width, color: presentationData.theme.list.itemDestructiveColor)
+            self.badgeNode.image = badgeImage
+            self.labelNode.attributedText = NSAttributedString(
+                string: badge.value,
+                font: .systemFont(ofSize: 12.0),
+                textColor: presentationData.theme.list.itemCheckColors.foregroundColor,
+                paragraphAlignment: .center
+            )
+        }
         
         let iconSize: CGSize?
         if let iconSource = self.item.iconSource {
@@ -231,10 +257,15 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         
         let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
-        
+        let _ = self.labelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
+
         var minSize = CGSize()
         minSize.width += sideInset
         minSize.width += max(titleSize.width, subtitleSize.width)
+        if let _ = badgeImage {
+            minSize.width += badgeSize.width
+            minSize.width += badgeSize.width
+        }
         if let iconSize = iconSize {
             minSize.width += max(standardIconWidth, iconSize.width)
             minSize.width += iconSideInset
@@ -251,11 +282,22 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         return (minSize: minSize, apply: { size, transition in
             let titleFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleSize)
             let subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
+            let badgeFrame = CGRect(origin: CGPoint(
+                x: titleFrame.maxX + (badgeSize.width / 2),
+                y: verticalInset), size: badgeSize
+            )
             
             transition.updateFrame(node: self.highlightBackgroundNode, frame: CGRect(origin: CGPoint(), size: size), beginWithCurrentState: true)
             transition.updateFrameAdditive(node: self.titleLabelNode, frame: titleFrame)
             transition.updateFrameAdditive(node: self.subtitleNode, frame: subtitleFrame)
-            
+            transition.updateFrameAdditive(node: self.badgeNode, frame: badgeFrame)
+            transition.updateFrameAdditive(node: self.labelNode, frame: CGRect(
+                origin: CGPoint(
+                    x: badgeFrame.origin.x,
+                    y: badgeFrame.origin.y + 4
+                ), size: badgeSize)
+            )
+
             if let iconSize = iconSize {
                 let iconWidth = max(standardIconWidth, iconSize.width)
                 let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
@@ -383,7 +425,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         ) {
             self.requestUpdate = requestUpdate
             self.items = items
-            
+
             var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
             self.itemNodes = items.map { item -> Item in
                 switch item {
@@ -867,7 +909,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     private let navigationContainer: NavigationContainer
     private var itemContainers: [ItemContainer] = []
     private var dismissingItemContainers: [(container: ItemContainer, isPopped: Bool)] = []
-    
+
     private var selectionPanGesture: UIPanGestureRecognizer?
     
     var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? {
@@ -894,9 +936,9 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.navigationContainer = NavigationContainer()
         
         super.init()
-        
+
         self.addSubnode(self.navigationContainer)
-        
+
         self.navigationContainer.requestUpdate = { [weak self] transition in
             guard let strongSelf = self else {
                 return
@@ -941,7 +983,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         self.itemContainers.removeAll()
         self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
-        
+
         self.push(item: item, currentScrollingState: nil, positionLock: nil, animated: animated)
     }
     
@@ -1140,7 +1182,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             }
         }
         self.dismissingItemContainers.removeAll()
-        
+
         return CGSize(width: topItemWidth, height: topItemSize.height)
     }
     

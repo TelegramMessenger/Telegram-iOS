@@ -547,7 +547,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
         
         super.init()
-        
+
         self.addSubnode(self.shadowNode)
         self.additionalShadowNode.flatMap(self.addSubnode)
         self.additionalActionsNode.flatMap(self.scrollNode.addSubnode)
@@ -585,7 +585,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         contentSize.height += actionsSize.height
         
         transition.updateFrame(node: self.actionsNode, frame: bounds)
-        
+
         if let textSelectionTipNode = self.textSelectionTipNode {
             contentSize.height += 8.0
             let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsSize.width, transition: transition)

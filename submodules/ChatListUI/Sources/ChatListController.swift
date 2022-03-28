@@ -4,7 +4,7 @@ import Postbox
 // MARK: Nicegram Imports
 import NGData
 import NGAssistant
-// MARKL
+
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
@@ -844,7 +844,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationItem.backBarButtonItem = backBarButtonItem
         }
         
-        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact)
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel)
         let editing = self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing
         let editItem: UIBarButtonItem
         if editing {

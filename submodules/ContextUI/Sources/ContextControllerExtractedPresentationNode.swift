@@ -410,10 +410,22 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 contentHeight = actionsFrame.maxY + bottomInset + layout.intrinsicInsets.bottom
             }
             let contentSize = CGSize(width: layout.size.width, height: contentHeight)
-            
+            // MARK: Nicegram changes
+            var topInset = actionsFrame.height - actionsFrame.maxY + bottomInset + layout.intrinsicInsets.bottom
+            if topInset < 0.0 {
+                topInset = 0.0
+            }
             if self.scrollNode.view.contentSize != contentSize {
                 let previousContentOffset = self.scrollNode.view.contentOffset
                 self.scrollNode.view.contentSize = contentSize
+                if topInset != 0 {
+                    self.scrollNode.view.contentInset = UIEdgeInsets(
+                        top: topInset,
+                        left: layout.intrinsicInsets.left,
+                        bottom: layout.intrinsicInsets.bottom,
+                        right: layout.intrinsicInsets.right
+                    )
+                }
                 if let storedScrollingState = self.actionsStackNode.storedScrollingState {
                     self.actionsStackNode.clearStoredScrollingState()
                     
