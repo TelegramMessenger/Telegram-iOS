@@ -7419,3 +7419,5 @@ Sorry for the inconvenience.";
 
 "WebApp.MessagePreview" = "Message Preview";
 "WebApp.Send" = "Send";
+
+"Notification.WebAppSentData" = "You have successfully transferred data from the \"%@\" button to the bot.";

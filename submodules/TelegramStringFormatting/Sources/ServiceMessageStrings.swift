@@ -632,7 +632,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }
             case let .webViewData(text):
-                attributedString = NSAttributedString(string: "Data for \(text) sent to bot", font: titleFont, textColor: primaryTextColor)
+                attributedString = NSAttributedString(string: strings.Notification_WebAppSentData(text).string, font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }
