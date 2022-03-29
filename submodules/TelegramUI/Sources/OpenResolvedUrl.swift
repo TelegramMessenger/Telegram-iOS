@@ -554,7 +554,11 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             let _ = (context.engine.messages.attachMenuBots()
             |> deliverOnMainQueue).start(next: { attachMenuBots in
                 if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == peerId }) {
-                    presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
+                    if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
+                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotId: peerId, useExisting: true))
+                    } else {
+                        presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
+                    }
                 } else {
                     let _ = (context.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
@@ -581,6 +585,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                     presentError(presentationData.strings.Login_UnknownError)
                                 }
                             }
+                        }, error: { _ in
+                            presentError(presentationData.strings.Login_UnknownError)
                         })
                     })
                 }

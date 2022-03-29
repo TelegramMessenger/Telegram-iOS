@@ -45,6 +45,68 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
     ]
 }
 
+private final class LoadingProgressNode: ASDisplayNode {
+    var color: UIColor {
+        didSet {
+            self.foregroundNode.backgroundColor = self.color
+        }
+    }
+    
+    private let foregroundNode: ASDisplayNode
+    
+    init(color: UIColor) {
+        self.color = color
+        
+        self.foregroundNode = ASDisplayNode()
+        self.foregroundNode.backgroundColor = color
+        
+        super.init()
+        
+        self.addSubnode(self.foregroundNode)
+    }
+        
+    private var _progress: CGFloat = 0.0
+    func updateProgress(_ progress: CGFloat, animated: Bool = false) {
+        if self._progress == progress && animated {
+            return
+        }
+        
+        var animated = animated
+        if (progress < self._progress && animated) {
+            animated = false
+        }
+        
+        let size = self.bounds.size
+        
+        self._progress = progress
+        
+        let transition: ContainedViewLayoutTransition
+        if animated && progress > 0.0 {
+            transition = .animated(duration: 0.7, curve: .spring)
+        } else {
+            transition = .immediate
+        }
+        
+        let alpaTransition: ContainedViewLayoutTransition
+        if animated {
+            alpaTransition = .animated(duration: 0.3, curve: .easeInOut)
+        } else {
+            alpaTransition = .immediate
+        }
+        
+        transition.updateFrame(node: self.foregroundNode, frame: CGRect(x: -2.0, y: 0.0, width: (size.width + 4.0) * progress, height: size.height))
+        
+        let alpha: CGFloat = progress < 0.001 || progress > 0.999 ? 0.0 : 1.0
+        alpaTransition.updateAlpha(node: self.foregroundNode, alpha: alpha)
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.foregroundNode.cornerRadius = self.frame.height / 2.0
+    }
+}
+
 public final class WebAppController: ViewController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
@@ -59,6 +121,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var placeholderIcon: UIImage?
         private var placeholderNode: ShimmerEffectNode?
         
+        private let loadingProgressNode: LoadingProgressNode
+        
         private let context: AccountContext
         var presentationData: PresentationData
         private let present: (ViewController, Any?) -> Void
@@ -72,6 +136,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.controller = controller
             self.presentationData = controller.presentationData
             self.present = present
+            
+            self.loadingProgressNode = LoadingProgressNode(color: presentationData.theme.rootController.tabBar.selectedIconColor)
             
             super.init()
             
@@ -133,11 +199,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             webView.allowsBackForwardNavigationGestures = false
             webView.scrollView.delegate = self
+            webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
             self.webView = webView
             
             let placeholderNode = ShimmerEffectNode()
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
+            
+            if controller.buttonText == nil {
+                self.addSubnode(self.loadingProgressNode)
+            }
             
             if let iconFile = controller.iconFile {
                 let _ = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
@@ -156,22 +227,24 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             }
             
-            if let url = controller.url, let queryId = controller.queryId, let keepAliveSignal = controller.keepAliveSignal {
-                self.queryId = queryId
+            if let url = controller.url {
+                self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
                     self.webView?.load(URLRequest(url: parsedUrl))
                 }
                 
-                self.keepAliveDisposable = (keepAliveSignal
-                |> deliverOnMainQueue).start(error: { [weak self] _ in
-                    if let strongSelf = self {
-                        strongSelf.controller?.dismiss()
-                    }
-                }, completed: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.controller?.dismiss()
-                    }
-                })
+                if let keepAliveSignal = controller.keepAliveSignal {
+                    self.keepAliveDisposable = (keepAliveSignal
+                    |> deliverOnMainQueue).start(error: { [weak self] _ in
+                        if let strongSelf = self {
+                            strongSelf.controller?.dismiss()
+                        }
+                    }, completed: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.controller?.dismiss()
+                        }
+                    })
+                }
             } else {
                 let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: controller.replyToMessageId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
@@ -205,6 +278,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         deinit {
             self.iconDisposable?.dispose()
             self.keepAliveDisposable?.dispose()
+            
+            self.webView?.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
         }
         
         override func didLoad() {
@@ -272,14 +347,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let height: CGFloat
                 if case .compact = layout.metrics.widthClass {
-                    height = layout.size.height - attachmentDefaultTopInset(layout: layout) - 56.0
+                    height = layout.size.height - attachmentDefaultTopInset(layout: layout) - layout.intrinsicInsets.bottom - 14.0
                 } else {
-                    height = layout.size.height - 56.0
+                    height = layout.size.height - layout.intrinsicInsets.bottom
                 }
                 
                 let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - iconSize.width) / 2.0), y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
+                
+                let loadingProgressHeight: CGFloat = 2.0
+                transition.updateFrame(node: self.loadingProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: height - loadingProgressHeight), size: CGSize(width: layout.size.width, height: loadingProgressHeight)))
+            }
+        }
+        
+        override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+            if keyPath == "estimatedProgress", let webView = self.webView {
+                self.loadingProgressNode.updateProgress(webView.estimatedProgress, animated: true)
             }
         }
         

@@ -710,7 +710,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {
-                            case "theme":
+                            case "themes":
                                 section = .theme
                             case "devices":
                                 section = .devices
