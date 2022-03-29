@@ -1269,7 +1269,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
             badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: string)
         }
-        var animated: Bool = animated
+        var animated = animated
         if let updatingMedia = attributes.updatingMedia, case .update = updatingMedia.media {
             state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(updatingMedia.progress), cancelEnabled: true, animateRotation: true)
         } else if var fetchStatus = self.fetchStatus {
@@ -1497,6 +1497,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 self.statusNode = nil
                 removeStatusNode = true
             }
+            
+            var animated = animated
+            if case .download = statusNode.state, case .progress = state {
+                animated = true
+            } else if case .progress = statusNode.state, case .download = state {
+                animated = true
+            }
+            
             statusNode.transitionToState(state, animated: animated, completion: { [weak statusNode] in
                 if removeStatusNode {
                     statusNode?.removeFromSupernode()

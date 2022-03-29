@@ -21,6 +21,7 @@ swift_library(
         "//submodules/CounterContollerTitleView:CounterContollerTitleView",
         "//submodules/HexColor:HexColor",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

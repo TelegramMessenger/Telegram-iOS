@@ -115,6 +115,11 @@ public final class AccountStateManager {
         return self.displayAlertsPipe.signal()
     }
     
+    private let dismissBotWebViewsPipe = ValuePipe<[Int64]>()
+    public var dismissBotWebViews: Signal<[Int64], NoError> {
+        return self.dismissBotWebViewsPipe.signal()
+    }
+    
     private let externallyUpdatedPeerIdsPipe = ValuePipe<[PeerId]>()
     var externallyUpdatedPeerIds: Signal<[PeerId], NoError> {
         return self.externallyUpdatedPeerIdsPipe.signal()
@@ -758,6 +763,10 @@ public final class AccountStateManager {
             
                 if !events.displayAlerts.isEmpty {
                     self.displayAlertsPipe.putNext(events.displayAlerts)
+                }
+            
+                if !events.dismissBotWebViews.isEmpty {
+                    self.dismissBotWebViewsPipe.putNext(events.dismissBotWebViews)
                 }
             
                 if !events.externallyUpdatedPeerId.isEmpty {

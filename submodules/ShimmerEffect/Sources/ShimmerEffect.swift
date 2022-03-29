@@ -161,6 +161,7 @@ public final class ShimmerEffectNode: ASDisplayNode {
         case roundedRectLine(startPoint: CGPoint, width: CGFloat, diameter: CGFloat)
         case roundedRect(rect: CGRect, cornerRadius: CGFloat)
         case rect(rect: CGRect)
+        case image(image: UIImage, rect: CGRect)
     }
     
     private let backgroundNode: ASDisplayNode
@@ -231,6 +232,14 @@ public final class ShimmerEffectNode: ASDisplayNode {
                     UIGraphicsPopContext()
                 case let .rect(rect):
                     context.fill(rect)
+                case let .image(image, rect):
+                    if let image = image.cgImage {
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 1.0, y: -1.0)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                        context.clip(to: rect, mask: image)
+                        context.fill(rect)
+                    }
                 }
             }
         })

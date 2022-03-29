@@ -81,7 +81,7 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
     case info(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, TelegramUserPresence?)
     case rankTitle(PresentationTheme, String, Int32?, Int32)
     case rank(PresentationTheme, PresentationStrings, String, String, Bool)
-    case rankInfo(PresentationTheme, String)
+    case rankInfo(PresentationTheme, String, Bool)
     case adminRights(PresentationTheme, String, Bool)
     case rightsTitle(PresentationTheme, String)
     case rightItem(PresentationTheme, Int, String, TelegramChatAdminRightsFlags, TelegramChatAdminRightsFlags, Bool, Bool)
@@ -167,8 +167,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .rankInfo(lhsTheme, lhsText):
-                if case let .rankInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+            case let .rankInfo(lhsTheme, lhsText, lhsTrimBottomInset):
+                if case let .rankInfo(rhsTheme, rhsText, rhsTrimBottomInset) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsTrimBottomInset == rhsTrimBottomInset {
                     return true
                 } else {
                     return false
@@ -332,8 +332,8 @@ private enum ChannelAdminEntry: ItemListNodeEntry {
                 }, action: {
                     arguments.dismissInput()
                 })
-            case let .rankInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, trimBottomInset: true)
+            case let .rankInfo(_, text, trimBottomInset):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section, trimBottomInset: trimBottomInset)
             case let .adminRights(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, type: .regular, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.updateAdminRights(value)
@@ -705,7 +705,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             let rankEnabled = !state.updating && canEdit
             entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
             entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
-            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string))
+            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
         }
         
         if canDismiss {
@@ -788,7 +788,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
                 entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
                 entries.append(.rank(presentationData.theme, presentationData.strings, placeholder, currentRank ?? "", rankEnabled))
-                entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string))
+                entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
             }
             
             if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, admin.id != accountPeerId, adminInfo != nil {

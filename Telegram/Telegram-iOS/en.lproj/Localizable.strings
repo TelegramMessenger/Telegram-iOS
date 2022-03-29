@@ -7425,3 +7425,5 @@ Sorry for the inconvenience.";
 
 "Notifications.UploadSound" = "Upload Sound";
 "Notifications.MessageSoundInfo" = "Long tap on any short voice note or mp3 file in chat\nand select \"Save for Notifications\". It will appear here.";
+
+"Notification.WebAppSentData" = "You have successfully transferred data from the \"%@\" button to the bot.";
