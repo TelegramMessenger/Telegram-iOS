@@ -342,7 +342,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.closeButton.isHidden = true
         }
         
-        var rightInset: CGFloat = 18.0 + rightInset
+        let rightInset: CGFloat = 18.0 + rightInset
         
         let buttonsContainerSize = CGSize(width: 16.0, height: panelHeight)
         self.buttonsContainer.frame = CGRect(origin: CGPoint(x: width - buttonsContainerSize.width - rightInset, y: 0.0), size: buttonsContainerSize)
@@ -362,8 +362,6 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             transition.updateFrame(node: self.actionButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: actionButtonFrame.size))
             transition.updateFrame(node: self.actionButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleSize.width) / 2.0), y: floorToScreenPixels((actionButtonFrame.height - actionButtonTitleSize.height) / 2.0)), size: actionButtonTitleSize))
-            
-            rightInset += actionButtonSize.width + 8.0
         } else {
             self.actionButton.isHidden = true
             self.actionButtonBackgroundNode.isHidden = true
