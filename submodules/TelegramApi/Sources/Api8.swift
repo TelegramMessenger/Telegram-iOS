@@ -444,19 +444,19 @@ public extension Api {
 }
 public extension Api {
     enum InputPeerNotifySettings: TypeConstructorDescription {
-        case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: String?)
+        case inputPeerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, sound: Api.NotificationSound?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPeerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let sound):
                     if boxed {
-                        buffer.appendInt32(-1673717362)
+                        buffer.appendInt32(-551616469)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {showPreviews!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 1) != 0 {silent!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(muteUntil!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {serializeString(sound!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {sound!.serialize(buffer, true)}
                     break
     }
     }
@@ -481,8 +481,10 @@ public extension Api {
             } }
             var _4: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
-            var _5: String?
-            if Int(_1!) & Int(1 << 3) != 0 {_5 = parseString(reader) }
+            var _5: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil

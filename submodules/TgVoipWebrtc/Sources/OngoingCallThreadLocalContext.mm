@@ -23,6 +23,9 @@
 #import "platform/darwin/VideoSampleBufferView.h"
 #import "platform/darwin/VideoCaptureView.h"
 #import "platform/darwin/CustomExternalCapturer.h"
+
+#include "platform/darwin/iOS/tgcalls_audio_device_module_ios.h"
+
 #endif
 
 #import "group/GroupInstanceImpl.h"
@@ -1039,9 +1042,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         [strongSelf signalingDataEmitted:mappedData];
                     }
                 }];
+            },
+            .createAudioDeviceModule = [](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
+                return rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
             }
         });
-        
         _state = OngoingCallStateInitializing;
         _signalBars = 4;
     }

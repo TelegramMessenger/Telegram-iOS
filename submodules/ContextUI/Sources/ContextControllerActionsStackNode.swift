@@ -94,6 +94,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.iconNode)
         
+        self.isEnabled = self.canBeHighlighted()
+        
         self.highligthedChanged = { [weak self] highlighted in
             guard let strongSelf = self else {
                 return
@@ -135,7 +137,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     }
     
     func canBeHighlighted() -> Bool {
-        return true
+        return self.item.action != nil
     }
     
     func updateIsHighlighted(isHighlighted: Bool) {

@@ -946,27 +946,31 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func presentAutoremoveSetup() {
-        let peer = self.peer
-        
-        let controller = peerAutoremoveSetupScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, completion: { [weak self] updatedValue in
-            if case let .updated(value) = updatedValue {
+        /*let controller = ChatTimerScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peer.id, style: .default, mode: .autoremove, currentTime: currentValue, dismissByTapOutside: true, completion: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = (strongSelf.context.engine.peers.setChatMessageAutoremoveTimeoutInteractively(peerId: strongSelf.peer.id, timeout: value == 0 ? nil : value)
+            |> deliverOnMainQueue).start(completed: {
                 guard let strongSelf = self else {
                     return
                 }
                 
                 var isOn: Bool = true
                 var text: String?
-                if let myValue = value.value {
-                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: myValue))").string
+                if value != 0 {
+                    text = strongSelf.presentationData.strings.Conversation_AutoremoveChanged("\(timeIntervalString(strings: strongSelf.presentationData.strings, value: value))").string
                 } else {
                     isOn = false
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
                 }
                 if let text = text {
-                    strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), .current, nil)
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
-            }
+            })
         })
-        self.pushController(controller)
+        self.view.endEditing(true)
+        self.present(controller, in: .window(.root))*/
     }
 }

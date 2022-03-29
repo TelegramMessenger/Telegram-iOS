@@ -209,7 +209,7 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
 }
 
 
-private func notificationPeerExceptionEntries(presentationData: PresentationData, state: NotificationExceptionPeerState) -> [NotificationPeerExceptionEntry] {
+private func notificationPeerExceptionEntries(presentationData: PresentationData, notificationSoundList: NotificationSoundList?, state: NotificationExceptionPeerState) -> [NotificationPeerExceptionEntry] {
     var entries:[NotificationPeerExceptionEntry] = []
     
     var index: Int32 = 0
@@ -239,15 +239,15 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
         index += 1
         
-        entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: state.defaultSound), selected: state.selectedSound == .default))
+        entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: state.defaultSound), selected: state.selectedSound == .default))
         index += 1
 
-        entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
+        entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: state.selectedSound == .none))
         index += 1
 
         for i in 0 ..< 12 {
             let sound: PeerMessageSound = .bundledModern(id: Int32(i))
-            entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+            entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound == state.selectedSound))
             index += 1
         }
         
@@ -256,7 +256,7 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         
         for i in 0 ..< 8 {
             let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
-            entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+            entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound == state.selectedSound))
             index += 1
         }
     }
@@ -330,7 +330,12 @@ public func notificationPeerExceptionController(context: AccountContext, updated
 
     let arguments = NotificationPeerExceptionArguments(account: context.account, selectSound: { sound in
         updateState { state in
-            playSoundDisposable.set(playSound(context: context, sound: sound, defaultSound: state.defaultSound).start())
+            let _ = (context.engine.peers.notificationSoundList()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { notificationSoundList in
+                playSoundDisposable.set(playSound(context: context, notificationSoundList: notificationSoundList, sound: sound, defaultSound: state.defaultSound).start())
+            })
+            
             return state.withUpdatedSound(sound)
         }
     }, selectMode: { mode in
@@ -365,8 +370,8 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     })
     
     
-    let signal = combineLatest(queue: .mainQueue(), (updatedPresentationData?.signal ?? context.sharedContext.presentationData), statePromise.get() |> distinctUntilChanged)
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), (updatedPresentationData?.signal ?? context.sharedContext.presentationData), context.engine.peers.notificationSoundList(), statePromise.get() |> distinctUntilChanged)
+    |> map { presentationData, notificationSoundList, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             arguments.cancel()
         })
@@ -376,7 +381,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
         })
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, state: state), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, notificationSoundList: notificationSoundList, state: state), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

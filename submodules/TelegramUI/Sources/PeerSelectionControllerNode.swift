@@ -347,6 +347,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, openSendAsPeer: { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, chatController: {
+            return nil
         }, statuses: nil)
         
         self.readyValue.set(self.chatListNode.ready)

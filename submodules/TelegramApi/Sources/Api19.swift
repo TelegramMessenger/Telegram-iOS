@@ -594,6 +594,7 @@ public extension Api {
         case updateReadMessagesContents(messages: [Int32], pts: Int32, ptsCount: Int32)
         case updateRecentStickers
         case updateSavedGifs
+        case updateSavedRingtones
         case updateServiceNotification(flags: Int32, inboxDate: Int32?, type: String, message: String, media: Api.MessageMedia, entities: [Api.MessageEntity])
         case updateStickerSets
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
@@ -1381,6 +1382,12 @@ public extension Api {
                     }
                     
                     break
+                case .updateSavedRingtones:
+                    if boxed {
+                        buffer.appendInt32(1960361625)
+                    }
+                    
+                    break
                 case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
                     if boxed {
                         buffer.appendInt32(-337352679)
@@ -1655,6 +1662,8 @@ public extension Api {
                 return ("updateRecentStickers", [])
                 case .updateSavedGifs:
                 return ("updateSavedGifs", [])
+                case .updateSavedRingtones:
+                return ("updateSavedRingtones", [])
                 case .updateServiceNotification(let flags, let inboxDate, let type, let message, let media, let entities):
                 return ("updateServiceNotification", [("flags", String(describing: flags)), ("inboxDate", String(describing: inboxDate)), ("type", String(describing: type)), ("message", String(describing: message)), ("media", String(describing: media)), ("entities", String(describing: entities))])
                 case .updateStickerSets:
@@ -3264,6 +3273,9 @@ public extension Api {
         }
         public static func parse_updateSavedGifs(_ reader: BufferReader) -> Update? {
             return Api.Update.updateSavedGifs
+        }
+        public static func parse_updateSavedRingtones(_ reader: BufferReader) -> Update? {
+            return Api.Update.updateSavedRingtones
         }
         public static func parse_updateServiceNotification(_ reader: BufferReader) -> Update? {
             var _1: Int32?

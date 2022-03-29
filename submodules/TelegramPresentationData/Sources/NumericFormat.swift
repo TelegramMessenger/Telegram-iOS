@@ -38,6 +38,18 @@ public func presentationStringsFormattedNumber(_ count: Int32, _ groupingSeparat
     }
 }
 
+public func dayIntervalString(strings: PresentationStrings, days: Int32) -> String {
+    return strings.MessageTimer_Days(max(0, days))
+}
+
+public func hoursIntervalString(strings: PresentationStrings, hours: Int32) -> String {
+    return strings.MessageTimer_Hours(max(0, hours))
+}
+
+public func minutesIntervalString(strings: PresentationStrings, minutes: Int32) -> String {
+    return strings.MessageTimer_Minutes(max(0, minutes))
+}
+
 public func timeIntervalString(strings: PresentationStrings, value: Int32, preferLowerValue: Bool = false) -> String {
     if preferLowerValue {
         if value <= 60 {

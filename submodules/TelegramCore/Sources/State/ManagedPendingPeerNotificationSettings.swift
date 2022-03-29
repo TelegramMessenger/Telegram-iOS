@@ -116,7 +116,7 @@ private func pushPeerNotificationSettings(postbox: Postbox, network: Network, pe
                     case .default:
                         muteUntil = nil
                 }
-                let sound: String? = settings.messageSound.apiSound
+                let sound: Api.NotificationSound? = settings.messageSound.apiSound
                 var flags: Int32 = 0
                 if showPreviews != nil {
                     flags |= (1 << 0)

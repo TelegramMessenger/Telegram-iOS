@@ -12,7 +12,7 @@ public enum UndoOverlayContent {
     case hidArchive(title: String, text: String, undo: Bool)
     case revealedArchive(title: String, text: String, undo: Bool)
     case succeed(text: String)
-    case info(text: String)
+    case info(title: String?, text: String)
     case emoji(name: String, text: String)
     case swipeToReply(title: String, text: String)
     case actionSucceeded(title: String, text: String, cancel: String)
@@ -40,6 +40,7 @@ public enum UndoOverlayContent {
     case paymentSent(currencyValue: String, itemTitle: String)
     case inviteRequestSent(title: String, text: String)
     case image(image: UIImage, text: String)
+    case notificationSoundAdded(title: String, text: String, action: (() -> Void)?)
 }
 
 public enum UndoOverlayAction {

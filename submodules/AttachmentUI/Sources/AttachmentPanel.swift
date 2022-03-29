@@ -464,6 +464,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, openSendAsPeer: { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, chatController: {
+            return nil
         }, statuses: nil)
         
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)

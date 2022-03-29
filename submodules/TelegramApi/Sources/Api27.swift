@@ -437,6 +437,21 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func getSavedRingtones(hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.SavedRingtones>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-510647672)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.getSavedRingtones", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.SavedRingtones? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.account.SavedRingtones?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.account.SavedRingtones
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func getSecureValue(types: [Api.SecureValueType]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.SecureValue]>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1936088002)
@@ -770,6 +785,22 @@ public extension Api.functions.account {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     settings.serialize(buffer, true)
                     return (FunctionDescription(name: "account.saveAutoDownloadSettings", parameters: [("flags", String(describing: flags)), ("settings", String(describing: settings))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func saveRingtone(id: Api.InputDocument, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-369618141)
+                    id.serialize(buffer, true)
+                    unsave.serialize(buffer, true)
+                    return (FunctionDescription(name: "account.saveRingtone", parameters: [("id", String(describing: id)), ("unsave", String(describing: unsave))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -1122,6 +1153,23 @@ public extension Api.functions.account {
                         var result: Api.User?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.User
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
+                static func uploadRingtone(file: Api.InputFile, fileName: String, mimeType: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Document>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2095414366)
+                    file.serialize(buffer, true)
+                    serializeString(fileName, buffer: buffer, boxed: false)
+                    serializeString(mimeType, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.uploadRingtone", parameters: [("file", String(describing: file)), ("fileName", String(describing: fileName)), ("mimeType", String(describing: mimeType))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Document? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Document?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Document
                         }
                         return result
                     })

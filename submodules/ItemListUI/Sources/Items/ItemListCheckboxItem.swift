@@ -16,9 +16,15 @@ public enum ItemListCheckboxItemColor {
 }
 
 public class ItemListCheckboxItem: ListViewItem, ItemListItem {
+    public enum IconPlacement {
+        case `default`
+        case check
+    }
+    
     let presentationData: ItemListPresentationData
     let icon: UIImage?
     let iconSize: CGSize?
+    let iconPlacement: IconPlacement
     let title: String
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
@@ -27,10 +33,11 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: () -> Void
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSize = iconSize
+        self.iconPlacement = iconPlacement
         self.title = title
         self.style = style
         self.color = color
@@ -158,7 +165,12 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
             
             let iconInset: CGFloat = 44.0
             if item.icon != nil {
-                leftInset += iconInset
+                switch item.iconPlacement {
+                case .default:
+                    leftInset += iconInset
+                case .check:
+                    break
+                }
             }
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
@@ -273,7 +285,15 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                     if let icon = item.icon {
                         let iconSize = item.iconSize ?? icon.size
                         strongSelf.imageNode.image = icon
-                        strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        
+                        let iconFrame: CGRect
+                        switch item.iconPlacement {
+                        case .default:
+                            iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        case .check:
+                            iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        }
+                        strongSelf.imageNode.frame = iconFrame
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))

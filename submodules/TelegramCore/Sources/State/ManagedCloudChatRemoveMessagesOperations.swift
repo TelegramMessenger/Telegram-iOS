@@ -395,7 +395,10 @@ private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, 
         if operation.minTimestamp != nil {
             return .complete()
         } else {
-            let flags: Int32 = 0
+            var flags: Int32 = 0
+            if operation.type == .forEveryone {
+                flags |= 1 << 0
+            }
             return network.request(Api.functions.channels.deleteHistory(flags: flags, channel: inputChannel, maxId: operation.topMessageId.id))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.Updates?, NoError> in

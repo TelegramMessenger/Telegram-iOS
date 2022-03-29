@@ -225,7 +225,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     }
     
     private func getActionsStackPositionLock() -> CGFloat? {
-        return self.actionsStackNode.view.convert(CGPoint(), to: self.view).y
+        switch self.source {
+        case .reference:
+            return nil
+        case .extracted:
+            return self.actionsStackNode.view.convert(CGPoint(), to: self.view).y
+        }
     }
     
     func update(

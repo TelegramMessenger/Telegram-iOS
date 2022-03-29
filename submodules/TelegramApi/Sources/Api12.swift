@@ -681,6 +681,90 @@ public extension Api {
     }
 }
 public extension Api {
+    enum NotificationSound: TypeConstructorDescription {
+        case notificationSoundDefault
+        case notificationSoundLocal(title: String, data: String)
+        case notificationSoundNone
+        case notificationSoundRingtone(id: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .notificationSoundDefault:
+                    if boxed {
+                        buffer.appendInt32(-1746354498)
+                    }
+                    
+                    break
+                case .notificationSoundLocal(let title, let data):
+                    if boxed {
+                        buffer.appendInt32(-2096391452)
+                    }
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(data, buffer: buffer, boxed: false)
+                    break
+                case .notificationSoundNone:
+                    if boxed {
+                        buffer.appendInt32(1863070943)
+                    }
+                    
+                    break
+                case .notificationSoundRingtone(let id):
+                    if boxed {
+                        buffer.appendInt32(-9666487)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .notificationSoundDefault:
+                return ("notificationSoundDefault", [])
+                case .notificationSoundLocal(let title, let data):
+                return ("notificationSoundLocal", [("title", String(describing: title)), ("data", String(describing: data))])
+                case .notificationSoundNone:
+                return ("notificationSoundNone", [])
+                case .notificationSoundRingtone(let id):
+                return ("notificationSoundRingtone", [("id", String(describing: id))])
+    }
+    }
+    
+        public static func parse_notificationSoundDefault(_ reader: BufferReader) -> NotificationSound? {
+            return Api.NotificationSound.notificationSoundDefault
+        }
+        public static func parse_notificationSoundLocal(_ reader: BufferReader) -> NotificationSound? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.NotificationSound.notificationSoundLocal(title: _1!, data: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_notificationSoundNone(_ reader: BufferReader) -> NotificationSound? {
+            return Api.NotificationSound.notificationSoundNone
+        }
+        public static func parse_notificationSoundRingtone(_ reader: BufferReader) -> NotificationSound? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.NotificationSound.notificationSoundRingtone(id: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum NotifyPeer: TypeConstructorDescription {
         case notifyBroadcasts
         case notifyChats
@@ -750,80 +834,6 @@ public extension Api {
         }
         public static func parse_notifyUsers(_ reader: BufferReader) -> NotifyPeer? {
             return Api.NotifyPeer.notifyUsers
-        }
-    
-    }
-}
-public extension Api {
-    enum Page: TypeConstructorDescription {
-        case page(flags: Int32, url: String, blocks: [Api.PageBlock], photos: [Api.Photo], documents: [Api.Document], views: Int32?)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .page(let flags, let url, let blocks, let photos, let documents, let views):
-                    if boxed {
-                        buffer.appendInt32(-1738178803)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeString(url, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(blocks.count))
-                    for item in blocks {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(photos.count))
-                    for item in photos {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents.count))
-                    for item in documents {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(views!, buffer: buffer, boxed: false)}
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .page(let flags, let url, let blocks, let photos, let documents, let views):
-                return ("page", [("flags", String(describing: flags)), ("url", String(describing: url)), ("blocks", String(describing: blocks)), ("photos", String(describing: photos)), ("documents", String(describing: documents)), ("views", String(describing: views))])
-    }
-    }
-    
-        public static func parse_page(_ reader: BufferReader) -> Page? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: [Api.PageBlock]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageBlock.self)
-            }
-            var _4: [Api.Photo]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Photo.self)
-            }
-            var _5: [Api.Document]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
-            }
-            var _6: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_6 = reader.readInt32() }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Page.page(flags: _1!, url: _2!, blocks: _3!, photos: _4!, documents: _5!, views: _6)
-            }
-            else {
-                return nil
-            }
         }
     
     }

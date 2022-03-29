@@ -116,56 +116,77 @@ private func fetchedNotificationSettings(network: Network) -> Signal<GlobalNotif
     |> map { chats, users, channels, contactsJoinedMuted in
         let chatsSettings: MessageNotificationSettings
         switch chats {
-            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
-                let enabled: Bool
-                if muteUntil != nil && muteUntil != 0 {
-                    enabled = false
-                } else {
-                    enabled = true
-                }
-                let displayPreviews: Bool
-                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
-                    displayPreviews = false
-                } else {
-                    displayPreviews = true
-                }
-                chatsSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+            let sound: Api.NotificationSound?
+            #if os(iOS)
+            sound = iosSound
+            #elseif os(macOS)
+            sound = desktopSound
+            #endif
+            
+            let enabled: Bool
+            if muteUntil != nil && muteUntil != 0 {
+                enabled = false
+            } else {
+                enabled = true
+            }
+            let displayPreviews: Bool
+            if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                displayPreviews = false
+            } else {
+                displayPreviews = true
+            }
+            chatsSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault))
         }
         
         let userSettings: MessageNotificationSettings
         switch users {
-            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
-                let enabled: Bool
-                if muteUntil != nil && muteUntil != 0 {
-                    enabled = false
-                } else {
-                    enabled = true
-                }
-                let displayPreviews: Bool
-                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
-                    displayPreviews = false
-                } else {
-                    displayPreviews = true
-                }
-                userSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+            let sound: Api.NotificationSound?
+            #if os(iOS)
+            sound = iosSound
+            #elseif os(macOS)
+            sound = desktopSound
+            #endif
+            
+            let enabled: Bool
+            if muteUntil != nil && muteUntil != 0 {
+                enabled = false
+            } else {
+                enabled = true
+            }
+            let displayPreviews: Bool
+            if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                displayPreviews = false
+            } else {
+                displayPreviews = true
+            }
+            userSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault))
         }
         
         let channelSettings: MessageNotificationSettings
         switch channels {
-            case let .peerNotifySettings(_, showPreviews, _, muteUntil, sound):
-                let enabled: Bool
-                if muteUntil != nil && muteUntil != 0 {
-                    enabled = false
-                } else {
-                    enabled = true
-                }
-                let displayPreviews: Bool
-                if let showPreviews = showPreviews, case .boolFalse = showPreviews {
-                    displayPreviews = false
-                } else {
-                    displayPreviews = true
-                }
-                channelSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound))
+        case let .peerNotifySettings(_, showPreviews, _, muteUntil, iosSound, _, desktopSound):
+            let sound: Api.NotificationSound?
+            #if os(iOS)
+            sound = iosSound
+            #elseif os(macOS)
+            sound = desktopSound
+            #endif
+            
+            let enabled: Bool
+            if muteUntil != nil && muteUntil != 0 {
+                enabled = false
+            } else {
+                enabled = true
+            }
+            let displayPreviews: Bool
+            if let showPreviews = showPreviews, case .boolFalse = showPreviews {
+                displayPreviews = false
+            } else {
+                displayPreviews = true
+            }
+            channelSettings = MessageNotificationSettings(enabled: enabled, displayPreviews: displayPreviews, sound: PeerMessageSound(apiSound: sound ?? .notificationSoundDefault))
         }
         
         return GlobalNotificationSettingsSet(privateChats: userSettings, groupChats: chatsSettings, channels: channelSettings, contactsJoined: contactsJoinedMuted == .boolFalse)
@@ -179,7 +200,7 @@ private func apiInputPeerNotifySettings(_ settings: MessageNotificationSettings)
     } else {
         muteUntil = Int32.max
     }
-    let sound: String? = settings.sound.apiSound
+    let sound: Api.NotificationSound? = settings.sound.apiSound
     var flags: Int32 = 0
     flags |= (1 << 0)
     if muteUntil != nil {

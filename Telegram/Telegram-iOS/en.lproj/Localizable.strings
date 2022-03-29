@@ -7419,3 +7419,9 @@ Sorry for the inconvenience.";
 
 "WebApp.MessagePreview" = "Message Preview";
 "WebApp.Send" = "Send";
+
+"Notifications.SystemTones" = "SYSTEM TONES";
+"Notifications.TelegramTones" = "TELEGRAM TONES";
+
+"Notifications.UploadSound" = "Upload Sound";
+"Notifications.MessageSoundInfo" = "Long tap on any short voice note or mp3 file in chat\nand select \"Save for Notifications\". It will appear here.";

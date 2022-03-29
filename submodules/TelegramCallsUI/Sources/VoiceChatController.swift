@@ -1572,7 +1572,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                             }).start()
                                         }
                                         
-                                        strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
+                                        strongSelf.presentUndoOverlay(content: .info(title: nil, text: strongSelf.presentationData.strings.VoiceChat_EditBioSuccess), action: { _ in return false })
                                     }
                                 })
                                 self?.controller?.present(controller, in: .window(.root))
@@ -1593,7 +1593,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                         if let strongSelf = self, let (firstName, lastName) = firstAndLastName {
                                             let _ = context.engine.accountData.updateAccountPeerName(firstName: firstName, lastName: lastName).start()
                                             
-                                            strongSelf.presentUndoOverlay(content: .info(text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
+                                            strongSelf.presentUndoOverlay(content: .info(title: nil, text: strongSelf.presentationData.strings.VoiceChat_EditNameSuccess), action: { _ in return false })
                                         }
                                     })
                                     self?.controller?.present(controller, in: .window(.root))

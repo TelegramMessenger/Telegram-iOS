@@ -303,7 +303,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2107670217] = { return Api.InputPeer.parse_inputPeerSelf($0) }
     dict[-571955892] = { return Api.InputPeer.parse_inputPeerUser($0) }
     dict[-1468331492] = { return Api.InputPeer.parse_inputPeerUserFromMessage($0) }
-    dict[-1673717362] = { return Api.InputPeerNotifySettings.parse_inputPeerNotifySettings($0) }
+    dict[-551616469] = { return Api.InputPeerNotifySettings.parse_inputPeerNotifySettings($0) }
     dict[506920429] = { return Api.InputPhoneCall.parse_inputPhoneCall($0) }
     dict[1001634122] = { return Api.InputPhoto.parse_inputPhoto($0) }
     dict[483901197] = { return Api.InputPhoto.parse_inputPhotoEmpty($0) }
@@ -477,6 +477,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1614803355] = { return Api.MessagesFilter.parse_inputMessagesFilterVideo($0) }
     dict[1358283666] = { return Api.MessagesFilter.parse_inputMessagesFilterVoice($0) }
     dict[-1910892683] = { return Api.NearestDc.parse_nearestDc($0) }
+    dict[-1746354498] = { return Api.NotificationSound.parse_notificationSoundDefault($0) }
+    dict[-2096391452] = { return Api.NotificationSound.parse_notificationSoundLocal($0) }
+    dict[1863070943] = { return Api.NotificationSound.parse_notificationSoundNone($0) }
+    dict[-9666487] = { return Api.NotificationSound.parse_notificationSoundRingtone($0) }
     dict[-703403793] = { return Api.NotifyPeer.parse_notifyBroadcasts($0) }
     dict[-1073230141] = { return Api.NotifyPeer.parse_notifyChats($0) }
     dict[-1613493288] = { return Api.NotifyPeer.parse_notifyPeer($0) }
@@ -530,7 +534,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-386039788] = { return Api.PeerBlocked.parse_peerBlocked($0) }
     dict[-901375139] = { return Api.PeerLocated.parse_peerLocated($0) }
     dict[-118740917] = { return Api.PeerLocated.parse_peerSelfLocated($0) }
-    dict[-1353671392] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
+    dict[-1472527322] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
     dict[-1525149427] = { return Api.PeerSettings.parse_peerSettings($0) }
     dict[-1770029977] = { return Api.PhoneCall.parse_phoneCall($0) }
     dict[912311057] = { return Api.PhoneCall.parse_phoneCallAccepted($0) }
@@ -787,6 +791,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1757493555] = { return Api.Update.parse_updateReadMessagesContents($0) }
     dict[-1706939360] = { return Api.Update.parse_updateRecentStickers($0) }
     dict[-1821035490] = { return Api.Update.parse_updateSavedGifs($0) }
+    dict[1960361625] = { return Api.Update.parse_updateSavedRingtones($0) }
     dict[-337352679] = { return Api.Update.parse_updateServiceNotification($0) }
     dict[1135492588] = { return Api.Update.parse_updateStickerSets($0) }
     dict[196268545] = { return Api.Update.parse_updateStickerSetsOrder($0) }
@@ -845,6 +850,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-478701471] = { return Api.account.ResetPasswordResult.parse_resetPasswordFailedWait($0) }
     dict[-383330754] = { return Api.account.ResetPasswordResult.parse_resetPasswordOk($0) }
     dict[-370148227] = { return Api.account.ResetPasswordResult.parse_resetPasswordRequestedWait($0) }
+    dict[-1041683259] = { return Api.account.SavedRingtones.parse_savedRingtones($0) }
+    dict[-67704655] = { return Api.account.SavedRingtones.parse_savedRingtonesNotModified($0) }
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[1304052993] = { return Api.account.Takeout.parse_takeout($0) }
     dict[-1707242387] = { return Api.account.Themes.parse_themes($0) }
@@ -1354,6 +1361,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.NearestDc:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.NotificationSound:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.NotifyPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Page:
@@ -1549,6 +1558,8 @@ public extension Api {
             case let _1 as Api.account.PrivacyRules:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.ResetPasswordResult:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.SavedRingtones:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.SentEmailCode:
                 _1.serialize(buffer, boxed)

@@ -1092,6 +1092,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedApplyPendingScheduledMessagesActions(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedSynchronizeAvailableReactions(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeAttachMenuBots(postbox: self.postbox, network: self.network).start())
+        self.managedOperationsDisposable.add(managedSynchronizeNotificationSoundList(postbox: self.postbox, network: self.network).start())
 
         if !supplementary {
             self.managedOperationsDisposable.add(managedChatListFilters(postbox: self.postbox, network: self.network, accountPeerId: self.peerId).start())
