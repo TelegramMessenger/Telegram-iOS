@@ -326,7 +326,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             actionTitle = nil
         }
         
-        if isReplyThread {
+        if isReplyThread || actionTitle != nil {
             self.closeButton.isHidden = true
             self.listButton.isHidden = true
         } else if let currentMessage = self.currentMessage {
@@ -344,6 +344,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let rightInset: CGFloat = 18.0 + rightInset
         
+        var tapButtonRightInset: CGFloat = rightInset
+        
         let buttonsContainerSize = CGSize(width: 16.0, height: panelHeight)
         self.buttonsContainer.frame = CGRect(origin: CGPoint(x: width - buttonsContainerSize.width - rightInset, y: 0.0), size: buttonsContainerSize)
         
@@ -358,10 +360,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             
             let actionButtonTitleSize = self.actionButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
             let actionButtonSize = CGSize(width: actionButtonTitleSize.width + 20.0, height: 28.0)
-            let actionButtonFrame = CGRect(origin: CGPoint(x: (buttonsContainerSize.width - closeButtonSize.width + 1.0) - 8.0 -  actionButtonSize.width, y: floor((panelHeight - actionButtonSize.height) / 2.0)), size: actionButtonSize)
+            let actionButtonFrame = CGRect(origin: CGPoint(x: buttonsContainerSize.width + 11.0 - actionButtonSize.width, y: floor((panelHeight - actionButtonSize.height) / 2.0)), size: actionButtonSize)
             transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
             transition.updateFrame(node: self.actionButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: actionButtonFrame.size))
             transition.updateFrame(node: self.actionButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleSize.width) / 2.0), y: floorToScreenPixels((actionButtonFrame.height - actionButtonTitleSize.height) / 2.0)), size: actionButtonTitleSize))
+            
+            tapButtonRightInset = 18.0 + actionButtonFrame.width
         } else {
             self.actionButton.isHidden = true
             self.actionButtonBackgroundNode.isHidden = true
@@ -378,7 +382,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(), size: indicatorSize))
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))
-        self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - rightInset - closeButtonSize.width - 4.0, height: panelHeight))
+        self.tapButton.frame = CGRect(origin: CGPoint(), size: CGSize(width: width - tapButtonRightInset, height: panelHeight))
         
         self.clippingContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
