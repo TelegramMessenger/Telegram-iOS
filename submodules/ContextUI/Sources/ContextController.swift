@@ -544,52 +544,55 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private func initializeContent() {
         switch self.source {
         case let .reference(source):
-            /*let transitionInfo = source.transitionInfo()
-            if let transitionInfo = transitionInfo {
-                let referenceView = transitionInfo.referenceView
-                self.contentContainerNode.contentNode = .reference(view: referenceView)
-                self.contentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
-                self.customPosition = transitionInfo.customPosition
-                var projectedFrame = convertFrame(referenceView.bounds, from: referenceView, to: self.view)
-                projectedFrame.origin.x += transitionInfo.insets.left
-                projectedFrame.size.width -= transitionInfo.insets.left + transitionInfo.insets.right
-                projectedFrame.origin.y += transitionInfo.insets.top
-                projectedFrame.size.width -= transitionInfo.insets.top + transitionInfo.insets.bottom
-                self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
-            }*/
-            let presentationNode = ContextControllerExtractedPresentationNode(
-                getController: { [weak self] in
-                    return self?.getController()
-                },
-                requestUpdate: { [weak self] transition in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let validLayout = strongSelf.validLayout {
-                        strongSelf.updateLayout(
-                            layout: validLayout,
-                            transition: transition,
-                            previousActionsContainerNode: nil
-                        )
-                    }
-                },
-                requestDismiss: { [weak self] result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.dismissedForCancel?()
-                    strongSelf.beginDismiss(result)
-                },
-                requestAnimateOut: { [weak self] result, completion in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.animateOut(result: result, completion: completion)
-                },
-                source: .reference(source)
-            )
-            self.presentationNode = presentationNode
-            self.addSubnode(presentationNode)
+            if let controller = self.getController() as? ContextController, controller.workaroundUseLegacyImplementation {
+                let transitionInfo = source.transitionInfo()
+                if let transitionInfo = transitionInfo {
+                    let referenceView = transitionInfo.referenceView
+                    self.contentContainerNode.contentNode = .reference(view: referenceView)
+                    self.contentAreaInScreenSpace = transitionInfo.contentAreaInScreenSpace
+                    self.customPosition = transitionInfo.customPosition
+                    var projectedFrame = convertFrame(referenceView.bounds, from: referenceView, to: self.view)
+                    projectedFrame.origin.x += transitionInfo.insets.left
+                    projectedFrame.size.width -= transitionInfo.insets.left + transitionInfo.insets.right
+                    projectedFrame.origin.y += transitionInfo.insets.top
+                    projectedFrame.size.width -= transitionInfo.insets.top + transitionInfo.insets.bottom
+                    self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
+                }
+            } else {
+                let presentationNode = ContextControllerExtractedPresentationNode(
+                    getController: { [weak self] in
+                        return self?.getController()
+                    },
+                    requestUpdate: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let validLayout = strongSelf.validLayout {
+                            strongSelf.updateLayout(
+                                layout: validLayout,
+                                transition: transition,
+                                previousActionsContainerNode: nil
+                            )
+                        }
+                    },
+                    requestDismiss: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.dismissedForCancel?()
+                        strongSelf.beginDismiss(result)
+                    },
+                    requestAnimateOut: { [weak self] result, completion in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.animateOut(result: result, completion: completion)
+                    },
+                    source: .reference(source)
+                )
+                self.presentationNode = presentationNode
+                self.addSubnode(presentationNode)
+            }
         case let .extracted(source):
             let presentationNode = ContextControllerExtractedPresentationNode(
                 getController: { [weak self] in
@@ -2251,6 +2254,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
+    public var workaroundUseLegacyImplementation = false
 
     public enum HandledTouchEvent {
         case ignore

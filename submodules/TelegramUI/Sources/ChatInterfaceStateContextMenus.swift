@@ -875,7 +875,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.append(.action(ContextMenuActionItem(text: "Save for Notifications", icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    let _ = context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file)).start(completed: {
+                    let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
+                    |> deliverOnMainQueue).start(completed: {
                         //TODO:localize
                         controllerInteraction.displayUndo(.notificationSoundAdded(title: "Sound added", text: "You can now use this sound as a notification tone in your [custom notification settings]().", action: {
                             controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))

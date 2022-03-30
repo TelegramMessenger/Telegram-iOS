@@ -703,6 +703,10 @@ public extension TelegramEngine {
         public func uploadNotificationSound(title: String, data: Data) -> Signal<NotificationSoundList.NotificationSound, UploadNotificationSoundError> {
             return _internal_uploadNotificationSound(account: self.account, title: title, data: data)
         }
+        
+        public func deleteNotificationSound(fileId: Int64) -> Signal<Never, DeleteNotificationSoundError> {
+            return _internal_deleteNotificationSound(account: self.account, fileId: fileId)
+        }
     }
 }
 

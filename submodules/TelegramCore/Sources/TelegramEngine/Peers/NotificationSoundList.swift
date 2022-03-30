@@ -279,3 +279,59 @@ func _internal_uploadNotificationSound(account: Account, title: String, data: Da
         }
     }
 }
+
+public enum DeleteNotificationSoundError {
+    case generic
+}
+
+func _internal_deleteNotificationSound(account: Account, fileId: Int64) -> Signal<Never, DeleteNotificationSoundError> {
+    return account.postbox.transaction { transaction -> NotificationSoundList.NotificationSound? in
+        return _internal_cachedNotificationSoundList(transaction: transaction).flatMap { list -> NotificationSoundList.NotificationSound? in
+            return list.sounds.first(where: { $0.file.fileId.id == fileId })
+        }
+    }
+    |> castError(DeleteNotificationSoundError.self)
+    |> mapToSignal { sound -> Signal<Never, DeleteNotificationSoundError> in
+        guard let sound = sound else {
+            return .fail(.generic)
+        }
+        guard let resource = sound.file.resource as? CloudDocumentMediaResource else {
+            return .fail(.generic)
+        }
+        
+        return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolTrue))
+        |> mapError { _ -> DeleteNotificationSoundError in
+            return .generic
+        }
+        |> mapToSignal { _ -> Signal<Never, DeleteNotificationSoundError> in
+            return account.postbox.transaction { transaction -> Void in
+                if let notificationSoundList = _internal_cachedNotificationSoundList(transaction: transaction) {
+                    let updatedNotificationSoundList = NotificationSoundList(hash: notificationSoundList.hash, sounds: notificationSoundList.sounds.filter { item in
+                        return item.file.fileId.id != fileId
+                    })
+                    _internal_setCachedNotificationSoundList(transaction: transaction, notificationSoundList: updatedNotificationSoundList)
+                }
+            }
+            |> castError(DeleteNotificationSoundError.self)
+            |> ignoreValues
+        }
+    }
+}
+
+public func resolvedNotificationSound(sound: PeerMessageSound, notificationSoundList: NotificationSoundList?) -> PeerMessageSound {
+    switch sound {
+    case let .cloud(fileId):
+        if let notificationSoundList = notificationSoundList {
+            for listSound in notificationSoundList.sounds {
+                if listSound.file.fileId.id == fileId {
+                    return sound
+                }
+            }
+            return .bundledModern(id: 0)
+        } else {
+            return .default
+        }
+    default:
+        return sound
+    }
+}

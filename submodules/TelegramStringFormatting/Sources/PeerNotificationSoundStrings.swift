@@ -51,7 +51,30 @@ private func soundName(strings: PresentationStrings, sound: PeerMessageSound, no
         }
         for sound in notificationSoundList.sounds {
             if sound.file.fileId.id == fileId {
-                return sound.file.fileName ?? "Cloud Tone"
+                for attribute in sound.file.attributes {
+                    switch attribute {
+                    case let .Audio(_, _, title, performer, _):
+                        if let title = title, !title.isEmpty, let performer = performer, !performer.isEmpty {
+                            return "\(title) - \(performer)"
+                        } else if let title = title, !title.isEmpty {
+                            return title
+                        } else if let performer = performer, !performer.isEmpty {
+                            return performer
+                        }
+                    default:
+                        break
+                    }
+                }
+                
+                if let fileName = sound.file.fileName, !fileName.isEmpty {
+                    if let range = fileName.range(of: ".", options: .backwards) {
+                        return String(fileName[fileName.startIndex ..< range.lowerBound])
+                    } else {
+                        return fileName
+                    }
+                }
+                
+                return "Cloud Tone"
             }
         }
         return ""
@@ -71,9 +94,16 @@ public func localizedPeerNotificationSoundString(strings: PresentationStrings, n
             }
             return strings.UserInfo_NotificationsDefaultSound(actualName).string
         } else {
-            return strings.UserInfo_NotificationsDefault
+            let name = soundName(strings: strings, sound: .bundledModern(id: 0), notificationSoundList: notificationSoundList)
+            return name
+            //return strings.UserInfo_NotificationsDefault
         }
     default:
-        return soundName(strings: strings, sound: sound, notificationSoundList: notificationSoundList)
+        let name = soundName(strings: strings, sound: sound, notificationSoundList: notificationSoundList)
+        if name.isEmpty {
+            return localizedPeerNotificationSoundString(strings: strings, notificationSoundList: notificationSoundList, sound: .default, default: `default`)
+        } else {
+            return name
+        }
     }
 }
