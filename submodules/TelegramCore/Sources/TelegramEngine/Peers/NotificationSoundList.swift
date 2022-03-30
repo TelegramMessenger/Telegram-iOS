@@ -2,6 +2,7 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramApi
+import MtProtoKit
 
 public final class NotificationSoundList: Equatable, Codable {
     public final class NotificationSound: Equatable, Codable {
@@ -187,11 +188,28 @@ func managedSynchronizeNotificationSoundList(postbox: Postbox, network: Network)
     |> restart
 }
 
-func _internal_saveNotificationSound(account: Account, file: TelegramMediaFile) -> Signal<Never, UploadNotificationSoundError> {
-    guard let resource = file.resource as? CloudDocumentMediaResource else {
+func _internal_saveNotificationSound(account: Account, file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
+    guard let resource = file.media.resource as? CloudDocumentMediaResource else {
         return .fail(.generic)
     }
     return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolFalse))
+    |> `catch` { error -> Signal<Api.Bool, MTRpcError> in
+        if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
+            return revalidateMediaResourceReference(postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: file.abstract.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: file.media.resource)
+            |> mapError { _ -> MTRpcError in
+                return MTRpcError(errorCode: 500, errorDescription: "Internal")
+            }
+            |> mapToSignal { result -> Signal<Api.Bool, MTRpcError> in
+                guard let resource = result.updatedResource as? CloudDocumentMediaResource else {
+                    return .fail(MTRpcError(errorCode: 500, errorDescription: "Internal"))
+                }
+                
+                return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolFalse))
+            }
+        } else {
+            return .fail(error)
+        }
+    }
     |> mapError { _ -> UploadNotificationSoundError in
         return .generic
     }

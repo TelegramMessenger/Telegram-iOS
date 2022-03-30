@@ -696,7 +696,7 @@ public extension TelegramEngine {
             }
         }
         
-        public func saveNotificationSound(file: TelegramMediaFile) -> Signal<Never, UploadNotificationSoundError> {
+        public func saveNotificationSound(file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
             return _internal_saveNotificationSound(account: self.account, file: file)
         }
         
