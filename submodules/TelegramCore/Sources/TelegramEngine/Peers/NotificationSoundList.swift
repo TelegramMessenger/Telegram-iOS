@@ -9,15 +9,14 @@ public struct NotificationSoundSettings : Equatable {
     public private(set) var maxSize: Int = 102400
     public private(set) var maxSavedCount: Int = 100
     private init(appConfiguration: AppConfiguration) {
-        var reasons: [String] = []
         if let data = appConfiguration.data {
             let duration = data["ringtone_duration_max"] as? Double ?? 5
             let size = data["ringtone_size_max"] as? Double ?? 102400
             let count = data["ringtone_saved_count_max"] as? Double ?? 100
             
-            self.maxDuration = Int(duration) ?? 5
-            self.maxSize = Int(size) ?? 102400
-            self.maxSavedCount = Int(count) ?? 100
+            self.maxDuration = Int(duration)
+            self.maxSize = Int(size)
+            self.maxSavedCount = Int(count)
         }
     }
     public static func extract(from appConfiguration: AppConfiguration) -> NotificationSoundSettings {
@@ -209,11 +208,12 @@ func managedSynchronizeNotificationSoundList(postbox: Postbox, network: Network)
     |> restart
 }
 
-func _internal_saveNotificationSound(account: Account, file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
+
+func _internal_saveNotificationSound(account: Account, file: FileMediaReference, unsave: Bool = false) -> Signal<Never, UploadNotificationSoundError> {
     guard let resource = file.media.resource as? CloudDocumentMediaResource else {
         return .fail(.generic)
     }
-    return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolFalse))
+    return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: unsave ? .boolTrue : .boolFalse))
     |> `catch` { error -> Signal<Api.Bool, MTRpcError> in
         if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
             return revalidateMediaResourceReference(postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: file.abstract.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: file.media.resource)
@@ -225,7 +225,7 @@ func _internal_saveNotificationSound(account: Account, file: FileMediaReference)
                     return .fail(MTRpcError(errorCode: 500, errorDescription: "Internal"))
                 }
                 
-                return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolFalse))
+                return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: unsave ? .boolTrue : .boolFalse))
             }
         } else {
             return .fail(error)
