@@ -163,8 +163,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     strongSelf.handleScriptMessage(message)
                 }
             }, name: "performAction")
-            
-            let selectionString = "var css = '*{-webkit-touch-callout:none;-webkit-user-select:none}';"
+            //-webkit-user-select:none
+            let selectionString = "var css = '*{-webkit-touch-callout:none;}';"
                     + " var head = document.head || document.getElementsByTagName('head')[0];"
                     + " var style = document.createElement('style'); style.type = 'text/css';" +
                     " style.appendChild(document.createTextNode(css)); head.appendChild(style);"
@@ -200,6 +200,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.allowsBackForwardNavigationGestures = false
             webView.scrollView.delegate = self
             webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
+            webView.tintColor = self.presentationData.theme.rootController.tabBar.iconColor
             self.webView = webView
             
             let placeholderNode = ShimmerEffectNode()
@@ -289,7 +290,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             self.view.addSubview(webView)
-            
+                        
             if #available(iOS 11.0, *) {
                 let webScrollView = webView.subviews.compactMap { $0 as? UIScrollView }.first
                 Queue.mainQueue().after(0.1, {
@@ -314,7 +315,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             self.loadCount += 1
         }
-
+        
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             self.loadCount -= 1
             
@@ -339,7 +340,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             if let webView = self.webView {
-                webView.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
+                transition.updateFrame(view: webView, frame:  CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom))))
+                if case .immediate = transition {
+                    webView.layoutSubviews()
+                }
             }
             
             if let placeholderNode = self.placeholderNode {
@@ -347,7 +351,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let height: CGFloat
                 if case .compact = layout.metrics.widthClass {
-                    height = layout.size.height - attachmentDefaultTopInset(layout: layout) - layout.intrinsicInsets.bottom - 14.0
+                    height = layout.size.height - layout.additionalInsets.bottom - layout.intrinsicInsets.bottom
                 } else {
                     height = layout.size.height - layout.intrinsicInsets.bottom
                 }
