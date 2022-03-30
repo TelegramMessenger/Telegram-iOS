@@ -4,6 +4,27 @@ import Postbox
 import TelegramApi
 import MtProtoKit
 
+public struct NotificationSoundSettings : Equatable {
+    public private(set) var maxDuration: Int = 5
+    public private(set) var maxSize: Int = 102400
+    public private(set) var maxSavedCount: Int = 100
+    private init(appConfiguration: AppConfiguration) {
+        var reasons: [String] = []
+        if let data = appConfiguration.data {
+            let duration = data["ringtone_duration_max"] as? Double ?? 5
+            let size = data["ringtone_size_max"] as? Double ?? 102400
+            let count = data["ringtone_saved_count_max"] as? Double ?? 100
+            
+            self.maxDuration = Int(duration) ?? 5
+            self.maxSize = Int(size) ?? 102400
+            self.maxSavedCount = Int(count) ?? 100
+        }
+    }
+    public static func extract(from appConfiguration: AppConfiguration) -> NotificationSoundSettings {
+        return self.init(appConfiguration: appConfiguration)
+    }
+}
+
 public final class NotificationSoundList: Equatable, Codable {
     public final class NotificationSound: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
