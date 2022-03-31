@@ -22,6 +22,7 @@ swift_library(
         "//submodules/HexColor:HexColor",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/LegacyComponents:LegacyComponents",
     ],
     visibility = [
         "//visibility:public",

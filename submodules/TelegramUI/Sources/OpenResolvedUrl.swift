@@ -132,7 +132,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 
                 if let peer = peer as? TelegramChannel {
-                    if peer.flags.contains(.isCreator) || peer.adminRights != nil {
+                    if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canAddAdmins) == true {
                         let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
                             controller?.dismiss()
                         }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })
@@ -547,7 +547,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(controller, nil)
                 }
             }
-        case let .setAttach(peerId):
+        case let .startAttach(peerId, payload):
             let presentError: (String) -> Void = { errorText in
                 present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
             }
@@ -555,39 +555,29 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             |> deliverOnMainQueue).start(next: { attachMenuBots in
                 if let _ = attachMenuBots.firstIndex(where: { $0.peer.id == peerId }) {
                     if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotId: peerId, useExisting: true))
+                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload), useExisting: true))
                     } else {
                         presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
                     }
                 } else {
-                    let _ = (context.engine.data.get(
-                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-                    )
-                    |> deliverOnMainQueue).start(next: { peer in
-                        guard let peer = peer else {
+                    let _ = (context.engine.messages.getAttachMenuBot(botId: peerId)
+                    |> deliverOnMainQueue).start(next: { bot in
+                        let peer = EnginePeer(bot.peer)
+                        guard let icon = bot.icons[.default] else {
                             return
                         }
-                        let _ = (context.engine.messages.requestWebView(peerId: peer.id, botId: peer.id, url: nil, themeParams: nil, replyToMessageId: nil)
-                        |> deliverOnMainQueue).start(next: { result in
-                            if case let .requestConfirmation(botIcon) = result {
-                                if case let .user(user) = peer, let botInfo = user.botInfo, botInfo.flags.contains(.canBeAddedToAttachMenu) {
-                                    let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: botIcon, completion: {
-                                        let _ = context.engine.messages.addBotToAttachMenu(peerId: peerId).start()
-                                        
-                                        Queue.mainQueue().after(1.0, {
-                                            if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotId: peer.id, useExisting: true))
-                                            }
-                                        })
-                                    })
-                                    present(controller, nil)
-                                } else {
-                                    presentError(presentationData.strings.Login_UnknownError)
+                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: icon, completion: {
+                            let _ = context.engine.messages.addBotToAttachMenu(botId: peerId).start()
+                            
+                            Queue.mainQueue().after(1.0, {
+                                if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
+                                    let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peer.id, payload: payload), useExisting: true))
                                 }
-                            }
-                        }, error: { _ in
-                            presentError(presentationData.strings.Login_UnknownError)
+                            })
                         })
+                        present(controller, nil)
+                    }, error: { _ in
+                        presentError(presentationData.strings.Login_UnknownError)
                     })
                 }
             })

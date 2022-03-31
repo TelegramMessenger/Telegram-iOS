@@ -296,6 +296,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         listNode.scroller.setContentOffset(CGPoint(), animated: false)
                     } else if let scrollView = scrollView {
                         scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                        Queue.mainQueue().after(0.01, {
+                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                        })
                     }
                     
                     self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))

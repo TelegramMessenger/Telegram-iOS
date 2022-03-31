@@ -5202,16 +5202,17 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func requestWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, url: String?, themeParams: Api.DataJSON?, replyToMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
+                static func requestWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, replyToMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(572653208)
+                    buffer.appendInt32(262163967)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     bot.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {themeParams!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.requestWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("url", String(describing: url)), ("themeParams", String(describing: themeParams)), ("replyToMsgId", String(describing: replyToMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewResult? in
+                    return (FunctionDescription(name: "messages.requestWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("url", String(describing: url)), ("startParam", String(describing: startParam)), ("themeParams", String(describing: themeParams)), ("replyToMsgId", String(describing: replyToMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.WebViewResult?
                         if let signature = reader.readInt32() {

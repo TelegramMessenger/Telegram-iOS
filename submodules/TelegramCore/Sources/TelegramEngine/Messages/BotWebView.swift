@@ -41,9 +41,10 @@ public enum KeepWebViewError {
     case generic
 }
 
-public enum RequestWebViewResult {
-    case webViewResult(queryId: Int64, url: String, keepAliveSignal: Signal<Never, KeepWebViewError>)
-    case requestConfirmation(botIcon: TelegramMediaFile)
+public struct RequestWebViewResult {
+    public let queryId: Int64
+    public let url: String
+    public let keepAliveSignal: Signal<Never, KeepWebViewError>
 }
 
 public enum RequestWebViewError {
@@ -92,7 +93,7 @@ private func keepWebViewSignal(network: Network, stateManager: AccountStateManag
     return signal
 }
 
-func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -115,33 +116,17 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
             flags |= (1 << 0)
             replyToMsgId = replyToMessageId.id
         }
-        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId))
+        if let _ = payload {
+            flags |= (1 << 3)
+        }
+        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId))
         |> mapError { _ -> RequestWebViewError in
             return .generic
         }
         |> mapToSignal { result -> Signal<RequestWebViewResult, RequestWebViewError> in
             switch result {
-                case let .webViewResultConfirmationRequired(bot, users):
-                    return postbox.transaction { transaction -> Signal<RequestWebViewResult, RequestWebViewError> in
-                        var peers: [Peer] = []
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                        }
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-                        
-                        if case let .attachMenuBot(_, _, _, attachMenuIcon) = bot, let icon = telegramMediaFileFromApiDocument(attachMenuIcon) {
-                            return .single(.requestConfirmation(botIcon: icon))
-                        } else {
-                            return .complete()
-                        }
-                    }
-                    |> castError(RequestWebViewError.self)
-                    |> switchToLatest
                 case let .webViewResultUrl(queryId, url):
-                    return .single(.webViewResult(queryId: queryId, url: url, keepAliveSignal: keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId)))
+                    return .single(RequestWebViewResult(queryId: queryId, url: url, keepAliveSignal:  keepWebViewSignal(network: network, stateManager: stateManager, flags: flags, peer: inputPeer, bot: inputBot, queryId: queryId, replyToMessageId: replyToMessageId)))
             }
         }
     }
