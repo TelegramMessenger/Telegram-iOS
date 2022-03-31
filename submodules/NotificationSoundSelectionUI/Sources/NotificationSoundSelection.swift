@@ -451,69 +451,73 @@ public func notificationSoundSelectionController(context: AccountContext, update
         controller?.dismiss()
     }
     
-    var presentUndo: ((UndoOverlayContent) -> Void)?
-    
-    
     presentFilePicker = { [weak controller] in
         guard let controller = controller else {
             return
         }
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        controller.present(legacyICloudFilePicker(theme: presentationData.theme, documentTypes: ["public.mp3"], completion: { urls in
-            guard !urls.isEmpty, let url = urls.first else {
-                return
-            }
-            
-            let coordinator = NSFileCoordinator(filePresenter: nil)
-            var error: NSError?
-            coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { url in
-                Queue.mainQueue().async {
-                    let asset = AVAsset(url: url)
-                    
-                    guard let data = try? Data(contentsOf: url) else {
-                        return
-                    }
-                    if data.count > 200 * 1024 {
-                        //TODO:localize
-                        presentUndo?(.info(title: "Audio is too large", text: "The file is over 200 KB."))
-                        return
-                    }
-                    
-                    asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
-                        if asset.statusOfValue(forKey: "duration", error: nil) != .loaded {
-                            return
-                        }
-                        guard let track = asset.tracks(withMediaType: .audio).first else {
-                            return
-                        }
-                        let duration = track.timeRange.duration.seconds
-                        
-                        Queue.mainQueue().async {
-                            if duration > 5.0 {
-                                //TODO:localize
-                                presentUndo?(.info(title: "\(url.lastPathComponent) is too long", text: "The duration is longer than 5 seconds."))
-                            } else {
-                                soundActionDisposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
-                                |> deliverOnMainQueue).start(next: { _ in
-                                    //TODO:localize
-                                    presentUndo?(.notificationSoundAdded(title: "Sound Added", text: "The sound **\(url.deletingPathExtension().lastPathComponent)** was added to your Telegram tones.**", action: nil))
-                                }, error: { _ in
-                                }))
-                            }
-                        }
-                    })
-                }
-            })
-        }), in: .window(.root))
+        presentCustomNotificationSoundFilePicker(context: context, controller: controller, disposable: soundActionDisposable)
     }
     
-    presentUndo = { [weak controller] content in
+    return controller
+}
+
+public func presentCustomNotificationSoundFilePicker(context: AccountContext, controller: ViewController, disposable: MetaDisposable) {
+    let presentUndo: (UndoOverlayContent) -> Void = { [weak controller] content in
         guard let controller = controller else {
             return
         }
+        
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         controller.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
     }
     
-    return controller
+    let settings = NotificationSoundSettings.extract(from: context.currentAppConfiguration.with({ $0 }))
+    
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    controller.present(legacyICloudFilePicker(theme: presentationData.theme, documentTypes: ["public.mp3"], completion: { urls in
+        guard !urls.isEmpty, let url = urls.first else {
+            return
+        }
+        
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        var error: NSError?
+        coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { url in
+            Queue.mainQueue().async {
+                let asset = AVAsset(url: url)
+                
+                guard let data = try? Data(contentsOf: url) else {
+                    return
+                }
+                if data.count > settings.maxSize {
+                    //TODO:localize
+                    presentUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
+                    return
+                }
+                
+                asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
+                    if asset.statusOfValue(forKey: "duration", error: nil) != .loaded {
+                        return
+                    }
+                    guard let track = asset.tracks(withMediaType: .audio).first else {
+                        return
+                    }
+                    let duration = track.timeRange.duration.seconds
+                    
+                    Queue.mainQueue().async {
+                        if duration > Double(settings.maxDuration) {
+                            //TODO:localize
+                            presentUndo(.info(title: "\(url.lastPathComponent) is too long", text: "The duration is longer than \(stringForDuration(Int32(settings.maxDuration)))."))
+                        } else {
+                            disposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                //TODO:localize
+                                presentUndo(.notificationSoundAdded(title: "Sound Added", text: "The sound **\(url.deletingPathExtension().lastPathComponent)** was added to your Telegram tones.**", action: nil))
+                            }, error: { _ in
+                            }))
+                        }
+                    }
+                })
+            }
+        })
+    }), in: .window(.root))
 }
