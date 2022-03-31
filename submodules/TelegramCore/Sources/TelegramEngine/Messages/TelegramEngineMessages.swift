@@ -322,8 +322,8 @@ public extension TelegramEngine {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
         
-        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
-            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, botId: botId, url: url, themeParams: themeParams, replyToMessageId: replyToMessageId)
+        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, botId: botId, url: url, payload: payload, themeParams: themeParams, replyToMessageId: replyToMessageId)
         }
         
         public func requestSimpleWebView(botId: PeerId, url: String, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {
@@ -334,13 +334,17 @@ public extension TelegramEngine {
         public func sendWebViewData(botId: PeerId, buttonText: String, data: String) -> Signal<Never, SendWebViewDataError> {
             return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
         }
-        
-        public func addBotToAttachMenu(peerId: PeerId) -> Signal<Bool, NoError> {
-            return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+                
+        public func addBotToAttachMenu(botId: PeerId) -> Signal<Bool, NoError> {
+            return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
-        public func removeBotFromAttachMenu(peerId: PeerId) -> Signal<Bool, NoError> {
-            return _internal_removeBotFromAttachMenu(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
+        public func removeBotFromAttachMenu(botId: PeerId) -> Signal<Bool, NoError> {
+            return _internal_removeBotFromAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
+        }
+        
+        public func getAttachMenuBot(botId: PeerId) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
+            return _internal_getAttachMenuBot(postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
         public func attachMenuBots() -> Signal<[AttachMenuBot], NoError> {

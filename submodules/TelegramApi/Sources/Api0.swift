@@ -45,7 +45,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[571523412] = { return $0.readDouble() }
     dict[-1255641564] = { return parseString($0) }
     dict[-1194283041] = { return Api.AccountDaysTTL.parse_accountDaysTTL($0) }
-    dict[1340016040] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
+    dict[-381896846] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
+    dict[-1297663893] = { return Api.AttachMenuBotIcon.parse_attachMenuBotIcon($0) }
+    dict[1165423600] = { return Api.AttachMenuBotIconColor.parse_attachMenuBotIconColor($0) }
     dict[1011024320] = { return Api.AttachMenuBots.parse_attachMenuBots($0) }
     dict[-237467044] = { return Api.AttachMenuBots.parse_attachMenuBotsNotModified($0) }
     dict[-1816172929] = { return Api.AttachMenuBotsBot.parse_attachMenuBotsBot($0) }
@@ -837,7 +839,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-981018084] = { return Api.WebPage.parse_webPagePending($0) }
     dict[1421174295] = { return Api.WebPageAttribute.parse_webPageAttributeTheme($0) }
     dict[211046684] = { return Api.WebViewMessageSent.parse_webViewMessageSent($0) }
-    dict[-1312107643] = { return Api.WebViewResult.parse_webViewResultConfirmationRequired($0) }
     dict[202659196] = { return Api.WebViewResult.parse_webViewResultUrl($0) }
     dict[-1389486888] = { return Api.account.AuthorizationForm.parse_authorizationForm($0) }
     dict[1275039392] = { return Api.account.Authorizations.parse_authorizations($0) }
@@ -1086,6 +1087,10 @@ public extension Api {
             case let _1 as Api.AccountDaysTTL:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AttachMenuBot:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AttachMenuBotIcon:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AttachMenuBotIconColor:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AttachMenuBots:
                 _1.serialize(buffer, boxed)

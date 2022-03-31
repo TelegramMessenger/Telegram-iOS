@@ -94,22 +94,10 @@ public extension Api {
 }
 public extension Api {
     enum WebViewResult: TypeConstructorDescription {
-        case webViewResultConfirmationRequired(bot: Api.AttachMenuBot, users: [Api.User])
         case webViewResultUrl(queryId: Int64, url: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .webViewResultConfirmationRequired(let bot, let users):
-                    if boxed {
-                        buffer.appendInt32(-1312107643)
-                    }
-                    bot.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
                 case .webViewResultUrl(let queryId, let url):
                     if boxed {
                         buffer.appendInt32(202659196)
@@ -122,31 +110,11 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .webViewResultConfirmationRequired(let bot, let users):
-                return ("webViewResultConfirmationRequired", [("bot", String(describing: bot)), ("users", String(describing: users))])
                 case .webViewResultUrl(let queryId, let url):
                 return ("webViewResultUrl", [("queryId", String(describing: queryId)), ("url", String(describing: url))])
     }
     }
     
-        public static func parse_webViewResultConfirmationRequired(_ reader: BufferReader) -> WebViewResult? {
-            var _1: Api.AttachMenuBot?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.AttachMenuBot
-            }
-            var _2: [Api.User]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.WebViewResult.webViewResultConfirmationRequired(bot: _1!, users: _2!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_webViewResultUrl(_ reader: BufferReader) -> WebViewResult? {
             var _1: Int64?
             _1 = reader.readInt64()
@@ -1204,6 +1172,46 @@ public extension Api.auth {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.auth.ExportedAuthorization.exportedAuthorization(id: _1!, bytes: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.auth {
+    enum LoggedOut: TypeConstructorDescription {
+        case loggedOut(flags: Int32, futureAuthToken: Buffer?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .loggedOut(let flags, let futureAuthToken):
+                    if boxed {
+                        buffer.appendInt32(-1012759713)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeBytes(futureAuthToken!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .loggedOut(let flags, let futureAuthToken):
+                return ("loggedOut", [("flags", String(describing: flags)), ("futureAuthToken", String(describing: futureAuthToken))])
+    }
+    }
+    
+        public static func parse_loggedOut(_ reader: BufferReader) -> LoggedOut? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Buffer?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseBytes(reader) }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.auth.LoggedOut.loggedOut(flags: _1!, futureAuthToken: _2)
             }
             else {
                 return nil

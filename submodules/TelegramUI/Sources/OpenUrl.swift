@@ -208,10 +208,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             if let navigationController = navigationController {
                                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), botStart: payload))
                             }
-                        case let .withAttachBot(botId):
+                        case let .withAttachBot(attachBotStart):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), attachBotId: botId))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), attachBotStart: attachBotStart))
                             }
                         default:
                             break
@@ -642,6 +642,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         voiceChat = value
                                     } else if queryItem.name == "attach" {
                                         attach = value
+                                    } else if queryItem.name == "startattach" {
+                                        startAttach = value
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -675,8 +677,12 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 }
                             } else if let attach = attach {
                                 result += "?attach=\(attach)"
-                            } else if let _ = startAttach {
-                                result += "?startattach"
+                            } else if let startAttach = startAttach {
+                                if !startAttach.isEmpty {
+                                    result += "?startattach=\(startAttach)"
+                                } else {
+                                    result += "?startattach"
+                                }
                             }
                             convertedUrl = result
                         }

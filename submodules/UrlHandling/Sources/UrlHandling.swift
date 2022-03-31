@@ -66,7 +66,7 @@ extension ResolvedBotAdminRights {
 public enum ParsedInternalPeerUrlParameter {
     case botStart(String)
     case groupBotStart(String, ResolvedBotAdminRights?)
-    case attachBotStart(String)
+    case attachBotStart(String, String?)
     case channelMessage(Int32, Double?)
     case replyThread(Int32, Int32)
     case voiceChat(String?)
@@ -87,7 +87,7 @@ public enum ParsedInternalUrl {
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
     case phone(String)
-    case setAttach(String)
+    case startAttach(String, String?)
 }
 
 private enum ParsedUrl {
@@ -185,7 +185,14 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
                                 if queryItem.name == "attach" {
-                                    return .peerName(peerName, .attachBotStart(value))
+                                    var startAttach: String?
+                                    for queryItem in queryItems {
+                                        if queryItem.name == "startattach", let value = queryItem.value {
+                                            startAttach = value
+                                            break
+                                        }
+                                    }
+                                    return .peerName(peerName, .attachBotStart(value, startAttach))
                                 } else if queryItem.name == "start" {
                                     return .peerName(peerName, .botStart(value))
                                 } else if queryItem.name == "startgroup" {
@@ -201,11 +208,13 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     return nil
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     return .peerName(peerName, .voiceChat(value))
+                                } else if queryItem.name == "startattach" {
+                                    return .startAttach(peerName, value)
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peerName(peerName, .voiceChat(nil))
                             } else if queryItem.name == "startattach" {
-                                return .setAttach(peerName)
+                                return .startAttach(peerName, nil)
                             }
                         }
                     }
@@ -437,7 +446,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.botStart(peerId: peer.id, payload: payload))
                             case let .groupBotStart(payload, adminRights):
                                 return .single(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights))
-                            case let .attachBotStart(name):
+                            case let .attachBotStart(name, payload):
                                 return context.engine.peers.resolvePeerByName(name: name)
                                 |> take(1)
                                 |> mapToSignal { botPeer -> Signal<Peer?, NoError> in
@@ -445,7 +454,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
                                     if let botPeer = botPeer {
-                                        return .single(.peer(peer.id, .withAttachBot(botPeer.id)))
+                                        return .single(.peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload))))
                                     } else {
                                         return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                     }
@@ -542,7 +551,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             return .single(.wallpaper(parameter))
         case let .theme(slug):
             return .single(.theme(slug))
-        case let .setAttach(name):
+        case let .startAttach(name, payload):
             return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
@@ -550,7 +559,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.setAttach(peer.id))
+                    return .single(.startAttach(peerId: peer.id, payload: payload))
                 } else {
                     return .single(.inaccessiblePeer)
                 }

@@ -61,8 +61,8 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                         return state.updatedBotStartPayload(botStart.payload)
                     })
                 }
-                if let botId = params.attachBotId {
-                    controller.presentAttachmentBot(botId: botId)
+                if let attachBotStart = params.attachBotStart {
+                    controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
                 }
                 found = true
                 break
@@ -79,11 +79,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     return state.updatedBotStartPayload(botStart.payload)
                 })
             }
-            if let botId = params.attachBotId {
-                controller.presentAttachmentBot(botId: botId)
+            if let attachBotStart = params.attachBotStart {
+                controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotId: params.attachBotId, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, subject: params.subject, botStart: params.botStart, attachBotStart: params.attachBotStart, peekData: params.peekData, peerNearbyData: params.peerNearbyData, chatListFilter: params.chatListFilter, chatNavigationStack: params.chatNavigationStack)
         }
         controller.purposefulAction = params.purposefulAction
         if let search = params.activateMessageSearch {

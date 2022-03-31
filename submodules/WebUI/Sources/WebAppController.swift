@@ -248,30 +248,25 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: controller.replyToMessageId)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: nil, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: controller.replyToMessageId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
                     }
-                    switch result {
-                        case let .webViewResult(queryId, url, keepAliveSignal):
-                            if let parsedUrl = URL(string: url) {
-                                strongSelf.queryId = queryId
-                                strongSelf.webView?.load(URLRequest(url: parsedUrl))
-                                
-                                strongSelf.keepAliveDisposable = (keepAliveSignal
-                                |> deliverOnMainQueue).start(error: { [weak self] _ in
-                                    if let strongSelf = self {
-                                        strongSelf.controller?.dismiss()
-                                    }
-                                }, completed: { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.controller?.dismiss()
-                                    }
-                                })
+                    if let parsedUrl = URL(string: result.url) {
+                        strongSelf.queryId = result.queryId
+                        strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                        
+                        strongSelf.keepAliveDisposable = (result.keepAliveSignal
+                        |> deliverOnMainQueue).start(error: { [weak self] _ in
+                            if let strongSelf = self {
+                                strongSelf.controller?.dismiss()
                             }
-                        case .requestConfirmation:
-                            break
+                        }, completed: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.controller?.dismiss()
+                            }
+                        })
                     }
                 })
             }
@@ -628,7 +623,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     f(.default)
                     
                     if let strongSelf = self {
-                        let _ = context.engine.messages.removeBotFromAttachMenu(peerId: strongSelf.botId).start()
+                        let _ = context.engine.messages.removeBotFromAttachMenu(botId: strongSelf.botId).start()
                         strongSelf.dismiss()
                     }
                 })))
