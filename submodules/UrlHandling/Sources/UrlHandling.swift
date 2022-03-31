@@ -204,7 +204,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
                                 return .peerName(peerName, .voiceChat(nil))
-                            } else if queryItem.name == "setattach" {
+                            } else if queryItem.name == "startattach" {
                                 return .setAttach(peerName)
                             }
                         }

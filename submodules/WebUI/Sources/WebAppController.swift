@@ -15,6 +15,7 @@ import PresentationDataUtils
 import HexColor
 import ShimmerEffect
 import PhotoResources
+import LegacyComponents
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
@@ -163,8 +164,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     strongSelf.handleScriptMessage(message)
                 }
             }, name: "performAction")
-            //-webkit-user-select:none
-            let selectionString = "var css = '*{-webkit-touch-callout:none;}';"
+            
+            let selectionString = "var css = '*{-webkit-touch-callout:none;} :not(input):not(textarea){-webkit-user-select:none;}';"
                     + " var head = document.head || document.getElementsByTagName('head')[0];"
                     + " var style = document.createElement('style'); style.type = 'text/css';" +
                     " style.appendChild(document.createTextNode(css)); head.appendChild(style);"
@@ -338,11 +339,39 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
         }
         
+        private var animationProgress: CGFloat = 0.0
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             if let webView = self.webView {
-                transition.updateFrame(view: webView, frame:  CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom))))
-                if case .immediate = transition {
-                    webView.layoutSubviews()
+                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
+                if case let .animated(duration, curve) = transition, let springAnimation = transition.animation(), webView.frame != frame {
+                    let initial = webView.frame
+                        
+                    let animation = POPBasicAnimation()
+                    animation.property = (POPAnimatableProperty.property(withName: "frame", initializer: { property in
+                        property?.readBlock = { node, values in
+                            values?.pointee = (node as! Node).animationProgress
+                        }
+                        property?.writeBlock = { node, values in
+                            (node as! Node).animationProgress = values!.pointee
+                            var mappedValue = values!.pointee
+                            switch curve {
+                                case .spring:
+                                    mappedValue = springAnimationValueAt(springAnimation, mappedValue)
+                                default:
+                                break
+                            }
+                            let currentFrame = CGRect.interpolator()(initial, frame, mappedValue) as! CGRect
+                            (node as! Node).webView?.frame = currentFrame
+                        }
+                        property?.threshold = 0.01
+                    }) as! POPAnimatableProperty)
+                    animation.fromValue = 0.0 as NSNumber
+                    animation.toValue = 1.0 as NSNumber
+                    animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                    animation.duration = duration * Double(springAnimation.speed)
+                    self.pop_add(animation, forKey: "frame")
+                } else {
+                    webView.frame = frame
                 }
             }
             
@@ -391,11 +420,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             switch eventName {
-                case "webview_data_send":
+                case "web_app_data_send":
                     if let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
                     }
-                case "webview_close":
+                case "web_app_close":
                     self.controller?.dismiss()
                 default:
                     break

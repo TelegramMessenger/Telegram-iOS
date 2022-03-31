@@ -620,7 +620,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var post: String?
                         var voiceChat: String?
                         var attach: String?
-                        var setAttach: String?
+                        var startAttach: String?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -645,8 +645,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
-                                } else if queryItem.name == "setattach" {
-                                    setAttach = ""
+                                } else if queryItem.name == "startattach" {
+                                    startAttach = ""
                                 }
                             }
                         }
@@ -675,8 +675,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 }
                             } else if let attach = attach {
                                 result += "?attach=\(attach)"
-                            } else if let _ = setAttach {
-                                result += "?setattach"
+                            } else if let _ = startAttach {
+                                result += "?startattach"
                             }
                             convertedUrl = result
                         }
