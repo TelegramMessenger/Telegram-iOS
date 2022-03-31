@@ -192,7 +192,7 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network) -> Sig
     let poll = Signal<Never, NoError> { subscriber in
         let signal: Signal<Never, NoError> = cachedAttachMenuBots(postbox: postbox)
         |> mapToSignal { current in
-            return (network.request(Api.functions.messages.getAttachMenuBots(hash: 0))
+            return (network.request(Api.functions.messages.getAttachMenuBots(hash: current?.hash ?? 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.AttachMenuBots?, NoError> in
                 return .single(nil)

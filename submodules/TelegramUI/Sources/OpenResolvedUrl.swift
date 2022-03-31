@@ -132,7 +132,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 
                 if let peer = peer as? TelegramChannel {
-                    if peer.flags.contains(.isCreator) || peer.adminRights != nil {
+                    if peer.flags.contains(.isCreator) || peer.adminRights?.rights.contains(.canAddAdmins) == true {
                         let controller = channelAdminController(context: context, peerId: peerId, adminId: botPeerId, initialParticipant: nil, invite: true, initialAdminRights: adminRights?.chatAdminRights, updated: { _ in
                             controller?.dismiss()
                         }, upgradedToSupergroup: { _, _ in }, transferedOwnership: { _ in })

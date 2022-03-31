@@ -618,7 +618,7 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 }
             }
         } else {
-            if let adminPeer = adminView.peers[adminView.peerId] as? TelegramUser, adminPeer.botInfo != nil, invite {
+            if let adminPeer = adminView.peers[adminView.peerId] as? TelegramUser, adminPeer.botInfo != nil, case .group = channel.info, invite {
                 entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
             }
             
