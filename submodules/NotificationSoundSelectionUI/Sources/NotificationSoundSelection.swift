@@ -21,6 +21,7 @@ private struct NotificationSoundSelectionArguments {
     let complete: () -> Void
     let cancel: () -> Void
     let upload: () -> Void
+    let deleteSound: (PeerMessageSound) -> Void
 }
 
 private enum NotificationSoundSelectionSection: Int32 {
@@ -31,9 +32,15 @@ private enum NotificationSoundSelectionSection: Int32 {
 
 private struct NotificationSoundSelectionState: Equatable {
     var selectedSound: PeerMessageSound
+    var removedSounds: [PeerMessageSound]
 }
 
 private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
+    enum StableId: Hashable {
+        case index(Int32)
+        case sound(PeerMessageSound.Id)
+    }
+    
     case cloudHeader(String)
     case uploadSound(String)
     case cloudInfo(String)
@@ -42,7 +49,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
     case classicHeader(PresentationTheme, String)
     case none(section: NotificationSoundSelectionSection, theme: PresentationTheme, text: String, selected: Bool)
     case `default`(section: NotificationSoundSelectionSection, theme: PresentationTheme, text: String, selected: Bool)
-    case sound(section: NotificationSoundSelectionSection, index: Int32, theme: PresentationTheme, text: String, sound: PeerMessageSound, selected: Bool)
+    case sound(section: NotificationSoundSelectionSection, index: Int32, theme: PresentationTheme, text: String, sound: PeerMessageSound, selected: Bool, canBeDeleted: Bool)
     
     var section: ItemListSectionId {
         switch self {
@@ -56,7 +63,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
                 return section.rawValue
             case let .default(section, _, _, _):
                 return section.rawValue
-            case let .sound(section, _, _, _, _, _):
+            case let .sound(section, _, _, _, _, _, _):
                 return section.rawValue
         }
     }
@@ -91,7 +98,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             case .classic:
                 return 2002
             }
-        case let .sound(section, index, _, _, _, _):
+        case let .sound(section, index, _, _, _, _, _):
             switch section {
             case .cloud:
                 return 3 + index
@@ -103,8 +110,13 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
         }
     }
     
-    var stableId: Int32 {
-        return self.sortId
+    var stableId: StableId {
+        switch self {
+        case let .sound(_ , _, _, _, sound, _, _):
+            return .sound(sound.id)
+        default:
+            return .index(self.sortId)
+        }
     }
     
     static func ==(lhs: NotificationSoundSelectionEntry, rhs: NotificationSoundSelectionEntry) -> Bool {
@@ -151,8 +163,8 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .sound(lhsSection, lhsIndex, lhsTheme, lhsText, lhsSound, lhsSelected):
-            if case let .sound(rhsSection, rhsIndex, rhsTheme, rhsText, rhsSound, rhsSelected) = rhs, lhsSection == rhsSection, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText, lhsSound == rhsSound, lhsSelected == rhsSelected {
+        case let .sound(lhsSection, lhsIndex, lhsTheme, lhsText, lhsSound, lhsSelected, lhsCanBeDeleted):
+            if case let .sound(rhsSection, rhsIndex, rhsTheme, rhsText, rhsSound, rhsSelected, rhsCanBeDeleted) = rhs, lhsSection == rhsSection, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsText == rhsText, lhsSound == rhsSound, lhsSelected == rhsSelected, lhsCanBeDeleted == rhsCanBeDeleted {
                 return true
             } else {
                 return false
@@ -161,7 +173,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
     }
     
     static func <(lhs: NotificationSoundSelectionEntry, rhs: NotificationSoundSelectionEntry) -> Bool {
-        return lhs.stableId < rhs.stableId
+        return lhs.sortId < rhs.sortId
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
@@ -188,23 +200,30 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(.default)
             })
-        case let .sound(_, _, _, text, sound, selected):
+        case let .sound(_, _, _, text, sound, selected, canBeDeleted):
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(sound)
-            })
+            }, deleteAction: canBeDeleted ? {
+                arguments.deleteSound(sound)
+            } : nil)
         }
     }
 }
 
 private func notificationsAndSoundsEntries(presentationData: PresentationData, defaultSound: PeerMessageSound?, state: NotificationSoundSelectionState, notificationSoundList: NotificationSoundList?) -> [NotificationSoundSelectionEntry] {
+    let selectedSound = resolvedNotificationSound(sound: state.selectedSound, notificationSoundList: notificationSoundList)
+    
     var entries: [NotificationSoundSelectionEntry] = []
     
     entries.append(.cloudHeader(presentationData.strings.Notifications_TelegramTones))
-    //entries.append(.none(section: .cloud, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: state.selectedSound == .none))
+    //entries.append(.none(section: .cloud, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound == .none))
     if let notificationSoundList = notificationSoundList {
         for listSound in notificationSoundList.sounds {
             let sound: PeerMessageSound = .cloud(fileId: listSound.file.fileId.id)
-            entries.append(.sound(section: .cloud, index: Int32(entries.count), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: state.selectedSound.id == sound.id))
+            if state.removedSounds.contains(where: { $0.id == sound.id }) {
+                continue
+            }
+            entries.append(.sound(section: .cloud, index: Int32(entries.count), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: selectedSound.id == sound.id, canBeDeleted: true))
         }
     }
     entries.append(.uploadSound(presentationData.strings.Notifications_UploadSound))
@@ -212,18 +231,18 @@ private func notificationsAndSoundsEntries(presentationData: PresentationData, d
     
     entries.append(.modernHeader(presentationData.theme, presentationData.strings.Notifications_AlertTones))
     if let defaultSound = defaultSound {
-        entries.append(.default(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: defaultSound), selected: state.selectedSound.id == .default))
+        entries.append(.default(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: defaultSound), selected: selectedSound.id == .default))
     }
-    entries.append(.none(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: state.selectedSound.id == .none))
+    entries.append(.none(section: .modern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound.id == .none))
     for i in 0 ..< 12 {
         let sound: PeerMessageSound = .bundledModern(id: Int32(i))
-        entries.append(.sound(section: .modern, index: Int32(i), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == state.selectedSound.id))
+        entries.append(.sound(section: .modern, index: Int32(i), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
     }
     
     entries.append(.classicHeader(presentationData.theme, presentationData.strings.Notifications_ClassicTones))
     for i in 0 ..< 8 {
         let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
-        entries.append(.sound(section: .classic, index: Int32(i), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == state.selectedSound.id))
+        entries.append(.sound(section: .classic, index: Int32(i), theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
     }
     
     return entries
@@ -340,8 +359,8 @@ public func playSound(context: AccountContext, notificationSoundList: Notificati
 }
 
 public func notificationSoundSelectionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, isModal: Bool, currentSound: PeerMessageSound, defaultSound: PeerMessageSound?, completion: @escaping (PeerMessageSound) -> Void) -> ViewController {
-    let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound), ignoreRepeated: true)
-    let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound))
+    let statePromise = ValuePromise(NotificationSoundSelectionState(selectedSound: currentSound, removedSounds: []), ignoreRepeated: true)
+    let stateValue = Atomic(value: NotificationSoundSelectionState(selectedSound: currentSound, removedSounds: []))
     let updateState: ((NotificationSoundSelectionState) -> NotificationSoundSelectionState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -355,7 +374,11 @@ public func notificationSoundSelectionController(context: AccountContext, update
     
     let arguments = NotificationSoundSelectionArguments(account: context.account, selectSound: { sound in
         updateState { state in
-            return NotificationSoundSelectionState(selectedSound: sound)
+            var state = state
+            
+            state.selectedSound = sound
+            
+            return state
         }
         
         let _ = (context.engine.peers.notificationSoundList()
@@ -369,6 +392,25 @@ public func notificationSoundSelectionController(context: AccountContext, update
         cancelImpl?()
     }, upload: {
         presentFilePicker?()
+    }, deleteSound: { sound in
+        updateState { state in
+            var state = state
+            
+            state.removedSounds.append(sound)
+            if state.selectedSound.id == sound.id {
+                state.selectedSound = .bundledModern(id: 0)
+            }
+            
+            return state
+        }
+        switch sound {
+        case let .cloud(id):
+            soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
+            |> deliverOnMainQueue).start(completed: {
+            }))
+        default:
+            break
+        }
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
@@ -432,20 +474,32 @@ public func notificationSoundSelectionController(context: AccountContext, update
                         return
                     }
                     if data.count > 200 * 1024 {
-                        presentUndo?(.info(title: "Audio is too large", text: "The file is larger than 200 KB."))
+                        //TODO:localize
+                        presentUndo?(.info(title: "Audio is too large", text: "The file is over 200 KB."))
                         return
                     }
                     
-                    asset.loadValuesAsynchronously(forKeys: ["duration"], completionHandler: {
-                        let duration = asset.duration.seconds
-                        if duration > 5.0 {
-                            //TODO:localize
-                            presentUndo?(.info(title: "Audio is too long", text: "The duration is longer than 5 seconds."))
-                        } else {
-                            soundActionDisposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
-                            |> deliverOnMainQueue).start(next: { _ in
-                            }, error: { _ in
-                            }))
+                    asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
+                        if asset.statusOfValue(forKey: "duration", error: nil) != .loaded {
+                            return
+                        }
+                        guard let track = asset.tracks(withMediaType: .audio).first else {
+                            return
+                        }
+                        let duration = track.timeRange.duration.seconds
+                        
+                        Queue.mainQueue().async {
+                            if duration > 5.0 {
+                                //TODO:localize
+                                presentUndo?(.info(title: "\(url.lastPathComponent) is too long", text: "The duration is longer than 5 seconds."))
+                            } else {
+                                soundActionDisposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
+                                |> deliverOnMainQueue).start(next: { _ in
+                                    //TODO:localize
+                                    presentUndo?(.notificationSoundAdded(title: "Sound Added", text: "The sound **\(url.deletingPathExtension().lastPathComponent)** was added to your Telegram tones.**", action: nil))
+                                }, error: { _ in
+                                }))
+                            }
                         }
                     })
                 }

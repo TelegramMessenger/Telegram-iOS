@@ -696,12 +696,19 @@ public extension TelegramEngine {
             }
         }
         
-        public func saveNotificationSound(file: TelegramMediaFile) -> Signal<Never, UploadNotificationSoundError> {
+        public func saveNotificationSound(file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
             return _internal_saveNotificationSound(account: self.account, file: file)
+        }
+        public func removeNotificationSound(file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
+            return _internal_saveNotificationSound(account: self.account, file: file, unsave: true)
         }
         
         public func uploadNotificationSound(title: String, data: Data) -> Signal<NotificationSoundList.NotificationSound, UploadNotificationSoundError> {
             return _internal_uploadNotificationSound(account: self.account, title: title, data: data)
+        }
+        
+        public func deleteNotificationSound(fileId: Int64) -> Signal<Never, DeleteNotificationSoundError> {
+            return _internal_deleteNotificationSound(account: self.account, fileId: fileId)
         }
     }
 }

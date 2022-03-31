@@ -2,6 +2,29 @@ import Foundation
 import SwiftSignalKit
 import Postbox
 import TelegramApi
+import MtProtoKit
+
+public struct NotificationSoundSettings: Equatable {
+    public private(set) var maxDuration: Int = 5
+    public private(set) var maxSize: Int = 102400
+    public private(set) var maxSavedCount: Int = 100
+    
+    private init(appConfiguration: AppConfiguration) {
+        if let data = appConfiguration.data {
+            let duration = data["ringtone_duration_max"] as? Double ?? 5
+            let size = data["ringtone_size_max"] as? Double ?? 102400
+            let count = data["ringtone_saved_count_max"] as? Double ?? 100
+            
+            self.maxDuration = Int(duration)
+            self.maxSize = Int(size)
+            self.maxSavedCount = Int(count)
+        }
+    }
+    
+    public static func extract(from appConfiguration: AppConfiguration) -> NotificationSoundSettings {
+        return self.init(appConfiguration: appConfiguration)
+    }
+}
 
 public final class NotificationSoundList: Equatable, Codable {
     public final class NotificationSound: Equatable, Codable {
@@ -187,11 +210,29 @@ func managedSynchronizeNotificationSoundList(postbox: Postbox, network: Network)
     |> restart
 }
 
-func _internal_saveNotificationSound(account: Account, file: TelegramMediaFile) -> Signal<Never, UploadNotificationSoundError> {
-    guard let resource = file.resource as? CloudDocumentMediaResource else {
+
+func _internal_saveNotificationSound(account: Account, file: FileMediaReference, unsave: Bool = false) -> Signal<Never, UploadNotificationSoundError> {
+    guard let resource = file.media.resource as? CloudDocumentMediaResource else {
         return .fail(.generic)
     }
-    return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolFalse))
+    return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: unsave ? .boolTrue : .boolFalse))
+    |> `catch` { error -> Signal<Api.Bool, MTRpcError> in
+        if error.errorDescription == "FILE_REFERENCE_EXPIRED" {
+            return revalidateMediaResourceReference(postbox: account.postbox, network: account.network, revalidationContext: account.mediaReferenceRevalidationContext, info: TelegramCloudMediaResourceFetchInfo(reference: file.abstract.resourceReference(file.media.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false), resource: file.media.resource)
+            |> mapError { _ -> MTRpcError in
+                return MTRpcError(errorCode: 500, errorDescription: "Internal")
+            }
+            |> mapToSignal { result -> Signal<Api.Bool, MTRpcError> in
+                guard let resource = result.updatedResource as? CloudDocumentMediaResource else {
+                    return .fail(MTRpcError(errorCode: 500, errorDescription: "Internal"))
+                }
+                
+                return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: unsave ? .boolTrue : .boolFalse))
+            }
+        } else {
+            return .fail(error)
+        }
+    }
     |> mapError { _ -> UploadNotificationSoundError in
         return .generic
     }
@@ -237,5 +278,61 @@ func _internal_uploadNotificationSound(account: Account, title: String, data: Da
         default:
             return .never()
         }
+    }
+}
+
+public enum DeleteNotificationSoundError {
+    case generic
+}
+
+func _internal_deleteNotificationSound(account: Account, fileId: Int64) -> Signal<Never, DeleteNotificationSoundError> {
+    return account.postbox.transaction { transaction -> NotificationSoundList.NotificationSound? in
+        return _internal_cachedNotificationSoundList(transaction: transaction).flatMap { list -> NotificationSoundList.NotificationSound? in
+            return list.sounds.first(where: { $0.file.fileId.id == fileId })
+        }
+    }
+    |> castError(DeleteNotificationSoundError.self)
+    |> mapToSignal { sound -> Signal<Never, DeleteNotificationSoundError> in
+        guard let sound = sound else {
+            return .fail(.generic)
+        }
+        guard let resource = sound.file.resource as? CloudDocumentMediaResource else {
+            return .fail(.generic)
+        }
+        
+        return account.network.request(Api.functions.account.saveRingtone(id: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference)), unsave: .boolTrue))
+        |> mapError { _ -> DeleteNotificationSoundError in
+            return .generic
+        }
+        |> mapToSignal { _ -> Signal<Never, DeleteNotificationSoundError> in
+            return account.postbox.transaction { transaction -> Void in
+                if let notificationSoundList = _internal_cachedNotificationSoundList(transaction: transaction) {
+                    let updatedNotificationSoundList = NotificationSoundList(hash: notificationSoundList.hash, sounds: notificationSoundList.sounds.filter { item in
+                        return item.file.fileId.id != fileId
+                    })
+                    _internal_setCachedNotificationSoundList(transaction: transaction, notificationSoundList: updatedNotificationSoundList)
+                }
+            }
+            |> castError(DeleteNotificationSoundError.self)
+            |> ignoreValues
+        }
+    }
+}
+
+public func resolvedNotificationSound(sound: PeerMessageSound, notificationSoundList: NotificationSoundList?) -> PeerMessageSound {
+    switch sound {
+    case let .cloud(fileId):
+        if let notificationSoundList = notificationSoundList {
+            for listSound in notificationSoundList.sounds {
+                if listSound.file.fileId.id == fileId {
+                    return sound
+                }
+            }
+            return .bundledModern(id: 0)
+        } else {
+            return .default
+        }
+    default:
+        return sound
     }
 }

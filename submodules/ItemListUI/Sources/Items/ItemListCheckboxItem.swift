@@ -32,8 +32,9 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let zeroSeparatorInsets: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
+    let deleteAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSize = iconSize
@@ -45,6 +46,7 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
         self.zeroSeparatorInsets = zeroSeparatorInsets
         self.sectionId = sectionId
         self.action = action
+        self.deleteAction = deleteAction
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -88,7 +90,7 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     }
 }
 
-public class ItemListCheckboxItemNode: ListViewItemNode {
+public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -97,6 +99,7 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
     
     private let activateArea: AccessibilityAreaNode
     
+    private let contentContainerNode: ASDisplayNode
     private let imageNode: ASImageNode
     private let iconNode: ASImageNode
     private let titleNode: TextNode
@@ -114,6 +117,8 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        
+        self.contentContainerNode = ASDisplayNode()
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
@@ -135,11 +140,12 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.titleNode)
+        self.addSubnode(self.contentContainerNode)
+        self.contentContainerNode.addSubnode(self.imageNode)
+        self.contentContainerNode.addSubnode(self.iconNode)
+        self.contentContainerNode.addSubnode(self.titleNode)
         self.addSubnode(self.activateArea)
         
         self.activateArea.activate = { [weak self] in
@@ -203,6 +209,8 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.contentContainerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: layout.contentSize.height))
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
                     if item.checked {
@@ -297,6 +305,14 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    if item.deleteAction != nil {
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                    } else {
+                        strongSelf.setRevealOptions((left: [], right: []))
+                    }
                 }
             })
         }
@@ -346,5 +362,62 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(x: offset, y: self.contentContainerNode.frame.minY), size: self.contentContainerNode.bounds.size))
+        
+        /*if let (item, params, _, _, _) = self.layoutParams {
+            let revealOffset = offset
+            
+            let editingOffset: CGFloat
+            if let editableControlNode = self.editableControlNode {
+                editingOffset = editableControlNode.bounds.size.width
+                var editableControlFrame = editableControlNode.frame
+                editableControlFrame.origin.x = params.leftInset + offset
+                transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
+            } else {
+                editingOffset = 0.0
+            }
+            
+            let leftInset: CGFloat = 86.0 + params.leftInset + editingOffset
+            let rightInset: CGFloat = 13.0 + params.rightInset
+            var infoIconRightInset: CGFloat = rightInset - 1.0
+            
+            var dateRightInset: CGFloat = 46.0 + params.rightInset
+            if item.editing {
+                dateRightInset += 5.0
+                infoIconRightInset -= 36.0
+            }
+            
+            var avatarFrame = self.avatarNode.frame
+            avatarFrame.origin.x = revealOffset + leftInset - 52.0
+            transition.updateFrameAdditive(node: self.avatarNode, frame: avatarFrame)
+            
+            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
+            
+            transition.updateFrameAdditive(node: self.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
+            
+            transition.updateFrameAdditive(node: self.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + self.bounds.size.width - dateRightInset - self.dateNode.bounds.size.width, y: self.dateNode.frame.minY), size: self.dateNode.bounds.size))
+            
+            transition.updateFrameAdditive(node: self.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 81.0, y: self.typeIconNode.frame.minY), size: self.typeIconNode.bounds.size))
+            
+            transition.updateFrameAdditive(node: self.infoButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + self.bounds.size.width - infoIconRightInset - self.infoButtonNode.bounds.width, y: self.infoButtonNode.frame.minY), size: self.infoButtonNode.bounds.size))
+        }*/
+    }
+
+    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
+        
+        if let item = self.item {
+            item.deleteAction?()
+        }
+        
+        /*if let item = self.layoutParams?.0 {
+            item.interaction.delete(item.messages.map { $0.id })
+        }*/
     }
 }
