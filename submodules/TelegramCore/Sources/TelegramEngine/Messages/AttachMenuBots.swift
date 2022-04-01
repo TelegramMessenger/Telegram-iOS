@@ -188,20 +188,20 @@ private func setCachedAttachMenuBots(transaction: Transaction, attachMenuBots: A
     }
 }
 
-func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
-    let poll = Signal<Never, NoError> { subscriber in
-        let signal: Signal<Never, NoError> = cachedAttachMenuBots(postbox: postbox)
+func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let poll = Signal<Void, NoError> { subscriber in
+        let signal: Signal<Void, NoError> = cachedAttachMenuBots(postbox: postbox)
         |> mapToSignal { current in
             return (network.request(Api.functions.messages.getAttachMenuBots(hash: current?.hash ?? 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.AttachMenuBots?, NoError> in
                 return .single(nil)
             }
-            |> mapToSignal { result -> Signal<Never, NoError> in
+            |> mapToSignal { result -> Signal<Void, NoError> in
                 guard let result = result else {
                     return .complete()
                 }
-                return postbox.transaction { transaction in
+                return postbox.transaction { transaction -> Void in
                     switch result {
                         case let .attachMenuBots(hash, bots, users):
                             var peers: [Peer] = []
@@ -237,11 +237,14 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network) -> Sig
                         case .attachMenuBotsNotModified:
                             break
                     }
-                } |> ignoreValues
+                    return Void()
+                }
             })
         }
                 
-        return signal.start(completed: {
+        return signal.start(next: { value in
+            subscriber.putNext(value)
+        }, completed: {
             subscriber.putCompletion()
         })
     }
@@ -273,9 +276,16 @@ func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: Pee
         |> `catch` { error -> Signal<Bool, NoError> in
             return .single(false)
         }
-        |> afterCompleted {
-            let _ = (managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
-            |> take(1)).start()
+        |> mapToSignal { value -> Signal<Bool, NoError> in
+            if value {
+                return managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
+                |> take(1)
+                |> map { _ -> Bool in
+                    return true
+                }
+            } else {
+                return .single(value)
+            }
         }
     }
     |> switchToLatest
