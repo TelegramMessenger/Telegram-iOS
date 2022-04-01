@@ -113,11 +113,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
     
     private class Node: ViewControllerTracingNode, WKNavigationDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
-        fileprivate var webView: WKWebView?
+        fileprivate var webView: WebAppWebView?
         
         private var placeholderIcon: UIImage?
         private var placeholderNode: ShimmerEffectNode?
@@ -183,7 +184,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 configuration.mediaPlaybackRequiresUserAction = false
             }
             
-            let webView = WKWebView(frame: CGRect(), configuration: configuration)
+            let webView = WebAppWebView(frame: CGRect(), configuration: configuration)
             webView.alpha = 0.0
             webView.isOpaque = false
             webView.backgroundColor = .clear
@@ -200,6 +201,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             webView.allowsBackForwardNavigationGestures = false
             webView.scrollView.delegate = self
+            webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0)
             webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
             webView.tintColor = self.presentationData.theme.rootController.tabBar.iconColor
             self.webView = webView
@@ -335,39 +337,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         private var animationProgress: CGFloat = 0.0
+        private var floatSnapshotView: UIView?
+        
+        
+        
+        
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-            if let webView = self.webView {
+            if let webView = self.webView, let controller = self.controller {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
-                if case let .animated(duration, curve) = transition, let springAnimation = transition.animation(), webView.frame != frame {
-                    let initial = webView.frame
-                        
-                    let animation = POPBasicAnimation()
-                    animation.property = (POPAnimatableProperty.property(withName: "frame", initializer: { property in
-                        property?.readBlock = { node, values in
-                            values?.pointee = (node as! Node).animationProgress
-                        }
-                        property?.writeBlock = { node, values in
-                            (node as! Node).animationProgress = values!.pointee
-                            var mappedValue = values!.pointee
-                            switch curve {
-                                case .spring:
-                                    mappedValue = springAnimationValueAt(springAnimation, mappedValue)
-                                default:
-                                break
-                            }
-                            let currentFrame = CGRect.interpolator()(initial, frame, mappedValue) as! CGRect
-                            (node as! Node).webView?.frame = currentFrame
-                        }
-                        property?.threshold = 0.01
-                    }) as! POPAnimatableProperty)
-                    animation.fromValue = 0.0 as NSNumber
-                    animation.toValue = 1.0 as NSNumber
-                    animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                    animation.duration = duration * Double(springAnimation.speed)
-                    self.pop_add(animation, forKey: "frame")
-                } else {
-                    webView.frame = frame
-                }
+                
+                webView.updateFrame(frame: frame, panning: controller.isContainerPanning(), transition: transition)
             }
             
             if let placeholderNode = self.placeholderNode {
@@ -670,4 +649,12 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
+}
+
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?) -> ViewController {
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: peerId), buttons: [.standalone], initialButton: .standalone)
+    controller.requestController = { _, completion in
+        completion(WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil, iconFile: nil), nil)
+    }
+    return controller
 }

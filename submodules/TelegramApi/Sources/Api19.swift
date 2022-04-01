@@ -605,7 +605,7 @@ public extension Api {
         case updateUserStatus(userId: Int64, status: Api.UserStatus)
         case updateUserTyping(userId: Int64, action: Api.SendMessageAction)
         case updateWebPage(webpage: Api.WebPage, pts: Int32, ptsCount: Int32)
-        case updateWebViewResultSent(peer: Api.Peer, botId: Int64, queryId: Int64)
+        case updateWebViewResultSent(queryId: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1473,12 +1473,10 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
-                case .updateWebViewResultSent(let peer, let botId, let queryId):
+                case .updateWebViewResultSent(let queryId):
                     if boxed {
-                        buffer.appendInt32(-118080598)
+                        buffer.appendInt32(361936797)
                     }
-                    peer.serialize(buffer, true)
-                    serializeInt64(botId, buffer: buffer, boxed: false)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     break
     }
@@ -1684,8 +1682,8 @@ public extension Api {
                 return ("updateUserTyping", [("userId", String(describing: userId)), ("action", String(describing: action))])
                 case .updateWebPage(let webpage, let pts, let ptsCount):
                 return ("updateWebPage", [("webpage", String(describing: webpage)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount))])
-                case .updateWebViewResultSent(let peer, let botId, let queryId):
-                return ("updateWebViewResultSent", [("peer", String(describing: peer)), ("botId", String(describing: botId)), ("queryId", String(describing: queryId))])
+                case .updateWebViewResultSent(let queryId):
+                return ("updateWebViewResultSent", [("queryId", String(describing: queryId))])
     }
     }
     
@@ -3449,19 +3447,11 @@ public extension Api {
             }
         }
         public static func parse_updateWebViewResultSent(_ reader: BufferReader) -> Update? {
-            var _1: Api.Peer?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int64?
-            _3 = reader.readInt64()
+            var _1: Int64?
+            _1 = reader.readInt64()
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateWebViewResultSent(peer: _1!, botId: _2!, queryId: _3!)
+            if _c1 {
+                return Api.Update.updateWebViewResultSent(queryId: _1!)
             }
             else {
                 return nil

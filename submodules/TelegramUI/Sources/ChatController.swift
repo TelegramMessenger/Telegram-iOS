@@ -3359,12 +3359,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, replyToMessageId: nil, iconFile: nil)
-                    controller.getNavigationController = { [weak self] in
-                        return self?.effectiveNavigationController
-                    }
-                    controller.navigationPresentation = .modal
-                    strongSelf.push(controller)
+                    
+                    let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil)
+                    strongSelf.present(controller, in: .window(.root))
+//                    controller.getNavigationController = { [weak self] in
+//                        return self?.effectiveNavigationController
+//                    }
+//                    controller.navigationPresentation = .modal
+//                    strongSelf.push(controller)
                 }, error: { [weak self] error in
                     if let strongSelf = self {
                         strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -3380,12 +3382,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, replyToMessageId: nil, iconFile: nil)
-                    controller.getNavigationController = { [weak self] in
-                        return self?.effectiveNavigationController
-                    }
-                    controller.navigationPresentation = .modal
-                    strongSelf.push(controller)
+                    let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal)
+                    strongSelf.present(controller, in: .window(.root))
+//                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, replyToMessageId: nil, iconFile: nil)
+//                    controller.getNavigationController = { [weak self] in
+//                        return self?.effectiveNavigationController
+//                    }
+//                    controller.navigationPresentation = .modal
+//                    strongSelf.push(controller)
                 }, error: { [weak self] error in
                     if let strongSelf = self {
                         strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -10870,6 +10874,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     completion(controller, nil)
                     strongSelf.controllerNavigationDisposable.set(nil)
+                default:
+                    break
                 }
             }
             let present = {

@@ -184,6 +184,10 @@ private final class AttachButtonComponent: CombinedComponent {
                 name = appName
                 imageName = ""
                 imageFile = appIcon
+            case .standalone:
+                name = ""
+                imageName = ""
+                imageFile = nil
             }
             
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
