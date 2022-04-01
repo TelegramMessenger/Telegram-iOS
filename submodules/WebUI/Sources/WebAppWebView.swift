@@ -85,14 +85,34 @@ final class WebAppWebView: WKWebView {
     
     
     func updateFrame(frame: CGRect, panning: Bool, transition: ContainedViewLayoutTransition) {
+        let reset = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            for (_, view, snapshotView) in strongSelf.currentFixedViews {
+                view.isHidden = false
+                snapshotView.removeFromSuperview()
+            }
+            strongSelf.currentFixedViews = []
+        }
+        
+        let update = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            for (_, view, snapshotView) in strongSelf.currentFixedViews {
+                view.isHidden = true
+                
+                var snapshotFrame = view.frame
+                snapshotFrame.origin.y = frame.height - snapshotFrame.height
+                transition.updateFrame(view: snapshotView, frame: snapshotFrame)
+            }
+        }
+        
         if panning {
             let fixedPositionViews = findFixedPositionViews(webView: self, classes: self.fixedPositionClasses)
             if fixedPositionViews.count != self.currentFixedViews.count {
-                for (_, view, snapshotView) in self.currentFixedViews {
-                    view.alpha = 1.0
-                    snapshotView.removeFromSuperview()
-                }
-                self.currentFixedViews = []
+                reset()
                 
                 var updatedFixedViews: [(String, UIView, UIView)] = []
                 for (className, view) in fixedPositionViews {
@@ -103,31 +123,12 @@ final class WebAppWebView: WKWebView {
                 }
                 self.currentFixedViews = updatedFixedViews
             }
-            
             transition.updateFrame(view: self, frame: frame)
-            
-            for (_, view, snapshotView) in self.currentFixedViews {
-                view.alpha = 0.0
-                
-                var snapshotFrame = view.frame
-                snapshotFrame.origin.y = frame.height - snapshotFrame.height
-                transition.updateFrame(view: snapshotView, frame: snapshotFrame)
-            }
+            update()
         } else {
-            for (_, view, snapshotView) in self.currentFixedViews {
-                view.alpha = 0.0
-                
-                var snapshotFrame = view.frame
-                snapshotFrame.origin.y = frame.height - snapshotFrame.height
-                transition.updateFrame(view: snapshotView, frame: snapshotFrame)
-            }
-            
+            update()
             transition.updateFrame(view: self, frame: frame, completion: { _ in
-                for (_, view, snapshotView) in self.currentFixedViews {
-                    view.alpha = 1.0
-                    snapshotView.removeFromSuperview()
-                }
-                self.currentFixedViews = []
+                reset()
             })
         }
         

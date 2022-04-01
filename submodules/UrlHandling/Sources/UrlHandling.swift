@@ -86,7 +86,7 @@ public enum ParsedInternalUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
-    case phone(String)
+    case phone(String, String?, String?)
     case startAttach(String, String?)
 }
 
@@ -223,7 +223,21 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
                     let component = pathComponents[0].replacingOccurrences(of: "%20", with: "+")
                     if component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789+").inverted) == nil {
-                        return .phone(component.replacingOccurrences(of: "+", with: ""))
+                        var attach: String?
+                        var startAttach: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "attach" {
+                                        attach = value
+                                    } else if queryItem.name == "startattach" {
+                                        startAttach = value
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return .phone(component.replacingOccurrences(of: "+", with: ""), attach, startAttach)
                     } else {
                         return .join(String(component.dropFirst()))
                     }
@@ -422,14 +436,26 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
 
 private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
     switch url {
-        case let .phone(phone):
+        case let .phone(phone, attach, startAttach):
             return context.engine.peers.resolvePeerByPhone(phone: phone)
             |> take(1)
-            |> map { peer -> ResolvedUrl? in
+            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer?._asPeer() {
-                    return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
+                    if let attach = attach {
+                        return context.engine.peers.resolvePeerByName(name: attach)
+                        |> take(1)
+                        |> map { botPeer -> ResolvedUrl? in
+                            if let botPeer = botPeer?._asPeer() {
+                                return .peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach)))
+                            } else {
+                                return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
+                            }
+                        }
+                    } else {
+                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                    }
                 } else {
-                    return .peer(nil, .info)
+                    return .single(.peer(nil, .info))
                 }
             }
         case let .peerName(name, parameter):
