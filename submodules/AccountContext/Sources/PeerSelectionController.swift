@@ -32,6 +32,7 @@ public struct ChatListNodePeersFilter: OptionSet {
     public static let onlyGroupsAndChannels = ChatListNodePeersFilter(rawValue: 1 << 13)
 }
 
+
 public final class PeerSelectionControllerParams {
     public let context: AccountContext
     public let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
