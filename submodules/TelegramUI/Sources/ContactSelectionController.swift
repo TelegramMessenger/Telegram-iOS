@@ -79,6 +79,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     var cancelPanGesture: () -> Void = { }
+    var isContainerPanning: () -> Bool = { return false }
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context

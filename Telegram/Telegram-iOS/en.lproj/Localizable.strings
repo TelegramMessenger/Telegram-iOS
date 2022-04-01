@@ -7418,6 +7418,9 @@ Sorry for the inconvenience.";
 
 "WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added in the attachment menu.";
 
+"WebApp.OpenWebViewAlertTitle" = "Open Web App";
+"WebApp.OpenWebViewAlertText" = "**%@** would like to open its web app to proceed.\n\nIt will be able to access your **IP address** and basic device info.";
+
 "WebApp.MessagePreview" = "Message Preview";
 "WebApp.Send" = "Send";
 

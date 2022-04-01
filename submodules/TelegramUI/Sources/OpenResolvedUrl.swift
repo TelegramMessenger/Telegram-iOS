@@ -567,9 +567,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             return
                         }
                         let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: icon, completion: {
-                            let _ = context.engine.messages.addBotToAttachMenu(botId: peerId).start()
-                            
-                            Queue.mainQueue().after(1.0, {
+                            let _ = (context.engine.messages.addBotToAttachMenu(botId: peerId)
+                            |> deliverOnMainQueue).start(completed: {
                                 if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
                                     let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peer.id, payload: payload), useExisting: true))
                                 }

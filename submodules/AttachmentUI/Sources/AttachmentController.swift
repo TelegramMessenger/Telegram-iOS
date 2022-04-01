@@ -18,6 +18,7 @@ public enum AttachmentButtonType: Equatable {
     case contact
     case poll
     case app(PeerId, String, TelegramMediaFile)
+    case standalone
 }
 
 public protocol AttachmentContainable: ViewController {
@@ -25,6 +26,7 @@ public protocol AttachmentContainable: ViewController {
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
+    var isContainerPanning: () -> Bool { get set }
     
     func resetForReuse()
     func prepareForReuse()
@@ -349,6 +351,15 @@ public class AttachmentController: ViewController {
                                 strongSelf.container.cancelPanGesture()
                             }
                         }
+                        
+                        controller.isContainerPanning = { [weak self] in
+                            if let strongSelf = self {
+                                return strongSelf.container.isTracking
+                            } else {
+                                return false
+                            }
+                        }
+                        
                         let previousController = strongSelf.currentControllers.last
                         strongSelf.currentControllers = [controller]
                         
@@ -557,14 +568,21 @@ public class AttachmentController: ViewController {
                 containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: containerRect.size))
                 
                 var containerInsets = containerLayout.intrinsicInsets
-                containerInsets.bottom = panelHeight
+                var hasPanel = false
+                if let controller = self.controller, controller.buttons.count > 1 {
+                    hasPanel = true
+                    containerInsets.bottom = panelHeight
+                }
+
                 let containerLayout = containerLayout.withUpdatedIntrinsicInsets(containerInsets)
                 
                 self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
                                     
                 if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
                     self.wrapperNode.addSubnode(self.container)
-                    self.container.addSubnode(self.panel)
+                    if hasPanel {
+                        self.container.addSubnode(self.panel)
+                    }
                     
                     self.animateIn()
                 }

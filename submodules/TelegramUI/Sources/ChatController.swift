@@ -3302,7 +3302,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
         }, openWebView: { [weak self] buttonText, url, simple in
-            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser else {
                 return
             }
             
@@ -3350,48 +3350,76 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if simple {
-                strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestSimpleWebView(botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
-                |> afterDisposed {
-                    updateProgress()
-                })
-                |> deliverOnMainQueue).start(next: { [weak self] url in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, replyToMessageId: nil, iconFile: nil)
-                    controller.getNavigationController = { [weak self] in
-                        return self?.effectiveNavigationController
-                    }
-                    controller.navigationPresentation = .modal
-                    strongSelf.push(controller)
-                }, error: { [weak self] error in
-                    if let strongSelf = self {
-                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                        })]), in: .window(.root))
-                    }
-                }))
+            let openWebView = {
+                if simple {
+                    strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestSimpleWebView(botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
+                    |> afterDisposed {
+                        updateProgress()
+                    })
+                    |> deliverOnMainQueue).start(next: { [weak self] url in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil)
+                        strongSelf.present(controller, in: .window(.root))
+    //                    controller.getNavigationController = { [weak self] in
+    //                        return self?.effectiveNavigationController
+    //                    }
+    //                    controller.navigationPresentation = .modal
+    //                    strongSelf.push(controller)
+                    }, error: { [weak self] error in
+                        if let strongSelf = self {
+                            strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
+                    }))
+                } else {
+                    strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, payload: nil, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme), replyToMessageId: nil)
+                    |> afterDisposed {
+                        updateProgress()
+                    })
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal)
+                        strongSelf.present(controller, in: .window(.root))
+    //                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, replyToMessageId: nil, iconFile: nil)
+    //                    controller.getNavigationController = { [weak self] in
+    //                        return self?.effectiveNavigationController
+    //                    }
+    //                    controller.navigationPresentation = .modal
+    //                    strongSelf.push(controller)
+                    }, error: { [weak self] error in
+                        if let strongSelf = self {
+                            strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            })]), in: .window(.root))
+                        }
+                    }))
+                }
+            }
+            
+            if peer.flags.contains(.isVerified) {
+                openWebView()
             } else {
-                strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestWebView(peerId: peerId, botId: peerId, url: url, payload: nil, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme), replyToMessageId: nil)
-                |> afterDisposed {
-                    updateProgress()
-                })
-                |> deliverOnMainQueue).start(next: { [weak self] result in
+                let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+                |> deliverOnMainQueue).start(next: { value in
                     guard let strongSelf = self else {
                         return
                     }
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, replyToMessageId: nil, iconFile: nil)
-                    controller.getNavigationController = { [weak self] in
-                        return self?.effectiveNavigationController
+
+                    if value {
+                        openWebView()
+                    } else {
+                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertTitle, text: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertText(botName).string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            if let strongSelf = self {
+                                let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                                openWebView()
+                            }
+                        })], parseMarkdown: true), in: .window(.root), with: nil)
                     }
-                    controller.navigationPresentation = .modal
-                    strongSelf.push(controller)
-                }, error: { [weak self] error in
-                    if let strongSelf = self {
-                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                        })]), in: .window(.root))
-                    }
-                }))
+                })
             }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
@@ -10878,6 +10906,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     completion(controller, nil)
                     strongSelf.controllerNavigationDisposable.set(nil)
+                default:
+                    break
                 }
             }
             let present = {

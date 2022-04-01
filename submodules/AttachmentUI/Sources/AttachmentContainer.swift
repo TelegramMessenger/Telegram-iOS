@@ -144,8 +144,11 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         return false
     }
     
+    var isTracking: Bool {
+        return self.panGestureArguments != nil
+    }
+    
     private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
-
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         guard let (layout, controllers, coveredByModalTransition) = self.validLayout else {
             return

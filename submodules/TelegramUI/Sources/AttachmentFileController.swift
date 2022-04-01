@@ -168,6 +168,7 @@ private class AttachmentFileControllerImpl: ItemListController, AttachmentContai
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
     
     var delayDisappear = false
     
