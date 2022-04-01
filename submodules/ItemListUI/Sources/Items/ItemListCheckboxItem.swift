@@ -21,6 +21,11 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
         case check
     }
     
+    public enum TextColor {
+        case primary
+        case accent
+    }
+    
     let presentationData: ItemListPresentationData
     let icon: UIImage?
     let iconSize: CGSize?
@@ -28,13 +33,14 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     let title: String
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
+    let textColor: TextColor
     let checked: Bool
     let zeroSeparatorInsets: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
     let deleteAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, textColor: TextColor = .primary, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSize = iconSize
@@ -42,6 +48,7 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
         self.title = title
         self.style = style
         self.color = color
+        self.textColor = textColor
         self.checked = checked
         self.zeroSeparatorInsets = zeroSeparatorInsets
         self.sectionId = sectionId
@@ -181,7 +188,15 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleColor: UIColor
+            switch item.textColor {
+            case .primary:
+                titleColor = item.presentationData.theme.list.itemPrimaryTextColor
+            case .accent:
+                titleColor = item.presentationData.theme.list.itemAccentColor
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             

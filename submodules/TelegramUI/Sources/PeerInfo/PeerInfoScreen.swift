@@ -3701,7 +3701,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
             }
         case .more:
-            guard let data = self.data, let peer = data.peer else {
+            guard let data = self.data, let peer = data.peer, let chatPeer = data.chatPeer else {
                 return
             }
             let presentationData = self.presentationData
@@ -3753,10 +3753,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 var canSetupAutoremoveTimeout = false
                 
-                if let secretChat = peer as? TelegramSecretChat {
+                if let secretChat = chatPeer as? TelegramSecretChat {
                     currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
-                    canSetupAutoremoveTimeout = true
-                } else if let group = peer as? TelegramGroup {
+                    canSetupAutoremoveTimeout = false
+                } else if let group = chatPeer as? TelegramGroup {
                     if case .creator = group.role {
                         canSetupAutoremoveTimeout = true
                     } else if case let .admin(rights, _) = group.role {
@@ -3764,11 +3764,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             canSetupAutoremoveTimeout = true
                         }
                     }
-                } else if let user = peer as? TelegramUser {
+                } else if let user = chatPeer as? TelegramUser {
                     if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
                         canSetupAutoremoveTimeout = true
                     }
-                } else if let channel = peer as? TelegramChannel {
+                } else if let channel = chatPeer as? TelegramChannel {
                     if channel.hasPermission(.deleteAllMessages) {
                         canSetupAutoremoveTimeout = true
                     }
@@ -3807,17 +3807,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             31 * 24 * 60 * 60
                         ]
                         
-                        if let _ = currentAutoremoveTimeout {
-                            //TODO:localize
-                            subItems.append(.action(ContextMenuActionItem(text: "Disable", icon: { _ in
-                                return nil
-                            }, action: { _, f in
-                                f(.default)
-                                
-                                self?.setAutoremove(timeInterval: nil)
-                            })))
-                        }
-                        
                         for value in presetValues {
                             subItems.append(.action(ContextMenuActionItem(text: timeIntervalString(strings: strings, value: value), icon: { _ in
                                 return nil
@@ -3836,6 +3825,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             self?.openAutoremove(currentValue: currentAutoremoveTimeout)
                         })))
+                        
+                        if let _ = currentAutoremoveTimeout {
+                            //TODO:localize
+                            subItems.append(.action(ContextMenuActionItem(text: "Disable", textColor: .destructive, icon: { _ in
+                                return nil
+                            }, action: { _, f in
+                                f(.default)
+                                
+                                self?.setAutoremove(timeInterval: nil)
+                            })))
+                        }
                         
                         subItems.append(.separator)
                         
@@ -4339,8 +4339,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })))
         subItems.append(.separator)
         
-        //TODO:localize
-        
         guard let anyType = clearPeerHistory.canClearForEveryone ?? clearPeerHistory.canClearForMyself else {
             return
         }
@@ -4348,8 +4346,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let title: String
         switch anyType {
         case .user, .secretChat, .savedMessages:
+            //TODO:localize
             title = "Are you sure you want to delete all messages with \(EnginePeer(chatPeer).compactDisplayTitle)?"
         case .group, .channel:
+            //TODO:localize
             title = "Are you sure you want to delete all messages in \(EnginePeer(chatPeer).compactDisplayTitle)?"
         }
         
@@ -4361,27 +4361,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             guard let strongSelf = self else {
                 return
             }
-            let statusText: String
-            if case .forEveryone = type {
-                statusText = strongSelf.presentationData.strings.Undo_ChatClearedForBothSides
-            } else {
-                statusText = strongSelf.presentationData.strings.Undo_ChatCleared
-            }
             
-            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { value in
-                if value == .commit {
-                    guard let strongSelf = self else {
-                        return false
-                    }
-                    
-                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peer.id, type: type).start(completed: {
-                    })
-                    return true
-                } else if value == .undo {
-                    return true
-                }
-                return false
-            }), in: .current)
+            strongSelf.openChatWithClearedHistory(type: type)
         }
         
         if let canClearForEveryone = clearPeerHistory.canClearForEveryone {
@@ -4773,6 +4754,28 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
             }))
         }
+    }
+    
+    private func openChatWithClearedHistory(type: InteractiveHistoryClearingType) {
+        guard let navigationController = self.controller?.navigationController as? NavigationController else {
+            return
+        }
+        
+        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(id: self.peerId), keepStack: self.nearbyPeerDistance != nil ? .always : .default, peerNearbyData: self.nearbyPeerDistance.flatMap({ ChatPeerNearbyData(distance: $0) }), setupController: { controller in
+            (controller as? ChatControllerImpl)?.beginClearHistory(type: type)
+        }, completion: { [weak self] _ in
+            if let strongSelf = self, strongSelf.nearbyPeerDistance != nil {
+                var viewControllers = navigationController.viewControllers
+                viewControllers = viewControllers.filter { controller in
+                    if controller is PeerInfoScreen {
+                        return false
+                    }
+                    return true
+                }
+                
+                navigationController.setViewControllers(viewControllers, animated: false)
+            }
+        }))
     }
     
     private func openAddContact() {

@@ -64,6 +64,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 if let attachBotStart = params.attachBotStart {
                     controller.presentAttachmentBot(botId: attachBotStart.botId, payload: attachBotStart.payload)
                 }
+                params.setupController(controller)
                 found = true
                 break
             }

@@ -183,7 +183,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .uploadSound(text):
             let icon = PresentationResourcesItemList.uploadToneIcon(presentationData.theme)
-            return ItemListCheckboxItem(presentationData: presentationData, icon: icon, iconSize: nil, iconPlacement: .check, title: text, style: .left, checked: false, zeroSeparatorInsets: false, sectionId: self.section, action: {
+            return ItemListCheckboxItem(presentationData: presentationData, icon: icon, iconSize: nil, iconPlacement: .check, title: text, style: .left, textColor: .accent, checked: false, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.upload()
             })
         case let .cloudInfo(text):
@@ -476,6 +476,20 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     controller.present(legacyICloudFilePicker(theme: presentationData.theme, documentTypes: ["public.mp3"], completion: { urls in
         guard !urls.isEmpty, let url = urls.first else {
+            return
+        }
+        
+        do {
+            let resources = try url.resourceValues(forKeys:[.fileSizeKey])
+            if let size = resources.fileSize {
+                if Int32(size) > settings.maxSize {
+                    //TODO:localize
+                    presentUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
+                    return
+                }
+            }
+        } catch {
+            print("Error: \(error)")
             return
         }
         

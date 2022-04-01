@@ -681,6 +681,67 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        for media in message.media {
+            if let file = media as? TelegramMediaFile, let size = file.size, let duration = file.duration, (["audio/mpeg", "audio/mp3", "audio/mpeg3"] as [String]).contains(file.mimeType.lowercased()) {
+                actions.append(.action(ContextMenuActionItem(text: "Save for Notifications", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    f(.default)
+                    
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
+                    let settings = NotificationSoundSettings.extract(from: context.currentAppConfiguration.with({ $0 }))
+                    if size > settings.maxSize {
+                        //TODO:localize
+                        controllerInteraction.displayUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
+                    } else if Double(duration) > Double(settings.maxDuration) {
+                        //TODO:localize
+                        controllerInteraction.displayUndo(.info(title: "Audio is too long", text: "The duration is longer than \(stringForDuration(Int32(settings.maxDuration)))."))
+                    } else {
+                        let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
+                        |> deliverOnMainQueue).start(completed: {
+                            //TODO:localize
+                            controllerInteraction.displayUndo(.notificationSoundAdded(title: "Sound added", text: "You can now use this sound as a notification tone in your [custom notification settings]().", action: {
+                                controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
+                            }))
+                        })
+                    }
+                })))
+                            
+                            /*
+                            
+                            let _ = (context.account.postbox.mediaBox.resourceData(file.resource, option: .incremental(waitUntilFetchStatus: false))
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { data in
+                                    if data.complete {
+                                        let documentsDirectoryPath = NSSearchPathForDirectoriesInDomains(.libraryDirectory, .userDomainMask, true)[0]
+                                        let soundsDirectoryPath = documentsDirectoryPath + "/Sounds"
+                                        
+                                        let _ = try? FileManager.default.createDirectory(atPath: soundsDirectoryPath, withIntermediateDirectories: true, attributes: nil)
+                                        
+                                        let containerSoundsPath = context.sharedContext.applicationBindings.containerPath + "/Library/Sounds"
+                                        
+                                        let _ = try? FileManager.default.createDirectory(atPath: containerSoundsPath, withIntermediateDirectories: true, attributes: nil)
+                                        
+                                        let soundFileName = "\(UInt32.random(in: 0 ..< UInt32.max)).mp3"
+                                        let soundPath = soundsDirectoryPath + "/\(soundFileName)"
+                                        
+                                        let _ = try? FileManager.default.copyItem(atPath: data.path, toPath: soundPath)
+                                        let _ = try? FileManager.default.copyItem(atPath: data.path, toPath: "\(containerSoundsPath)/\(soundFileName)")
+                                        
+                                        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
+                                            var settings = settings
+                                            
+                                            settings.customSound = soundFileName
+                                            
+                                            return settings
+                                        }).start()
+                                    }
+                                })*/
+            }
+            actions.append(.separator)
+        }
+        
         var isReplyThreadHead = false
         if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
             isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
@@ -867,66 +928,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         f(.default)
                     })))
                 }
-            }
-        }
-        
-        for media in message.media {
-            if let file = media as? TelegramMediaFile, let size = file.size, let duration = file.duration, (["audio/mpeg", "audio/mp3", "audio/mpeg3"] as [String]).contains(file.mimeType.lowercased()) {
-                actions.append(.action(ContextMenuActionItem(text: "Save for Notifications", icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    f(.default)
-                    
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    
-                    let settings = NotificationSoundSettings.extract(from: context.currentAppConfiguration.with({ $0 }))
-                    if size > settings.maxSize {
-                        //TODO:localize
-                        controllerInteraction.displayUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
-                    } else if Double(duration) > Double(settings.maxDuration) {
-                        //TODO:localize
-                        controllerInteraction.displayUndo(.info(title: "Audio is too long", text: "The duration is longer than \(stringForDuration(Int32(settings.maxDuration)))."))
-                    } else {
-                        let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
-                        |> deliverOnMainQueue).start(completed: {
-                            //TODO:localize
-                            controllerInteraction.displayUndo(.notificationSoundAdded(title: "Sound added", text: "You can now use this sound as a notification tone in your [custom notification settings]().", action: {
-                                controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
-                            }))
-                        })
-                    }
-                })))
-                            
-                            /*
-                            
-                            let _ = (context.account.postbox.mediaBox.resourceData(file.resource, option: .incremental(waitUntilFetchStatus: false))
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { data in
-                                    if data.complete {
-                                        let documentsDirectoryPath = NSSearchPathForDirectoriesInDomains(.libraryDirectory, .userDomainMask, true)[0]
-                                        let soundsDirectoryPath = documentsDirectoryPath + "/Sounds"
-                                        
-                                        let _ = try? FileManager.default.createDirectory(atPath: soundsDirectoryPath, withIntermediateDirectories: true, attributes: nil)
-                                        
-                                        let containerSoundsPath = context.sharedContext.applicationBindings.containerPath + "/Library/Sounds"
-                                        
-                                        let _ = try? FileManager.default.createDirectory(atPath: containerSoundsPath, withIntermediateDirectories: true, attributes: nil)
-                                        
-                                        let soundFileName = "\(UInt32.random(in: 0 ..< UInt32.max)).mp3"
-                                        let soundPath = soundsDirectoryPath + "/\(soundFileName)"
-                                        
-                                        let _ = try? FileManager.default.copyItem(atPath: data.path, toPath: soundPath)
-                                        let _ = try? FileManager.default.copyItem(atPath: data.path, toPath: "\(containerSoundsPath)/\(soundFileName)")
-                                        
-                                        let _ = updateInAppNotificationSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-                                            var settings = settings
-                                            
-                                            settings.customSound = soundFileName
-                                            
-                                            return settings
-                                        }).start()
-                                    }
-                                })*/
             }
         }
         
