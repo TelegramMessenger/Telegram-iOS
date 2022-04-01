@@ -336,13 +336,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
         }
         
-        private var animationProgress: CGFloat = 0.0
-        private var floatSnapshotView: UIView?
-        
-        
-        
-        
+        private var validLayout: (ContainerViewLayout, CGFloat)?
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+            let previous = self.validLayout?.0
+            self.validLayout = (layout, navigationBarHeight)
+                        
             if let webView = self.webView, let controller = self.controller {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
                 
@@ -365,6 +363,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 
                 let loadingProgressHeight: CGFloat = 2.0
                 transition.updateFrame(node: self.loadingProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: height - loadingProgressHeight), size: CGSize(width: layout.size.width, height: loadingProgressHeight)))
+            }
+            
+            if let previous = previous, (previous.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0 {
+                self.controller?.requestAttachmentMenuExpansion()
             }
         }
         

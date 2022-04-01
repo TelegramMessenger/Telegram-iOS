@@ -112,15 +112,27 @@ final class WebAppWebView: WKWebView {
         if panning {
             let fixedPositionViews = findFixedPositionViews(webView: self, classes: self.fixedPositionClasses)
             if fixedPositionViews.count != self.currentFixedViews.count {
-                reset()
+                var existing: [String: (UIView, UIView)] = [:]
+                for (className, originalView, snapshotView) in self.currentFixedViews {
+                    existing[className] = (originalView, snapshotView)
+                }
                 
                 var updatedFixedViews: [(String, UIView, UIView)] = []
                 for (className, view) in fixedPositionViews {
-                    if let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                    if let (_, existingSnapshotView) = existing[className] {
+                        updatedFixedViews.append((className, view, existingSnapshotView))
+                        existing[className] = nil
+                    } else if let snapshotView = view.snapshotView(afterScreenUpdates: false) {
                         updatedFixedViews.append((className, view, snapshotView))
                         self.addSubview(snapshotView)
                     }
                 }
+                
+                for (_, originalAndSnapshotView) in existing {
+                    originalAndSnapshotView.0.isHidden = false
+                    originalAndSnapshotView.1.removeFromSuperview()
+                }
+                
                 self.currentFixedViews = updatedFixedViews
             }
             transition.updateFrame(view: self, frame: frame)
