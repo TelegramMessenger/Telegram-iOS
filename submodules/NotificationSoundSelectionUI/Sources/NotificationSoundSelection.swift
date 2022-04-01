@@ -479,7 +479,7 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
             return
         }
         
-        do {
+        /*do {
             let resources = try url.resourceValues(forKeys:[.fileSizeKey])
             if let size = resources.fileSize {
                 if Int32(size) > settings.maxSize {
@@ -491,47 +491,72 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
         } catch {
             print("Error: \(error)")
             return
+        }*/
+        
+        if !url.startAccessingSecurityScopedResource() {
+            Logger.shared.log("NotificationSoundSelection", "startAccessingSecurityScopedResource failed")
+            return
         }
         
         let coordinator = NSFileCoordinator(filePresenter: nil)
         var error: NSError?
         coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { url in
             Queue.mainQueue().async {
-                let asset = AVAsset(url: url)
-                
-                guard let data = try? Data(contentsOf: url) else {
-                    return
-                }
-                if data.count > settings.maxSize {
-                    //TODO:localize
-                    presentUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
-                    return
-                }
-                
-                asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
-                    if asset.statusOfValue(forKey: "duration", error: nil) != .loaded {
-                        return
-                    }
-                    guard let track = asset.tracks(withMediaType: .audio).first else {
-                        return
-                    }
-                    let duration = track.timeRange.duration.seconds
+                do {
+                    let asset = AVAsset(url: url)
                     
-                    Queue.mainQueue().async {
-                        if duration > Double(settings.maxDuration) {
-                            //TODO:localize
-                            presentUndo(.info(title: "\(url.lastPathComponent) is too long", text: "The duration is longer than \(stringForDuration(Int32(settings.maxDuration)))."))
-                        } else {
-                            disposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
-                            |> deliverOnMainQueue).start(next: { _ in
-                                //TODO:localize
-                                presentUndo(.notificationSoundAdded(title: "Sound Added", text: "The sound **\(url.deletingPathExtension().lastPathComponent)** was added to your Telegram tones.**", action: nil))
-                            }, error: { _ in
-                            }))
-                        }
+                    let data = try Data(contentsOf: url)
+                    
+                    if data.count > settings.maxSize {
+                        //TODO:localize
+                        presentUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
+                        
+                        url.stopAccessingSecurityScopedResource()
+                        
+                        return
                     }
-                })
+                    
+                    asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
+                        if asset.statusOfValue(forKey: "duration", error: nil) != .loaded {
+                            url.stopAccessingSecurityScopedResource()
+                            
+                            return
+                        }
+                        guard let track = asset.tracks(withMediaType: .audio).first else {
+                            url.stopAccessingSecurityScopedResource()
+                            
+                            return
+                        }
+                        let duration = track.timeRange.duration.seconds
+                        
+                        Queue.mainQueue().async {
+                            if duration > Double(settings.maxDuration) {
+                                url.stopAccessingSecurityScopedResource()
+                                
+                                //TODO:localize
+                                presentUndo(.info(title: "\(url.lastPathComponent) is too long", text: "The duration is longer than \(stringForDuration(Int32(settings.maxDuration)))."))
+                            } else {
+                                disposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
+                                |> deliverOnMainQueue).start(next: { _ in
+                                    //TODO:localize
+                                    presentUndo(.notificationSoundAdded(title: "Sound Added", text: "The sound **\(url.deletingPathExtension().lastPathComponent)** was added to your Telegram tones.**", action: nil))
+                                }, error: { _ in
+                                    url.stopAccessingSecurityScopedResource()
+                                }, completed: {
+                                    url.stopAccessingSecurityScopedResource()
+                                }))
+                            }
+                        }
+                    })
+                } catch let e {
+                    Logger.shared.log("NotificationSoundSelection", "Error: \(e)")
+                }
             }
         })
+        
+        if let error = error {
+            url.stopAccessingSecurityScopedResource()
+            Logger.shared.log("NotificationSoundSelection", "Error: \(error)")
+        }
     }), in: .window(.root))
 }
