@@ -2254,7 +2254,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var useComplexItemsTransitionAnimation = false
     public var immediateItemsTransitionAnimation = false
-    public var workaroundUseLegacyImplementation = false
+    let workaroundUseLegacyImplementation: Bool
 
     public enum HandledTouchEvent {
         case ignore
@@ -2267,13 +2267,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
     
-    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
+    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
         self.account = account
         self.presentationData = presentationData
         self.source = source
         self.items = items
         self.recognizer = recognizer
         self.gesture = gesture
+        self.workaroundUseLegacyImplementation = workaroundUseLegacyImplementation
         
         super.init(navigationBarPresentationData: nil)
               
