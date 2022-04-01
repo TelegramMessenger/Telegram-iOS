@@ -422,7 +422,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
                     case .sendTimer:
                         strongSelf.completion?(timerValues[pickerView.selectedRow(inComponent: 0)])
                     case .autoremove:
-                        let timeInterval = pickerView.selectedRow(inComponent: 0) * 24 * 60 * 60 + pickerView.selectedRow(inComponent: 1) * 60 * 60 + pickerView.selectedRow(inComponent: 2) * 60
+                        let timeInterval = strongSelf.autoremoveTimerValues[pickerView.selectedRow(inComponent: 0)]
                         strongSelf.completion?(Int32(timeInterval))
                     case .mute:
                         break
