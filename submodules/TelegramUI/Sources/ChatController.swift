@@ -3304,8 +3304,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
-            let botName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+            strongSelf.chatDisplayNode.dismissInput()
             
+            let botName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                 return $0.updatedTitlePanelContext {
                     if !$0.contains(where: {
