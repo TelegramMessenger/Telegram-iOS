@@ -601,7 +601,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_ReloadPage, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Share"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reload"), color: theme.contextMenu.primaryColor)
             }, action: { [weak self] _, f in
                 f(.default)
                 
@@ -634,6 +634,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         })
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+    }
+    
+    public func isContainerPanningUpdated(_ panning: Bool) {
+        self.controllerNode.isContainerPanningUpdated(panning)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
