@@ -28,6 +28,8 @@ public protocol AttachmentContainable: ViewController {
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
     
+    func isContainerPanningUpdated(_ panning: Bool)
+    
     func resetForReuse()
     func prepareForReuse()
     
@@ -35,6 +37,10 @@ public protocol AttachmentContainable: ViewController {
 }
 
 public extension AttachmentContainable {
+    func isContainerPanningUpdated(_ panning: Bool) {
+        
+    }
+    
     func resetForReuse() {
         
     }
@@ -206,6 +212,12 @@ public class AttachmentController: ViewController {
             self.container.interactivelyDismissed = { [weak self] in
                 if let strongSelf = self {
                     strongSelf.controller?.dismiss(animated: true)
+                }
+            }
+            
+            self.container.isPanningUpdated = { [weak self] value in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last, !value {
+                    currentController.isContainerPanningUpdated(value)
                 }
             }
             

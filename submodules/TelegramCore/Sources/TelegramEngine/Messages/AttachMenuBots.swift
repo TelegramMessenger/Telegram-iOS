@@ -3,7 +3,6 @@ import TelegramApi
 import Postbox
 import SwiftSignalKit
 
-
 public final class AttachMenuBots: Equatable, Codable {
     public final class Bot: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
@@ -188,11 +187,11 @@ private func setCachedAttachMenuBots(transaction: Transaction, attachMenuBots: A
     }
 }
 
-func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force: Bool = false) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         let signal: Signal<Void, NoError> = cachedAttachMenuBots(postbox: postbox)
         |> mapToSignal { current in
-            return (network.request(Api.functions.messages.getAttachMenuBots(hash: current?.hash ?? 0))
+            return (network.request(Api.functions.messages.getAttachMenuBots(hash: force ? 0 : (current?.hash ?? 0)))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.AttachMenuBots?, NoError> in
                 return .single(nil)

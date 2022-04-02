@@ -4,30 +4,46 @@ import ComponentFlow
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import HierarchyTrackingLayer
+import TelegramCore
 
 public final class AnimatedStickerComponent: Component {
     public struct Animation: Equatable {
-        public var name: String
-        public var loop: Bool
-        public var isAnimating: Bool
+        public enum Source: Equatable {
+            case bundle(name: String)
+            case file(media: TelegramMediaFile)
+        }
         
-        public init(name: String, loop: Bool, isAnimating: Bool = true) {
-            self.name = name
+        public var source: Source
+        public var loop: Bool
+        public var tintColor: UIColor?
+        
+        public init(source: Source, loop: Bool, tintColor: UIColor? = nil) {
+            self.source = source
             self.loop = loop
-            self.isAnimating = isAnimating
+            self.tintColor = tintColor
         }
     }
     
+    public let account: Account
     public let animation: Animation
+    public let isAnimating: Bool
     public let size: CGSize
     
-    public init(animation: Animation, size: CGSize) {
+    public init(account: Account, animation: Animation, isAnimating: Bool = true, size: CGSize) {
+        self.account = account
         self.animation = animation
+        self.isAnimating = isAnimating
         self.size = size
     }
 
     public static func ==(lhs: AnimatedStickerComponent, rhs: AnimatedStickerComponent) -> Bool {
+        if lhs.account !== rhs.account {
+            return false
+        }
         if lhs.animation != rhs.animation {
+            return false
+        }
+        if lhs.isAnimating != rhs.isAnimating {
             return false
         }
         if lhs.size != rhs.size {
@@ -72,20 +88,40 @@ public final class AnimatedStickerComponent: Component {
         
         func update(component: AnimatedStickerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             if self.component?.animation != component.animation {
-                self.component = component
-                
                 self.animationNode?.view.removeFromSuperview()
                 
                 let animationNode = AnimatedStickerNode()
-                animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: component.animation.name), width: Int(component.size.width * 2.0), height: Int(component.size.height * 2.0), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                let source: AnimatedStickerNodeSource
+                switch component.animation.source {
+                    case let .bundle(name):
+                        source = AnimatedStickerNodeLocalFileSource(name: name)
+                    case let .file(media):
+                        source = AnimatedStickerResourceSource(account: component.account, resource: media.resource, fitzModifier: nil, isVideo: false)
+                }
+                animationNode.setOverlayColor(component.animation.tintColor, replace: true, animated: false)
+                
+                var playbackMode: AnimatedStickerPlaybackMode = .still(.start)
+                if component.animation.loop {
+                    playbackMode = .loop
+                } else if component.isAnimating {
+                    playbackMode = .once
+                }
+                animationNode.setup(source: source, width: Int(component.size.width * 2.0), height: Int(component.size.height * 2.0), playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
                 animationNode.visibility = self.isInHierarchy
                 
                 self.animationNode = animationNode
                 self.addSubnode(animationNode)
             }
             
-            let animationSize = component.size
+            if !component.animation.loop && component.isAnimating != self.component?.isAnimating {
+                if component.isAnimating {
+                    let _ = self.animationNode?.playIfNeeded()
+                }
+            }
             
+            self.component = component
+                
+            let animationSize = component.size
             let size = CGSize(width: min(animationSize.width, availableSize.width), height: min(animationSize.height, availableSize.height))
             
             if let animationNode = self.animationNode {

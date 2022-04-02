@@ -209,10 +209,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let placeholderNode = ShimmerEffectNode()
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
-            
-            if controller.buttonText == nil {
-                self.addSubnode(self.loadingProgressNode)
-            }
+            self.addSubnode(self.loadingProgressNode)
             
             if let iconFile = controller.iconFile {
                 let _ = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
@@ -337,6 +334,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
         }
         
+        
         private var validLayout: (ContainerViewLayout, CGFloat)?
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let previous = self.validLayout?.0
@@ -344,7 +342,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         
             if let webView = self.webView, let controller = self.controller {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
-                
                 webView.updateFrame(frame: frame, panning: controller.isContainerPanning(), transition: transition)
             }
             
@@ -368,6 +365,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             if let previous = previous, (previous.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0 {
                 self.controller?.requestAttachmentMenuExpansion()
+            }
+        }
+        
+        func isContainerPanningUpdated(_ panning: Bool) {
+            guard let (layout, navigationBarHeight) = self.validLayout else {
+                return
+            }
+            
+            if let webView = self.webView {
+                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
+                webView.updateFrame(frame: frame, panning: panning, transition: .immediate)
             }
         }
         

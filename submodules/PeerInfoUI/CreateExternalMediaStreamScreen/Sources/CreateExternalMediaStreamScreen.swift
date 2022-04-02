@@ -203,8 +203,9 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             
             let animation = animation.update(
                 component: AnimatedStickerComponent(
+                    account: state.context.account,
                     animation: AnimatedStickerComponent.Animation(
-                        name: "CreateStream",
+                        source: .bundle(name: "CreateStream"),
                         loop: true
                     ),
                     size: CGSize(width: 138.0, height: 138.0)
