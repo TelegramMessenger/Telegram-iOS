@@ -266,6 +266,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             }
                         }, completed: { [weak self] in
                             if let strongSelf = self {
+                                strongSelf.controller?.completion()
                                 strongSelf.controller?.dismiss()
                             }
                         })
@@ -483,6 +484,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private var presentationDataDisposable: Disposable?
     
     public var getNavigationController: () -> NavigationController? = { return nil }
+    
+    public var completion: () -> Void = {}
         
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, replyToMessageId: MessageId?, iconFile: TelegramMediaFile?) {
         self.context = context
@@ -653,10 +656,12 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, completion: @escaping () -> Void = {}) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: peerId), buttons: [.standalone], initialButton: .standalone)
-    controller.requestController = { _, completion in
-        completion(WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil, iconFile: nil), nil)
+    controller.requestController = { _, present in
+        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil, iconFile: nil)
+        webAppController.completion = completion
+        present(webAppController, nil)
     }
     return controller
 }

@@ -15,8 +15,9 @@ import ChatTextLinkEditUI
 import PhotoResources
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
+private let smallButtonWidth: CGFloat = 69.0
 private let iconSize = CGSize(width: 30.0, height: 30.0)
-private let sideInset: CGFloat = 0.0
+private let sideInset: CGFloat = 3.0
 
 private final class IconComponent: Component {
     public let account: Account
@@ -546,19 +547,20 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let visibleRect = self.scrollNode.bounds.insetBy(dx: -180.0, dy: 0.0)
         var validButtons = Set<Int>()
         
-        let distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
+        var distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
         let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
-        let leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
-                
-//        var sideInset = sideInset
-//        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
-//        if buttonsWidth < layout.size.width {
-//            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
-//        }
-//
+        var leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
+        
+        var buttonWidth = buttonSize.width
+        if self.buttons.count > 6 {
+            buttonWidth = smallButtonWidth
+            distanceBetweenNodes = buttonWidth
+            leftNodeOriginX = sideInset + buttonWidth / 2.0
+        }
+        
         for i in 0 ..< self.buttons.count {
-            let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonSize.width / 2.0)
-            let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: buttonSize)
+            let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonWidth / 2.0)
+            let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: CGSize(width: buttonWidth, height: buttonSize.height))
             if !visibleRect.intersects(buttonFrame) {
                 continue
             }
@@ -589,12 +591,16 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                             if strongSelf.selectionChanged(type) {
                                 strongSelf.selectedIndex = i
                                 strongSelf.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+                                
+                                if strongSelf.buttons.count > 6, let button = strongSelf.buttonViews[i] {
+                                    strongSelf.scrollNode.view.scrollRectToVisible(button.frame.insetBy(dx: -35.0, dy: 0.0), animated: true)
+                                }
                             }
                         }
                     })
                 ),
                 environment: {},
-                containerSize: buttonSize
+                containerSize: CGSize(width: buttonWidth, height: buttonSize.height)
             )
             buttonTransition.setFrame(view: buttonView, frame: buttonFrame)
         }
@@ -608,14 +614,12 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
         
-//        var sideInset = sideInset
-//        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
-//        if buttonsWidth < layout.size.width {
-//            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
-//        }
-
-        let contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
-//        CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
+        var contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
+        var buttonWidth = buttonSize.width
+        if self.buttons.count > 6 {
+            buttonWidth = smallButtonWidth
+            contentSize = CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonWidth, height: buttonSize.height)
+        }
         self.scrollLayout = (layout.size.width, contentSize)
 
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))

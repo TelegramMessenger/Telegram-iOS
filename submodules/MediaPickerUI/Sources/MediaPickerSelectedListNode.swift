@@ -506,6 +506,10 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
                         backgroundNode.layer.removeAllAnimations()
                     }
                     
+                    for (_, itemNode) in strongSelf.itemNodes {
+                        itemNode.layer.removeAllAnimations()
+                    }
+                    
                     strongSelf.messageNodes?.first?.layer.removeAllAnimations()
                     strongSelf.messageNodes?.last?.layer.removeAllAnimations()
                     
@@ -523,6 +527,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         for (identifier, itemNode) in self.itemNodes {
             if let (transitionView, completion) = self.getTransitionView(identifier) {
                 itemNode.animateTo(transitionView, completion: completion)
+            } else {
+                itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             }
         }
         
