@@ -9791,6 +9791,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    func beginClearHistory(type: InteractiveHistoryClearingType) {
+        guard case let .peer(peerId) = self.chatLocation else {
+            return
+        }
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+        self.chatDisplayNode.historyNode.historyAppearsCleared = true
+        
+        let statusText: String
+        if case .scheduledMessages = self.presentationInterfaceState.subject {
+            statusText = self.presentationData.strings.Undo_ScheduledMessagesCleared
+        } else if case .forEveryone = type {
+            if peerId.namespace == Namespaces.Peer.CloudUser {
+                statusText = self.presentationData.strings.Undo_ChatClearedForBothSides
+            } else {
+                statusText = self.presentationData.strings.Undo_ChatClearedForEveryone
+            }
+        } else {
+            statusText = self.presentationData.strings.Undo_ChatCleared
+        }
+        
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { [weak self] value in
+            guard let strongSelf = self else {
+                return false
+            }
+            if value == .commit {
+                let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
+                    self?.chatDisplayNode.historyNode.historyAppearsCleared = false
+                })
+                return true
+            } else if value == .undo {
+                strongSelf.chatDisplayNode.historyNode.historyAppearsCleared = false
+                return true
+            }
+            return false
+        }), in: .current)
+    }
+    
     private func navigationButtonAction(_ action: ChatNavigationButtonAction) {
         switch action {
         case .spacer:
@@ -9799,36 +9836,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
         case .clearHistory:
             if case let .peer(peerId) = self.chatLocation {
-                let context = self.context
-                
                 let beginClear: (InteractiveHistoryClearingType) -> Void = { [weak self] type in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    strongSelf.chatDisplayNode.historyNode.historyAppearsCleared = true
-                    
-                    let statusText: String
-                    if case .scheduledMessages = strongSelf.presentationInterfaceState.subject {
-                        statusText = strongSelf.presentationData.strings.Undo_ScheduledMessagesCleared
-                    } else if case .forEveryone = type {
-                        statusText = strongSelf.presentationData.strings.Undo_ChatClearedForBothSides
-                    } else {
-                        statusText = strongSelf.presentationData.strings.Undo_ChatCleared
-                    }
-                    
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, action: { value in
-                        if value == .commit {
-                            let _ = context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
-                                self?.chatDisplayNode.historyNode.historyAppearsCleared = false
-                            })
-                            return true
-                        } else if value == .undo {
-                            self?.chatDisplayNode.historyNode.historyAppearsCleared = false
-                            return true
-                        }
-                        return false
-                    }), in: .current)
+                    self?.beginClearHistory(type: type)
                 }
                 
                 let _ = (self.context.account.postbox.transaction { transaction -> Bool in

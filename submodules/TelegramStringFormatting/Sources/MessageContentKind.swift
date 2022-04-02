@@ -179,7 +179,11 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
     case let .dice(dice):
         return .dice(dice.emoji)
     case let .invoice(invoice):
-        return .invoice(invoice.title)
+        if !invoice.description.isEmpty {
+            return .invoice(invoice.description)
+        } else {
+            return .invoice(invoice.title)
+        }
     default:
         return nil
     }

@@ -4060,6 +4060,7 @@ Unused sets are archived when you add more.";
 "Undo.ChatDeleted" = "Chat deleted";
 "Undo.ChatCleared" = "Chat cleared";
 "Undo.ChatClearedForBothSides" = "Chat cleared for both sides";
+"Undo.ChatClearedForEveryone" = "Chat cleared for everyone";
 "Undo.SecretChatDeleted" = "Secret Chat deleted";
 "Undo.LeftChannel" = "Left channel";
 "Undo.LeftGroup" = "Left group";

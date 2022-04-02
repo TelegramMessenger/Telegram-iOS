@@ -124,7 +124,7 @@ func _internal_cachedNotificationSoundListCacheKey() -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.notificationSoundList, key: key)
 }
 
-func _internal_cachedNotificationSoundList(transaction: Transaction) -> NotificationSoundList? {
+public func _internal_cachedNotificationSoundList(transaction: Transaction) -> NotificationSoundList? {
     let cached = transaction.retrieveItemCacheEntry(id: _internal_cachedNotificationSoundListCacheKey())?.get(NotificationSoundList.self)
     if let cached = cached {
         return cached

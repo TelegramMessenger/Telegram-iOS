@@ -279,6 +279,8 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     private var initialTime: Int32?
     private var pickerView: TimerPickerView?
     
+    private let autoremoveTimerValues: [Int32]
+    
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var completion: ((Int32) -> Void)?
@@ -370,6 +372,25 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
             break
         }
         
+        self.autoremoveTimerValues = [
+            1 * 24 * 60 * 60 as Int32,
+            2 * 24 * 60 * 60 as Int32,
+            3 * 24 * 60 * 60 as Int32,
+            4 * 24 * 60 * 60 as Int32,
+            5 * 24 * 60 * 60 as Int32,
+            6 * 24 * 60 * 60 as Int32,
+            1 * 7 * 24 * 60 * 60 as Int32,
+            2 * 7 * 24 * 60 * 60 as Int32,
+            3 * 7 * 24 * 60 * 60 as Int32,
+            1 * 31 * 24 * 60 * 60 as Int32,
+            2 * 30 * 24 * 60 * 60 as Int32,
+            3 * 31 * 24 * 60 * 60 as Int32,
+            4 * 30 * 24 * 60 * 60 as Int32,
+            5 * 31 * 24 * 60 * 60 as Int32,
+            6 * 30 * 24 * 60 * 60 as Int32,
+            365 * 24 * 60 * 60 as Int32
+        ]
+        
         super.init()
         
         self.backgroundColor = nil
@@ -401,7 +422,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
                     case .sendTimer:
                         strongSelf.completion?(timerValues[pickerView.selectedRow(inComponent: 0)])
                     case .autoremove:
-                        let timeInterval = pickerView.selectedRow(inComponent: 0) * 24 * 60 * 60 + pickerView.selectedRow(inComponent: 1) * 60 * 60 + pickerView.selectedRow(inComponent: 2) * 60
+                        let timeInterval = strongSelf.autoremoveTimerValues[pickerView.selectedRow(inComponent: 0)]
                         strongSelf.completion?(Int32(timeInterval))
                     case .mute:
                         break
@@ -452,13 +473,14 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
             self.pickerView = pickerView
             
             if let value = self.initialTime {
-                let days = value / (24 * 60 * 60)
-                let hours = (value % (24 * 60 * 60)) / (60 * 60)
-                let minutes = (value % (60 * 60)) / 60
+                var selectedRowIndex = 0
+                for i in 0 ..< self.autoremoveTimerValues.count {
+                    if self.autoremoveTimerValues[i] <= value {
+                        selectedRowIndex = i
+                    }
+                }
                 
-                pickerView.selectRow(Int(days), inComponent: 0, animated: false)
-                pickerView.selectRow(Int(hours), inComponent: 1, animated: false)
-                pickerView.selectRow(Int(minutes), inComponent: 2, animated: false)
+                pickerView.selectRow(selectedRowIndex, inComponent: 0, animated: false)
             }
         case .mute:
             let pickerView = TimerDatePickerView()
@@ -487,7 +509,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         case .sendTimer:
             return 1
         case .autoremove:
-            return 3
+            return 1
         case .mute:
             return 0
         }
@@ -498,16 +520,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         case .sendTimer:
             return timerValues.count
         case .autoremove:
-            switch component {
-            case 0:
-                return 365
-            case 1:
-                return 24
-            case 2:
-                return 60
-            default:
-                return 0
-            }
+            return self.autoremoveTimerValues.count
         case .mute:
             return 0
         }
@@ -536,19 +549,12 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
                 itemView.textColor = self.presentationData.theme.list.itemPrimaryTextColor
             }
             
-            let string: String
-            switch component {
-            case 0:
-                string = dayIntervalString(strings: self.presentationData.strings, days: Int32(row))
-            case 1:
-                string = hoursIntervalString(strings: self.presentationData.strings, hours: Int32(row))
-            case 2:
-                string = minutesIntervalString(strings: self.presentationData.strings, minutes: Int32(row))
-            default:
-                preconditionFailure()
-            }
+            let value = self.autoremoveTimerValues[row]
             
-            itemView.value = (Int32(row), string)
+            let string: String
+            string = timeIntervalString(strings: self.presentationData.strings, value: value)
+            
+            itemView.value = (value, string)
             
             return itemView
         case .mute:
