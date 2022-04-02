@@ -23,6 +23,7 @@ swift_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/UrlHandling:UrlHandling",
     ],
     visibility = [
         "//visibility:public",

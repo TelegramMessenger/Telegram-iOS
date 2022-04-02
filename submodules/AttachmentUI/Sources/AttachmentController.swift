@@ -17,7 +17,7 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(PeerId, String, TelegramMediaFile)
+    case app(PeerId, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
     case standalone
 }
 

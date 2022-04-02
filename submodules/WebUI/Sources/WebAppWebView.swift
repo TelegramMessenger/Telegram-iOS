@@ -4,145 +4,106 @@ import Display
 import WebKit
 import SwiftSignalKit
 
-private let findFixedPositionClasses = """
-function findFixedPositionClasses() {
-    var elems = document.body.getElementsByTagName("*");
-    var len = elems.length
-
-    var result = []
-    var j = 0;
-    for (var i = 0; i < len; i++) {
-        if ((window.getComputedStyle(elems[i],null).getPropertyValue('position') == 'fixed') && (window.getComputedStyle(elems[i],null).getPropertyValue('bottom') == '0px')) {
-            result[j] = elems[i].className;
-            j++;
-        }
-    }
-    return result;
-}
-findFixedPositionClasses();
-"""
-
-private func findFixedPositionViews(webView: WKWebView, classes: [String]) -> [(String, UIView)] {
-    if let contentView = webView.scrollView.subviews.first {
-        func recursiveSearch(_ view: UIView) -> [(String, UIView)] {
-            var result: [(String, UIView)] = []
-            
-            let description = view.description
-            if description.contains("class='") {
-                for className in classes {
-                    if description.contains(className) {
-                        result.append((className, view))
-                        break
-                    }
-                }
-            }
-            
-            for subview in view.subviews {
-                result.append(contentsOf: recursiveSearch(subview))
-            }
-            
-            return result
-        }
+private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    private let f: (WKScriptMessage) -> ()
+    
+    init(_ f: @escaping (WKScriptMessage) -> ()) {
+        self.f = f
         
-        return recursiveSearch(contentView)
-    } else {
-        return []
+        super.init()
+    }
+    
+    func userContentController(_ controller: WKUserContentController, didReceive scriptMessage: WKScriptMessage) {
+        self.f(scriptMessage)
     }
 }
 
 final class WebAppWebView: WKWebView {
-    private var fixedPositionClasses: [String] = []
-    private var currentFixedViews: [(String, UIView, UIView)] = []
+    var handleScriptMessage: (WKScriptMessage) -> Void = { _ in }
     
-    private var timer: SwiftSignalKit.Timer?
+    init() {
+        let configuration = WKWebViewConfiguration()
+        let userController = WKUserContentController()
+        
+        let js = "var TelegramWebviewProxyProto = function() {}; " +
+            "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
+            "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +
+            "}; " +
+        "var TelegramWebviewProxy = new TelegramWebviewProxyProto();"
+                   
+        var handleScriptMessageImpl: ((WKScriptMessage) -> Void)?
+        let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        userController.addUserScript(userScript)
+        userController.add(WeakGameScriptMessageHandler { message in
+            handleScriptMessageImpl?(message)
+        }, name: "performAction")
+        
+        let selectionString = "var css = '*{-webkit-touch-callout:none;} :not(input):not(textarea){-webkit-user-select:none;}';"
+                + " var head = document.head || document.getElementsByTagName('head')[0];"
+                + " var style = document.createElement('style'); style.type = 'text/css';" +
+                " style.appendChild(document.createTextNode(css)); head.appendChild(style);"
+        let selectionScript: WKUserScript = WKUserScript(source: selectionString, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
+        userController.addUserScript(selectionScript)
+        
+        configuration.userContentController = userController
+        
+        configuration.allowsInlineMediaPlayback = true
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+        } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+            configuration.requiresUserActionForMediaPlayback = false
+        } else {
+            configuration.mediaPlaybackRequiresUserAction = false
+        }
+        
+        super.init(frame: CGRect(), configuration: configuration)
+        
+        self.isOpaque = false
+        self.backgroundColor = .clear
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+            self.allowsLinkPreview = false
+        }
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+            self.scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        self.interactiveTransitionGestureRecognizerTest = { point -> Bool in
+            return point.x > 30.0
+        }
+        self.allowsBackForwardNavigationGestures = false
+        
+        handleScriptMessageImpl = { [weak self] message in
+            if let strongSelf = self {
+                strongSelf.handleScriptMessage(message)
+            }
+        }
+    }
     
-    deinit {
-        self.timer?.invalidate()
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     override func didMoveToSuperview() {
         super.didMoveToSuperview()
         
-        if self.timer == nil {
-            let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
-                guard let strongSelf = self else {
+        if #available(iOS 11.0, *) {
+            let webScrollView = self.subviews.compactMap { $0 as? UIScrollView }.first
+            Queue.mainQueue().after(0.1, {
+                let contentView = webScrollView?.subviews.first(where: { $0.interactions.count > 1 })
+                guard let dragInteraction = (contentView?.interactions.compactMap { $0 as? UIDragInteraction }.first) else {
                     return
                 }
-                
-                strongSelf.evaluateJavaScript(findFixedPositionClasses, completionHandler: { [weak self] result, _ in
-                    if let result = result {
-                        Queue.mainQueue().async {
-                            self?.fixedPositionClasses = (result as? [String]) ?? []
-                        }
-                    }
-                })
-            }, queue: Queue.mainQueue())
-            timer.start()
-            self.timer = timer
+                contentView?.removeInteraction(dragInteraction)
+            })
         }
     }
     
-    
-    
-    func updateFrame(frame: CGRect, panning: Bool, transition: ContainedViewLayoutTransition) {
-        let reset = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            for (_, view, snapshotView) in strongSelf.currentFixedViews {
-                view.isHidden = false
-                snapshotView.removeFromSuperview()
-            }
-            strongSelf.currentFixedViews = []
-        }
+    func sendEvent(name: String, data: String) {
+        let script = "window.TelegramGameProxy.receiveEvent(\"\(name)\", \(data))"
+        self.evaluateJavaScript(script, completionHandler: { _, _ in
+        })
+    }
         
-        let update = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            for (_, view, snapshotView) in strongSelf.currentFixedViews {
-                view.isHidden = true
-                
-                var snapshotFrame = view.frame
-                snapshotFrame.origin.y = frame.height - snapshotFrame.height
-                transition.updateFrame(view: snapshotView, frame: snapshotFrame)
-            }
-        }
-        
-        if panning {
-            let fixedPositionViews = findFixedPositionViews(webView: self, classes: self.fixedPositionClasses)
-            if fixedPositionViews.count != self.currentFixedViews.count {
-                var existing: [String: (UIView, UIView)] = [:]
-                for (className, originalView, snapshotView) in self.currentFixedViews {
-                    existing[className] = (originalView, snapshotView)
-                }
-                
-                var updatedFixedViews: [(String, UIView, UIView)] = []
-                for (className, view) in fixedPositionViews {
-                    if let (_, existingSnapshotView) = existing[className] {
-                        updatedFixedViews.append((className, view, existingSnapshotView))
-                        existing[className] = nil
-                    } else if let snapshotView = view.snapshotView(afterScreenUpdates: false) {
-                        updatedFixedViews.append((className, view, snapshotView))
-                        self.addSubview(snapshotView)
-                    }
-                }
-                
-                for (_, originalAndSnapshotView) in existing {
-                    originalAndSnapshotView.0.isHidden = false
-                    originalAndSnapshotView.1.removeFromSuperview()
-                }
-                
-                self.currentFixedViews = updatedFixedViews
-            }
-            transition.updateFrame(view: self, frame: frame)
-            update()
-        } else {
-            update()
-            transition.updateFrame(view: self, frame: frame, completion: { _ in
-                reset()
-            })
-        }
-        
+    func updateFrame(frame: CGRect, transition: ContainedViewLayoutTransition) {
+        self.sendEvent(name: "viewport_changed", data: "{height:\(frame.height)}")
     }
 }

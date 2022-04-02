@@ -167,6 +167,7 @@ private final class AttachButtonComponent: CombinedComponent {
             let name: String
             let imageName: String
             var imageFile: TelegramMediaFile?
+            var animationFile: TelegramMediaFile?
             
             let component = context.component
             let strings = component.strings
@@ -187,17 +188,22 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
-            case let .app(_, appName, appIcon):
+            case let .app(_, appName, appIcons):
                 name = appName
                 imageName = ""
-                imageFile = appIcon
+                if let file = appIcons[.iOSAnimated] {
+                    animationFile = file
+                } else if let file = appIcons[.iOSStatic] {
+                    imageFile = file
+                } else if let file = appIcons[.default] {
+                    imageFile = file
+                }
             case .standalone:
                 name = ""
                 imageName = ""
                 imageFile = nil
             }
 
-            
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
             
             let iconSize = CGSize(width: 30.0, height: 30.0)
@@ -205,12 +211,12 @@ private final class AttachButtonComponent: CombinedComponent {
             let spacing: CGFloat = 15.0 + UIScreenPixel
             
             let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - iconSize.width) / 2.0), y: topInset), size: iconSize)
-            if let imageFile = imageFile, (imageFile.fileName ?? "").lowercased().hasSuffix(".tgs") {
+            if let animationFile = animationFile {
                 let icon = animatedIcon.update(
                     component: AnimatedStickerComponent(
                         account: component.context.account,
                         animation: AnimatedStickerComponent.Animation(
-                            source: .file(media: imageFile),
+                            source: .file(media: animationFile),
                             loop: false,
                             tintColor: tintColor
                         ),
@@ -610,9 +616,13 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let type = self.buttons[i]
-            if case let .app(_, _, iconFile) = type {
-                if self.iconDisposables[iconFile.fileId] == nil {
-                    self.iconDisposables[iconFile.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
+            if case let .app(_, _, iconFiles) = type {
+                for (name, file) in iconFiles {
+                    if [.default, .iOSAnimated].contains(name) {
+                        if self.iconDisposables[file.fileId] == nil {
+                            self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file)).start()
+                        }
+                    }
                 }
             }
             let _ = buttonView.update(

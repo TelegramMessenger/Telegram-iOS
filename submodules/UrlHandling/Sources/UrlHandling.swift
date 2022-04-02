@@ -606,6 +606,19 @@ public func isTelegramMeLink(_ url: String) -> Bool {
     return false
 }
 
+public func isTelegraPhLink(_ url: String) -> Bool {
+    let schemes = ["http://", "https://", ""]
+    for basePath in baseTelegramMePaths {
+        for scheme in schemes {
+            let basePrefix = scheme + basePath + "/"
+            if url.lowercased().hasPrefix(basePrefix) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
 public func parseProxyUrl(_ url: String) -> (host: String, port: Int32, username: String?, password: String?, secret: Data?)? {
     let schemes = ["http://", "https://", ""]
     for basePath in baseTelegramMePaths {
