@@ -479,20 +479,6 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
             return
         }
         
-        /*do {
-            let resources = try url.resourceValues(forKeys:[.fileSizeKey])
-            if let size = resources.fileSize {
-                if Int32(size) > settings.maxSize {
-                    //TODO:localize
-                    presentUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
-                    return
-                }
-            }
-        } catch {
-            print("Error: \(error)")
-            return
-        }*/
-        
         if !url.startAccessingSecurityScopedResource() {
             Logger.shared.log("NotificationSoundSelection", "startAccessingSecurityScopedResource failed")
             return
