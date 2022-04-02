@@ -146,6 +146,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as SendAsMessageAttribute:
                 return true
+            case _ as ReplyMessageAttribute:
+                return true
             default:
                 return false
         }

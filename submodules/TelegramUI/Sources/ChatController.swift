@@ -1658,9 +1658,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         }
                                     }
                                     
-                                    if let botPeer = botPeer, botPeer.flags.contains(.isVerified) {
-                                        openBot()
-                                    } else if let botPeer = botPeer {
+                                    if let botPeer = botPeer {
                                         let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: botPeer.id)
                                         |> deliverOnMainQueue).start(next: { value in
                                             guard let strongSelf = self else {
@@ -3383,7 +3381,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal)
+                        let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, completion: { [weak self] in
+                            self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                        })
                         strongSelf.present(controller, in: .window(.root))
     //                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, replyToMessageId: nil, iconFile: nil)
     //                    controller.getNavigationController = { [weak self] in
@@ -3400,27 +3400,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if peer.flags.contains(.isVerified) {
-                openWebView()
-            } else {
-                let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
-                |> deliverOnMainQueue).start(next: { value in
-                    guard let strongSelf = self else {
-                        return
-                    }
+            let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id)
+            |> deliverOnMainQueue).start(next: { value in
+                guard let strongSelf = self else {
+                    return
+                }
 
-                    if value {
-                        openWebView()
-                    } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertTitle, text: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertText(botName).string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                            if let strongSelf = self {
-                                let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
-                                openWebView()
-                            }
-                        })], parseMarkdown: true), in: .window(.root), with: nil)
-                    }
-                })
-            }
+                if value {
+                    openWebView()
+                } else {
+                    strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertTitle, text: strongSelf.presentationData.strings.WebApp_OpenWebViewAlertText(botName).string, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        if let strongSelf = self {
+                            let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peer.id).start()
+                            openWebView()
+                        }
+                    })], parseMarkdown: true), in: .window(.root), with: nil)
+                }
+            })
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -10903,6 +10899,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, replyToMessageId: replyMessageId, iconFile: botIcon)
                     controller.getNavigationController = { [weak self] in
                         return self?.effectiveNavigationController
+                    }
+                    controller.completion = { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                            })
+                            strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                        }
                     }
                     completion(controller, nil)
                     strongSelf.controllerNavigationDisposable.set(nil)
