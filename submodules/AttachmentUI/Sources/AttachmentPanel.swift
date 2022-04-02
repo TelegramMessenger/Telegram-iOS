@@ -13,6 +13,7 @@ import ChatPresentationInterfaceState
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
 import PhotoResources
+import AnimatedStickerComponent
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -23,12 +24,14 @@ private final class IconComponent: Component {
     public let account: Account
     public let name: String
     public let file: TelegramMediaFile?
+    public let animationName: String?
     public let tintColor: UIColor?
     
-    public init(account: Account, name: String, file: TelegramMediaFile?, tintColor: UIColor?) {
+    public init(account: Account, name: String, file: TelegramMediaFile?, animationName: String?, tintColor: UIColor?) {
         self.account = account
         self.name = name
         self.file = file
+        self.animationName = animationName
         self.tintColor = tintColor
     }
     
@@ -40,6 +43,9 @@ private final class IconComponent: Component {
             return false
         }
         if lhs.file?.fileId != rhs.file?.fileId {
+            return false
+        }
+        if lhs.animationName != rhs.animationName {
             return false
         }
         if lhs.tintColor != rhs.tintColor {
@@ -72,7 +78,6 @@ private final class IconComponent: Component {
                         self.image = nil
                     }
                     
-                    let _ = freeMediaFileInteractiveFetched(account: component.account, fileReference: .standalone(media: file)).start()
                     self.disposable = (svgIconImageFile(account: component.account, fileReference: .standalone(media: file), fetched: true)
                     |> runOn(Queue.concurrentDefaultQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] transform in
@@ -154,6 +159,7 @@ private final class AttachButtonComponent: CombinedComponent {
     
     static var body: Body {
         let icon = Child(IconComponent.self)
+        let animatedIcon = Child(AnimatedStickerComponent.self)
         let title = Child(Text.self)
         let button = Child(Rectangle.self)
 
@@ -190,20 +196,49 @@ private final class AttachButtonComponent: CombinedComponent {
                 imageName = ""
                 imageFile = nil
             }
+
             
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
             
             let iconSize = CGSize(width: 30.0, height: 30.0)
-            let icon = icon.update(
-                component: IconComponent(
-                    account: component.context.account,
-                    name: imageName,
-                    file: imageFile,
-                    tintColor: tintColor
-                ),
-                availableSize: iconSize,
-                transition: context.transition
-            )
+            let topInset: CGFloat = 4.0 + UIScreenPixel
+            let spacing: CGFloat = 15.0 + UIScreenPixel
+            
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - iconSize.width) / 2.0), y: topInset), size: iconSize)
+            if let imageFile = imageFile, (imageFile.fileName ?? "").lowercased().hasSuffix(".tgs") {
+                let icon = animatedIcon.update(
+                    component: AnimatedStickerComponent(
+                        account: component.context.account,
+                        animation: AnimatedStickerComponent.Animation(
+                            source: .file(media: imageFile),
+                            loop: false,
+                            tintColor: tintColor
+                        ),
+                        isAnimating: component.isSelected,
+                        size: CGSize(width: iconSize.width, height: iconSize.height)
+                    ),
+                    availableSize: iconSize,
+                    transition: context.transition
+                )
+                context.add(icon
+                    .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
+                )
+            } else {
+                let icon = icon.update(
+                    component: IconComponent(
+                        account: component.context.account,
+                        name: imageName,
+                        file: imageFile,
+                        animationName: nil,
+                        tintColor: tintColor
+                    ),
+                    availableSize: iconSize,
+                    transition: context.transition
+                )
+                context.add(icon
+                    .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
+                )
+            }
 
             let title = title.update(
                 component: Text(
@@ -225,18 +260,10 @@ private final class AttachButtonComponent: CombinedComponent {
                 transition: .immediate
             )
 
-            let topInset: CGFloat = 4.0 + UIScreenPixel
-            let spacing: CGFloat = 15.0 + UIScreenPixel
-            
-            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0), y: topInset), size: iconSize)
             let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - title.size.width) / 2.0), y: iconFrame.midY + spacing), size: title.size)
             
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
-            )
-
-            context.add(icon
-                .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
             )
             
             context.add(button
@@ -255,6 +282,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    
+    private var iconDisposables: [MediaId: Disposable] = [:]
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -492,6 +521,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        for (_, disposable) in self.iconDisposables {
+            disposable.dispose()
+        }
     }
     
     override func didLoad() {
@@ -578,6 +610,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let type = self.buttons[i]
+            if case let .app(_, _, iconFile) = type {
+                if self.iconDisposables[iconFile.fileId] == nil {
+                    self.iconDisposables[iconFile.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
+                }
+            }
             let _ = buttonView.update(
                 transition: buttonTransition,
                 component: AnyComponent(AttachButtonComponent(
