@@ -1390,6 +1390,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        if !actions.isEmpty, case .separator = actions[0] {
+            actions.removeFirst()
+        }
+        
         return ContextController.Items(content: .list(actions), tip: nil)
     }
 }
