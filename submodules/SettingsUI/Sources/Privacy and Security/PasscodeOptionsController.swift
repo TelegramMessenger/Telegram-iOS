@@ -289,15 +289,17 @@ private struct PasscodeOptionsData: Equatable {
         return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: self.fakePasscodeSettings)
     }
 
-    func withUpdatedFakePasscodeSettings(index: Int, settings: FakePasscodeSettings?) -> PasscodeOptionsData {
+    func withUpdatedFakePasscodeSettings(index: Int, settings: FakePasscodeSettings) -> PasscodeOptionsData {
+        var fakePasscodeSettings = self.fakePasscodeSettings
+        fakePasscodeSettings[index] = settings
+        return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
+    }
+
+    func withDeletedFakePasscodeSettings(index: Int) -> PasscodeOptionsData {
         var fakePasscodeSettings = self.fakePasscodeSettings
         var accessChallenge = self.accessChallenge
-        if let settings = settings {
-            fakePasscodeSettings[index] = settings
-        } else {
-            fakePasscodeSettings.remove(at: index)
-            accessChallenge = accessChallenge.removeFakePasscode(at: index)
-        }
+        fakePasscodeSettings.remove(at: index)
+        accessChallenge = accessChallenge.removeFakePasscode(at: index)
         return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
     }
 }
@@ -716,6 +718,11 @@ private func fakePasscodeOptionsController(context: AccountContext, index: Int, 
             passcodeOptionsDataPromise?.set(.single(newData))
         })
 
+    }, deletedSettings: { index in
+        let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+            let newData = data.withDeletedFakePasscodeSettings(index: index)
+            passcodeOptionsDataPromise?.set(.single(newData))
+        })
     })
     return controller
 }

@@ -291,7 +291,7 @@ private func fakePasscodeOptionsControllerEntries(presentationData: Presentation
     return entries
 }
 
-public func fakePasscodeOptionsController(context: AccountContext, index: Int, updatedSettings: @escaping (Int, FakePasscodeSettings?) -> Void) -> ViewController {
+public func fakePasscodeOptionsController(context: AccountContext, index: Int, updatedSettings: @escaping (Int, FakePasscodeSettings) -> Void, deletedSettings: @escaping (Int) -> Void) -> ViewController {
     let statePromise = ValuePromise(FakePasscodeOptionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: FakePasscodeOptionsControllerState())
     let updateState: ((FakePasscodeOptionsControllerState) -> FakePasscodeOptionsControllerState) -> Void = { f in
@@ -299,7 +299,7 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
     }
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
 
@@ -396,14 +396,23 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
     }, accountActions: {
         // TODO implement Account Actions screen and open it here
     }, deletePasscode: {
-        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.PasscodeSettings_FakePasscodeDeleteTitle, text:  presentationData.strings.PasscodeSettings_FakePasscodeDeleteMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-            popControllerImpl?()
-            updateSettings(context: context, index: index, passcodeOptionsDataPromise) { settings in
-                updatedSettings(index, nil)
-                return nil
-            }
-        })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        let actionSheet = ActionSheetController(presentationData: presentationData)
 
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                    popControllerImpl?()
+                    deletedSettings(index)
+                    actionSheet?.dismissAnimated()
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        presentControllerImpl?(actionSheet)
     })
 
     let accountPeerSignal = context.account.postbox.loadedPeerWithId(context.account.peerId)
@@ -436,9 +445,9 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
     }
 
     let controller = ItemListController(context: context, state: signal)
-    presentControllerImpl = { [weak controller] c, p in
+    presentControllerImpl = { [weak controller] c in
         if let controller = controller {
-            controller.present(c, in: .window(.root), with: p)
+            controller.present(c, in: .window(.root))
         }
     }
     pushControllerImpl = { [weak controller] c in
