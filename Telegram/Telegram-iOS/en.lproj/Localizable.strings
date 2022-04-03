@@ -585,7 +585,7 @@
 "Notification.Exceptions.NewException" = "New Exception";
 "Notification.Exceptions.NewException.NotificationHeader" = "NOTIFICATIONS";
 "Notification.Exceptions.Sound" = "Sound: %@";
-
+"Notification.Exceptions.SoundCustom" = "Sound: Custom";
 
 
 // Message
@@ -901,6 +901,8 @@
 "MessageTimer.ShortWeeks_many" = "%@w";
 "MessageTimer.ShortMonths_1" = "%@mo";
 "MessageTimer.ShortMonths_any" = "%@mo";
+"MessageTimer.ShortYears_1" = "%@y";
+"MessageTimer.ShortYears_any" = "%@y";
 
 "Activity.UploadingPhoto" = "sending photo";
 "Activity.UploadingVideo" = "sending video";
@@ -7355,6 +7357,8 @@ Sorry for the inconvenience.";
 "LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
 "LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";
 
+"LiveStream.ViewCredentials" = "View Stream Key";
+
 "Attachment.MyAlbums" = "My Albums";
 "Attachment.MediaTypes" = "Media Types";
 
@@ -7367,6 +7371,7 @@ Sorry for the inconvenience.";
 
 "ChannelInfo.CreateExternalStream" = "Stream With...";
 
+"CreateExternalStream.StreamKeyTitle" = "Stream Key";
 "CreateExternalStream.Title" = "Stream With...";
 "CreateExternalStream.Text" = "To stream video with a another app, enter\nthese Server URL and Stream Key in your\nsteaming app.";
 "CreateExternalStream.ServerUrl" = "server URL";
@@ -7431,3 +7436,35 @@ Sorry for the inconvenience.";
 "Notifications.MessageSoundInfo" = "Long tap on any short voice note or mp3 file in chat\nand select \"Save for Notifications\". It will appear here.";
 
 "Notification.WebAppSentData" = "You have successfully transferred data from the \"%@\" button to the bot.";
+
+"Notifications.UploadError.TooLarge.Title" = "Audio is too large";
+"Notifications.UploadError.TooLarge.Text" = "The file is over %@.";
+"Notifications.UploadError.TooLong.Title" = "%@ is too long.";
+"Notifications.UploadError.TooLong.Text" = "The duration is longer than %@.";
+"Notifications.UploadSuccess.Title" = "Sound Added";
+"Notifications.UploadSuccess.Text" = "The sound **%@** was added to your Telegram tones.";
+"Notifications.SaveSuccess.Text" = "You can now use this sound as a notification tone in your [custom notification settings]().";
+
+"Conversation.DeleteTimer.SetupTitle" = "Auto-Delete After...";
+"Conversation.DeleteTimer.Disable" = "Disable Auto-Delete";
+"Conversation.DeleteTimer.Apply" = "Set Auto-Delete";
+
+"Conversation.Mute.SetupTitle" = "Mute Until...";
+"Conversation.Mute.ApplyMuteUntil" = "Mute until %@";
+
+"PeerInfo.EnableSound" = "Enable Sound";
+"PeerInfo.DisableSound" = "Disable Sound";
+"PeerInfo.MuteFor" = "Mute for...";
+"PeerInfo.MuteForever" = "Mute Forever";
+"PeerInfo.MuteForCustom" = "Mute until...";
+"PeerInfo.NotificationsCustomize" = "Customize";
+
+"PeerInfo.EnableAutoDelete" = "Enable Auto-Delete";
+"PeerInfo.AdjustAutoDelete" = "Adjust Auto-Delete";
+"PeerInfo.AutoDeleteSettingOther" = "Other...";
+"PeerInfo.AutoDeleteDisable" = "Disable";
+"PeerInfo.AutoDeleteInfo" = "Automatically delete messages sent in this chat after a certain period of time.";
+
+"PeerInfo.ClearMessages" = "Clear Messages";
+"PeerInfo.ClearConfirmationUser" = "Are you sure you want to delete all messages with %@?";
+"PeerInfo.ClearConfirmationGroup" = "Are you sure you want to delete all messages in %@?";

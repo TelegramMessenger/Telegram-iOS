@@ -306,18 +306,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             messageUpdated = true
         }
         
-        if messageUpdated || themeUpdated {
-            let previousMessageWasNil = self.currentMessage == nil
-            self.currentMessage = interfaceState.pinnedMessage
-            
-            if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
-                self.dustNode?.update(revealed: false, animated: false)
-                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
-            }
-        }
-        
-        if let currentMessage = self.currentMessage {
-            for attribute in currentMessage.message.attributes {
+        if let message = interfaceState.pinnedMessage {
+            for attribute in message.message.attributes {
                 if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), attribute.rows.count == 1, attribute.rows[0].buttons.count == 1 {
                     actionTitle = attribute.rows[0].buttons[0].title
                 }
@@ -329,8 +319,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         if isReplyThread || actionTitle != nil {
             self.closeButton.isHidden = true
             self.listButton.isHidden = true
-        } else if let currentMessage = self.currentMessage {
-            if currentMessage.totalCount > 1 {
+        } else if let message = interfaceState.pinnedMessage {
+            if message.totalCount > 1 {
                 self.listButton.isHidden = false
                 self.closeButton.isHidden = true
             } else {
@@ -352,6 +342,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         
         if let actionTitle = actionTitle {
+            var actionButtonTransition = transition
+            if self.actionButton.isHidden {
+                actionButtonTransition = .immediate
+            }
+            
             self.actionButton.isHidden = false
             self.actionButtonBackgroundNode.isHidden = false
             self.actionButtonTitleNode.isHidden = false
@@ -359,11 +354,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.actionButtonTitleNode.attributedText = NSAttributedString(string: actionTitle, font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor:  interfaceState.theme.list.itemCheckColors.foregroundColor)
             
             let actionButtonTitleSize = self.actionButtonTitleNode.updateLayout(CGSize(width: 150.0, height: .greatestFiniteMagnitude))
-            let actionButtonSize = CGSize(width: actionButtonTitleSize.width + 20.0, height: 28.0)
+            let actionButtonSize = CGSize(width: max(actionButtonTitleSize.width + 20.0, 40.0), height: 28.0)
             let actionButtonFrame = CGRect(origin: CGPoint(x: buttonsContainerSize.width + 11.0 - actionButtonSize.width, y: floor((panelHeight - actionButtonSize.height) / 2.0)), size: actionButtonSize)
-            transition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
-            transition.updateFrame(node: self.actionButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: actionButtonFrame.size))
-            transition.updateFrame(node: self.actionButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleSize.width) / 2.0), y: floorToScreenPixels((actionButtonFrame.height - actionButtonTitleSize.height) / 2.0)), size: actionButtonTitleSize))
+            actionButtonTransition.updateFrame(node: self.actionButton, frame: actionButtonFrame)
+            actionButtonTransition.updateFrame(node: self.actionButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: actionButtonFrame.size))
+            actionButtonTransition.updateFrame(node: self.actionButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleSize.width) / 2.0), y: floorToScreenPixels((actionButtonFrame.height - actionButtonTitleSize.height) / 2.0)), size: actionButtonTitleSize))
             
             tapButtonRightInset = 18.0 + actionButtonFrame.width
         } else {
@@ -387,13 +382,27 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.clippingContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: panelHeight))
         
-        if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated {
+        if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated || themeUpdated {
+            self.currentLayout = (width, leftInset, rightInset)
+            
+            let previousMessageWasNil = self.currentMessage == nil
+            self.currentMessage = interfaceState.pinnedMessage
+            
+            if let currentMessage = self.currentMessage, let currentLayout = self.currentLayout {
+                self.dustNode?.update(revealed: false, animated: false)
+                self.enqueueTransition(width: currentLayout.0, panelHeight: panelHeight, leftInset: currentLayout.1, rightInset: currentLayout.2, transition: .immediate, animation: messageUpdatedAnimation, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: self.context.account.peerId, firstTime: previousMessageWasNil, isReplyThread: isReplyThread)
+            }
+        }
+        
+        self.currentLayout = (width, leftInset, rightInset)
+        
+        /*if self.currentLayout?.0 != width || self.currentLayout?.1 != leftInset || self.currentLayout?.2 != rightInset || messageUpdated {
             self.currentLayout = (width, leftInset, rightInset)
             
             if let currentMessage = self.currentMessage {
                 self.enqueueTransition(width: width, panelHeight: panelHeight, leftInset: leftInset, rightInset: rightInset, transition: .immediate, animation: .none, pinnedMessage: currentMessage, theme: interfaceState.theme, strings: interfaceState.strings, nameDisplayOrder: interfaceState.nameDisplayOrder, dateTimeFormat: interfaceState.dateTimeFormat, accountPeerId: interfaceState.accountPeerId, firstTime: true, isReplyThread: isReplyThread)
             }
-        }
+        }*/
         
         return LayoutResult(backgroundHeight: panelHeight, insetHeight: panelHeight)
     }
@@ -443,12 +452,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         let contentLeftInset: CGFloat = leftInset + 10.0
         var textLineInset: CGFloat = 10.0
-        var rightInset: CGFloat = 18.0 + rightInset
+        var rightInset: CGFloat = 14.0 + rightInset
         
         let textRightInset: CGFloat = 0.0
         
         if !self.actionButton.isHidden {
-            rightInset += self.actionButton.bounds.width + 8.0
+            rightInset += self.actionButton.bounds.width - 14.0
         }
         
         targetQueue.async { [weak self] in
@@ -496,6 +505,13 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     titleString = ""
                 }
                 titleStrings = [.text(0, NSAttributedString(string: titleString, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
+            } else {
+                for media in message.media {
+                    if let media = media as? TelegramMediaInvoice {
+                        titleStrings = [.text(0, NSAttributedString(string: media.title, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor))]
+                        break
+                    }
+                }
             }
             
             var applyImage: (() -> Void)?

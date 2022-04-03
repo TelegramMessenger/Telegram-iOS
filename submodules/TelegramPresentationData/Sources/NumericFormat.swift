@@ -129,8 +129,10 @@ public func shortTimeIntervalString(strings: PresentationStrings, value: Int32) 
         return strings.MessageTimer_ShortDays(max(1, value / (60 * 60 * 24)))
     } else if value < 60 * 60 * 24 * 31 {
         return strings.MessageTimer_ShortWeeks(max(1, value / (60 * 60 * 24 * 7)))
+    } else if value < 60 * 60 * 24 * 365 {
+        return strings.MessageTimer_ShortMonths(max(1, value / (60 * 60 * 24 * 30)))
     } else {
-        return strings.MessageTimer_ShortMonths(max(1, value / (60 * 60 * 24 * 7 * 30)))
+        return strings.MessageTimer_ShortYears(max(1, value / (60 * 60 * 24 * 365)))
     }
 }
 

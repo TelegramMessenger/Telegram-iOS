@@ -449,8 +449,7 @@ public final class CreateExternalMediaStreamScreen: ViewControllerComponentConta
         case .create:
             self.title = presentationData.strings.CreateExternalStream_Title
         case .view:
-            //TODO:localize
-            self.title = "Stream Key"
+            self.title = presentationData.strings.CreateExternalStream_StreamKeyTitle
         }
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))

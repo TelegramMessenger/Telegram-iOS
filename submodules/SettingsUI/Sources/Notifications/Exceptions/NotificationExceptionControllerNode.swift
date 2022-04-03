@@ -358,11 +358,13 @@ private func notificationsExceptionEntries(presentationData: PresentationData, n
             }
             if !muted {
                 switch value.settings.messageSound {
-                    case .default:
-                        break
-                    default:
-                    let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: value.settings.messageSound)
-                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).string : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).string)")
+                case .default:
+                    break
+                default:
+                    if !title.isEmpty {
+                        title.append(", ")
+                    }
+                    title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
                 }
                 switch value.settings.displayPreviews {
                     case .default:

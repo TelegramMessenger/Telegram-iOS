@@ -1378,8 +1378,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     })))
                 }
                 
-                if let id = id {
-                    //TODO:localize
+                /*if let id = id {
                     items.append(.action(ContextMenuActionItem(text: "View as Feed", icon: { _ in
                         return nil
                     }, action: { c, f in
@@ -1392,7 +1391,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }, scrollToEndIfExists: false, options: []))
                         })
                     })))
-                }
+                }*/
                 
                 let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatListHeaderBarContextExtractedContentSource(controller: strongSelf, sourceNode: sourceNode, keepInPlace: keepInPlace)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
                 strongSelf.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)

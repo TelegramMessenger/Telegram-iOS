@@ -927,8 +927,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         let credentialsPromise = Promise<GroupCallStreamCredentials>()
                         credentialsPromise.set(call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false) |> `catch` { _ -> Signal<GroupCallStreamCredentials, NoError> in return .never() })
                         
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(id: nil, text: "View Stream Key", textColor: .primary, textLayout: .singleLine, textFont: .regular, badge: nil, icon: { theme in
+                        items.append(.action(ContextMenuActionItem(id: nil, text: presentationData.strings.LiveStream_ViewCredentials, textColor: .primary, textLayout: .singleLine, textFont: .regular, badge: nil, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.contextMenu.primaryColor, backgroundColor: nil)
                         }, action: { [weak call, weak controller] _, a in
                             guard let call = call, let controller = controller else {

@@ -46,8 +46,7 @@ private func soundName(strings: PresentationStrings, sound: PeerMessageSound, no
         return "Sound \(id)"
     case let .cloud(fileId):
         guard let notificationSoundList = notificationSoundList else {
-            //TODO:localize
-            return "Loading..."
+            return strings.Channel_NotificationLoading
         }
         for sound in notificationSoundList.sounds {
             if sound.file.fileId.id == fileId {
