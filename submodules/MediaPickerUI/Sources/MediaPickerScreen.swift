@@ -1473,6 +1473,14 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
         }
     }
         
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
+    
     init(interaction: MediaPickerInteraction) {
         self.interaction = interaction
     }
@@ -1487,6 +1495,10 @@ final class MediaPickerContext: AttachmentMediaPickerContext {
     
     func schedule() {
         self.interaction?.schedule()
+    }
+    
+    func mainButtonAction() {
+        
     }
 }
 

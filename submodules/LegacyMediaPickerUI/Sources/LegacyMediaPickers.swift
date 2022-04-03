@@ -95,6 +95,14 @@ public class LegacyAssetPickerContext: AttachmentMediaPickerContext {
             }
         }
     }
+    
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
         
     public init(controller: TGMediaAssetsController) {
         self.controller = controller
@@ -110,6 +118,10 @@ public class LegacyAssetPickerContext: AttachmentMediaPickerContext {
     
     public func schedule() {
         self.controller?.schedule(false)
+    }
+    
+    public func mainButtonAction() {
+        
     }
 }
 

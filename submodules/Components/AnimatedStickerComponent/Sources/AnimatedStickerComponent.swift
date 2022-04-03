@@ -14,11 +14,13 @@ public final class AnimatedStickerComponent: Component {
         }
         
         public var source: Source
+        public var scale: CGFloat
         public var loop: Bool
         public var tintColor: UIColor?
         
-        public init(source: Source, loop: Bool, tintColor: UIColor? = nil) {
+        public init(source: Source, scale: CGFloat = 2.0, loop: Bool, tintColor: UIColor? = nil) {
             self.source = source
+            self.scale = scale
             self.loop = loop
             self.tintColor = tintColor
         }
@@ -106,7 +108,7 @@ public final class AnimatedStickerComponent: Component {
                 } else if component.isAnimating {
                     playbackMode = .once
                 }
-                animationNode.setup(source: source, width: Int(component.size.width * 2.0), height: Int(component.size.height * 2.0), playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
+                animationNode.setup(source: source, width: Int(component.size.width * component.animation.scale), height: Int(component.size.height * component.animation.scale), playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
                 animationNode.visibility = self.isInHierarchy
                 
                 self.animationNode = animationNode

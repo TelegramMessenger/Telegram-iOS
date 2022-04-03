@@ -141,11 +141,11 @@ public var popularTranslationLanguages = [
 @available(iOS 12.0, *)
 private let languageRecognizer = NLLanguageRecognizer()
 
-public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
-    guard showTranslate, text.count > 0 else {
+public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, showTranslateIfTopical: Bool = false, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
+    guard showTranslate || showTranslateIfTopical, text.count > 0 else {
         return (false, nil)
     }
-    
+
     if #available(iOS 15.0, *) {
         var dontTranslateLanguages: [String] = []
         if let ignoredLanguages = ignoredLanguages {
@@ -158,6 +158,11 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         languageRecognizer.processString(text)
         let hypotheses = languageRecognizer.languageHypotheses(withMaximum: 3)
         languageRecognizer.reset()
+        
+        var supportedTranslationLanguages = supportedTranslationLanguages
+        if !showTranslate && showTranslateIfTopical {
+            supportedTranslationLanguages = ["uk", "ru"]
+        }
         
         let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
         if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {

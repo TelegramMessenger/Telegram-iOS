@@ -618,8 +618,12 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                 }
             }
         } else {
-            if let adminPeer = adminView.peers[adminView.peerId] as? TelegramUser, adminPeer.botInfo != nil, case .group = channel.info, invite, let channelPeer = channelView.peers[channelView.peerId], canEditAdminRights(accountPeerId: accountPeerId, channelPeer: channelPeer, initialParticipant: initialParticipant)  {
-                entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
+            if let adminPeer = adminView.peers[adminView.peerId] as? TelegramUser, adminPeer.botInfo != nil, case .group = channel.info, invite, let channelPeer = channelView.peers[channelView.peerId], canEditAdminRights(accountPeerId: accountPeerId, channelPeer: channelPeer, initialParticipant: initialParticipant) {
+                if let initialParticipant = initialParticipant, case let .member(_, _, adminInfo, _, _) = initialParticipant, adminInfo != nil {
+                    
+                } else {
+                    entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
+                }
             }
             
             if !invite || state.adminRights {
@@ -686,26 +690,28 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             }
         }
         
-        if canTransfer {
-            entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
-        }
-        
-        if case .group = channel.info {
-            let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
-            
-            let currentRank: String?
-            if let updatedRank = state.updatedRank {
-                currentRank = updatedRank
-            } else if let initialParticipant = initialParticipant {
-                currentRank = initialParticipant.rank
-            } else {
-                currentRank = nil
+        if !invite || state.adminRights {
+            if canTransfer {
+                entries.append(.transfer(presentationData.theme, isGroup ? presentationData.strings.Group_EditAdmin_TransferOwnership : presentationData.strings.Channel_EditAdmin_TransferOwnership))
             }
             
-            let rankEnabled = !state.updating && canEdit
-            entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
-            entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
-            entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
+            if case .group = channel.info {
+                let placeholder = isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder
+                
+                let currentRank: String?
+                if let updatedRank = state.updatedRank {
+                    currentRank = updatedRank
+                } else if let initialParticipant = initialParticipant {
+                    currentRank = initialParticipant.rank
+                } else {
+                    currentRank = nil
+                }
+                
+                let rankEnabled = !state.updating && canEdit
+                entries.append(.rankTitle(presentationData.theme, presentationData.strings.Group_EditAdmin_RankTitle.uppercased(), rankEnabled && state.focusedOnRank ? Int32(currentRank?.count ?? 0) : nil, rankMaxLength))
+                entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
+                entries.append(.rankInfo(presentationData.theme, presentationData.strings.Group_EditAdmin_RankInfo(placeholder).string, invite))
+            }
         }
         
         if canDismiss {
@@ -733,7 +739,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
             entries.append(.rank(presentationData.theme, presentationData.strings, isCreator ? presentationData.strings.Group_EditAdmin_RankOwnerPlaceholder : presentationData.strings.Group_EditAdmin_RankAdminPlaceholder, currentRank ?? "", rankEnabled))
         } else {
             if let adminPeer = adminView.peers[adminView.peerId] as? TelegramUser, adminPeer.botInfo != nil, invite {
-                entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
+                if let initialParticipant = initialParticipant, case let .member(_, _, adminRights, _, _) = initialParticipant, adminRights != nil {
+                    
+                } else {
+                    entries.append(.adminRights(presentationData.theme, presentationData.strings.Bot_AddToChat_Add_AdminRights, state.adminRights))
+                }
             }
             
             if !invite || state.adminRights {

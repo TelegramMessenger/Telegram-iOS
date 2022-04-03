@@ -16,20 +16,7 @@ import HexColor
 import ShimmerEffect
 import PhotoResources
 import LegacyComponents
-
-private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
-    private let f: (WKScriptMessage) -> ()
-    
-    init(_ f: @escaping (WKScriptMessage) -> ()) {
-        self.f = f
-        
-        super.init()
-    }
-    
-    func userContentController(_ controller: WKUserContentController, didReceive scriptMessage: WKScriptMessage) {
-        self.f(scriptMessage)
-    }
-}
+import UrlHandling
 
 public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
     var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
@@ -46,68 +33,6 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
     ]
 }
 
-private final class LoadingProgressNode: ASDisplayNode {
-    var color: UIColor {
-        didSet {
-            self.foregroundNode.backgroundColor = self.color
-        }
-    }
-    
-    private let foregroundNode: ASDisplayNode
-    
-    init(color: UIColor) {
-        self.color = color
-        
-        self.foregroundNode = ASDisplayNode()
-        self.foregroundNode.backgroundColor = color
-        
-        super.init()
-        
-        self.addSubnode(self.foregroundNode)
-    }
-        
-    private var _progress: CGFloat = 0.0
-    func updateProgress(_ progress: CGFloat, animated: Bool = false) {
-        if self._progress == progress && animated {
-            return
-        }
-        
-        var animated = animated
-        if (progress < self._progress && animated) {
-            animated = false
-        }
-        
-        let size = self.bounds.size
-        
-        self._progress = progress
-        
-        let transition: ContainedViewLayoutTransition
-        if animated && progress > 0.0 {
-            transition = .animated(duration: 0.7, curve: .spring)
-        } else {
-            transition = .immediate
-        }
-        
-        let alpaTransition: ContainedViewLayoutTransition
-        if animated {
-            alpaTransition = .animated(duration: 0.3, curve: .easeInOut)
-        } else {
-            alpaTransition = .immediate
-        }
-        
-        transition.updateFrame(node: self.foregroundNode, frame: CGRect(x: -2.0, y: 0.0, width: (size.width + 4.0) * progress, height: size.height))
-        
-        let alpha: CGFloat = progress < 0.001 || progress > 0.999 ? 0.0 : 1.0
-        alpaTransition.updateAlpha(node: self.foregroundNode, alpha: alpha)
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        self.foregroundNode.cornerRadius = self.frame.height / 2.0
-    }
-}
-
 public final class WebAppController: ViewController, AttachmentContainable {
     public var requestAttachmentMenuExpansion: () -> Void = { }
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
@@ -115,15 +40,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     
-    private class Node: ViewControllerTracingNode, WKNavigationDelegate, UIScrollViewDelegate {
+    fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
         fileprivate var webView: WebAppWebView?
-        
         private var placeholderIcon: UIImage?
         private var placeholderNode: ShimmerEffectNode?
-        
-        private let loadingProgressNode: LoadingProgressNode
+    
+        fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
+        fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
         
         private let context: AccountContext
         var presentationData: PresentationData
@@ -139,8 +64,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.presentationData = controller.presentationData
             self.present = present
             
-            self.loadingProgressNode = LoadingProgressNode(color: presentationData.theme.rootController.tabBar.selectedIconColor)
-            
             super.init()
             
             if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
@@ -148,69 +71,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
             } else {
                 self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
-                        
-            let configuration = WKWebViewConfiguration()
-            let userController = WKUserContentController()
-            
-            let js = "var TelegramWebviewProxyProto = function() {}; " +
-                "TelegramWebviewProxyProto.prototype.postEvent = function(eventName, eventData) { " +
-                "window.webkit.messageHandlers.performAction.postMessage({'eventName': eventName, 'eventData': eventData}); " +
-                "}; " +
-            "var TelegramWebviewProxy = new TelegramWebviewProxyProto();"
-                        
-            let userScript = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
-            userController.addUserScript(userScript)
-            userController.add(WeakGameScriptMessageHandler { [weak self] message in
-                if let strongSelf = self {
-                    strongSelf.handleScriptMessage(message)
-                }
-            }, name: "performAction")
-            
-            let selectionString = "var css = '*{-webkit-touch-callout:none;} :not(input):not(textarea){-webkit-user-select:none;}';"
-                    + " var head = document.head || document.getElementsByTagName('head')[0];"
-                    + " var style = document.createElement('style'); style.type = 'text/css';" +
-                    " style.appendChild(document.createTextNode(css)); head.appendChild(style);"
-            let selectionScript: WKUserScript = WKUserScript(source: selectionString, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-            userController.addUserScript(selectionScript)
-            
-            configuration.userContentController = userController
-            
-            configuration.allowsInlineMediaPlayback = true
-            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                configuration.mediaTypesRequiringUserActionForPlayback = []
-            } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                configuration.requiresUserActionForMediaPlayback = false
-            } else {
-                configuration.mediaPlaybackRequiresUserAction = false
-            }
-            
-            let webView = WebAppWebView(frame: CGRect(), configuration: configuration)
+                         
+            let webView = WebAppWebView()
             webView.alpha = 0.0
-            webView.isOpaque = false
-            webView.backgroundColor = .clear
             webView.navigationDelegate = self
-            
-            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                webView.allowsLinkPreview = false
-            }
-            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                webView.scrollView.contentInsetAdjustmentBehavior = .never
-            }
-            webView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
-                return point.x > 30.0
-            }
-            webView.allowsBackForwardNavigationGestures = false
+            webView.uiDelegate = self
             webView.scrollView.delegate = self
-            webView.scrollView.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0)
             webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: [], context: nil)
             webView.tintColor = self.presentationData.theme.rootController.tabBar.iconColor
+            webView.handleScriptMessage = { [weak self] message in
+                self?.handleScriptMessage(message)
+            }
             self.webView = webView
             
             let placeholderNode = ShimmerEffectNode()
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
-            self.addSubnode(self.loadingProgressNode)
-            
+                        
             if let iconFile = controller.iconFile {
                 let _ = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
                 self.iconDisposable = (svgIconImageFile(account: self.context.account, fileReference: .standalone(media: iconFile))
@@ -286,17 +163,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             self.view.addSubview(webView)
-                        
-            if #available(iOS 11.0, *) {
-                let webScrollView = webView.subviews.compactMap { $0 as? UIScrollView }.first
-                Queue.mainQueue().after(0.1, {
-                    let contentView = webScrollView?.subviews.first(where: { $0.interactions.count > 1 })
-                    guard let dragInteraction = (contentView?.interactions.compactMap { $0 as? UIDragInteraction }.first) else {
-                        return
-                    }
-                    contentView?.removeInteraction(dragInteraction)
-                })
-            }
+        }
+        
+        @objc fileprivate func mainButtonPressed() {
+            self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
         
         private func updatePlaceholder() {
@@ -307,11 +177,31 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.placeholderNode?.update(backgroundColor: self.backgroundColor ?? .clear, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: [.image(image: image, rect: CGRect(origin: CGPoint(), size: image.size))], horizontal: true, size: image.size)
         }
         
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+            if let url = navigationAction.request.url?.absoluteString {
+                if isTelegramMeLink(url) || isTelegraPhLink(url) {
+                    decisionHandler(.cancel)
+                    self.controller?.openUrl(url)
+                } else {
+                    decisionHandler(.allow)
+                }
+            } else {
+                decisionHandler(.allow)
+            }
+        }
+        
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+                self.controller?.openUrl(url.absoluteString)
+            }
+            return nil
+        }
+                
         private var loadCount = 0
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             self.loadCount += 1
         }
-        
+                
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             self.loadCount -= 1
             
@@ -327,6 +217,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 }
             })
+            
+            if let (layout, navigationBarHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -334,15 +228,17 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
         }
         
-        
         private var validLayout: (ContainerViewLayout, CGFloat)?
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
-            let previous = self.validLayout?.0
+            let previousLayout = self.validLayout?.0
             self.validLayout = (layout, navigationBarHeight)
                         
-            if let webView = self.webView, let controller = self.controller {
-                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
-                webView.updateFrame(frame: frame, panning: controller.isContainerPanning(), transition: transition)
+            if let webView = self.webView {
+                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
+                let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
+                transition.updateFrame(view: webView, frame: frame)
+                
+                webView.updateFrame(frame: viewportFrame, transition: transition)
             }
             
             if let placeholderNode = self.placeholderNode {
@@ -358,43 +254,19 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - iconSize.width) / 2.0), y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
-                
-                let loadingProgressHeight: CGFloat = 2.0
-                transition.updateFrame(node: self.loadingProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: height - loadingProgressHeight), size: CGSize(width: layout.size.width, height: loadingProgressHeight)))
             }
             
-            if let previous = previous, (previous.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0 {
+            if let previousLayout = previousLayout, (previousLayout.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0 {
                 self.controller?.requestAttachmentMenuExpansion()
-            }
-        }
-        
-        func isContainerPanningUpdated(_ panning: Bool) {
-            guard let (layout, navigationBarHeight) = self.validLayout else {
-                return
-            }
-            
-            if let webView = self.webView {
-                let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
-                webView.updateFrame(frame: frame, panning: panning, transition: .immediate)
             }
         }
         
         override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
             if keyPath == "estimatedProgress", let webView = self.webView {
-                self.loadingProgressNode.updateProgress(webView.estimatedProgress, animated: true)
+                self.loadingProgressPromise.set(.single(CGFloat(webView.estimatedProgress)))
             }
         }
-        
-        func animateIn() {
-            self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-        }
-        
-        func animateOut(completion: (() -> Void)? = nil) {
-            self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
-                completion?()
-            })
-        }
-        
+                
         private func handleScriptMessage(_ message: WKScriptMessage) {
             guard let body = message.body as? [String: Any] else {
                 return
@@ -408,6 +280,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_data_send":
                     if let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
+                    }
+                case "web_app_setup_main_button":
+                    if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
+                        if  let backgroundColorString = json["color"] as? String, let backgroundColor = UIColor(hexString: backgroundColorString),
+                            let textColorString = json["text_color"] as? String, let textColor = UIColor(hexString: textColorString),
+                            let text = json["text"] as? String,
+                            let isEnabled = json["is_active"] as? Bool,
+                            let isVisible = json["is_visible"] as? Bool
+                        {
+                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isEnabled: isEnabled, isVisible: isVisible)
+                            self.mainButtonStatePromise.set(.single(state))
+                        }
+                    }
+                case "web_app_request_viewport":
+                    if let (layout, navigationBarHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                     }
                 case "web_app_close":
                     self.controller?.dismiss()
@@ -437,13 +325,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
-        func sendEvent(name: String, data: String) {
-            let script = "window.TelegramGameProxy.receiveEvent(\"\(name)\", \(data))"
-            self.webView?.evaluateJavaScript(script, completionHandler: { _, _ in
-                
-            })
-        }
-        
         func updatePresentationData(_ presentationData: PresentationData) {
             self.presentationData = presentationData
             
@@ -466,11 +347,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
             }
             themeParamsString.append("}}")
-            self.sendEvent(name: "theme_changed", data: themeParamsString)
+            self.webView?.sendEvent(name: "theme_changed", data: themeParamsString)
         }
     }
     
-    private var controllerNode: Node {
+    fileprivate var controllerNode: Node {
         return self.displayNode as! Node
     }
     
@@ -491,8 +372,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
+    public var openUrl: (String) -> Void = { _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
-    
     public var completion: () -> Void = {}
         
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, replyToMessageId: MessageId?, iconFile: TelegramMediaFile?) {
@@ -509,17 +390,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
-        var theme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
-            theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.itemBlocksBackgroundColor)
-        } else {
-            theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.plainBackgroundColor)
-        }
-        let navigationBarPresentationData = NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "", close: ""))
-        
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
+        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -545,13 +419,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 
-                var theme = NavigationBarTheme(rootControllerTheme: presentationData.theme)
-                if presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
-                    theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.itemBlocksBackgroundColor)
-                } else {
-                    theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.plainBackgroundColor)
-                }
-                let navigationBarPresentationData = NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "", close: ""))
+                let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
                 strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 strongSelf.titleView?.theme = presentationData.theme
                 
@@ -634,12 +502,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
         })
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.updateTabBarAlpha(1.0, .immediate)
     }
-    
-    public func isContainerPanningUpdated(_ panning: Bool) {
-        self.controllerNode.isContainerPanningUpdated(panning)
-    }
-    
+        
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -652,7 +517,53 @@ public final class WebAppController: ViewController, AttachmentContainable {
         } set(value) {
         }
     }
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        return WebAppPickerContext(controller: self)
+    }
+    
+    public func prepareForReuse() {
+        self.updateTabBarAlpha(1.0, .immediate)
+    }
 }
+
+final class WebAppPickerContext: AttachmentMediaPickerContext {
+    private weak var controller: WebAppController?
+    
+    var selectionCount: Signal<Int, NoError> {
+        return .single(0)
+    }
+    
+    var caption: Signal<NSAttributedString?, NoError> {
+        return .single(nil)
+    }
+    
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return self.controller?.controllerNode.loadingProgressPromise.get() ?? .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return self.controller?.controllerNode.mainButtonStatePromise.get() ?? .single(nil)
+    }
+        
+    init(controller: WebAppController) {
+        self.controller = controller
+    }
+    
+    func setCaption(_ caption: NSAttributedString) {
+    }
+    
+    func send(silently: Bool, mode: AttachmentMediaPickerSendMode) {
+    }
+    
+    func schedule() {
+    }
+    
+    func mainButtonAction() {
+        self.controller?.controllerNode.mainButtonPressed()
+    }
+}
+
 
 private final class WebAppContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
@@ -668,12 +579,13 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, completion: @escaping () -> Void = {}) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, openUrl: @escaping (String) -> Void, completion: @escaping () -> Void = {}) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: peerId), buttons: [.standalone], initialButton: .standalone)
     controller.requestController = { _, present in
         let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil, iconFile: nil)
+        webAppController.openUrl = openUrl
         webAppController.completion = completion
-        present(webAppController, nil)
+        present(webAppController, webAppController.mediaPickerContext)
     }
     return controller
 }

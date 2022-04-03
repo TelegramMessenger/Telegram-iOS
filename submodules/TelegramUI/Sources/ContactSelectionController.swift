@@ -426,6 +426,14 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
     var caption: Signal<NSAttributedString?, NoError> {
         return .single(nil)
     }
+    
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
         
     init(controller: ContactSelectionControllerImpl) {
         self.controller = controller
@@ -443,5 +451,8 @@ final class ContactsPickerContext: AttachmentMediaPickerContext {
         self.controller?.presentScheduleTimePicker ({ time in
             self.controller?.contactsNode.requestMultipleAction?(false, time)
         })
+    }
+    
+    func mainButtonAction() {
     }
 }
