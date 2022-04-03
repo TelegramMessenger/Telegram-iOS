@@ -282,7 +282,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         self.handleSendData(data: eventData)
                     }
                 case "web_app_setup_main_button":
-                    if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
+                    if let webView = self.webView, !webView.didTouchOnce {
+                        
+                    } else if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
                         if let isVisible = json["is_visible"] as? Bool {
                             let text = json["text"] as? String
                             let backgroundColorString = json["color"] as? String

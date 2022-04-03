@@ -169,7 +169,6 @@ public class AttachmentController: ViewController {
                         if let strongSelf = self {
                             strongSelf.panel.updateLoadingProgress(progress)
                             if let layout = strongSelf.validLayout {
-                                print(progress ?? 0)
                                 strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                             }
                         }

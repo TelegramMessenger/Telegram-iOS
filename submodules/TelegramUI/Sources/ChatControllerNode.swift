@@ -253,6 +253,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId), options)
             |> map { messages, accountPeer, options -> ([Message], Int32, Bool) in
                 var messages = messages
+                let forwardedMessageIds = Set(messages.map { $0.id })
                 messages.sort(by: { lhsMessage, rhsMessage in
                     return lhsMessage.timestamp > rhsMessage.timestamp
                 })
@@ -261,13 +262,20 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     flags.remove(.Incoming)
                     flags.remove(.IsIncomingMask)
                     
+                    var hideNames = options.hideNames
+                    if message.id.peerId == accountPeer.id && message.forwardInfo == nil {
+                        hideNames = true
+                    }
+                    
                     var attributes = message.attributes
                     attributes = attributes.filter({ attribute in
                         if attribute is EditedMessageAttribute {
                             return false
                         }
-                        if attribute is ReplyMessageAttribute {
-                            return false
+                        if let attribute = attribute as? ReplyMessageAttribute {
+                            if !forwardedMessageIds.contains(attribute.messageId) || hideNames {
+                                return false
+                            }
                         }
                         if attribute is ReplyMarkupMessageAttribute {
                             return false
@@ -286,11 +294,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         return true
                     })
-                    
-                    var hideNames = options.hideNames
-                    if message.id.peerId == accountPeer.id && message.forwardInfo == nil {
-                        hideNames = true
-                    }
                     
                     var messageText = message.text
                     var messageMedia = message.media
