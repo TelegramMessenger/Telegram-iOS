@@ -293,6 +293,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.mainButtonStatePromise.set(.single(state))
                         }
                     }
+                case "web_app_request_viewport":
+                    if let (layout, navigationBarHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+                    }
                 case "web_app_close":
                     self.controller?.dismiss()
                 default:

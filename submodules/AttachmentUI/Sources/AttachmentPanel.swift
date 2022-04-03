@@ -385,12 +385,16 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.allowsGroupOpacity = true
         self.backgroundNode.isUserInteractionEnabled = false
+        self.backgroundNode.cornerRadius = 12.0
+        if #available(iOS 13.0, *) {
+            self.backgroundNode.layer.cornerCurve = .continuous
+        }
         
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
         
         super.init(pointerStyle: pointerStyle)
-        
+                
         self.addSubnode(self.backgroundNode)
         self.backgroundNode.addSubnode(self.textNode)
         
@@ -407,28 +411,22 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         }
     }
     
-    func updateLayout(layout: ContainerViewLayout, state: AttachmentMainButtonState, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLayout(size: CGSize, state: AttachmentMainButtonState, transition: ContainedViewLayoutTransition) {
         self.state = state
         
         self.isUserInteractionEnabled = state.isVisible
         self.isEnabled = state.isEnabled
         transition.updateAlpha(node: self, alpha: state.isEnabled ? 1.0 : 0.4)
         
-        let buttonHeight = 50.0
         if let text = state.text {
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(16.0), textColor: state.textColor)
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(17.0), textColor: state.textColor)
             
-            let textSize = self.textNode.updateLayout(layout.size)
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: floorToScreenPixels((buttonHeight - textSize.height) / 2.0)), size: textSize)
+            let textSize = self.textNode.updateLayout(size)
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
             
             self.backgroundNode.backgroundColor = state.backgroundColor
         }
-        
-        let totalButtonHeight = buttonHeight + layout.intrinsicInsets.bottom
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: totalButtonHeight)))
-        transition.updateSublayerTransformOffset(layer: self.layer, offset: CGPoint(x: 0.0, y: state.isVisible ? 0.0 : totalButtonHeight))
-        
-        return totalButtonHeight
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
     }
 }
 
@@ -835,7 +833,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
         self.scrollLayout = (layout.size.width, contentSize)
 
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting || self.isButtonVisible ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
+        transition.updateFrameAsPositionAndBounds(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting || self.isButtonVisible ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
         self.scrollNode.view.contentSize = contentSize
 
         return true
@@ -935,7 +933,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: buttonSize.height + insets.bottom))
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
-        if isSelecting {
+        if isButtonVisible {
+            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: bounds.height + 9.0))
+        } else if isSelecting {
             containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: textPanelHeight + insets.bottom))
         } else {
             containerFrame = bounds
@@ -947,6 +947,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             containerTransition = transition
         }
         containerTransition.updateAlpha(node: self.scrollNode, alpha: isSelecting || isButtonVisible ? 0.0 : 1.0)
+        containerTransition.updateTransformScale(node: self.scrollNode, scale: isSelecting || isButtonVisible ? 0.8 : 1.0)
         
         if isSelectingUpdated {
             if isSelecting {
@@ -964,7 +965,6 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
-
         
         containerTransition.updateFrame(node: self.containerNode, frame: containerFrame)
         containerTransition.updateFrame(node: self.backgroundNode, frame: containerBounds)
@@ -994,9 +994,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 progressNode?.removeFromSupernode()
             })
         }
-        
-        let mainButtonHeight = self.mainButtonNode.updateLayout(layout: layout, state: self.mainButtonState, transition: transition)
-        transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: mainButtonHeight)))
+
+        let sideInset: CGFloat = 16.0
+        let buttonSize = CGSize(width: layout.size.width - (sideInset + safeAreaInsets.left) * 2.0, height: 50.0)
+        self.mainButtonNode.updateLayout(size: buttonSize, state: self.mainButtonState, transition: transition)
+        transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible ? 8.0 : containerFrame.height), size: buttonSize))
         
         return containerFrame.height
     }

@@ -596,7 +596,7 @@ public class AttachmentController: ViewController {
             }
             
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: !hasPanel && hasButton ? .immediate : transition)
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
             }
