@@ -10904,7 +10904,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
                         }
                     }
-                    completion(controller, nil)
+                    completion(controller, controller.mediaPickerContext)
                     strongSelf.controllerNavigationDisposable.set(nil)
                 default:
                     break

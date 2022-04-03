@@ -63,6 +63,11 @@ public protocol AttachmentMediaPickerContext {
     var selectionCount: Signal<Int, NoError> { get }
     var caption: Signal<NSAttributedString?, NoError> { get }
     
+    var loadingProgress: Signal<CGFloat?, NoError> { get }
+    var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
+    
+    func mainButtonAction()
+    
     func setCaption(_ caption: NSAttributedString)
     func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
     func schedule()
@@ -139,6 +144,9 @@ public class AttachmentController: ViewController {
         private let captionDisposable = MetaDisposable()
         private let mediaSelectionCountDisposable = MetaDisposable()
         
+        private let loadingProgressDisposable = MetaDisposable()
+        private let mainButtonStateDisposable = MetaDisposable()
+        
         private var selectionCount: Int = 0
         
         fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
@@ -156,9 +164,30 @@ public class AttachmentController: ViewController {
                             strongSelf.updateSelectionCount(count)
                         }
                     }))
+                    self.loadingProgressDisposable.set((mediaPickerContext.loadingProgress
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        if let strongSelf = self {
+                            strongSelf.panel.updateLoadingProgress(progress)
+                            if let layout = strongSelf.validLayout {
+                                print(progress ?? 0)
+                                strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                            }
+                        }
+                    }))
+                    self.mainButtonStateDisposable.set((mediaPickerContext.mainButtonState
+                    |> deliverOnMainQueue).start(next: { [weak self] mainButtonState in
+                        if let strongSelf = self {
+                            strongSelf.panel.updateMainButtonState(mainButtonState)
+                            if let layout = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                            }
+                        }
+                    }))
                 } else {
                     self.updateSelectionCount(0)
                     self.mediaSelectionCountDisposable.set(nil)
+                    self.loadingProgressDisposable.set(nil)
+                    self.mainButtonStateDisposable.set(nil)
                 }
             }
         }
@@ -251,6 +280,12 @@ public class AttachmentController: ViewController {
                         case .schedule:
                             strongSelf.mediaPickerContext?.schedule()
                     }
+                }
+            }
+            
+            self.panel.mainButtonPressed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.mediaPickerContext?.mainButtonAction()
                 }
             }
             
@@ -553,13 +588,28 @@ public class AttachmentController: ViewController {
                 self.wrapperNode.view.mask = nil
             }
             
+            var containerInsets = containerLayout.intrinsicInsets
+            var hasPanel = false
+            let hasButton = self.panel.isButtonVisible
+            if let controller = self.controller, controller.buttons.count > 1 {
+                hasPanel = true
+            }
+            
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: !hasPanel && hasButton ? .immediate : transition)
+            if hasPanel || hasButton {
+                containerInsets.bottom = panelHeight
+            }
+            
             var panelTransition = transition
             if isEffecitvelyCollapsedUpdated {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
-            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: containerRect.height - panelHeight), size: CGSize(width: containerRect.width, height: panelHeight)))
+            var panelY = containerRect.height - panelHeight
+            if !hasPanel && !hasButton {
+                panelY = containerRect.height
+            }
+            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)))
             
             var shadowFrame = containerRect.insetBy(dx: -60.0, dy: -60.0)
             shadowFrame.size.height -= 12.0
@@ -579,22 +629,13 @@ public class AttachmentController: ViewController {
                 let controllers = self.currentControllers
                 containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: containerRect.size))
                 
-                var containerInsets = containerLayout.intrinsicInsets
-                var hasPanel = false
-                if let controller = self.controller, controller.buttons.count > 1 {
-                    hasPanel = true
-                    containerInsets.bottom = panelHeight
-                }
-
                 let containerLayout = containerLayout.withUpdatedIntrinsicInsets(containerInsets)
                 
                 self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
                                     
                 if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
                     self.wrapperNode.addSubnode(self.container)
-                    if hasPanel {
-                        self.container.addSubnode(self.panel)
-                    }
+                    self.container.addSubnode(self.panel)
                     
                     self.animateIn()
                 }
