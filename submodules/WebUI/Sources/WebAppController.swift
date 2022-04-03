@@ -502,6 +502,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         })
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
+        self.updateTabBarAlpha(1.0, .immediate)
     }
         
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -519,6 +520,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         return WebAppPickerContext(controller: self)
+    }
+    
+    public func prepareForReuse() {
+        self.updateTabBarAlpha(1.0, .immediate)
     }
 }
 

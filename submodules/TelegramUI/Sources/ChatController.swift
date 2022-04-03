@@ -2940,7 +2940,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         translationSettings = TranslationSettings.defaultSettings
                     }
                     
-                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                    var showTranslateIfTopical = false
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = peer.info, !(peer.addressName ?? "").isEmpty {
+                        showTranslateIfTopical = true
+                    }
+                    
+                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
                     
                     let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
                     controller.pushController = { [weak self] c in
