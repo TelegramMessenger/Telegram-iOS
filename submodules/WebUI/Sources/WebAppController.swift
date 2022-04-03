@@ -283,13 +283,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_setup_main_button":
                     if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
-                        if  let backgroundColorString = json["color"] as? String, let backgroundColor = UIColor(hexString: backgroundColorString),
-                            let textColorString = json["text_color"] as? String, let textColor = UIColor(hexString: textColorString),
-                            let text = json["text"] as? String,
-                            let isEnabled = json["is_active"] as? Bool,
-                            let isVisible = json["is_visible"] as? Bool
-                        {
-                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isEnabled: isEnabled, isVisible: isVisible)
+                        if let isVisible = json["is_visible"] as? Bool {
+                            let text = json["text"] as? String
+                            let backgroundColorString = json["color"] as? String
+                            let backgroundColor = backgroundColorString.flatMap({ UIColor(hexString: $0) }) ?? .clear
+                            let textColorString = json["text_color"] as? String
+                            let textColor = textColorString.flatMap({ UIColor(hexString: $0) }) ?? .clear
+                            
+                            let isLoading = json["is_progress_visible"] as? Bool
+                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false)
                             self.mainButtonStatePromise.set(.single(state))
                         }
                     }

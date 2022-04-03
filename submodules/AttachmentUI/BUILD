@@ -30,6 +30,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/SemanticStatusNode:SemanticStatusNode",
         "//submodules/Components/AnimatedStickerComponent:AnimatedStickerComponent",
     ],
     visibility = [
