@@ -339,11 +339,9 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         case .sendTimer:
             title = self.presentationData.strings.Conversation_Timer_Title
         case .autoremove:
-            //TODO:localize
-            title = "Auto-Delete After..."
+            title = self.presentationData.strings.Conversation_DeleteTimer_SetupTitle
         case .mute:
-            //TODO:localize
-            title = "Mute Until..."
+            title = self.presentationData.strings.Conversation_Mute_SetupTitle
         }
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
@@ -359,8 +357,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         self.disableButton = HighlightableButtonNode()
         self.disableButtonTitle = ImmediateTextNode()
         self.disableButton.addSubnode(self.disableButtonTitle)
-        //TODO:localize
-        self.disableButtonTitle.attributedText = NSAttributedString(string: "Disable Auto-Delete", font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+        self.disableButtonTitle.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_DeleteTimer_Disable, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
         self.disableButton.isHidden = true
         
         switch self.mode {
@@ -716,8 +713,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         case .sendTimer:
             break
         case .autoremove:
-            //TODO:localize
-            self.doneButton.title = "Set Auto-Delete"
+            self.doneButton.title = self.presentationData.strings.Conversation_DeleteTimer_Apply
         case .mute:
             if let pickerView = self.pickerView as? TimerDatePickerView {
                 let timeInterval = max(0, Int32(pickerView.date.timeIntervalSince1970) - Int32(Date().timeIntervalSince1970))
@@ -725,8 +721,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
                 if timeInterval > 0 {
                     let timeString = stringForPreciseRelativeTimestamp(strings: self.presentationData.strings, relativeTimestamp: Int32(pickerView.date.timeIntervalSince1970), relativeTo: Int32(Date().timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
                     
-                    //TODO:localize
-                    self.doneButton.title = "Mute until \(timeString)"
+                    self.doneButton.title = self.presentationData.strings.Conversation_Mute_ApplyMuteUntil(timeString).string
                 } else {
                     self.doneButton.title = self.presentationData.strings.Common_Close
                 }

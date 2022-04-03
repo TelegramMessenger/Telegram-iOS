@@ -368,6 +368,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     var completeImpl: (() -> Void)?
     var cancelImpl: (() -> Void)?
     var presentFilePicker: (() -> Void)?
+    var deleteSoundImpl: ((PeerMessageSound) -> Void)?
     
     let playSoundDisposable = MetaDisposable()
     let soundActionDisposable = MetaDisposable()
@@ -393,24 +394,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     }, upload: {
         presentFilePicker?()
     }, deleteSound: { sound in
-        updateState { state in
-            var state = state
-            
-            state.removedSounds.append(sound)
-            if state.selectedSound.id == sound.id {
-                state.selectedSound = .bundledModern(id: 0)
-            }
-            
-            return state
-        }
-        switch sound {
-        case let .cloud(id):
-            soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
-            |> deliverOnMainQueue).start(completed: {
-            }))
-        default:
-            break
-        }
+        deleteSoundImpl?(sound)
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
@@ -458,6 +442,47 @@ public func notificationSoundSelectionController(context: AccountContext, update
         presentCustomNotificationSoundFilePicker(context: context, controller: controller, disposable: soundActionDisposable)
     }
     
+    deleteSoundImpl = { [weak controller] sound in
+        guard let controller = controller else {
+            return
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    updateState { state in
+                        var state = state
+                        
+                        state.removedSounds.append(sound)
+                        if state.selectedSound.id == sound.id {
+                            state.selectedSound = .bundledModern(id: 0)
+                        }
+                        
+                        return state
+                    }
+                    switch sound {
+                    case let .cloud(id):
+                        soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
+                        |> deliverOnMainQueue).start(completed: {
+                        }))
+                    default:
+                        break
+                    }
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        controller.present(actionSheet, in: .window(.root))
+    }
+    
     return controller
 }
 
@@ -494,8 +519,7 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                     let data = try Data(contentsOf: url)
                     
                     if data.count > settings.maxSize {
-                        //TODO:localize
-                        presentUndo(.info(title: "Audio is too large", text: "The file is over \(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData)))."))
+                        presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
                         
                         url.stopAccessingSecurityScopedResource()
                         
@@ -519,13 +543,11 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                             if duration > Double(settings.maxDuration) {
                                 url.stopAccessingSecurityScopedResource()
                                 
-                                //TODO:localize
-                                presentUndo(.info(title: "\(url.lastPathComponent) is too long", text: "The duration is longer than \(stringForDuration(Int32(settings.maxDuration)))."))
+                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(url.lastPathComponent).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
                             } else {
                                 disposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
                                 |> deliverOnMainQueue).start(next: { _ in
-                                    //TODO:localize
-                                    presentUndo(.notificationSoundAdded(title: "Sound Added", text: "The sound **\(url.deletingPathExtension().lastPathComponent)** was added to your Telegram tones.**", action: nil))
+                                    presentUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_UploadSuccess_Text(url.deletingPathExtension().lastPathComponent).string, action: nil))
                                 }, error: { _ in
                                     url.stopAccessingSecurityScopedResource()
                                 }, completed: {

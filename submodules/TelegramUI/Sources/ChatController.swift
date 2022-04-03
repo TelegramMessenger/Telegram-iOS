@@ -4294,7 +4294,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                 self.titleDisposable.set(nil)
                 
-                //TODO:localize
                 self.chatTitleView?.titleContent = .custom("Feed", nil, false)
                 
                 if !self.didSetChatLocationInfoReady {

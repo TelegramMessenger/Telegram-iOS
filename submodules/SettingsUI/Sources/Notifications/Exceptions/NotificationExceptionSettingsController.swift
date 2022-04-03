@@ -375,6 +375,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     var cancelImpl: (() -> Void)?
     let playSoundDisposable = MetaDisposable()
     var presentFilePicker: (() -> Void)?
+    var deleteSoundImpl: ((PeerMessageSound) -> Void)?
     
     let soundActionDisposable = MetaDisposable()
 
@@ -411,24 +412,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     }, upload: {
         presentFilePicker?()
     }, deleteSound: { sound in
-        updateState { state in
-            var state = state
-            
-            state.removedSounds.append(sound)
-            if state.selectedSound.id == sound.id {
-                state.selectedSound = .bundledModern(id: 0)
-            }
-            
-            return state
-        }
-        switch sound {
-        case let .cloud(id):
-            soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
-            |> deliverOnMainQueue).start(completed: {
-            }))
-        default:
-            break
-        }
+        deleteSoundImpl?(sound)
     })
     
     statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
@@ -516,6 +500,47 @@ public func notificationPeerExceptionController(context: AccountContext, updated
             return
         }
         presentCustomNotificationSoundFilePicker(context: context, controller: controller, disposable: soundActionDisposable)
+    }
+    
+    deleteSoundImpl = { [weak controller] sound in
+        guard let controller = controller else {
+            return
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
+                    updateState { state in
+                        var state = state
+                        
+                        state.removedSounds.append(sound)
+                        if state.selectedSound.id == sound.id {
+                            state.selectedSound = .bundledModern(id: 0)
+                        }
+                        
+                        return state
+                    }
+                    switch sound {
+                    case let .cloud(id):
+                        soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
+                        |> deliverOnMainQueue).start(completed: {
+                        }))
+                    default:
+                        break
+                    }
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        controller.present(actionSheet, in: .window(.root))
     }
 
     return controller
