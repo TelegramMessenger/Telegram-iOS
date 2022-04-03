@@ -217,6 +217,7 @@ private final class AttachButtonComponent: CombinedComponent {
                         account: component.context.account,
                         animation: AnimatedStickerComponent.Animation(
                             source: .file(media: animationFile),
+                            scale: UIScreenScale,
                             loop: false,
                             tintColor: tintColor
                         ),

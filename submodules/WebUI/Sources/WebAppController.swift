@@ -386,17 +386,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
-        var theme = NavigationBarTheme(rootControllerTheme: self.presentationData.theme)
-        if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
-            theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.itemBlocksBackgroundColor)
-        } else {
-            theme = theme.withUpdatedBackgroundColor(self.presentationData.theme.list.plainBackgroundColor)
-        }
-        let navigationBarPresentationData = NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "", close: ""))
-        
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
+        let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -422,13 +415,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 
-                var theme = NavigationBarTheme(rootControllerTheme: presentationData.theme)
-                if presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
-                    theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.itemBlocksBackgroundColor)
-                } else {
-                    theme = theme.withUpdatedBackgroundColor(presentationData.theme.list.plainBackgroundColor)
-                }
-                let navigationBarPresentationData = NavigationBarPresentationData(theme: theme, strings: NavigationBarStrings(back: "", close: ""))
+                let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
                 strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 strongSelf.titleView?.theme = presentationData.theme
                 
