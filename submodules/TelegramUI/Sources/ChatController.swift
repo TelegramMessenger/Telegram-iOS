@@ -2940,12 +2940,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         translationSettings = TranslationSettings.defaultSettings
                     }
                     
-                    var showTranslateIfTopical = false
-                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = peer.info, !(peer.addressName ?? "").isEmpty {
-                        showTranslateIfTopical = true
-                    }
-                    
-                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: true, ignoredLanguages: translationSettings.ignoredLanguages)
                     
                     let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
                     controller.pushController = { [weak self] c in
@@ -10891,9 +10886,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let controller = strongSelf.configurePollCreation()
                     completion(controller, nil)
                     strongSelf.controllerNavigationDisposable.set(nil)
-                case let .app(botId, botName, botIcons):
+                case let .app(botId, botName, _):
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, replyToMessageId: replyMessageId, iconFile: botIcons[.default])
+                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, replyToMessageId: replyMessageId)
                     controller.openUrl = { [weak self] url in
                         self?.openUrl(url, concealed: true)
                     }

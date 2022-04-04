@@ -458,7 +458,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
-                        replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                        replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, item.message, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
                     }
                 } else if let _ = attribute as? InlineBotMessageAttribute {
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {

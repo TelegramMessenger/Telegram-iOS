@@ -169,7 +169,6 @@ public class AttachmentController: ViewController {
                         if let strongSelf = self {
                             strongSelf.panel.updateLoadingProgress(progress)
                             if let layout = strongSelf.validLayout {
-                                print(progress ?? 0)
                                 strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                             }
                         }
@@ -376,7 +375,9 @@ public class AttachmentController: ViewController {
                         controller._presentedInModal = true
                         controller.navigation_setPresenting(strongSelf.controller)
                         controller.requestAttachmentMenuExpansion = { [weak self] in
-                            self?.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                            if let strongSelf = self, !strongSelf.container.isTracking {
+                                strongSelf.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                            }
                         }
                         controller.updateNavigationStack = { [weak self] f in
                             if let strongSelf = self {
@@ -596,7 +597,7 @@ public class AttachmentController: ViewController {
             }
             
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
             }

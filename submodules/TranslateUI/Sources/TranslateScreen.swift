@@ -86,6 +86,7 @@ private final class TranslateScreenComponent: CombinedComponent {
         fileprivate var isSpeakingOriginalText: Bool = false
         fileprivate var isSpeakingTranslatedText: Bool = false
         private var speechHolder: SpeechSynthesizerHolder?
+        fileprivate var availableSpeakLanguages: Set<String>
         
         fileprivate var moreBackgroundImage: (CGSize, UIImage)?
         
@@ -95,6 +96,7 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.fromLanguage = fromLanguage
             self.toLanguage = toLanguage
             self.expand = expand
+            self.availableSpeakLanguages = supportedSpeakLanguages()
             
             super.init()
             
@@ -334,32 +336,34 @@ private final class TranslateScreenComponent: CombinedComponent {
             )
             
             if state.textExpanded {
-                let originalSpeakButton = originalSpeakButton.update(
-                    component: Button(
-                        content: AnyComponent(ZStack([
-                            AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
-                                fillColor: theme.list.itemPrimaryTextColor,
-                                size: CGSize(width: 22.0, height: 22.0)
-                            ))),
-                            AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
-                                state: state.isSpeakingOriginalText ? .pause : .play,
-                                size: CGSize(width: 18.0, height: 18.0)
-                            ))),
-                        ])),
-                        action: { [weak state] in
-                            guard let state = state else {
-                                return
+                if let fromLanguage = state.fromLanguage, state.availableSpeakLanguages.contains(fromLanguage) {
+                    let originalSpeakButton = originalSpeakButton.update(
+                        component: Button(
+                            content: AnyComponent(ZStack([
+                                AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
+                                    fillColor: theme.list.itemPrimaryTextColor,
+                                    size: CGSize(width: 22.0, height: 22.0)
+                                ))),
+                                AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
+                                    state: state.isSpeakingOriginalText ? .pause : .play,
+                                    size: CGSize(width: 18.0, height: 18.0)
+                                ))),
+                            ])),
+                            action: { [weak state] in
+                                guard let state = state else {
+                                    return
+                                }
+                                state.speakOriginalText()
                             }
-                            state.speakOriginalText()
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)),
-                    availableSize: CGSize(width: 22.0, height: 22.0),
-                    transition: .immediate
-                )
-                
-                context.add(originalSpeakButton
-                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height - originalSpeakButton.size.height / 2.0 - 2.0))
-                )
+                        ).minSize(CGSize(width: 44.0, height: 44.0)),
+                        availableSize: CGSize(width: 22.0, height: 22.0),
+                        transition: .immediate
+                    )
+                    
+                    context.add(originalSpeakButton
+                        .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height - originalSpeakButton.size.height / 2.0 - 2.0))
+                    )
+                }
             } else {
                 let originalMoreButton = originalMoreButton.update(
                     component: Button(
@@ -406,7 +410,13 @@ private final class TranslateScreenComponent: CombinedComponent {
                 context.add(translationText
                     .position(CGPoint(x: textBackgroundOrigin.x + textSideInset + translationText.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationText.size.height / 2.0))
                 )
-                
+            } else if let translationPlaceholder = maybeTranslationPlaceholder {
+                context.add(translationPlaceholder
+                    .position(CGPoint(x: textBackgroundOrigin.x + textSideInset + translationPlaceholder.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationPlaceholder.size.height / 2.0 + 4.0))
+                )
+            }
+            
+            if state.availableSpeakLanguages.contains(state.toLanguage) {
                 let translationSpeakButton = translationSpeakButton.update(
                     component: Button(
                         content: AnyComponent(ZStack([
@@ -429,13 +439,9 @@ private final class TranslateScreenComponent: CombinedComponent {
                     availableSize: CGSize(width: 22.0, height: 22.0),
                     transition: .immediate
                 )
-                
+                                
                 context.add(translationSpeakButton
-                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - translationSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationText.size.height - translationSpeakButton.size.height / 2.0 - 2.0))
-                )
-            } else if let translationPlaceholder = maybeTranslationPlaceholder {
-                context.add(translationPlaceholder
-                    .position(CGPoint(x: textBackgroundOrigin.x + textSideInset + translationPlaceholder.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationPlaceholder.size.height / 2.0 + 4.0))
+                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - translationSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight - translationSpeakButton.size.height / 2.0 - 2.0))
                 )
             }
             

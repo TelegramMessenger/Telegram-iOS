@@ -1046,7 +1046,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })]
                 
-                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: true, ignoredLanguages: translationSettings.ignoredLanguages)
                 if canTranslate {
                     actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: { [weak self] in
                         let controller = TranslateScreen(context: context, text: text, fromLanguage: language)

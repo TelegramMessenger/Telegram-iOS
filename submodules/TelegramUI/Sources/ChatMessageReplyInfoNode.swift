@@ -45,13 +45,13 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         self.contentNode.addSubnode(self.lineNode)
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContext, _ type: ChatMessageReplyInfoType, _ message: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
+    class func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ theme: ChatPresentationData, _ strings: PresentationStrings, _ context: AccountContext, _ type: ChatMessageReplyInfoType, _ message: Message, _ parentMessage: Message, _ constrainedSize: CGSize) -> (CGSize, () -> ChatMessageReplyInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNode.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMediaReference = maybeNode?.previousMediaReference
         
-        return { presentationData, strings, context, type, message, constrainedSize in
+        return { presentationData, strings, context, type, message, parentMessage, constrainedSize in
             let fontSize = floor(presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let titleFont = Font.medium(fontSize)
             let textFont = Font.regular(fontSize)
@@ -59,7 +59,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             let author = message.effectiveAuthor
             var titleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder) ?? strings.User_DeletedAccount
             
-            if let forwardInfo = message.forwardInfo {
+            if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) || parentMessage.forwardInfo != nil {
                 if let author = forwardInfo.author {
                     titleString = EnginePeer(author).displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
                 } else if let authorSignature = forwardInfo.authorSignature {

@@ -18,6 +18,12 @@ private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
+private class WebViewTouchGestureRecognizer: UITapGestureRecognizer {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        self.state = .began
+    }
+}
+
 final class WebAppWebView: WKWebView {
     var handleScriptMessage: (WKScriptMessage) -> Void = { _ in }
     
@@ -76,6 +82,10 @@ final class WebAppWebView: WKWebView {
                 strongSelf.handleScriptMessage(message)
             }
         }
+        
+//        let tapGestureRecognizer = WebViewTouchGestureRecognizer(target: self, action: #selector(self.handleTap))
+//        tapGestureRecognizer.delegate = self
+//        self.addGestureRecognizer(tapGestureRecognizer)
     }
     
     required init?(coder: NSCoder) {
@@ -105,5 +115,10 @@ final class WebAppWebView: WKWebView {
         
     func updateFrame(frame: CGRect, transition: ContainedViewLayoutTransition) {
         self.sendEvent(name: "viewport_changed", data: "{height:\(frame.height)}")
+    }
+    
+    private(set) var didTouchOnce = true
+    @objc func handleTap() {
+        self.didTouchOnce = true
     }
 }

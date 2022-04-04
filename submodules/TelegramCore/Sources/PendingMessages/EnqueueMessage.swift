@@ -131,7 +131,7 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
     }
 }
 
-private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute], forwardedMessageIds: [MessageId]? = nil) -> [MessageAttribute] {
+private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAttribute], forwardedMessageIds: Set<MessageId>? = nil) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
             case _ as TextEntitiesMessageAttribute:
@@ -285,10 +285,10 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 }
 
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
-    var forwardedMessageIds: [MessageId] = []
+    var forwardedMessageIds = Set<MessageId>()
     for (_, message) in messages {
         if case let .forward(sourceId, _, _, _) = message {
-            forwardedMessageIds.append(sourceId)
+            forwardedMessageIds.insert(sourceId)
         }
     }
     

@@ -549,7 +549,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .startAttach(peerId, payload):
             let presentError: (String) -> Void = { errorText in
-                present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                    return true
+                }), nil)
             }
             let _ = (context.engine.messages.attachMenuBots()
             |> deliverOnMainQueue).start(next: { attachMenuBots in
@@ -576,7 +578,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         })
                         present(controller, nil)
                     }, error: { _ in
-                        presentError(presentationData.strings.Login_UnknownError)
+                        presentError(presentationData.strings.WebApp_AddToAttachmentUnavailableError)
                     })
                 }
             })

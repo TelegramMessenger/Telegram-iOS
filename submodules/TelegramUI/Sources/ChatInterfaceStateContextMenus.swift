@@ -857,12 +857,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     })))
                 }
                 
-                var showTranslateIfTopical = false
-                if let peer = chatPresentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, case .broadcast = peer.info, !(peer.addressName ?? "").isEmpty {
-                    showTranslateIfTopical = true
-                }
-                
-                let (canTranslate, _) = canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                let (canTranslate, _) = canTranslateText(context: context, text: messageText, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: true, ignoredLanguages: translationSettings.ignoredLanguages)
                 if canTranslate {
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
