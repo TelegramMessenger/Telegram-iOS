@@ -258,8 +258,14 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force:
     |> restart
 }
 
-func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
-    return postbox.transaction { transaction -> Signal<Bool, NoError> in
+
+public enum AddBotToAttachMenuError {
+    case generic
+}
+
+
+func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, AddBotToAttachMenuError> {
+    return postbox.transaction { transaction -> Signal<Bool, AddBotToAttachMenuError> in
         guard let peer = transaction.getPeer(botId), let inputUser = apiInputUser(peer) else {
             return .complete()
         }
@@ -272,21 +278,23 @@ func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: Pee
                     return false
             }
         }
-        |> `catch` { error -> Signal<Bool, NoError> in
-            return .single(false)
+        |> mapError { _ -> AddBotToAttachMenuError in
+            return .generic
         }
-        |> mapToSignal { value -> Signal<Bool, NoError> in
+        |> mapToSignal { value -> Signal<Bool, AddBotToAttachMenuError> in
             if value {
                 return managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
+                |> castError(AddBotToAttachMenuError.self)
                 |> take(1)
                 |> map { _ -> Bool in
                     return true
                 }
             } else {
-                return .single(value)
+                return .fail(.generic)
             }
         }
     }
+    |> castError(AddBotToAttachMenuError.self)
     |> switchToLatest
 }
 

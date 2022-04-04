@@ -335,7 +335,7 @@ public extension TelegramEngine {
             return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
         }
                 
-        public func addBotToAttachMenu(botId: PeerId) -> Signal<Bool, NoError> {
+        public func addBotToAttachMenu(botId: PeerId) -> Signal<Bool, AddBotToAttachMenuError> {
             return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
