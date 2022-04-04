@@ -146,6 +146,16 @@ public func muteForIntervalString(strings: PresentationStrings, value: Int32) ->
     }
 }
 
+public func mutedForTimeIntervalString(strings: PresentationStrings, value: Int32) -> String {
+    if value < 60 * 60 {
+        return strings.MutedForTime_Minutes(max(1, value / (60)))
+    } else if value < 60 * 60 * 24 {
+        return strings.MutedForTime_Hours(max(1, value / (60 * 60)))
+    } else {
+        return strings.MutedForTime_Days(max(1, value / (60 * 60 * 24)))
+    }
+}
+
 public func unmuteIntervalString(strings: PresentationStrings, value: Int32) -> String {
     if value < 60 * 60 {
         return strings.MuteExpires_Minutes(max(1, value / 60))
