@@ -13,7 +13,8 @@ public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     func update(
         presentationData: PresentationData,
         constrainedSize: CGSize,
-        standardWidth: CGFloat,
+        standardMinWidth: CGFloat,
+        standardMaxWidth: CGFloat,
         transition: ContainedViewLayoutTransition
     ) -> (size: CGSize, apparentHeight: CGFloat)
     
@@ -476,7 +477,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
-            standardWidth: CGFloat,
+            standardMinWidth: CGFloat,
+            standardMaxWidth: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             var itemNodeLayouts: [(minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)] = []
@@ -486,13 +488,13 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                 
                 let itemNodeLayout = item.node.update(
                     presentationData: presentationData,
-                    constrainedSize: CGSize(width: standardWidth, height: constrainedSize.height)
+                    constrainedSize: CGSize(width: standardMaxWidth, height: constrainedSize.height)
                 )
                 itemNodeLayouts.append(itemNodeLayout)
                 combinedSize.width = max(combinedSize.width, itemNodeLayout.minSize.width)
                 combinedSize.height += itemNodeLayout.minSize.height
             }
-            combinedSize.width = max(combinedSize.width, standardWidth)
+            combinedSize.width = max(combinedSize.width, standardMinWidth)
             
             var nextItemOrigin = CGPoint()
             for i in 0 ..< self.itemNodes.count {
@@ -619,7 +621,8 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
-            standardWidth: CGFloat,
+            standardMinWidth: CGFloat,
+            standardMaxWidth: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let contentLayout = self.contentNode.update(
@@ -830,14 +833,16 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
-            standardWidth: CGFloat,
+            standardMinWidth: CGFloat,
+            standardMaxWidth: CGFloat,
             transitionFraction: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let (size, apparentHeight) = self.node.update(
                 presentationData: presentationData,
                 constrainedSize: constrainedSize,
-                standardWidth: standardWidth,
+                standardMinWidth: standardMinWidth,
+                standardMaxWidth: standardMaxWidth,
                 transition: transition
             )
             
@@ -1076,7 +1081,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             let itemSize = itemContainer.update(
                 presentationData: presentationData,
                 constrainedSize: CGSize(width: constrainedSize.width, height: itemConstrainedHeight),
-                standardWidth: 250.0,
+                standardMinWidth: 220.0,
+                standardMaxWidth: 240.0,
                 transitionFraction: alphaTransitionFraction,
                 transition: itemContainerTransition
             )
