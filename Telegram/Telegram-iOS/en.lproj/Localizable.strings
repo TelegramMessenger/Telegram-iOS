@@ -7391,7 +7391,7 @@ Sorry for the inconvenience.";
 "Bot.AddToChatInfo" = "This bot is able to manage a group or channel.";
 
 "Bot.AddToChat.Title" = "Add to Group or Channel";
-"Bot.AddToChat.MyChannels" = "CHANNEL I MANAGE";
+"Bot.AddToChat.MyChannels" = "CHANNELS I MANAGE";
 "Bot.AddToChat.MyGroups" = "GROUPS I MANAGE";
 "Bot.AddToChat.OtherGroups" = "GROUPS";
 
@@ -7401,28 +7401,28 @@ Sorry for the inconvenience.";
 "Bot.AddToChat.Add.AddAsMember" = "Add Bot as Member";
 
 "Bot.AddToChat.Add.AdminAlertTitle" = "Add Bot as Admin?";
-"Bot.AddToChat.Add.AdminAlertTextGroup" = "Are you sure you want to add the bot as an admin in the group **%@**?";
-"Bot.AddToChat.Add.AdminAlertTextChannel" = "Are you sure you want to add the bot as an admin in the channel **%@**?";
+"Bot.AddToChat.Add.AdminAlertTextGroup" = "Are you sure you want to add the bot as an admin in **%@**?";
+"Bot.AddToChat.Add.AdminAlertTextChannel" = "Are you sure you want to add the bot as an admin in **%@**?";
 "Bot.AddToChat.Add.AdminAlertAdd" = "Add as Admin";
 
 "Bot.AddToChat.Add.MemberAlertTitle" = "Add Bot as Member?";
-"Bot.AddToChat.Add.MemberAlertTextGroup" = "Are you sure you want to add the bot as a member in the group **%@**?";
-"Bot.AddToChat.Add.MemberAlertTextChannel" = "Are you sure you want to add the bot as a member in the channel **%@**?";
+"Bot.AddToChat.Add.MemberAlertTextGroup" = "Are you sure you want to add the bot as a member in **%@**?";
+"Bot.AddToChat.Add.MemberAlertTextChannel" = "Are you sure you want to add the bot as a member in **%@**?";
 "Bot.AddToChat.Add.MemberAlertAdd" = "Add as Member";
 
 "PeerInfo.ButtonStop" = "Stop";
 
-"Localization.ShowTranslateInfoExtended" = "Show 'Translate' button in the message context menu.\n\nGoogle may have access to the messages you translate.";
+"Localization.ShowTranslateInfoExtended" = "Show a 'Translate' button in the message context menu.\n\nGoogle may have access to message text you translate.";
 
 "WebApp.OpenBot" = "Open Bot";
 "WebApp.ReloadPage" = "Reload Page";
 "WebApp.RemoveBot" = "Remove Bot";
 
-"WebApp.AddToAttachmentText" = "%@ asks your permission to be added as an option to your attachments menu so you access it from any chat.";
+"WebApp.AddToAttachmentText" = "%@ requests your permission to be added as an option to your attachments menu, so you can access it from any chat.";
 "WebApp.AddToAttachmentAdd" = "Add";
 
-"WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added in the attachment menu.";
 "WebApp.AddToAttachmentUnavailableError" = "This bot can't be added to the attachment menu.";
+"WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added to your attachment menu.";
 
 "WebApp.OpenWebViewAlertTitle" = "Open Web App";
 "WebApp.OpenWebViewAlertText" = "**%@** would like to open its web app to proceed.\n\nIt will be able to access your **IP address** and basic device info.";
@@ -7434,14 +7434,14 @@ Sorry for the inconvenience.";
 "Notifications.TelegramTones" = "TELEGRAM TONES";
 
 "Notifications.UploadSound" = "Upload Sound";
-"Notifications.MessageSoundInfo" = "Long tap on any short voice note or mp3 file in chat\nand select \"Save for Notifications\". It will appear here.";
+"Notifications.MessageSoundInfo" = "Press and hold a short voice note or mp3 file in any chat and select \"Save for Notifications\". It will appear here.";
 
 "Notification.WebAppSentData" = "You have successfully transferred data from the \"%@\" button to the bot.";
 
 "Notifications.UploadError.TooLarge.Title" = "Audio is too large";
-"Notifications.UploadError.TooLarge.Text" = "The file is over %@.";
+"Notifications.UploadError.TooLarge.Text" = "File is over %@.";
 "Notifications.UploadError.TooLong.Title" = "%@ is too long.";
-"Notifications.UploadError.TooLong.Text" = "The duration is longer than %@.";
+"Notifications.UploadError.TooLong.Text" = "Duration must be less than %@.";
 "Notifications.UploadSuccess.Title" = "Sound Added";
 "Notifications.UploadSuccess.Text" = "The sound **%@** was added to your Telegram tones.";
 "Notifications.SaveSuccess.Text" = "You can now use this sound as a notification tone in your [custom notification settings]().";

@@ -3542,40 +3542,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 var items: [ContextMenuItem] = []
                 
-                var isSoundEnabled = true
-                if let notificationSettings = self.data?.notificationSettings {
-                    switch notificationSettings.messageSound {
-                    case .none:
-                        isSoundEnabled = false
-                    default:
-                        break
-                    }
-                }
-                
-                if !isSoundEnabled {
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_EnableSound, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-                        
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .default).start()
-                    })))
-                } else {
-                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_DisableSound, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-                        
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .none).start()
-                    })))
-                }
-                
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_MuteFor, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Mute2d"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in
@@ -3621,6 +3587,42 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     
                     c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
                 })))
+                
+                items.append(.separator)
+                
+                var isSoundEnabled = true
+                if let notificationSettings = self.data?.notificationSettings {
+                    switch notificationSettings.messageSound {
+                    case .none:
+                        isSoundEnabled = false
+                    default:
+                        break
+                    }
+                }
+                
+                if !isSoundEnabled {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_EnableSound, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Unmute"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .default).start()
+                    })))
+                } else {
+                    items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_DisableSound, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .none).start()
+                    })))
+                }
                 
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_NotificationsCustomize, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
@@ -3795,8 +3797,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         subItems.append(.separator)
                         
                         let presetValues: [Int32] = [
-                            60 * 60,
-                            24 * 60 * 60,
+                            1 * 24 * 60 * 60,
                             7 * 24 * 60 * 60,
                             31 * 24 * 60 * 60
                         ]
