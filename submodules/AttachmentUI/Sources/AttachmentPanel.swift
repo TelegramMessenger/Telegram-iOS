@@ -461,6 +461,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var loadingProgress: CGFloat?
     private var mainButtonState: AttachmentMainButtonState = .initial
     
+    private var elevateProgress: Bool = false
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
     private(set) var isSelecting: Bool = false
@@ -687,7 +688,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
                 if let layout = strongSelf.validLayout {
-                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, transition: .immediate)
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, elevateProgress: strongSelf.elevateProgress, transition: .immediate)
                 }
             }
         })
@@ -891,9 +892,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.mainButtonState = mainButtonState ?? currentButtonState
     }
     
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
+        self.elevateProgress = elevateProgress
                 
         let isButtonVisibleUpdated = self.isButtonVisible != self.mainButtonState.isVisible
         self.isButtonVisible = self.mainButtonState.isVisible
@@ -993,7 +995,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 self.progressNode = loadingProgressNode
             }
             let loadingProgressHeight: CGFloat = 2.0
-            transition.updateFrame(node: loadingProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: loadingProgressHeight)))
+            let loadingProgressY: CGFloat = elevateProgress ? -loadingProgressHeight : -loadingProgressHeight / 2.0
+            transition.updateFrame(node: loadingProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: loadingProgressY), size: CGSize(width: layout.size.width, height: loadingProgressHeight)))
             
             loadingProgressNode.updateProgress(progress, animated: true)
         } else if let progressNode = self.progressNode {

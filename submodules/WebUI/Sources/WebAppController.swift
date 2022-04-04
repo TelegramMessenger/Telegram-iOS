@@ -87,24 +87,40 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let placeholderNode = ShimmerEffectNode()
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
-                        
-            if let iconFile = controller.iconFile {
-                let _ = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: iconFile)).start()
-                self.iconDisposable = (svgIconImageFile(account: self.context.account, fileReference: .standalone(media: iconFile))
-                |> deliverOnMainQueue).start(next: { [weak self] transform in
-                    if let strongSelf = self {
-                        let imageSize = CGSize(width: 75.0, height: 75.0)
-                        let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
-                        let drawingContext = transform(arguments)
-                        if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
-                            strongSelf.placeholderIcon = image
-                            
-                            strongSelf.updatePlaceholder()
-                        }
+                       
+            let botId = controller.botId
+            let _ = (self.context.engine.messages.attachMenuBots()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] bots in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let bot = bots.first(where: { $0.peer.id == botId }) {
+                    var iconFile: TelegramMediaFile?
+                    if let file = bot.icons[.iOSStatic] {
+                        iconFile = file
+                    } else if let file = bot.icons[.default] {
+                        iconFile = file
                     }
-                })
-            }
-            
+                    if let iconFile = iconFile {
+                        let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .standalone(media: iconFile)).start()
+                        strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: .standalone(media: iconFile))
+                        |> deliverOnMainQueue).start(next: { [weak self] transform in
+                            if let strongSelf = self {
+                                let imageSize = CGSize(width: 75.0, height: 75.0)
+                                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                                let drawingContext = transform(arguments)
+                                if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
+                                    strongSelf.placeholderIcon = image
+                                    
+                                    strongSelf.updatePlaceholder()
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+                
             if let url = controller.url {
                 self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
@@ -301,6 +317,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let (layout, navigationBarHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                     }
+                case "web_app_expand":
+                    self.controller?.requestAttachmentMenuExpansion()
                 case "web_app_close":
                     self.controller?.dismiss()
                 default:
@@ -370,7 +388,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let buttonText: String?
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
-    private let iconFile: TelegramMediaFile?
     
     private var presentationData: PresentationData
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
@@ -380,7 +397,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
         
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, replyToMessageId: MessageId?, iconFile: TelegramMediaFile?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, replyToMessageId: MessageId?) {
         self.context = context
         self.peerId = peerId
         self.botId = botId
@@ -389,7 +406,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.replyToMessageId = replyToMessageId
-        self.iconFile = iconFile
         
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -586,7 +602,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
 public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, openUrl: @escaping (String) -> Void, completion: @escaping () -> Void = {}) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: peerId), buttons: [.standalone], initialButton: .standalone)
     controller.requestController = { _, present in
-        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil, iconFile: nil)
+        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil)
         webAppController.openUrl = openUrl
         webAppController.completion = completion
         present(webAppController, webAppController.mediaPickerContext)

@@ -27,6 +27,17 @@ public class SpeechSynthesizerHolder: NSObject, AVSpeechSynthesizerDelegate {
     }
 }
 
+public func supportedSpeakLanguages() -> Set<String> {
+    var languages: [String] = []
+    for voice in AVSpeechSynthesisVoice.speechVoices() {
+        let components = voice.language.components(separatedBy: "-")
+        if let language = components.first {
+            languages.append(language)
+        }
+    }
+    return Set(languages)
+}
+
 public func speakText(_ text: String) -> SpeechSynthesizerHolder? {
     guard !text.isEmpty else {
         return nil
