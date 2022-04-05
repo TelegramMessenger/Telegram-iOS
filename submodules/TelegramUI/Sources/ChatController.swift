@@ -14406,7 +14406,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         guard let peerId = self.chatLocation.peerId else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, forceExternal: false, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
