@@ -487,6 +487,8 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
             if #available(iOS 13.4, *) {
                 pickerView.preferredDatePickerStyle = .wheels
             }
+            pickerView.setValue(self.presentationData.theme.list.itemPrimaryTextColor, forKey: "textColor")
+            pickerView.setValue(false, forKey: "highlightsToday")
             pickerView.selectorColor = UIColor(rgb: 0xffffff, alpha: 0.18)
             pickerView.addTarget(self, action: #selector(self.dataPickerChanged), for: .valueChanged)
             

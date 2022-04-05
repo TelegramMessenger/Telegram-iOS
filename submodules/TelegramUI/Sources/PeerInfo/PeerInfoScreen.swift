@@ -3535,7 +3535,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if let notificationSettings = self.data?.notificationSettings, case .muted = notificationSettings.muteState {
                 let _ = self.context.engine.peers.updatePeerMuteSetting(peerId: self.peerId, muteInterval: nil).start()
                 
-                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_sound_on", title: nil, text: self.presentationData.strings.PeerInfo_TooltipUnmuted), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                let iconColor: UIColor = .white
+                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
+                        "Middle.Group 1.Fill 1": iconColor,
+                        "Top.Group 1.Fill 1": iconColor,
+                        "Bottom.Group 1.Fill 1": iconColor,
+                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                        "Line.Group 1.Stroke 1": iconColor
+                ], title: nil, text: self.presentationData.strings.PeerInfo_TooltipUnmuted), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             } else {
                 self.state = self.state.withHighlightedButton(.mute)
                 if let (layout, navigationHeight) = self.validLayout {
@@ -3577,7 +3584,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             }
                             let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: value).start()
                             
-                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedFor(mutedForTimeIntervalString(strings: strongSelf.presentationData.strings, value: value)).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedFor(mutedForTimeIntervalString(strings: strongSelf.presentationData.strings, value: value)).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                         })))
                     }
                     
@@ -3615,7 +3622,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                         let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .default).start()
                         
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_on", title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundEnabled), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_on", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundEnabled), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                     })))
                 } else {
                     items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_DisableSound, icon: { theme in
@@ -3628,7 +3635,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                         let _ = strongSelf.context.engine.peers.updatePeerNotificationSoundInteractive(peerId: strongSelf.peerId, sound: .none).start()
                         
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_off", title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundEnabled), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_sound_off", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipSoundDisabled), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                     })))
                 }
                 
@@ -3666,8 +3673,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             guard let strongSelf = self else {
                                 return
                             }
-                            if let muteInterval = muteInterval {
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedFor(mutedForTimeIntervalString(strings: strongSelf.presentationData.strings, value: muteInterval)).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            if let muteInterval = muteInterval, muteInterval == Int32.max {
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                             }
                         })
                     }, updatePeerDisplayPreviews: { peerId, displayPreviews in
@@ -3694,7 +3701,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     
                     let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: Int32.max).start()
                     
-                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                 })))
                 
                 self.view.endEditing(true)
@@ -4217,7 +4224,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 let timeString = stringForPreciseRelativeTimestamp(strings: strongSelf.presentationData.strings, relativeTimestamp: Int32(Date().timeIntervalSince1970) + value, relativeTo: Int32(Date().timeIntervalSince1970), dateTimeFormat: strongSelf.presentationData.dateTimeFormat)
                 
-                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedUntil(timeString).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedUntil(timeString).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             }
         })
         self.controller?.view.endEditing(true)

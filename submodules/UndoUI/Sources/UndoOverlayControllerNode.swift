@@ -789,11 +789,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     }
                 }
-            case let .universal(animation, title, text):
+            case let .universal(animation, scale, colors, title, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
-                self.animationNode = AnimationNode(animation: animation, colors: [:], scale: 0.066)
+                self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
                 self.animatedStickerNode = nil
                 if let title = title {
                     self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
