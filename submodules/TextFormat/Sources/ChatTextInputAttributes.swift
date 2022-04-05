@@ -728,44 +728,68 @@ public func convertMarkdownToAttributes(_ text: NSAttributedString) -> NSAttribu
             
             var pre = match.range(at: 3)
             if pre.location != NSNotFound {
-                let text = string.substring(with: pre)
-                
-                stringOffset -= match.range(at: 2).length + match.range(at: 4).length
-                
-                let substring = string.substring(with: match.range(at: 1)) + text + string.substring(with: match.range(at: 5))
-                result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.monospace: true as NSNumber]))
-                offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 1).length, text.count), 6))
+                var intersectsWithEntities = false
+                text.enumerateAttributes(in: pre, options: [], using: { attributes, _, _ in
+                    for (key, _) in attributes {
+                        if key.rawValue.hasPrefix("Attribute__") {
+                            intersectsWithEntities = true
+                        }
+                    }
+                })
+                if intersectsWithEntities {
+                    result.append(text.attributedSubstring(from: match.range(at: 0)))
+                } else {
+                    let text = string.substring(with: pre)
+                    
+                    stringOffset -= match.range(at: 2).length + match.range(at: 4).length
+                    
+                    let substring = string.substring(with: match.range(at: 1)) + text + string.substring(with: match.range(at: 5))
+                    result.append(NSAttributedString(string: substring, attributes: [ChatTextInputAttributes.monospace: true as NSNumber]))
+                    offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 1).length, text.count), 6))
+                }
             }
             
             pre = match.range(at: 8)
             if pre.location != NSNotFound {
-                let text = string.substring(with: pre)
-                
-                let entity = string.substring(with: match.range(at: 7))
-                let substring = string.substring(with: match.range(at: 6)) + text + string.substring(with: match.range(at: 9))
-                
-                let textInputAttribute: NSAttributedString.Key?
-                switch entity {
-                    case "`":
-                        textInputAttribute = ChatTextInputAttributes.monospace
-                    case "**":
-                        textInputAttribute = ChatTextInputAttributes.bold
-                    case "__":
-                        textInputAttribute = ChatTextInputAttributes.italic
-                    case "~~":
-                        textInputAttribute = ChatTextInputAttributes.strikethrough
-                    case "||":
-                        textInputAttribute = ChatTextInputAttributes.spoiler
-                    default:
-                        textInputAttribute = nil
+                var intersectsWithEntities = false
+                text.enumerateAttributes(in: pre, options: [], using: { attributes, _, _ in
+                    for (key, _) in attributes {
+                        if key.rawValue.hasPrefix("Attribute__") {
+                            intersectsWithEntities = true
+                        }
+                    }
+                })
+                if intersectsWithEntities {
+                    result.append(text.attributedSubstring(from: match.range(at: 0)))
+                } else {
+                    let text = string.substring(with: pre)
+                    
+                    let entity = string.substring(with: match.range(at: 7))
+                    let substring = string.substring(with: match.range(at: 6)) + text + string.substring(with: match.range(at: 9))
+                    
+                    let textInputAttribute: NSAttributedString.Key?
+                    switch entity {
+                        case "`":
+                            textInputAttribute = ChatTextInputAttributes.monospace
+                        case "**":
+                            textInputAttribute = ChatTextInputAttributes.bold
+                        case "__":
+                            textInputAttribute = ChatTextInputAttributes.italic
+                        case "~~":
+                            textInputAttribute = ChatTextInputAttributes.strikethrough
+                        case "||":
+                            textInputAttribute = ChatTextInputAttributes.spoiler
+                        default:
+                            textInputAttribute = nil
+                    }
+                    
+                    if let textInputAttribute = textInputAttribute {
+                        result.append(NSAttributedString(string: substring, attributes: [textInputAttribute: true as NSNumber]))
+                        offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
+                    }
+                    
+                    stringOffset -= match.range(at: 7).length * 2
                 }
-                
-                if let textInputAttribute = textInputAttribute {
-                    result.append(NSAttributedString(string: substring, attributes: [textInputAttribute: true as NSNumber]))
-                    offsetRanges.append((NSMakeRange(matchIndex + match.range(at: 6).length, text.count), match.range(at: 6).length * 2))
-                }
-                
-                stringOffset -= match.range(at: 7).length * 2
             }
             
             string = string.substring(from: match.range.location + match.range(at: 0).length) as NSString

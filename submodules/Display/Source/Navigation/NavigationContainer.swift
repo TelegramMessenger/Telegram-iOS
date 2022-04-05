@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private final class Child {
         let value: ViewController
         var layout: ContainerViewLayout
@@ -73,19 +73,20 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         var pending: PendingChild?
     }
     
-    private(set) var controllers: [ViewController] = []
+    public private(set) var controllers: [ViewController] = []
     private var state: State = State(layout: nil, canBeClosed: nil, top: nil, transition: nil, pending: nil)
     
     private var ignoreInputHeight: Bool = false
     
-    private(set) var isReady: Bool = false
-    var isReadyUpdated: (() -> Void)?
-    var controllerRemoved: (ViewController) -> Void
-    var keyboardViewManager: KeyboardViewManager? {
+    public private(set) var isReady: Bool = false
+    public var isReadyUpdated: (() -> Void)?
+    public var controllerRemoved: (ViewController) -> Void
+    public var keyboardViewManager: KeyboardViewManager? {
         didSet {
         }
     }
-    var canHaveKeyboardFocus: Bool = false {
+    
+    public var canHaveKeyboardFocus: Bool = false {
         didSet {
             if self.canHaveKeyboardFocus != oldValue {
                 if !self.canHaveKeyboardFocus {
@@ -96,16 +97,19 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    var isInFocus: Bool = false {
+    public var isInFocus: Bool = false {
         didSet {
             if self.isInFocus != oldValue {
                 self.inFocusUpdated(isInFocus: self.isInFocus)
             }
         }
     }
-    func inFocusUpdated(isInFocus: Bool) {
+    
+    public func inFocusUpdated(isInFocus: Bool) {
         self.state.top?.value.isInFocus = isInFocus
     }
+    
+    public var overflowInset: CGFloat = 0.0
     
     private var currentKeyboardLeftEdge: CGFloat = 0.0
     private var additionalKeyboardLeftEdgeOffset: CGFloat = 0.0
@@ -113,13 +117,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     var statusBarStyle: StatusBarStyle = .Ignore
     var statusBarStyleUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
-    init(controllerRemoved: @escaping (ViewController) -> Void) {
+    public init(controllerRemoved: @escaping (ViewController) -> Void) {
         self.controllerRemoved = controllerRemoved
         
         super.init()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), allowedDirections: { [weak self] _ in
@@ -263,7 +267,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func update(layout: ContainerViewLayout, canBeClosed: Bool, controllers: [ViewController], transition: ContainedViewLayoutTransition) {
+    public func update(layout: ContainerViewLayout, canBeClosed: Bool, controllers: [ViewController], transition: ContainedViewLayoutTransition) {
         self.state.layout = layout
         self.state.canBeClosed = canBeClosed
         
@@ -539,7 +543,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func updateAdditionalKeyboardLeftEdgeOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func updateAdditionalKeyboardLeftEdgeOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.additionalKeyboardLeftEdgeOffset = offset
         self.syncKeyboard(leftEdge: self.currentKeyboardLeftEdge, transition: transition)
     }
@@ -562,7 +566,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
         }

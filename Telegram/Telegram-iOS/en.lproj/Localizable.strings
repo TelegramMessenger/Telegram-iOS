@@ -443,6 +443,7 @@
 "DialogList.TabTitle" = "Chats";
 "DialogList.Title" = "Chats";
 "DialogList.SearchLabel" = "Search for messages or users";
+"DialogList.SearchLabelCompact" = "Search";
 "DialogList.NoMessagesTitle" = "You have no conversations yet";
 "DialogList.NoMessagesText" = "Start messaging by pressing the pencil button in the top right corner or go to the Contacts section.";
 "DialogList.SingleTypingSuffix" = "%@ is typing";
@@ -7189,14 +7190,14 @@ Sorry for the inconvenience.";
 "ForcedPasswordSetup.Intro.DismissActionOK" = "Yes, I’m sure";
 
 "Login.ShortCallTitle" = "Within a few seconds you should\nreceive a short call from:";
-"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the missed call number.";
+"Login.CodePhonePatternInfoText" = "Please enter the last digits\nof the number that called.";
 "Login.EnterMissingDigits" = "Enter the missing digits";
 
 "Channel.AdminLogFilter.EventsSentMessages" = "Sent Messages";
 
 "Contacts.AddContact" = "Add Contact";
 
-"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in chat.";
+"Conversation.LargeEmojiDisabledInfo" = "You have disabled large emoji, so they appear small and have no effects in the chat.";
 "Conversation.LargeEmojiEnable" = "Enable Large Emoji";
 "Conversation.LargeEmojiEnabled" = "Large emoji enabled.";
 
@@ -7208,16 +7209,16 @@ Sorry for the inconvenience.";
 
 "Conversation.ContextMenuTranslate" = "Translate";
 
-"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need it again.";
+"ClearCache.ClearDescription" = "All media will stay in the Telegram cloud and can be re-downloaded if you need them again.";
 
 "ChatSettings.StickersAndReactions" = "Stickers and Emoji";
 
 "Localization.TranslateMessages" = "Translate Messages";
 "Localization.ShowTranslate" = "Show Translate Button";
-"Localization.ShowTranslateInfo" = "Show 'Translate' button in the message action menu.";
+"Localization.ShowTranslateInfo" = "Show a 'Translate' button in the message action menu.";
 "Localization.DoNotTranslate" = "Do Not Translate";
-"Localization.DoNotTranslateInfo" = "Do not show 'Translate' button in the message action menu for this language.";
-"Localization.DoNotTranslateManyInfo" = "Do not show 'Translate' button in the message action menu for this languages.";
+"Localization.DoNotTranslateInfo" = "Do not show the 'Translate' button in the message action menu for this language.";
+"Localization.DoNotTranslateManyInfo" = "Do not show the 'Translate' button in the message action menu for these languages.";
 "Localization.InterfaceLanguage" = "Interface Language";
 
 "DoNotTranslate.Title" = "Do Not Translate";
@@ -7229,8 +7230,8 @@ Sorry for the inconvenience.";
 "Contacts.QrCode.MyCode" = "My QR Code";
 "Contacts.QrCode.NoCodeFound" = "No valid QR code found in the image. Please try again.";
 
-"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nPlease go to Settings > Privacy > Photos and set Telegram to ON.";
-"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nPlease go to Settings > Privacy > Camera and set Telegram to ON.";
+"AccessDenied.QrCode" = "Telegram needs access to your photo library to scan QR codes.\n\nOpen your device's Settings > Privacy > Photos and set Telegram to ON.";
+"AccessDenied.QrCamera" = "Telegram needs access to your camera to scan QR codes.\n\nOpen your device's Settings > Privacy > Camera and set Telegram to ON.";
 
 "Share.ShareToInstagramStories" = "Share to Instagram Stories";
 
@@ -7245,7 +7246,7 @@ Sorry for the inconvenience.";
 
 "Settings.QuickReactionSetup.NavigationTitle" = "Quick Reaction";
 "Settings.QuickReactionSetup.Title" = "Quick Reaction";
-"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON MESSAGE TO REACT";
+"Settings.QuickReactionSetup.DemoHeader" = "DOUBLE TAP ON A MESSAGE TO REACT";
 "Settings.QuickReactionSetup.DemoInfo" = "You can double tap on message for a quick reaction.";
 "Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
 "Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
@@ -7256,6 +7257,146 @@ Sorry for the inconvenience.";
 "Chat.OutgoingContextReactionCount_1" = "1 reacted";
 "Chat.OutgoingContextReactionCount_any" = "%@ reacted";
 "Chat.OutgoingContextMixedReactionCount" = "%1$@/%2$@ reacted";
+
+"Contacts.Sort" = "Sort";
+"Contacts.Sort.ByName" = "by Name";
+"Contacts.Sort.ByLastSeen" = "by Last Seen";
+
+"ClearCache.Progress" = "Clearing the Cache • %d%";
+"ClearCache.KeepOpenedDescription" = "Please keep this window open until the clearing is completed.";
+
+"Share.ShareAsLink" = "Share as Link";
+"Share.ShareAsImage" = "Share as Image";
+
+"Share.MessagePreview" = "Message Preview";
+"Share.ShareMessage" = "Share Message";
+
+"Conversation.UserSendMessage" = "SEND MESSAGE";
+
+"Conversation.CopyProtectionForwardingDisabledBot" = "Forwards from this bot are restricted";
+"Conversation.CopyProtectionSavingDisabledBot" = "Saving from this bot is restricted";
+
+"Channel.ChannelSubscribersHeader" = "CHANNEL SUBSCRIBERS";
+
+"Channel.Members.Contacts" = "CONTACTS IN THIS CHANNEL";
+"Channel.Members.Other" = "OTHERS SUBSCRIBERS";
+
+"Group.Members.Contacts" = "CONTACTS IN THIS GROUP";
+"Group.Members.Other" = "OTHERS MEMBERS";
+
+"Conversation.ReadAllReactions" = "Read All Reactions";
+"ChatList.UserReacted" = "Reacted %@ to your message";
+
+"SharedMedia.CommonGroupCount_1" = "%@ group in common";
+"SharedMedia.CommonGroupCount_any" = "%@ groups in common";
+
+"Attachment.Camera" = "Camera";
+"Attachment.Gallery" = "Gallery";
+"Attachment.File" = "File";
+"Attachment.Location" = "Location";
+"Attachment.Contact" = "Contact";
+"Attachment.Poll" = "Poll";
+
+"Attachment.SelectFromGallery" = "Select from Gallery";
+"Attachment.SelectFromFiles" = "Select from Files";
+
+"Attachment.AllMedia" = "All";
+
+"Attachment.SelectedMedia_1" = "%@ Selected";
+"Attachment.SelectedMedia_2" = "%@ Selected";
+"Attachment.SelectedMedia_3_10" = "%@ Selected";
+"Attachment.SelectedMedia_any" = "%@ Selected";
+"Attachment.SelectedMedia_many" = "%@ Selected";
+"Attachment.SelectedMedia_0" = "%@ Selected";
+
+"Attachment.SendAsFile" = "Send as File";
+"Attachment.SendAsFiles" = "Send as Files";
+
+"Attachment.Grouped" = "Grouped";
+"Attachment.Ungrouped" = "Ungrouped";
+
+"Attachment.MessagePreview" = "Message Preview";
+"Attachment.MessagesPreview" = "Messages Preview";
+"Attachment.DragToReorder" = "Drag media to reorder";
+
+"Attachment.SearchWeb" = "Search Web";
+
+"Attachment.RecentlySentFiles" = "Recently Sent Files";
+
+"ReportPeer.ReasonIllegalDrugs" = "Illegal Drugs";
+"ReportPeer.ReasonPersonalDetails" = "Personal Details";
+
+"Attachment.FilesIntro" = "Send and receive files of any type, up to 2 GB\nin size each, access them instantly\non your other devices.";
+"Attachment.FilesSearchPlaceholder" = "Search sent files";
+
+"Attachment.MediaAccessTitle" = "Access Your Photos and Videos";
+"Attachment.MediaAccessText" = "Share an unlimited number of photos and videos of up to 2 GB each.";
+
+"Attachment.LimitedMediaAccessText" = "You have limited Telegram from accessing all of your photos.";
+"Attachment.CameraAccessText" = "Telegram needs camera access so that you can take photos and videos.";
+"Attachment.Manage" = "Manage";
+
+"Attachment.OpenSettings" = "Go to Settings";
+"Attachment.OpenCamera" = "Open Camera";
+
+"Attachment.DeselectedPhotos_1" = "%@ photo deselected";
+"Attachment.DeselectedPhotos_any" = "%@ photos deselected";
+
+"Attachment.DeselectedVideos_1" = "%@ video deselected";
+"Attachment.DeselectedVideos_any" = "%@ videos deselected";
+
+"Attachment.DeselectedItems_1" = "%@ item deselected";
+"Attachment.DeselectedItems_any" = "%@ items deselected";
+
+"PrivacyPhoneNumberSettings.CustomPublicLink" = "Users who have your number saved in their contacts will also see it on Telegram.\n\nThis public link opens a chat with you:\n[https://t.me/%@]()";
+
+"DownloadList.DownloadingHeader" = "Downloading";
+"DownloadList.DownloadedHeader" = "Recently Downloaded";
+"DownloadList.PauseAll" = "Pause All";
+"DownloadList.ResumeAll" = "Resume All";
+"DownloadList.Clear" = "Clear";
+"DownloadList.OptionManageDeviceStorage" = "Manage Device Storage";
+"DownloadList.ClearDownloadList" = "Clear Download List";
+"DownloadList.DeleteFromCache" = "Delete from Cache";
+"DownloadList.RaisePriority" = "Raise Priority";
+"DownloadList.CancelDownloading" = "Cancel Downloading";
+
+"DownloadList.RemoveFileAlertTitle_1" = "Remove Document?";
+"DownloadList.RemoveFileAlertTitle_any" = "Remove %@ Documents?";
+"DownloadList.RemoveFileAlertText_1" = "Are you sure you want to remove this\ndocument from Downloads?\nIt will be deleted from your disk, but\nwill remain accessible in the cloud.";
+"DownloadList.RemoveFileAlertText_any" = "Are you sure you want to remove these\n%@ documents from Downloads?\nThey will be deleted from your disk, but\nwill remain accessible in the cloud.";
+"DownloadList.RemoveFileAlertRemove" = "Remove";
+
+"DownloadList.ClearAlertTitle" = "Downloaded Files";
+"DownloadList.ClearAlertText" = "Telegram allows to store all received and sent\ndocuments in the cloud and save storage\nspace on your device.";
+
+"ChatList.Search.FilterDownloads" = "Downloads";
+
+"LiveStream.NoViewers" = "No viewers";
+"LiveStream.ViewerCount_1" = "1 viewer";
+"LiveStream.ViewerCount_any" = "%@ viewers";
+
+"LiveStream.NoSignalAdminText" = "Oops! Telegram doesn't see any stream\ncoming from your streaming app.\n\nPlease make sure you entered the right Server\nURL and Stream Key in your app.";
+"LiveStream.NoSignalUserText" = "%@ is currently not broadcasting live\nstream data to Telegram.";
+
+"Attachment.MyAlbums" = "My Albums";
+"Attachment.MediaTypes" = "Media Types";
+
+"Attachment.LocationAccessTitle" = "Access Your Location";
+"Attachment.LocationAccessText" = "Share places or your live location.";
+
+"Attachment.CancelSelectionAlertText" = "Cancel selection?";
+"Attachment.CancelSelectionAlertYes" = "Yes";
+"Attachment.CancelSelectionAlertNo" = "No";
+
+"ChannelInfo.CreateExternalStream" = "Stream With...";
+
+"CreateExternalStream.Title" = "Stream With...";
+"CreateExternalStream.Text" = "To stream video with a another app, enter\nthese Server URL and Stream Key in your\nsteaming app.";
+"CreateExternalStream.ServerUrl" = "server URL";
+"CreateExternalStream.StreamKey" = "stream key";
+"CreateExternalStream.StartStreamingInfo" = "Once you start broadcasting in your streaming\napp, tap Start Streaming below.";
+"CreateExternalStream.StartStreaming" = "Start Streaming";
 
 "Settings.Version" = "Telegram for iOS v%1$@ (%2$@)\nPTelegram version %3$@";
 

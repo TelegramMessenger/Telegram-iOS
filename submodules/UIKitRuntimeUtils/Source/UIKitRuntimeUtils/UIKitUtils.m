@@ -168,3 +168,47 @@ void applySmoothRoundedCornersImpl(CALayer * _Nonnull layer) {
         setBoolField(layer, [@[@"set", @"Continuous", @"Corners", @":"] componentsJoinedByString:@""], true);
     }
 }
+
+/*@interface _UIPortalView : UIView
+
+@property(nonatomic, getter=_isGeometryFrozen, setter=_setGeometryFrozen:) _Bool _geometryFrozen; // @synthesize _geometryFrozen=__geometryFrozen;
+@property(nonatomic) _Bool forwardsClientHitTestingToSourceView; // @synthesize forwardsClientHitTestingToSourceView=_forwardsClientHitTestingToSourceView;
+@property(copy, nonatomic) NSString * _Nullable name; // @synthesize name=_name;
+@property(nonatomic) __weak UIView * _Nullable sourceView; // @synthesize sourceView=_sourceView;
+- (void)setCenter:(struct CGPoint)arg1;
+- (void)setBounds:(struct CGRect)arg1;
+- (void)setFrame:(struct CGRect)arg1;
+- (void)setHidden:(_Bool)arg1;
+@property(nonatomic) _Bool allowsHitTesting; // @dynamic allowsHitTesting;
+@property(nonatomic) _Bool allowsBackdropGroups; // @dynamic allowsBackdropGroups;
+@property(nonatomic) _Bool matchesPosition; // @dynamic matchesPosition;
+@property(nonatomic) _Bool matchesTransform; // @dynamic matchesTransform;
+@property(nonatomic) _Bool matchesAlpha; // @dynamic matchesAlpha;
+@property(nonatomic) _Bool hidesSourceView; // @dynamic hidesSourceView;
+- (instancetype _Nonnull)initWithFrame:(struct CGRect)arg1;
+- (instancetype _Nonnull)initWithSourceView:(UIView * _Nullable)arg1;
+
+@end*/
+
+UIView<UIKitPortalViewProtocol> * _Nullable makePortalView() {
+    static Class portalViewClass = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        portalViewClass = NSClassFromString([@[@"_", @"UI", @"Portal", @"View"] componentsJoinedByString:@""]);
+    });
+    if (!portalViewClass) {
+        return nil;
+    }
+    UIView<UIKitPortalViewProtocol> *view = [[portalViewClass alloc] init];
+    if (!view) {
+        return nil;
+    }
+    
+    view.forwardsClientHitTestingToSourceView = false;
+    view.matchesPosition = true;
+    view.matchesTransform = true;
+    view.matchesAlpha = false;
+    view.allowsHitTesting = false;
+    
+    return view;
+}

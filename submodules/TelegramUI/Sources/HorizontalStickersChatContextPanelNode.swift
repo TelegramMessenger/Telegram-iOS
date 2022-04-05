@@ -11,6 +11,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import ContextUI
+import ChatPresentationInterfaceState
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: StickerPackItem?

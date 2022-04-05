@@ -47,7 +47,6 @@ EXTRA_DIST = \
     ekr_client.c \
     ekr_server.c \
     ekr_loop.c \
-    ekr_loop_offload.c \
     ekr_loop_upcall.c \
     ekr_peer.c \
     test_libmgmt.c \
@@ -72,7 +71,6 @@ noinst_PROGRAMS = \
     ekr_client \
     ekr_server \
     ekr_loop \
-    ekr_loop_offload \
     ekr_loop_upcall \
     ekr_peer \
     test_libmgmt \
@@ -114,8 +112,6 @@ ekr_peer_SOURCES = programs_helper.c ekr_peer.c
 ekr_peer_LDADD = ../usrsctplib/libusrsctp.la
 ekr_loop_SOURCES = programs_helper.c ekr_loop.c
 ekr_loop_LDADD = ../usrsctplib/libusrsctp.la
-ekr_loop_offload_SOURCES = programs_helper.c ekr_loop_offload.c
-ekr_loop_offload_LDADD = ../usrsctplib/libusrsctp.la
 ekr_loop_upcall_SOURCES = programs_helper.c ekr_loop_upcall.c
 ekr_loop_upcall_LDADD = ../usrsctplib/libusrsctp.la
 http_client_SOURCES = programs_helper.c http_client.c

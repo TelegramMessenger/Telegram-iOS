@@ -112,6 +112,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @interface GroupCallDisposable : NSObject
 
+- (instancetype _Nonnull)initWithBlock:(dispatch_block_t _Nonnull)block;
 - (void)dispose;
 
 @end
@@ -349,11 +350,13 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
-    enableNoiseSuppression:(bool)enableNoiseSuppression;
+    enableNoiseSuppression:(bool)enableNoiseSuppression
+    disableAudioInput:(bool)disableAudioInput
+    preferX264:(bool)preferX264;
 
 - (void)stop;
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled;
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;
 - (void)setJoinResponsePayload:(NSString * _Nonnull)payload;

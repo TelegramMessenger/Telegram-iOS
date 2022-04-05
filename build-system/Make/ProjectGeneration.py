@@ -91,6 +91,8 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
         bazel_build_arguments += ['--//{}:disableProvisioningProfiles'.format(app_target)]
     if generate_dsym:
         bazel_build_arguments += ['--apple_generate_dsym']
+    bazel_build_arguments += ['--//{}:disableStripping'.format(app_target)]
+    bazel_build_arguments += ['--strip=never']
 
     call_executable([
         tulsi_path,

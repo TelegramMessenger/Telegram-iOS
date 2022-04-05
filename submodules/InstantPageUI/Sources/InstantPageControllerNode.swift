@@ -16,6 +16,7 @@ import OpenInExternalAppUI
 import LocationUI
 import UndoUI
 import ContextUI
+import Translate
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var controller: InstantPageController?
@@ -1020,23 +1021,51 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 coveringRect = coveringRect.union(rects[i])
             }
             
-            let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: {
-                UIPasteboard.general.string = text
-            }), ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
-                if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
-                }
-            })])
-            controller.dismissed = { [weak self] in
-                self?.updateTextSelectionRects([], text: nil)
-            }
-            self.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-                if let strongSelf = self {
-                    return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf, strongSelf.bounds)
+            let context = self.context
+            let strings = self.strings
+            let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                let translationSettings: TranslationSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                    translationSettings = current
                 } else {
-                    return nil
+                    translationSettings = TranslationSettings.defaultSettings
                 }
-            }))
+                
+                var actions: [ContextMenuAction] = [ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuCopy, accessibilityLabel: strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                    UIPasteboard.general.string = text
+                    
+                    if let strongSelf = self {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                    }
+                }), ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuShare, accessibilityLabel: strings.Conversation_ContextMenuShare), action: { [weak self] in
+                    if let strongSelf = self, let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                        strongSelf.present(ShareController(context: strongSelf.context, subject: .quote(text: text, url: content.url)), nil)
+                    }
+                })]
+                
+                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                if canTranslate {
+                    actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: {
+                        translateText(context: context, text: text, fromLang: language)
+                    }))
+                }
+                
+                let controller = ContextMenuController(actions: actions)
+                controller.dismissed = { [weak self] in
+                    self?.updateTextSelectionRects([], text: nil)
+                }
+                self?.present(controller, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                    if let strongSelf = self {
+                        return (strongSelf.scrollNode, coveringRect.insetBy(dx: -3.0, dy: -3.0), strongSelf, strongSelf.bounds)
+                    } else {
+                        return nil
+                    }
+                }))
+            })
+            
             textSelectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
         } else if let textSelectionNode = self.textSelectionNode {
             self.textSelectionNode = nil

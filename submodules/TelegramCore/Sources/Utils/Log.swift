@@ -3,6 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 import NetworkLogging
+import ManagedFile
 
 private let queue = DispatchQueue(label: "org.telegram.Telegram.trace", qos: .utility)
 

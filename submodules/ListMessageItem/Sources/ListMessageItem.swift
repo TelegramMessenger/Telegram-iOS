@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import AccountContext
 import TelegramUIPreferences
+import ItemListUI
 
 public final class ListMessageItemInteraction {
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
@@ -47,16 +48,20 @@ public final class ListMessageItem: ListViewItem {
     let context: AccountContext
     let chatLocation: ChatLocation
     let interaction: ListMessageItemInteraction
-    let message: Message
+    let message: Message?
     public let selection: ChatHistoryMessageSelection
     let hintIsLink: Bool
     let isGlobalSearchResult: Bool
+    let isDownloadList: Bool
+    let displayFileInfo: Bool
+    let displayBackground: Bool
+    let style: ItemListStyle
     
     let header: ListViewItemHeader?
     
     public let selectable: Bool = true
     
-    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false) {
+    public init(presentationData: ChatPresentationData, context: AccountContext, chatLocation: ChatLocation, interaction: ListMessageItemInteraction, message: Message?, selection: ChatHistoryMessageSelection, displayHeader: Bool, customHeader: ListViewItemHeader? = nil, hintIsLink: Bool = false, isGlobalSearchResult: Bool = false, isDownloadList: Bool = false, displayFileInfo: Bool = true, displayBackground: Bool = false, style: ItemListStyle = .plain) {
         self.presentationData = presentationData
         self.context = context
         self.chatLocation = chatLocation
@@ -64,7 +69,7 @@ public final class ListMessageItem: ListViewItem {
         self.message = message
         if let header = customHeader {
             self.header = header
-        } else if displayHeader {
+        } else if displayHeader, let message = message {
             self.header = ListMessageDateHeader(timestamp: message.timestamp, theme: presentationData.theme.theme, strings: presentationData.strings, fontSize: presentationData.fontSize)
         } else {
             self.header = nil
@@ -72,17 +77,28 @@ public final class ListMessageItem: ListViewItem {
         self.selection = selection
         self.hintIsLink = hintIsLink
         self.isGlobalSearchResult = isGlobalSearchResult
+        self.isDownloadList = isDownloadList
+        self.displayFileInfo = displayFileInfo
+        self.displayBackground = displayBackground
+        self.style = style
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         var viewClassName: AnyClass = ListMessageSnippetItemNode.self
         
         if !self.hintIsLink {
-            for media in self.message.media {
-                if let _ = media as? TelegramMediaFile {
-                    viewClassName = ListMessageFileItemNode.self
-                    break
+            if let message = self.message {
+                for media in message.media {
+                    if let _ = media as? TelegramMediaFile {
+                        viewClassName = ListMessageFileItemNode.self
+                        break
+                    } else if let _ = media as? TelegramMediaImage {
+                        viewClassName = ListMessageFileItemNode.self
+                        break
+                    }
                 }
+            } else {
+                viewClassName = ListMessageFileItemNode.self
             }
         }
         
@@ -92,7 +108,7 @@ public final class ListMessageItem: ListViewItem {
             node.setupItem(self)
             
             let nodeLayout = node.asyncLayout()
-            let (top, bottom, dateAtBottom) = (previousItem != nil, nextItem != nil, self.getDateAtBottom(top: previousItem, bottom: nextItem))
+            let (top, bottom, dateAtBottom) = (previousItem != nil && !(previousItem is ItemListItem), nextItem != nil, self.getDateAtBottom(top: previousItem, bottom: nextItem))
             let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
             
             node.updateSelectionState(animated: false)
@@ -125,7 +141,7 @@ public final class ListMessageItem: ListViewItem {
                 let nodeLayout = nodeValue.asyncLayout()
                 
                 async {
-                    let (top, bottom, dateAtBottom) = (previousItem != nil, nextItem != nil, self.getDateAtBottom(top: previousItem, bottom: nextItem))
+                    let (top, bottom, dateAtBottom) = (previousItem != nil && !(previousItem is ItemListItem), nextItem != nil, self.getDateAtBottom(top: previousItem, bottom: nextItem))
                     
                     let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom)
                     Queue.mainQueue().async {
@@ -143,17 +159,25 @@ public final class ListMessageItem: ListViewItem {
     public func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
         
+        guard let message = self.message else {
+            return
+        }
+        
         if case let .selectable(selected) = self.selection {
-            self.interaction.toggleMessagesSelection([self.message.id], !selected)
+            self.interaction.toggleMessagesSelection([message.id], !selected)
         } else {
-            listView.forEachItemNode { itemNode in
-                if let itemNode = itemNode as? ListMessageFileItemNode {
-                    if let messageId = itemNode.item?.message.id, messageId == self.message.id {
-                        itemNode.activateMedia()
-                    }
-                } else if let itemNode = itemNode as? ListMessageSnippetItemNode {
-                    if let messageId = itemNode.item?.message.id, messageId == self.message.id {
-                        itemNode.activateMedia()
+            if !self.displayFileInfo {
+                let _ = self.interaction.openMessage(message, .default)
+            } else {
+                listView.forEachItemNode { itemNode in
+                    if let itemNode = itemNode as? ListMessageFileItemNode {
+                        if let messageId = itemNode.item?.message?.id, messageId == message.id {
+                            itemNode.activateMedia()
+                        }
+                    } else if let itemNode = itemNode as? ListMessageSnippetItemNode {
+                        if let messageId = itemNode.item?.message?.id, messageId == message.id {
+                            itemNode.activateMedia()
+                        }
                     }
                 }
             }
@@ -174,6 +198,10 @@ public final class ListMessageItem: ListViewItem {
     }
     
     public var description: String {
-        return "(ListMessageItem id: \(self.message.id), text: \"\(self.message.text)\")"
+        if let message = self.message {
+            return "(ListMessageItem id: \(message.id), text: \"\(message.text)\")"
+        } else {
+            return "(ListMessageItem empty)"
+        }
     }
 }

@@ -23,6 +23,7 @@ import ChatImportUI
 import ZipArchive
 import ActivityIndicator
 import DebugSettingsUI
+import ManagedFile
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
@@ -348,8 +349,8 @@ public class ShareRootControllerImpl {
                             } |> runOn(Queue.mainQueue())
                         }
                         
-                        let sentItems: ([PeerId], [PreparedShareItemContent], Account) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account in
-                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents)
+                        let sentItems: ([PeerId], [PreparedShareItemContent], Account, Bool) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account, silently in
+                            let sentItems = sentShareItems(account: account, to: peerIds, items: contents, silently: silently)
                             |> `catch` { _ -> Signal<
                                 Float, NoError> in
                                 return .complete()
@@ -361,7 +362,7 @@ public class ShareRootControllerImpl {
                             |> then(.single(.done))
                         }
                                             
-                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account in
+                        let shareController = ShareController(context: context, subject: .fromExternal({ peerIds, additionalText, account, silently in
                             if let strongSelf = self, let inputItems = strongSelf.getExtensionContext()?.inputItems, !inputItems.isEmpty, !peerIds.isEmpty {
                                 let rawSignals = TGItemProviderSignals.itemSignals(forInputItems: inputItems)!
                                 return preparedShareItems(account: account, to: peerIds[0], dataItems: rawSignals, additionalText: additionalText)
@@ -381,10 +382,10 @@ public class ShareRootControllerImpl {
                                         case let .userInteractionRequired(value):
                                             return requestUserInteraction(value)
                                             |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, NoError> in
-                                                return sentItems(peerIds, contents, account)
+                                                return sentItems(peerIds, contents, account, silently)
                                             }
                                         case let .done(contents):
-                                            return sentItems(peerIds, contents, account)
+                                            return sentItems(peerIds, contents, account, silently)
                                     }
                                 }
                             } else {

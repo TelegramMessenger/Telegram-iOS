@@ -48,7 +48,7 @@ NSInteger UITabBarItem_addSetBadgeListener(UITabBarItem * _Nonnull item, UITabBa
 - (NSInteger)addSetSelectedImageListener:(UINavigationItemSetImageListener _Nonnull)listener;
 - (void)removeSetSelectedImageListener:(NSInteger)key;
 
-- (NSObject * _Nullable)userInfo;
-- (void)setUserInfo:(NSObject * _Nullable)userInfo;
+@property (nonatomic, strong) NSString * _Nullable animationName;
+@property (nonatomic, assign) CGPoint animationOffset;
 
 @end

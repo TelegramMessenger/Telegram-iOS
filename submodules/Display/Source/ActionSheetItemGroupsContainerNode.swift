@@ -112,4 +112,8 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         
         self.groups[groupIndex] = ActionSheetItemGroup(items: groupItems)
     }
+    
+    func setItemGroupOverlayNode(groupIndex: Int, node: ActionSheetGroupOverlayNode) {
+        self.groupNodes[groupIndex].setOverlayNode(node)
+    }
 }

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 class AccessoryPanelNode: ASDisplayNode {
     var originalFrameBeforeDismissed: CGRect?

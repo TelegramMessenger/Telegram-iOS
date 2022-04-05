@@ -285,11 +285,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     animateReactionsIn = true
                 }
                 
-                reactionContextNode.reactionSelected = { [weak self] reaction in
+                reactionContextNode.reactionSelected = { [weak self] reaction, isLarge in
                     guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
                         return
                     }
-                    controller.reactionSelected?(reaction)
+                    controller.reactionSelected?(reaction, isLarge)
                 }
             }
             contentTopInset += 70.0
@@ -504,6 +504,17 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             )
             
             if let reactionContextNode = self.reactionContextNode {
+                let reactionsPositionDeltaYDistance = -animationInContentDistance
+                reactionContextNode.layer.animateSpring(
+                    from: NSValue(cgPoint: CGPoint(x: 0.0, y: reactionsPositionDeltaYDistance)),
+                    to: NSValue(cgPoint: CGPoint()),
+                    keyPath: "position",
+                    duration: duration,
+                    delay: 0.0,
+                    initialVelocity: 0.0,
+                    damping: springDamping,
+                    additive: true
+                )
                 reactionContextNode.animateIn(from: currentContentScreenFrame)
             }
             
@@ -675,7 +686,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
-    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.requestAnimateOut(.default, completion)
             return
@@ -697,7 +708,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             intermediateCompletion()
         })
         
-        reactionContextNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
+        reactionContextNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }

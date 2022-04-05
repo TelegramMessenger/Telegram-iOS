@@ -79,7 +79,15 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
 
     var status: Signal<PeerInfoStatusData?, NoError> {
-        return .single(nil)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        return self.groupsInCommonContext.state
+        |> map { state in
+            if let count = state.count {
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_CommonGroupCount(Int32(count)), isActivity: false)
+            } else {
+                return nil
+            }
+        }
     }
 
     var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)?
@@ -178,7 +186,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
-            self?.chatControllerInteraction.openPeer(peer.id, .default, nil)
+            self?.chatControllerInteraction.openPeer(peer.id, .default, nil, nil)
         }, openPeerContextAction: { [weak self] peer, node, gesture in
             self?.openPeerContextAction(peer, node, gesture)
         })

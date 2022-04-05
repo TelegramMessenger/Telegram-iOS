@@ -325,7 +325,7 @@ private final class NavigationButtonItemNode: ImmediateTextNode {
 }
 
 
-public final class NavigationButtonNode: ASDisplayNode {
+public final class NavigationButtonNode: ContextControllerSourceNode {
     private var nodes: [NavigationButtonItemNode] = []
     
     public var singleCustomNode: ASDisplayNode? {
@@ -379,6 +379,7 @@ public final class NavigationButtonNode: ASDisplayNode {
         super.init()
         
         self.isAccessibilityElement = false
+        self.isGestureEnabled = false
     }
     
     var manualText: String {

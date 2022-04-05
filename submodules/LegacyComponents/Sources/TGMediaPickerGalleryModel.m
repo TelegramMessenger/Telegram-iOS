@@ -11,6 +11,7 @@
 #import "TGModernGalleryEditableItemView.h"
 #import "TGMediaPickerGalleryItem.h"
 #import <LegacyComponents/TGModernGalleryZoomableItemView.h>
+#import "TGMediaPickerGalleryVideoItem.h"
 #import "TGMediaPickerGalleryVideoItemView.h"
 
 #import "TGModernMediaListItem.h"
@@ -100,12 +101,6 @@
     return self;
 }
 
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext
-{
-    _suggestionContext = suggestionContext;
-    [_interfaceView setSuggestionContext:suggestionContext];
-}
-
 - (NSInteger)selectionCount
 {
     if (self.externalSelectionCount != nil)
@@ -185,7 +180,6 @@
     {
         __weak TGMediaPickerGalleryModel *weakSelf = self;
         _interfaceView = [[TGMediaPickerGalleryInterfaceView alloc] initWithContext:_context focusItem:_initialFocusItem selectionContext:_selectionContext editingContext:_editingContext stickersContext:_stickersContext hasSelectionPanel:_hasSelectionPanel hasCameraButton:_hasCamera recipientName:_recipientName];
-        [_interfaceView setSuggestionContext:_suggestionContext];
         _interfaceView.hasCaptions = _hasCaptions;
         _interfaceView.allowCaptionEntities = _allowCaptionEntities;
         _interfaceView.hasTimer = _hasTimer;
@@ -410,7 +404,6 @@
     controller.editingContext = _editingContext;
     controller.stickersContext = _stickersContext;
     self.editorController = controller;
-    controller.suggestionContext = self.suggestionContext;
     controller.willFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges)
     {
         __strong TGMediaPickerGalleryModel *strongSelf = weakSelf;

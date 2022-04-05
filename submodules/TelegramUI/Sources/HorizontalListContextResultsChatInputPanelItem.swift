@@ -14,6 +14,7 @@ import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import AccountContext
 import ShimmerEffect
+import SoftwareVideo
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
@@ -436,7 +437,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             let dimensions = animatedStickerFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                             let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
                             strongSelf.fetchDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(animatedStickerFile), resource: animatedStickerFile.resource).start())
-                            animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                            animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource, isVideo: animatedStickerFile.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     
@@ -460,7 +461,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                                     switch status {
                                         case let .Fetching(_, progress):
                                             state = .progress(color: statusForegroundColor, lineWidth: nil, value: CGFloat(max(progress, 0.2)), cancelEnabled: false, animateRotation: true)
-                                        case .Remote:
+                                        case .Remote, .Paused:
                                             //state = .download(statusForegroundColor)
                                             state = .none
                                         case .Local:

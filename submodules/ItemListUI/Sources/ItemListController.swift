@@ -174,6 +174,13 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
+    public var visibleBottomContentOffset: ListViewVisibleContentOffset {
+        if self.isNodeLoaded {
+            return (self.displayNode as! ItemListControllerNode).listNode.visibleBottomContentOffset()
+        } else {
+            return .unknown
+        }
+    }
     public var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)? {
         didSet {
             if self.isNodeLoaded {

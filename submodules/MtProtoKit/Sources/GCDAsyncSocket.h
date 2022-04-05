@@ -151,6 +151,8 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 @property (nonatomic) bool useTcpNodelay;
 @property (nonatomic, strong) MTNetworkUsageCalculationInfo *usageCalculationInfo;
 
+@property (nonatomic, strong) NSString *(^getLogPrefix)();
+
 /**
  * GCDAsyncSocket uses the standard delegate paradigm,
  * but executes all delegate callbacks on a given delegate dispatch queue.

@@ -623,8 +623,10 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         (self.supernode as? ListView)?.ensureItemNodeVisible(self, animated: false, overflow: 22.0, allowIntersection: true)
     }
     
-    public func updateFrame(_ frame: CGRect, within containerSize: CGSize) {
-        self.frame = frame
+    public func updateFrame(_ frame: CGRect, within containerSize: CGSize, updateFrame: Bool = true) {
+        if updateFrame {
+            self.frame = frame
+        }
         if frame.maxY < 0.0 || frame.minY > containerSize.height {
         } else {
             self.updateAbsoluteRect(frame, within: containerSize)

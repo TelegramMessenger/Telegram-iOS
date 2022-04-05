@@ -167,7 +167,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
             switch fetchStatus {
                 case .Local:
                     self.openMedia(self.media)
-                case .Remote:
+                case .Remote, .Paused:
                     self.fetchControls?.fetch(true)
                 case .Fetching:
                     self.fetchControls?.cancel()

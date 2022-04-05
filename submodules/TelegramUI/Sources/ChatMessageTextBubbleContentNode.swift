@@ -412,7 +412,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.insertSubnode(dustNode, aboveSubnode: spoilerTextNode)
                                 }
                                 dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                                dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                                dustNode.update(size: dustNode.frame.size, color: messageTheme.secondaryTextColor, textColor: messageTheme.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                             } else if let spoilerTextNode = strongSelf.spoilerTextNode {
                                 strongSelf.spoilerTextNode = nil
                                 spoilerTextNode.removeFromSupernode()

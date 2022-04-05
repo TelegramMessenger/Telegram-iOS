@@ -11,6 +11,10 @@ import Markdown
 private let titleFont = Font.regular(13.0)
 private let titleBoldFont = Font.bold(13.0)
 
+private func spoilerAttributes(primaryTextColor: UIColor) -> MarkdownAttributeSet {
+    return MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [TelegramTextAttributes.Spoiler: true])
+}
+
 private func peerMentionAttributes(primaryTextColor: UIColor, peerId: EnginePeer.Id) -> MarkdownAttributeSet {
     return MarkdownAttributeSet(font: titleBoldFont, textColor: primaryTextColor, additionalAttributes: [TelegramTextAttributes.PeerMention: TelegramPeerMention(peerId: peerId, mention: "")])
 }
@@ -25,8 +29,18 @@ private func peerMentionsAttributes(primaryTextColor: UIColor, peerIds: [(Int, E
     return result
 }
 
-public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id, forChatList: Bool) -> String? {
-    return universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: forChatList)?.string
+public func plainServiceMessageString(strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id, forChatList: Bool) -> (String, [NSRange])? {
+    if let attributedString = universalServiceMessageString(presentationData: nil, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: forChatList) {
+        var ranges: [NSRange] = []
+        attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)] {
+                ranges.append(range)
+            }
+        })
+        return (attributedString.string, ranges)
+    } else {
+        return nil
+    }
 }
 
 public func universalServiceMessageString(presentationData: (PresentationTheme, TelegramWallpaper)?, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id, forChatList: Bool) -> NSAttributedString? {
@@ -137,7 +151,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .pinnedMessageUpdated:
                 enum PinnnedMediaType {
-                    case text(String)
+                    case text(String, [MessageTextEntity])
                     case game
                     case photo
                     case video
@@ -160,8 +174,15 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 
                 var type: PinnnedMediaType
-                if let pinnedMessage = pinnedMessage {
-                    type = .text(pinnedMessage.text)
+                if let pinnedMessage = pinnedMessage?._asMessage() {
+                    let entities = (pinnedMessage.textEntitiesAttribute?.entities ?? []).filter { entity in
+                        if case .Spoiler = entity.type {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }
+                    type = .text(pinnedMessage.text, entities)
                     inner: for media in pinnedMessage.media {
                         if media is TelegramMediaGame {
                             type = .game
@@ -213,8 +234,13 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
                 
                 switch type {
-                case let .text(text):
-                    var clippedText = text.replacingOccurrences(of: "\n", with: " ")
+                case let .text(text, entities):
+                    var clippedText = text
+                    if !entities.isEmpty {
+                        clippedText = trimToLineCount(clippedText, lineCount: 1)
+                    } else {
+                        clippedText = clippedText.replacingOccurrences(of: "\n", with: " ")
+                    }
                     if clippedText.count > 14 {
                         clippedText = "\(clippedText[...clippedText.index(clippedText.startIndex, offsetBy: 14)])..."
                     }
@@ -224,7 +250,26 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     } else {
                         textWithRanges = strings.Notification_PinnedTextMessage(authorName, clippedText)
                     }
-                    attributedString = addAttributesToStringWithRanges(textWithRanges._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
+                    
+                    let string = textWithRanges._tuple.0
+                    let stringLength = (string as NSString).length
+                    let messageLength = (clippedText as NSString).length
+                    var ranges = textWithRanges._tuple.1
+                    let entityOffset = ranges.first(where: { $0.0 == 1 })?.1.location ?? 0
+                    var attributes = peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)])
+                    for entity in entities {
+                        if entity.range.startIndex >= messageLength {
+                            continue
+                        }
+                        let location = entityOffset + entity.range.startIndex
+                        let length = max(0, min(entity.range.count, stringLength - location - 1))
+                        if length > 0 {
+                            let index = ranges.count
+                            ranges.append((ranges.count, NSRange(location: location, length: length)))
+                            attributes[index] = spoilerAttributes(primaryTextColor: primaryTextColor)
+                        }
+                    }
+                    attributedString = addAttributesToStringWithRanges((string, ranges), body: bodyAttributes, argumentAttributes: attributes)
                 case .game:
                     attributedString = addAttributesToStringWithRanges(strings.Message_AuthorPinnedGame(authorName)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, message.author?.id)]))
                 case .photo:

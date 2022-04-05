@@ -211,6 +211,9 @@
         if (strongController == nil)
             return;
         
+        if (strongController->_toolbarView.superview == nil)
+            return;
+        
         UIView *toolbarView = strongController->_toolbarView;
         if (enabled)
         {
@@ -243,7 +246,6 @@
             pickerController = [[TGMediaAssetsPickerController alloc] initWithContext:strongController->_context assetsLibrary:strongController.assetsLibrary assetGroup:group intent:intent selectionContext:inhibitSelection ? nil : strongController->_selectionContext editingContext:strongController->_editingContext saveEditedPhotos:strongController->_saveEditedPhotos];
             pickerController.pallete = strongController.pallete;
         }
-        pickerController.suggestionContext = strongController.suggestionContext;
         pickerController.stickersContext = strongController.stickersContext;
         pickerController.localMediaCacheEnabled = strongController.localMediaCacheEnabled;
         pickerController.captionsEnabled = strongController.captionsEnabled;
@@ -271,18 +273,16 @@
     [groupsController setIsFirstInStack:true];
     [pickerController setIsFirstInStack:false];
     
-    [assetsController setViewControllers:@[ groupsController, pickerController ]];
+    if (intent == TGMediaAssetsControllerSendMediaIntent) {
+        [assetsController setViewControllers:@[ pickerController ]];
+    } else {
+        [assetsController setViewControllers:@[ groupsController, pickerController ]];
+    }
     ((TGNavigationBar *)assetsController.navigationBar).navigationController = assetsController;
     
     assetsController.recipientName = recipientName;
     
     return assetsController;
-}
-
-- (void)setSuggestionContext:(TGSuggestionContext *)suggestionContext
-{
-    _suggestionContext = suggestionContext;
-    self.pickerController.suggestionContext = suggestionContext;
 }
 
 - (void)setStickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
@@ -363,7 +363,7 @@
     self.pickerController.reminder = reminder;
 }
 
-- (void)setPresentScheduleController:(void (^)(void (^)(int32_t)))presentScheduleController {
+- (void)setPresentScheduleController:(void (^)(bool, void (^)(int32_t)))presentScheduleController {
     _presentScheduleController = [presentScheduleController copy];
     self.pickerController.presentScheduleController = presentScheduleController;
 }
@@ -611,7 +611,8 @@
                 [strongSelf groupPhotosPressed];
         };
     }
-    [self.view addSubview:_toolbarView];
+    if (_intent != TGMediaAssetsControllerSendMediaIntent)
+        [self.view addSubview:_toolbarView];
 
     if (@available(iOS 14.0, *)) {
         if ([PHPhotoLibrary authorizationStatusForAccessLevel:PHAccessLevelReadWrite] == PHAuthorizationStatusLimited) {
@@ -926,6 +927,11 @@
                     grouping = false;
                 }
             }
+            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
+                if (entity.animated) {
+                    grouping = true;
+                }
+            }
         }
     }
     
@@ -941,8 +947,12 @@
         
         NSAttributedString *caption = [editingContext captionForItem:asset];
         
-        if (editingContext.isForcedCaption && num > 0) {
-            caption = nil;
+        if (editingContext.isForcedCaption) {
+            if (grouping && num > 0) {
+                caption = nil;
+            } else if (!grouping && num < selectedItems.count - 1) {
+                caption = nil;
+            }
         }
         
         switch (asset.type)
@@ -1386,23 +1396,37 @@
 
 #pragma mark -
 
+- (UIBarButtonItem *)leftBarButtonItem
+{
+    if (_intent == TGMediaAssetsControllerSendMediaIntent) {
+        return [[UIBarButtonItem alloc] initWithTitle:TGLocalized(@"Common.Cancel") style:UIBarButtonItemStylePlain target:self action:@selector(cancelButtonPressed)];
+    }
+    return nil;
+}
+
 - (UIBarButtonItem *)rightBarButtonItem
 {
-    if (_intent == TGMediaAssetsControllerSendFileIntent)
-        return nil;
-    if (self.requestSearchController == nil) {
-        return nil;
-    }
-    
-    if (iosMajorVersion() < 7)
-    {
-        TGModernBarButton *searchButton = [[TGModernBarButton alloc] initWithImage:TGComponentsImageNamed(@"NavigationSearchIcon.png")];
-        searchButton.portraitAdjustment = CGPointMake(-7, -5);
-        [searchButton addTarget:self action:@selector(searchButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-        return [[UIBarButtonItem alloc] initWithCustomView:searchButton];
-    }
-    
-    return [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSearch target:self action:@selector(searchButtonPressed)];
+    return nil;
+//    if (_intent == TGMediaAssetsControllerSendFileIntent)
+//        return nil;
+//    if (self.requestSearchController == nil) {
+//        return nil;
+//    }
+//
+//    if (iosMajorVersion() < 7)
+//    {
+//        TGModernBarButton *searchButton = [[TGModernBarButton alloc] initWithImage:TGComponentsImageNamed(@"NavigationSearchIcon.png")];
+//        searchButton.portraitAdjustment = CGPointMake(-7, -5);
+//        [searchButton addTarget:self action:@selector(searchButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+//        return [[UIBarButtonItem alloc] initWithCustomView:searchButton];
+//    }
+//
+//    return [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemSearch target:self action:@selector(searchButtonPressed)];
+}
+
+- (void)cancelButtonPressed
+{
+    [self dismiss];
 }
 
 - (void)searchButtonPressed
@@ -1410,6 +1434,18 @@
     if (self.requestSearchController) {
         self.requestSearchController();
     }
+}
+
+- (void)send:(bool)silently
+{
+    [self completeWithCurrentItem:nil silentPosting:silently scheduleTime:0];
+}
+
+- (void)schedule:(bool)media {
+    __weak TGMediaAssetsController *weakSelf = self;
+    self.presentScheduleController(media, ^(int32_t scheduleTime) {
+        [weakSelf completeWithCurrentItem:nil silentPosting:false scheduleTime:scheduleTime];
+    });
 }
 
 - (void)navigationController:(UINavigationController *)__unused navigationController willShowViewController:(UIViewController *)viewController animated:(BOOL)__unused animated

@@ -1,4 +1,5 @@
 #import "TGAttachmentCameraView.h"
+#import "TGImageUtils.h"
 
 #import "LegacyComponentsInternal.h"
 
@@ -14,6 +15,7 @@
 
 #import <AVFoundation/AVFoundation.h>
 
+
 @interface TGAttachmentCameraView ()
 {
     UIView *_wrapperView;
@@ -24,6 +26,8 @@
     
     TGCameraPreviewView *_previewView;
     __weak PGCamera *_camera;
+    
+    UIInterfaceOrientation _innerInterfaceOrientation;
 }
 @end
 
@@ -52,7 +56,7 @@
         [_wrapperView addSubview:_previewView];
         [camera attachPreviewView:_previewView];
         
-        _iconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"Editor/Camera"]];
+        _iconView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"Chat/Attach Menu/Camera"]];
         [self addSubview:_iconView];
         
         [self addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGesture:)]];
@@ -119,6 +123,10 @@
         [self stopPreview];
     
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
+}
+
+- (void)removeCorners {
+    [_cornersView removeFromSuperview];
 }
 
 - (void)setPallete:(TGMenuSheetPallete *)pallete
@@ -227,8 +235,21 @@
 {
     void(^block)(void) = ^
     {
-        _wrapperView.transform = CGAffineTransformMakeRotation(-1 * TGRotationForInterfaceOrientation(orientation));
+        CGAffineTransform transform = CGAffineTransformMakeRotation(-1 * TGRotationForInterfaceOrientation(orientation));
+        CGFloat scale = 1.0;
+        if (self.frame.size.width != 0.0) {
+            scale = self.frame.size.height / self.frame.size.width;
+        }
+        if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeLeft) {
+            transform = CGAffineTransformScale(transform, scale, scale);
+        } else if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeRight) {
+            transform = CGAffineTransformScale(transform, scale, scale);
+        }
+        _wrapperView.transform = transform;
+        [self layoutSubviews];
     };
+    
+    _innerInterfaceOrientation = orientation;
     
     if (animated)
         [UIView animateWithDuration:0.3f animations:block];
@@ -240,11 +261,20 @@
 {
     [super layoutSubviews];
     
+    _wrapperView.bounds = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height);
+    _wrapperView.center = CGPointMake(self.bounds.size.width / 2.0, self.bounds.size.height / 2.0);
+    
     TGCameraPreviewView *previewView = _previewView;
     if (previewView.superview == _wrapperView)
         previewView.frame = self.bounds;
     
-    _iconView.frame = CGRectMake((self.frame.size.width - _iconView.frame.size.width) / 2, (self.frame.size.height - _iconView.frame.size.height) / 2, _iconView.frame.size.width, _iconView.frame.size.height);
+//    if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeLeft) {
+//        _wrapperView.frame = CGRectOffset(_wrapperView.frame, 0, 100.0);
+//    } else if (_innerInterfaceOrientation == UIInterfaceOrientationLandscapeRight) {
+//        _wrapperView.frame = CGRectOffset(_wrapperView.frame, 0, -100.0);
+//    }
+    
+    _iconView.frame = CGRectMake(self.frame.size.width - _iconView.frame.size.width - 3.0, 3.0 - TGScreenPixel, _iconView.frame.size.width, _iconView.frame.size.height);
 }
 
 - (void)saveStartImage:(void (^)(void))completion {

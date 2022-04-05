@@ -12,18 +12,20 @@ public enum ChatMessageEntryContentType {
 }
 
 public struct ChatMessageEntryAttributes: Equatable {
-    let rank: CachedChannelAdminRank?
-    let isContact: Bool
-    let contentTypeHint: ChatMessageEntryContentType
-    let updatingMedia: ChatUpdatingMessageMedia?
-    let isPlaying: Bool
+    var rank: CachedChannelAdminRank?
+    var isContact: Bool
+    var contentTypeHint: ChatMessageEntryContentType
+    var updatingMedia: ChatUpdatingMessageMedia?
+    var isPlaying: Bool
+    var isCentered: Bool
     
-    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool) {
+    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
         self.updatingMedia = updatingMedia
         self.isPlaying = isPlaying
+        self.isCentered = isCentered
     }
     
     public init() {
@@ -32,6 +34,7 @@ public struct ChatMessageEntryAttributes: Equatable {
         self.contentTypeHint = .generic
         self.updatingMedia = nil
         self.isPlaying = false
+        self.isCentered = false
     }
 }
 

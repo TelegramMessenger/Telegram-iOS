@@ -26,6 +26,9 @@ public enum ChatListSearchItemHeaderType {
     case activeVoiceChats
     case recentCalls
     case orImportIntoAnExistingGroup
+    case subscribers
+    case downloading
+    case recentDownloads
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -71,6 +74,12 @@ public enum ChatListSearchItemHeaderType {
                 return strings.CallList_RecentCallsHeader
             case .orImportIntoAnExistingGroup:
                 return strings.ChatList_HeaderImportIntoAnExistingGroup
+            case .subscribers:
+                return strings.Channel_ChannelSubscribersHeader
+            case .downloading:
+                return strings.DownloadList_DownloadingHeader
+            case .recentDownloads:
+                return strings.DownloadList_DownloadedHeader
         }
     }
     
@@ -118,6 +127,12 @@ public enum ChatListSearchItemHeaderType {
                 return .recentCalls
             case .orImportIntoAnExistingGroup:
                 return .orImportIntoAnExistingGroup
+            case .subscribers:
+                return .subscribers
+            case .downloading:
+                return .downloading
+            case .recentDownloads:
+                return .recentDownloads
         }
     }
 }
@@ -148,6 +163,9 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case activeVoiceChats
     case recentCalls
     case orImportIntoAnExistingGroup
+    case subscribers
+    case downloading
+    case recentDownloads
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {
@@ -239,6 +257,10 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
         self.validLayout = (size, leftInset, rightInset)
         self.sectionHeaderNode.frame = CGRect(origin: CGPoint(), size: size)
         self.sectionHeaderNode.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+    }
+    
+    override public func animateAdded(duration: Double) {
+        self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
     }
     
     override public func animateRemoved(duration: Double) {

@@ -2,8 +2,12 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import ContextUI
 
 public final class ShareActionButtonNode: HighlightTrackingButtonNode {
+    private let referenceNode: ContextReferenceContentNode
+    private let containerNode: ContextControllerSourceNode
+    
     private let badgeLabel: TextNode
     private var badgeText: NSAttributedString?
     private let badgeBackground: ASImageNode
@@ -38,7 +42,14 @@ public final class ShareActionButtonNode: HighlightTrackingButtonNode {
         }
     }
     
+    var shouldBegin: (() -> Bool)?
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    
     public init(badgeBackgroundColor: UIColor, badgeTextColor: UIColor) {
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        
         self.badgeBackgroundColor = badgeBackgroundColor
         self.badgeTextColor = badgeTextColor
         
@@ -57,8 +68,27 @@ public final class ShareActionButtonNode: HighlightTrackingButtonNode {
         
         super.init()
         
+        self.containerNode.addSubnode(self.referenceNode)
+        self.addSubnode(self.containerNode)
+        
         self.addSubnode(self.badgeBackground)
         self.addSubnode(self.badgeLabel)
+        
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self, let _ = strongSelf.contextAction else {
+                return false
+            }
+            if let shouldBegin = strongSelf.shouldBegin {
+                return shouldBegin()
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contextAction?(strongSelf.referenceNode, gesture)
+        }
     }
     
     override public func layout() {
@@ -74,5 +104,8 @@ public final class ShareActionButtonNode: HighlightTrackingButtonNode {
             self.badgeBackground.frame = backgroundFrame
             self.badgeLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeLayout.size.width / 2.0), y: backgroundFrame.minY + 3.0), size: badgeLayout.size)
         }
+        
+        self.containerNode.frame = self.bounds
+        self.referenceNode.frame = self.bounds
     }
 }

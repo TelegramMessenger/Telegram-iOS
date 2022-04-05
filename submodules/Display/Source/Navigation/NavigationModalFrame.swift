@@ -112,7 +112,7 @@ final class NavigationModalFrame: ASDisplayNode {
         let cornerRadius: CGFloat = 9.0
         let initialCornerRadius: CGFloat
         if !layout.safeInsets.top.isZero {
-            initialCornerRadius = 40.0
+            initialCornerRadius = layout.deviceMetrics.screenCornerRadius
         } else {
             initialCornerRadius = 0.0
         }

@@ -79,7 +79,12 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
     return formContext.generateImage()!
 }
 
-public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false) -> UIImage {
+public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, theme: PresentationThemeChat, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
+    let bubbleColors = incoming ? theme.message.incoming : theme.message.outgoing
+    return messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: incoming, fillColor: fillColor, strokeColor: strokeColor, neighbors: neighbors, shadow: bubbleColors.bubble.withWallpaper.shadow, wallpaper: wallpaper, knockout: knockoutValue, mask: mask, extendedEdges: extendedEdges, onlyOutline: onlyOutline, onlyShadow: onlyShadow, alwaysFillColor: alwaysFillColor)
+}
+
+public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, shadow: PresentationThemeBubbleShadow?, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
     let topLeftRadius: CGFloat
     let topRightRadius: CGFloat
     let bottomLeftRadius: CGFloat
@@ -299,9 +304,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         if onlyShadow {
             context.clear(CGRect(origin: CGPoint(), size: rawSize))
             
-            let bubbleColors = incoming ? theme.message.incoming : theme.message.outgoing
-            
-            if let shadow = bubbleColors.bubble.withWallpaper.shadow {
+            if let shadow = shadow {
                 context.translateBy(x: rawSize.width / 2.0, y: rawSize.height / 2.0)
                 context.scaleBy(x: incoming ? -1.0 : 1.0, y: -1.0)
                 context.translateBy(x: -rawSize.width / 2.0, y: -rawSize.height / 2.0)
@@ -346,6 +349,12 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             if !onlyOutline {
                 context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: formImage.cgImage!)
                 context.fill(CGRect(origin: CGPoint(), size: rawSize))
+                
+                if alwaysFillColor && drawWithClearColor {
+                    context.setBlendMode(.normal)
+                    context.setFillColor(fillColor.cgColor)
+                    context.fill(CGRect(origin: CGPoint(), size: rawSize))
+                }
             } else {
                 context.setFillColor(strokeColor.cgColor)
                 context.clip(to: CGRect(origin: CGPoint(), size: rawSize), mask: outlineImage.cgImage!)

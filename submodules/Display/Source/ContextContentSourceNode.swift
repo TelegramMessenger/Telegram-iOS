@@ -1,7 +1,10 @@
 import Foundation
 import AsyncDisplayKit
 
-public final class ContextReferenceContentNode: ASDisplayNode {
+open class ContextReferenceContentNode: ASDisplayNode {
+    override public init() {
+        super.init()
+    }
 }
 
 public final class ContextExtractedContentContainingNode: ASDisplayNode {
@@ -80,7 +83,7 @@ public final class ContextControllerContentNode: ASDisplayNode {
 }
 
 public enum ContextContentNode {
-    case reference(node: ContextReferenceContentNode)
+    case reference(view: UIView)
     case extracted(node: ContextExtractedContentContainingNode, keepInPlace: Bool)
     case controller(ContextControllerContentNode)
 }

@@ -1,4 +1,19 @@
 
+config_setting(
+    name = "debug_build",
+    values = {
+        "compilation_mode": "dbg",
+    },
+)
+
+optimization_flags = select({
+    ":debug_build": [
+    ],
+    "//conditions:default": ["-DNDEBUG"],
+})
+
+enable_x264 = False
+
 objc_library(
     name = "TgVoipWebrtc",
     enable_modules = True,
@@ -18,6 +33,7 @@ objc_library(
         "tgcalls/tgcalls/platform/android/**",
         "tgcalls/tgcalls/platform/windows/**",
         "tgcalls/tgcalls/platform/uwp/**",
+        "tgcalls/tgcalls/platform/darwin/SQueue*",
         "tgcalls/tgcalls/platform/darwin/macOS/**",
         "tgcalls/tgcalls/platform/darwin/VideoCameraCapturerMac.*",
         "tgcalls/tgcalls/platform/darwin/VideoMetalViewMac.*",
@@ -54,7 +70,7 @@ objc_library(
         "-DRTC_ENABLE_VP9",
         "-DTGVOIP_NAMESPACE=tgvoip_webrtc",
         "-std=c++14",
-    ],
+    ] + optimization_flags + (["-DTGCALLS_ENABLE_X264"] if enable_x264 else []),
     includes = [
         "PublicHeaders",
     ],
@@ -68,7 +84,7 @@ objc_library(
         "//submodules/ffmpeg:ffmpeg",
         "//third-party/rnnoise:rnnoise",
         "//third-party/libyuv:libyuv",
-    ],
+    ] + (["//third-party/libx264:libx264"] if enable_x264 else []),
     sdk_frameworks = [
         "Foundation",
         "UIKit",

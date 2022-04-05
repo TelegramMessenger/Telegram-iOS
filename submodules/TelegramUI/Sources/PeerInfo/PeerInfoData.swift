@@ -446,7 +446,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     }
 }
 
-func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, isSettings: Bool, ignoreGroupInCommon: PeerId?, existingRequestsContext: PeerInvitationImportersContext?) -> Signal<PeerInfoScreenData, NoError> {
+func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, isSettings: Bool, hintGroupInCommon: PeerId?, existingRequestsContext: PeerInvitationImportersContext?) -> Signal<PeerInfoScreenData, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: isSettings)
     |> mapToSignal { inputData -> Signal<PeerInfoScreenData, NoError> in
         switch inputData {
@@ -471,7 +471,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
             if [.user, .bot].contains(kind) {
-                groupsInCommon = GroupsInCommonContext(account: context.account, peerId: userPeerId)
+                groupsInCommon = GroupsInCommonContext(account: context.account, peerId: userPeerId, hintGroupInCommon: hintGroupInCommon)
             } else {
                 groupsInCommon = nil
             }

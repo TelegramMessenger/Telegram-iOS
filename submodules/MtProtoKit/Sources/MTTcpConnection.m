@@ -689,7 +689,7 @@ struct ctr_state {
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId scheme:(MTTransportScheme *)scheme interface:(NSString *)interface usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo getLogPrefix:(NSString *(^)())getLogPrefix
 {
 #ifdef DEBUG
     NSAssert(scheme != nil, @"scheme should not be nil");
@@ -699,6 +699,8 @@ struct ctr_state {
     if (self != nil)
     {
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
+        
+        _getLogPrefix = [getLogPrefix copy];
         
         _encryptionProvider = context.encryptionProvider;
         
@@ -799,6 +801,7 @@ struct ctr_state {
         if (_socket == nil)
         {
             _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:[[MTTcpConnection tcpQueue] nativeQueue]];
+            _socket.getLogPrefix = _getLogPrefix;
             _socket.usageCalculationInfo = _usageCalculationInfo;
             
             NSString *addressIp = _scheme.address.ip;

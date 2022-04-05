@@ -23,11 +23,11 @@ swift_library(
         "//submodules/LocalMediaResources:LocalMediaResources",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
-        "//submodules/LegacyMediaPickerUI/LegacyImageProcessors:LegacyImageProcessors",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/StickerResources:StickerResources",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/AttachmentUI:AttachmentUI",
     ],
     visibility = [
         "//visibility:public",

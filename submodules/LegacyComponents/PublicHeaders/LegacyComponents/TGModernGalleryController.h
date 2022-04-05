@@ -40,6 +40,8 @@ typedef NS_ENUM(NSUInteger, TGModernGalleryScrollAnimationDirection) {
 - (TGModernGalleryItemView *)itemViewForItem:(id<TGModernGalleryItem>)item;
 - (id<TGModernGalleryItem>)currentItem;
 
+- (UIView *)transitionView;
+
 - (void)setCurrentItemIndex:(NSUInteger)index animated:(bool)animated;
 - (void)setCurrentItemIndex:(NSUInteger)index direction:(TGModernGalleryScrollAnimationDirection)direction animated:(bool)animated;
 

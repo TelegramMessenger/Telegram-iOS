@@ -13,6 +13,7 @@ import PhotoResources
 import TelegramStringFormatting
 import InvisibleInkDustNode
 import TextFormat
+import ChatPresentationInterfaceState
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -135,7 +136,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     }
                     let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
                     if entities.count > 0 {
-                        messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
+                        messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
                     } else {
                         messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                     }
@@ -196,7 +197,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                             if fileReference.media.isVideo {
                                 updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                             } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                                updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                             }
                         }
                     } else {
@@ -330,7 +331,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 
             }
             if let dustNode = self.dustNode {
-                dustNode.update(size: textFrame.size, color: self.theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                dustNode.update(size: textFrame.size, color: self.theme.chat.inputPanel.secondaryTextColor, textColor: self.theme.chat.inputPanel.primaryTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                 dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
             }
         } else if let dustNode = self.dustNode {

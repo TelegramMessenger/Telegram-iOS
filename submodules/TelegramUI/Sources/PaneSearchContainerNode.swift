@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import ChatPresentationInterfaceState
 
 private let searchBarHeight: CGFloat = 52.0
 

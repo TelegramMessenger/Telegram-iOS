@@ -143,7 +143,7 @@ receive_cb(struct socket *s, union sctp_sockstore addr, void *data,
 			       rcv.rcv_sid,
 			       rcv.rcv_ssn,
 			       rcv.rcv_tsn,
-			       ntohl(rcv.rcv_ppid),
+			       (uint32_t)ntohl(rcv.rcv_ppid),
 			       rcv.rcv_context);
 		}
 		free(data);
@@ -161,7 +161,7 @@ main(int argc, char *argv[])
 #ifdef _WIN32
 	SOCKET fd;
 #else
-	int fd;
+	int fd, rc;
 #endif
 	struct socket *s;
 #ifdef _WIN32
@@ -174,13 +174,13 @@ main(int argc, char *argv[])
 #endif
 
 	if (argc < 4) {
-		printf("error: this program requires 4 arguments!\n");
+		fprintf(stderr, "error: this program requires 4 arguments!\n");
 		exit(EXIT_FAILURE);
 	}
 
 #ifdef _WIN32
 	if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
-		printf("WSAStartup failed\n");
+		fprintf(stderr, "WSAStartup failed\n");
 		exit (EXIT_FAILURE);
 	}
 #endif
@@ -188,7 +188,7 @@ main(int argc, char *argv[])
 	/* set up a connected UDP socket */
 #ifdef _WIN32
 	if ((fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
-		printf("socket() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "socket() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -204,12 +204,12 @@ main(int argc, char *argv[])
 #endif
 	sin.sin_port = htons(atoi(argv[2]));
 	if (!inet_pton(AF_INET, argv[1], &sin.sin_addr.s_addr)){
-		printf("error: invalid address\n");
+		fprintf(stderr, "error: invalid address\n");
 		exit(EXIT_FAILURE);
 	}
 #ifdef _WIN32
 	if (bind(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-		printf("bind() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "bind() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -230,7 +230,7 @@ main(int argc, char *argv[])
 	}
 #ifdef _WIN32
 	if (connect(fd, (struct sockaddr *)&sin, sizeof(struct sockaddr_in)) == SOCKET_ERROR) {
-		printf("connect() failed with error: %d\n", WSAGetLastError());
+		fprintf(stderr, "connect() failed with error: %d\n", WSAGetLastError());
 		exit(EXIT_FAILURE);
 	}
 #else
@@ -245,9 +245,15 @@ main(int argc, char *argv[])
 	usrsctp_sysctl_set_sctp_ecn_enable(0);
 	usrsctp_register_address((void *)&fd);
 #ifdef _WIN32
-	tid = CreateThread(NULL, 0, &handle_packets, (void *)&fd, 0, NULL);
+	if ((tid = CreateThread(NULL, 0, &handle_packets, (void *)&fd, 0, NULL)) == NULL) {
+		fprintf(stderr, "CreateThread() failed with error: %lu\n", GetLastError());
+		exit(EXIT_FAILURE);
+	}
 #else
-	pthread_create(&tid, NULL, &handle_packets, (void *)&fd);
+	if ((rc = pthread_create(&tid, NULL, &handle_packets, (void *)&fd)) != 0) {
+		fprintf(stderr, "pthread_create: %s\n", strerror(rc));
+		exit(EXIT_FAILURE);
+	}
 #endif
 	if ((s = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP, receive_cb, NULL, 0, NULL)) == NULL) {
 		perror("usrsctp_socket");
@@ -270,28 +276,5 @@ main(int argc, char *argv[])
 			perror("usrsctp_accept");
 		}
 	}
-	usrsctp_close(s);
-	usrsctp_deregister_address((void *)&fd);
-	while (usrsctp_finish() != 0) {
-#ifdef _WIN32
-		Sleep(SLEEP * 1000);
-#else
-		sleep(SLEEP);
-#endif
-	}
-#ifdef _WIN32
-	TerminateThread(tid, 0);
-	WaitForSingleObject(tid, INFINITE);
-	if (closesocket(fd) == SOCKET_ERROR) {
-		printf("closesocket() failed with error: %d\n", WSAGetLastError());
-	}
-	WSACleanup();
-#else
-	pthread_cancel(tid);
-	pthread_join(tid, NULL);
-	if (close(fd) < 0) {
-		perror("close");
-	}
-#endif
 	return (0);
 }

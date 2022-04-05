@@ -9,7 +9,6 @@
 
 - (CGSize)contentSize;
 - (UIView *)contentView;
-- (UIView *)transitionContentView;
 
 - (void)reset;
 

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import TelegramCore
 import AccountContext
+import ChatPresentationInterfaceState
 
 private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult) -> (Int, Bool) {
     switch result {

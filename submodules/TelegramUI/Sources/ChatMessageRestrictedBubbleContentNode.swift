@@ -181,7 +181,7 @@ class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textNode.frame = textFrame
                             
                             if let statusSizeAndApply = statusSizeAndApply {
-                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
+                                strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: textFrameWithoutInsets.maxX - statusSizeAndApply.0.width, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0)
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
                                     statusSizeAndApply.1(.None)

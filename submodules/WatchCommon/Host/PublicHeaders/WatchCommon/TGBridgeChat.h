@@ -37,8 +37,8 @@
 @property (nonatomic) int32_t participantsCount;
 @property (nonatomic, strong) NSArray *participants;
 
-- (NSIndexSet *)involvedUserIds;
-- (NSIndexSet *)participantsUserIds;
+- (NSArray<NSNumber *> *)involvedUserIds;
+- (NSArray<NSNumber *> *)participantsUserIds;
 
 @end
 

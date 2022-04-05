@@ -1,5 +1,10 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
+
+public protocol ActionSheetGroupOverlayNode: ASDisplayNode {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+}
 
 open class ActionSheetController: ViewController, PresentableController, StandalonePresentableController {
     private var actionSheetNode: ActionSheetControllerNode {
@@ -81,6 +86,12 @@ open class ActionSheetController: ViewController, PresentableController, Standal
     public func updateItem(groupIndex: Int, itemIndex: Int, _ f: (ActionSheetItem) -> ActionSheetItem) {
         if self.isViewLoaded {
             self.actionSheetNode.updateItem(groupIndex: groupIndex, itemIndex: itemIndex, f)
+        }
+    }
+    
+    public func setItemGroupOverlayNode(groupIndex: Int, node: ActionSheetGroupOverlayNode) {
+        if self.isViewLoaded {
+            self.actionSheetNode.setItemGroupOverlayNode(groupIndex: groupIndex, node: node)
         }
     }
 }

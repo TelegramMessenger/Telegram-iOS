@@ -293,10 +293,11 @@ public final class NavigateToChatControllerParams {
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let chatListFilter: Int32?
+    public let chatNavigationStack: [PeerId]
     public let changeColors: Bool
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, changeColors: Bool = false, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = [], changeColors: Bool = false, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -318,6 +319,7 @@ public final class NavigateToChatControllerParams {
         self.options = options
         self.parentGroupId = parentGroupId
         self.chatListFilter = chatListFilter
+        self.chatNavigationStack = chatNavigationStack
         self.changeColors = changeColors
         self.completion = completion
     }
@@ -499,6 +501,7 @@ public final class ContactSelectionControllerParams {
 public enum ChatListSearchFilter: Equatable {
     case chats
     case media
+    case downloads
     case links
     case files
     case music
@@ -512,14 +515,16 @@ public enum ChatListSearchFilter: Equatable {
                 return 0
             case .media:
                 return 1
-            case .links:
+            case .downloads:
                 return 2
-            case .files:
+            case .links:
                 return 3
-            case .music:
+            case .files:
                 return 4
-            case .voice:
+            case .music:
                 return 5
+            case .voice:
+                return 6
             case let .peer(peerId, _, _, _):
                 return peerId.id._internalGetInt64Value()
             case let .date(_, date, _):
@@ -603,7 +608,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeComposeController(context: AccountContext) -> ViewController
     func makeChatListController(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool, previewing: Bool, enableDebugActions: Bool) -> ChatListController
     func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController
-    func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?) -> ListViewItem
+    func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, isCentered: Bool) -> ListViewItem
     func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController?
     func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController
@@ -615,6 +620,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatRecentActionsController(context: AccountContext, peer: Peer, adminPeerId: PeerId?) -> ViewController
     func makePrivacyAndSecurityController(context: AccountContext) -> ViewController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
+    func openStorageUsage(context: AccountContext)
     func openLocationScreen(context: AccountContext, messageId: MessageId, navigationController: NavigationController)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: EnginePeer.Id, messageIds: Set<EngineMessage.Id>) -> Signal<ChatAvailableMessageActions, NoError>

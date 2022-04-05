@@ -886,6 +886,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                         EnginePeer.Presence(status: .present(until: presenceTimestamp + 1000), lastActivity: presenceTimestamp)
                     },
                     hasUnseenMentions: false,
+                    hasUnseenReactions: false,
                     draftState: nil,
                     inputActivities: hasInputActivity ? [(author, .typingText)] : [],
                     promoInfo: nil,
@@ -1043,7 +1044,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     return state
                 }, animated: true)
             }, clickThroughMessage: {
-            }, backgroundNode: self.backgroundNode, availableReactions: nil)
+            }, backgroundNode: self.backgroundNode, availableReactions: nil, isCentered: false)
             return item
         }
         

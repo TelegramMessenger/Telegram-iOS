@@ -6,12 +6,11 @@ import TelegramPresentationData
 import AccountContext
 import ChatListUI
 import SegmentedControlNode
+import ChatListSearchItemHeader
 
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let navigationBar: NavigationBar?
 
-    private let toolbarBackgroundNode: NavigationBackgroundNode
-    private let toolbarSeparatorNode: ASDisplayNode
     private let segmentedControlNode: SegmentedControlNode
     let listNode: ListView
     
@@ -24,23 +23,18 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private var enqueuedTransitions: [(ChatListSearchContainerTransition, Bool)] = []
     private var hasValidLayout = false
     
-    init(context: AccountContext, peer: EnginePeer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationBar: NavigationBar?, navigationController: NavigationController?) {
-        self.navigationBar = navigationBar
-
+    init(context: AccountContext, peer: EnginePeer?, query: String, navigationBar: NavigationBar?, navigationController: NavigationController?) {
         self.context = context
         self.query = query
-        self.listNode = ListView()
-        self.listNode.accessibilityPageScrolledString = { row, count in
-            return strings.VoiceOver_ScrollStatus(row, count).string
-        }
-        
-        self.toolbarBackgroundNode = NavigationBackgroundNode(color: theme.rootController.navigationBar.blurredBackgroundColor)
-        
-        self.toolbarSeparatorNode = ASDisplayNode()
-        self.toolbarSeparatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
+        self.navigationBar = navigationBar
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
+        self.listNode = ListView()
+        self.listNode.accessibilityPageScrolledString = { row, count in
+            return presentationData.strings.VoiceOver_ScrollStatus(row, count).string
+        }
+       
         var items: [String] = []
         if peer?.id == context.account.peerId {
             items.append(presentationData.strings.Conversation_SavedMessages)
@@ -49,8 +43,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         } else {
             items.append(peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) ?? "")
         }
-        items.append(strings.HashtagSearch_AllChats)
-        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
+        items.append(presentationData.strings.HashtagSearch_AllChats)
+        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         
         if let peer = peer {
             self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
@@ -64,7 +58,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = theme.chatList.backgroundColor
+        self.backgroundColor = presentationData.theme.chatList.backgroundColor
         
         self.addSubnode(self.listNode)
         self.listNode.isHidden = true
@@ -80,6 +74,18 @@ final class HashtagSearchControllerNode: ASDisplayNode {
                 }
             }
         }
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+        self.backgroundColor = theme.chatList.backgroundColor
+        
+        self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: theme))
+        
+        self.listNode.forEachItemHeaderNode({ itemHeaderNode in
+            if let itemHeaderNode = itemHeaderNode as? ChatListSearchItemHeaderNode {
+                itemHeaderNode.updateTheme(theme: theme)
+            }
+        })
     }
     
     func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {
@@ -101,12 +107,18 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         }
     }
     
+    func scrollToTop() {
+        if self.segmentedControlNode.selectedIndex == 0 {
+            self.chatController?.scrollToTop?()
+        } else {
+            self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        }
+    }
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.containerLayout = (layout, navigationBarHeight)
         
-        if self.chatController != nil && self.toolbarSeparatorNode.supernode == nil {
-            //self.addSubnode(self.toolbarBackgroundNode)
-            self.navigationBar?.additionalContentNode.addSubnode(self.toolbarSeparatorNode)
+        if self.chatController != nil && self.segmentedControlNode.supernode == nil {
             self.navigationBar?.additionalContentNode.addSubnode(self.segmentedControlNode)
         }
         
@@ -115,10 +127,6 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         let toolbarHeight: CGFloat = 40.0
         let panelY: CGFloat = insets.top - UIScreenPixel - 4.0
-        
-        transition.updateFrame(node: self.toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: toolbarHeight)))
-        self.toolbarBackgroundNode.update(size: self.toolbarBackgroundNode.bounds.size, transition: transition)
-        transition.updateFrame(node: self.toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
         let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: layout.size.width - 14.0 * 2.0), transition: transition)
         transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: panelY + 2.0 + floor((toolbarHeight - controlSize.height) / 2.0)), size: controlSize))
@@ -140,6 +148,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        
+        insets.top += 4.0
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: curve)

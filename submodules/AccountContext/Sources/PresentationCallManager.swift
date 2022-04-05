@@ -402,6 +402,8 @@ public protocol PresentationGroupCall: AnyObject {
     
     var schedulePending: Bool { get }
     
+    var isStream: Bool { get }
+    
     var audioOutputState: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> { get }
     
     var isSpeaking: Signal<Bool, NoError> { get }

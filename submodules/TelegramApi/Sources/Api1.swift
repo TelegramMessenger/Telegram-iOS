@@ -1219,19 +1219,24 @@ public struct messages {
     
     }
     public enum MessageReactionsList: TypeConstructorDescription {
-        case messageReactionsList(flags: Int32, count: Int32, reactions: [Api.MessageUserReaction], users: [Api.User], nextOffset: String?)
+        case messageReactionsList(flags: Int32, count: Int32, reactions: [Api.MessagePeerReaction], chats: [Api.Chat], users: [Api.User], nextOffset: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageReactionsList(let flags, let count, let reactions, let users, let nextOffset):
+                case .messageReactionsList(let flags, let count, let reactions, let chats, let users, let nextOffset):
                     if boxed {
-                        buffer.appendInt32(-1553558980)
+                        buffer.appendInt32(834488621)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(reactions.count))
                     for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -1246,8 +1251,8 @@ public struct messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageReactionsList(let flags, let count, let reactions, let users, let nextOffset):
-                return ("messageReactionsList", [("flags", flags), ("count", count), ("reactions", reactions), ("users", users), ("nextOffset", nextOffset)])
+                case .messageReactionsList(let flags, let count, let reactions, let chats, let users, let nextOffset):
+                return ("messageReactionsList", [("flags", flags), ("count", count), ("reactions", reactions), ("chats", chats), ("users", users), ("nextOffset", nextOffset)])
     }
     }
     
@@ -1256,23 +1261,28 @@ public struct messages {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: [Api.MessageUserReaction]?
+            var _3: [Api.MessagePeerReaction]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserReaction.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessagePeerReaction.self)
             }
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.MessageReactionsList.messageReactionsList(flags: _1!, count: _2!, reactions: _3!, users: _4!, nextOffset: _5)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.messages.MessageReactionsList.messageReactionsList(flags: _1!, count: _2!, reactions: _3!, chats: _4!, users: _5!, nextOffset: _6)
             }
             else {
                 return nil
@@ -2467,6 +2477,52 @@ public struct messages {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.messages.Dialogs.dialogsNotModified(count: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum TranslatedText: TypeConstructorDescription {
+        case translateNoResult
+        case translateResultText(text: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .translateNoResult:
+                    if boxed {
+                        buffer.appendInt32(1741309751)
+                    }
+                    
+                    break
+                case .translateResultText(let text):
+                    if boxed {
+                        buffer.appendInt32(-1575684144)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .translateNoResult:
+                return ("translateNoResult", [])
+                case .translateResultText(let text):
+                return ("translateResultText", [("text", text)])
+    }
+    }
+    
+        public static func parse_translateNoResult(_ reader: BufferReader) -> TranslatedText? {
+            return Api.messages.TranslatedText.translateNoResult
+        }
+        public static func parse_translateResultText(_ reader: BufferReader) -> TranslatedText? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.TranslatedText.translateResultText(text: _1!)
             }
             else {
                 return nil

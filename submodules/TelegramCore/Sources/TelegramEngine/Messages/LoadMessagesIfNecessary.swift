@@ -7,10 +7,10 @@ import MtProtoKit
 
 public enum GetMessagesStrategy  {
     case local
-    case cloud
+    case cloud(skipLocal: Bool)
 }
 
-func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postbox, network: Network, accountPeerId: PeerId, strategy: GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
+func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Postbox, network: Network, accountPeerId: PeerId, strategy: GetMessagesStrategy = .cloud(skipLocal: false)) -> Signal <[Message], NoError> {
     let postboxSignal = postbox.transaction { transaction -> ([Message], Set<MessageId>, SimpleDictionary<PeerId, Peer>) in
         var ids = messageIds
         
@@ -22,21 +22,29 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
         
         var messages:[Message] = []
         var missingMessageIds:Set<MessageId> = Set()
-        var supportPeers:SimpleDictionary<PeerId, Peer> = SimpleDictionary()
+        var supportPeers: SimpleDictionary<PeerId, Peer> = SimpleDictionary()
         for messageId in ids {
-            if let message = transaction.getMessage(messageId) {
-                messages.append(message)
-            } else {
+            if case let .cloud(skipLocal) = strategy, skipLocal {
                 missingMessageIds.insert(messageId)
                 if let peer = transaction.getPeer(messageId.peerId) {
                     supportPeers[messageId.peerId] = peer
+                }
+            } else {
+                if let message = transaction.getMessage(messageId) {
+                    messages.append(message)
+                    
+                } else {
+                    missingMessageIds.insert(messageId)
+                    if let peer = transaction.getPeer(messageId.peerId) {
+                        supportPeers[messageId.peerId] = peer
+                    }
                 }
             }
         }
         return (messages, missingMessageIds, supportPeers)
     }
     
-    if strategy == .cloud {
+    if case .cloud = strategy {
         return postboxSignal
         |> mapToSignal { (existMessages, missingMessageIds, supportPeers) in
             

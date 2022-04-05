@@ -868,6 +868,20 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         }
                     }
                     
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+                    if let forwardBackgroundNode = strongSelf.forwardBackgroundNode {
+                        transition.updateAlpha(node: forwardBackgroundNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    if let replyBackgroundNode = strongSelf.replyBackgroundNode {
+                        transition.updateAlpha(node: replyBackgroundNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    if let forwardInfoNode = strongSelf.forwardInfoNode {
+                        transition.updateAlpha(node: forwardInfoNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    if let replyInfoNode = strongSelf.replyInfoNode {
+                        transition.updateAlpha(node: replyInfoNode, alpha: isPlaying ? 0.0 : 1.0)
+                    }
+                    
                     if let (_, f) = strongSelf.awaitingAppliedReaction {
                         strongSelf.awaitingAppliedReaction = nil
                         
@@ -935,7 +949,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                                     return
                                 }
                             }
-                            item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                            item.controllerInteraction.openPeer(openPeerId, navigate, MessageReference(item.message), item.message.peers[openPeerId])
                         }
                     })
                 }
@@ -967,7 +981,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             }
                             item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                         } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil)
+                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
                         } else if let _ = forwardInfo.authorSignature {
                             item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                         }

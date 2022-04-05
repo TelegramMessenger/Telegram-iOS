@@ -1,6 +1,6 @@
 #
 # Copyright (C) 2015-2015 Oleg Alexeenkov
-# Copyright (C) 2015-2019 Felix Weinrank
+# Copyright (C) 2015-2020 Felix Weinrank
 #
 # All rights reserved.
 #
@@ -34,61 +34,68 @@
 # INCLUDE MODULES AND SETTINGS
 #################################################
 
-set(VERSION "1.0.0")
+set(VERSION "0.9.5.0")
 
-set(prefix 					${CMAKE_INSTALL_PREFIX})
-set(exec_prefix 			${prefix})
-set(libdir 					${exec_prefix}/lib)
-set(includedir 				${prefix}/include/usrsctp)
+# Shared library API and ABI versions
+# Notice: shared library version must be in X.Y.Z format only
+set(SOVERSION_FULL "2.0.0")
+set(SOVERSION_SHORT "2")
+
+include(GNUInstallDirs)
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${prefix})
+set(libdir ${exec_prefix}/${CMAKE_INSTALL_LIBDIR})
+set(includedir ${prefix}/${CMAKE_INSTALL_INCLUDEDIR})
+
 set(CMAKE_REQUIRED_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR})
-set(CMAKE_MACOSX_RPATH 		1)
+set(CMAKE_MACOSX_RPATH 1)
+
+include(CheckCCompilerFlag)
+
+
+option(SCTP_USE_MBEDTLS_SHA1 "Build with mbedtls sha1 support." OFF)
 
 add_definitions(-D__Userspace__)
-add_definitions(-D__Userspace_os_${CMAKE_SYSTEM_NAME})
 add_definitions(-DSCTP_SIMPLE_ALLOCATOR)
 add_definitions(-DSCTP_PROCESS_LEVEL_LOCKS)
+
+if(SCTP_USE_MBEDTLS_SHA1)
+	add_definitions(-DSCTP_USE_MBEDTLS_SHA1)
+	find_package(MbedTLS REQUIRED)
+endif()
 
 
 #################################################
 # OS DEPENDENT
 #################################################
 
-check_c_compiler_flag(-Wno-address-of-packed-member has_wno_address_of_packet_member)
-if (has_wno_address_of_packet_member)
+check_c_compiler_flag(-Wno-address-of-packed-member has_wno_address_of_packed_member)
+if (has_wno_address_of_packed_member)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-address-of-packed-member")
+endif ()
+
+check_c_compiler_flag(-Wno-deprecated-declarations has_wno_deprecated_declarations)
+if (has_wno_deprecated_declarations)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
 endif ()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	add_definitions(-D_GNU_SOURCE)
 endif ()
 
-if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
-	add_definitions(-U__FreeBSD__)
-endif ()
-
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-	add_definitions(-U__APPLE__)
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin" OR CMAKE_SYSTEM_NAME MATCHES "iOS")
 	add_definitions(-D__APPLE_USE_RFC_2292)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
-endif ()
-
-if (CMAKE_SYSTEM_NAME MATCHES "DragonFly")
-	add_definitions(-U__DragonFly__)
-endif ()
-
-if (CMAKE_SYSTEM_NAME MATCHES "NetBSD")
-	add_definitions(-U__NetBSD__)
-endif ()
-
-if (CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
-	add_definitions(-U__OpenBSD__)
 endif ()
 
 #################################################
 # MISC
 #################################################
 
+if (sctp_build_shared_lib)
+	set(BUILD_SHARED_LIBS 1)
+endif ()
 
+find_package(Threads)
 
 #################################################
 # LIBRARY FILES
@@ -175,30 +182,39 @@ list(APPEND usrsctp_sources
 	user_socket.c
 )
 
-add_library(usrsctp SHARED ${usrsctp_sources} ${usrsctp_headers})
-add_library(usrsctp-static STATIC ${usrsctp_sources} ${usrsctp_headers})
+add_library(usrsctp ${usrsctp_sources} ${usrsctp_headers})
 
 target_include_directories(usrsctp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(usrsctp-static PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(SCTP_USE_MBEDTLS_SHA1)
+	target_include_directories(usrsctp PRIVATE ${MBEDTLS_INCLUDE_DIRS})
+endif()
+
+target_link_libraries(usrsctp ${CMAKE_THREAD_LIBS_INIT})
 
 if (WIN32)
 	message(STATUS "link library: ws2_32")
-	target_link_libraries(usrsctp ws2_32 iphlpapi.lib)
-	target_link_libraries(usrsctp-static ws2_32 iphlpapi.lib)
+	target_link_libraries(usrsctp ws2_32 iphlpapi)
 endif ()
 
-set_target_properties(usrsctp-static PROPERTIES OUTPUT_NAME "usrsctp")
+if(SCTP_USE_MBEDTLS_SHA1)
+	target_link_libraries(usrsctp PRIVATE ${MBEDTLS_LIBRARIES})
+endif()
+
+
 set_target_properties(usrsctp PROPERTIES IMPORT_SUFFIX "_import.lib")
-set_target_properties(usrsctp PROPERTIES SOVERSION 1 VERSION 1.0.0)
-
-if (NOT DEFINED CMAKE_INSTALL_LIBDIR)
-	SET(CMAKE_INSTALL_LIBDIR lib)
-endif ()
-
+set_target_properties(usrsctp PROPERTIES SOVERSION ${SOVERSION_SHORT} VERSION ${SOVERSION_FULL})
 
 #################################################
 # INSTALL LIBRARY AND HEADER
 #################################################
 
-install(TARGETS usrsctp usrsctp-static DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(FILES usrsctp.h DESTINATION include)
+install(TARGETS usrsctp DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES usrsctp.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+#################################################
+# GENERATE AND INSTALL PKG-CONFIG FILE
+#################################################
+
+configure_file("${PROJECT_SOURCE_DIR}/usrsctp.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/usrsctp.pc" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/usrsctp.pc" DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")

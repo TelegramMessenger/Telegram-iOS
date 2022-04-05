@@ -14,6 +14,7 @@ import PresentationDataUtils
 import TextFormat
 import Markdown
 import TelegramNotices
+import ChatPresentationInterfaceState
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
@@ -21,6 +22,9 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
             case _ as TelegramMediaImage:
                 return (strings.Message_Photo, true)
             case let file as TelegramMediaFile:
+                if file.isVideoSticker || file.isAnimatedSticker {
+                    return (strings.Message_Sticker, true)
+                }
                 var fileName: String = strings.Message_File
                 for attribute in file.attributes {
                     switch attribute {
@@ -51,9 +55,6 @@ func textStringForForwardedMessage(_ message: Message, strings: PresentationStri
                         default:
                             break
                     }
-                }
-                if file.isAnimatedSticker {
-                    return (strings.Message_Sticker, true)
                 }
                 return (fileName, true)
             case _ as TelegramMediaContact:

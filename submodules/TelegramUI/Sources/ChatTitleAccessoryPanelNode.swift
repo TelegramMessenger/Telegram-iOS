@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import ChatPresentationInterfaceState
 
 class ChatTitleAccessoryPanelNode: ASDisplayNode {
     struct LayoutResult {

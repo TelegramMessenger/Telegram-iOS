@@ -6,6 +6,7 @@ import TelegramPresentationData
 import TextSelectionNode
 import TelegramCore
 import SwiftSignalKit
+import ReactionSelectionNode
 
 enum ContextControllerPresentationNodeStateTransition {
     case animateIn
@@ -24,7 +25,7 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
         stateTransition: ContextControllerPresentationNodeStateTransition?
     )
     
-    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void)
+    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void)
     func cancelReactionAnimation()
     
     func highlightGestureMoved(location: CGPoint)

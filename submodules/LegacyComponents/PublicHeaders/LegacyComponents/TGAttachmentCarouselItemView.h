@@ -6,7 +6,6 @@
 
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
-@class TGSuggestionContext;
 @class TGViewController;
 @class TGAttachmentCameraView;
 @class TGVideoEditAdjustments;
@@ -22,7 +21,6 @@
 
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic) bool allowCaptions;
 @property (nonatomic) bool allowCaptionEntities;
@@ -35,7 +33,7 @@
 @property (nonatomic) bool hasSilentPosting;
 @property (nonatomic) bool hasSchedule;
 @property (nonatomic) bool reminder;
-@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
+@property (nonatomic, copy) void (^presentScheduleController)(bool, void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
 @property (nonatomic, strong) NSArray *underlyingViews;

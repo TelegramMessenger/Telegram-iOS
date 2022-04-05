@@ -160,7 +160,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                 }
                 
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: messageItem.outgoing ? otherPeerId : peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: messageItem.outgoing ? [] : [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: messageItem.outgoing ? TelegramUser(id: otherPeerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []) : nil, text: messageItem.text, attributes: messageItem.reply != nil ? [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil)] : [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
-                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil))
+                items.append(item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [message], theme: item.componentTheme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, isCentered: false))
             }
             
             var nodes: [ListViewItemNode] = []
@@ -254,6 +254,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0

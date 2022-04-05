@@ -18,6 +18,7 @@ private final class GroupsInCommonContextImpl {
     private let queue: Queue
     private let account: Account
     private let peerId: PeerId
+    private let hintGroupInCommon: PeerId?
     
     private let disposable = MetaDisposable()
     
@@ -30,10 +31,21 @@ private final class GroupsInCommonContextImpl {
         return self.stateValue.get()
     }
     
-    init(queue: Queue, account: Account, peerId: PeerId) {
+    init(queue: Queue, account: Account, peerId: PeerId, hintGroupInCommon: PeerId?) {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        self.hintGroupInCommon = hintGroupInCommon
+        
+        if let hintGroupInCommon = hintGroupInCommon {
+            let _ = (self.account.postbox.loadedPeerWithId(hintGroupInCommon)
+            |> deliverOn(self.queue)).start(next: { [weak self] peer in
+                if let strongSelf = self {
+                    strongSelf.peers.append(RenderedPeer(peer: peer))
+                    strongSelf.pushState()
+                }
+            })
+        }
         
         self.loadMore(limit: 32)
     }
@@ -141,10 +153,10 @@ public final class GroupsInCommonContext {
         }
     }
     
-    public init(account: Account, peerId: PeerId) {
+    public init(account: Account, peerId: PeerId, hintGroupInCommon: PeerId? = nil) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return GroupsInCommonContextImpl(queue: queue, account: account, peerId: peerId)
+            return GroupsInCommonContextImpl(queue: queue, account: account, peerId: peerId, hintGroupInCommon: hintGroupInCommon)
         })
     }
     
