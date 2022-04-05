@@ -167,12 +167,16 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 5
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .info(text):
+            case let .info(title, text):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 self.animatedStickerNode = nil
+            
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                }
             
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -750,6 +754,64 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
+            case let .notificationSoundAdded(title, text, action):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: "anim_notificationsound", colors: [:], scale: 0.066)
+                self.animatedStickerNode = nil
+                self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+            
+                self.textNode.maximumNumberOfLines = 5
+                displayUndo = false
+                self.originalRemainingSeconds = 5
+            
+                if let action = action {
+                    self.textNode.highlightAttributeAction = { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                            return NSAttributedString.Key(rawValue: "URL")
+                        } else {
+                            return nil
+                        }
+                    }
+                    self.textNode.tapAttributeAction = { attributes, _ in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
+                            action()
+                        }
+                    }
+                }
+            case let .universal(animation, scale, colors, title, text):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = AnimationNode(animation: animation, colors: colors, scale: scale)
+                self.animatedStickerNode = nil
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                } else {
+                    self.titleNode.attributedText = nil
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+            
+                self.textNode.maximumNumberOfLines = 5
+                displayUndo = false
+                self.originalRemainingSeconds = 3
             case let .image(image, text):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()
@@ -790,15 +852,33 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         super.init()
         
         switch content {
-            case .removedChat:
-                self.panelWrapperNode.addSubnode(self.timerTextNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent:
-                break
-            case .dice:
-                self.panelWrapperNode.clipsToBounds = true
-            case .info:
+        case .removedChat:
+            self.panelWrapperNode.addSubnode(self.timerTextNode)
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal:
+            if self.textNode.tapAttributeAction != nil {
+                self.isUserInteractionEnabled = true
+            } else {
                 self.isUserInteractionEnabled = false
+            }
+        case .dice:
+            self.panelWrapperNode.clipsToBounds = true
+        case .info:
+            if self.textNode.tapAttributeAction != nil {
+                self.isUserInteractionEnabled = true
+            } else {
+                self.isUserInteractionEnabled = false
+            }
         }
+        
+        self.titleNode.isUserInteractionEnabled = false
+        self.textNode.isUserInteractionEnabled = self.textNode.tapAttributeAction != nil
+        self.iconNode?.isUserInteractionEnabled = false
+        self.animationNode?.isUserInteractionEnabled = false
+        self.iconCheckNode?.isUserInteractionEnabled = false
+        self.avatarNode?.isUserInteractionEnabled = false
+        self.slotMachineNode?.isUserInteractionEnabled = false
+        self.animatedStickerNode?.isUserInteractionEnabled = false
+        
         self.statusNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
@@ -807,9 +887,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.avatarNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.panelWrapperNode.addSubnode(self.buttonNode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
-        self.panelWrapperNode.addSubnode(self.buttonNode)
         if displayUndo {
             self.panelWrapperNode.addSubnode(self.undoButtonTextNode)
             self.panelWrapperNode.addSubnode(self.undoButtonNode)

@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public enum PeerMuteState: Equatable {
@@ -36,102 +37,147 @@ private enum PeerMessageSoundValue: Int32 {
     case bundledModern
     case bundledClassic
     case `default`
+    case cloud
 }
 
 public enum PeerMessageSound: Equatable {
+    public enum Id: Hashable {
+        case none
+        case `default`
+        case bundledModern(id: Int32)
+        case bundledClassic(id: Int32)
+        case cloud(fileId: Int64)
+    }
+    
     case none
     case `default`
     case bundledModern(id: Int32)
     case bundledClassic(id: Int32)
+    case cloud(fileId: Int64)
+    
+    public var id: Id {
+        switch self {
+        case .none:
+            return .none
+        case .default:
+            return .default
+        case let .bundledModern(id):
+            return .bundledModern(id: id)
+        case let .bundledClassic(id):
+            return .bundledClassic(id: id)
+        case let .cloud(fileId):
+            return .cloud(fileId: fileId)
+        }
+    }
     
     static func decodeInline(_ container: KeyedDecodingContainer<StringCodingKey>) throws -> PeerMessageSound {
         switch try container.decode(Int32.self, forKey: "s.v") {
-            case PeerMessageSoundValue.none.rawValue:
-                return .none
-            case PeerMessageSoundValue.bundledModern.rawValue:
-                return .bundledModern(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
-            case PeerMessageSoundValue.bundledClassic.rawValue:
-                return .bundledClassic(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
-            case PeerMessageSoundValue.default.rawValue:
+        case PeerMessageSoundValue.none.rawValue:
+            return .none
+        case PeerMessageSoundValue.bundledModern.rawValue:
+            return .bundledModern(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
+        case PeerMessageSoundValue.bundledClassic.rawValue:
+            return .bundledClassic(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
+        case PeerMessageSoundValue.default.rawValue:
+            return .default
+        case PeerMessageSoundValue.cloud.rawValue:
+            do {
+                return .cloud(fileId: try container.decode(Int64.self, forKey: "s.cloud.fileId"))
+            } catch {
                 return .default
-            default:
-                assertionFailure()
-                return .bundledModern(id: 0)
+            }
+        default:
+            assertionFailure()
+            return .bundledModern(id: 0)
         }
     }
 
     static func decodeInline(_ container: PostboxDecoder) -> PeerMessageSound {
         switch container.decodeInt32ForKey("s.v", orElse: 0) {
-            case PeerMessageSoundValue.none.rawValue:
-                return .none
-            case PeerMessageSoundValue.bundledModern.rawValue:
-                return .bundledModern(id: container.decodeInt32ForKey("s.i", orElse: 0))
-            case PeerMessageSoundValue.bundledClassic.rawValue:
-                return .bundledClassic(id: container.decodeInt32ForKey("s.i", orElse: 0))
-            case PeerMessageSoundValue.default.rawValue:
-                return .default
-            default:
-                assertionFailure()
-                return .bundledModern(id: 0)
+        case PeerMessageSoundValue.none.rawValue:
+            return .none
+        case PeerMessageSoundValue.bundledModern.rawValue:
+            return .bundledModern(id: container.decodeInt32ForKey("s.i", orElse: 0))
+        case PeerMessageSoundValue.bundledClassic.rawValue:
+            return .bundledClassic(id: container.decodeInt32ForKey("s.i", orElse: 0))
+        case PeerMessageSoundValue.default.rawValue:
+            return .default
+        case PeerMessageSoundValue.cloud.rawValue:
+            return .cloud(fileId: container.decodeInt64ForKey("s.cloud.fileId", orElse: 0))
+        default:
+            assertionFailure()
+            return .bundledModern(id: 0)
         }
     }
 
     func encodeInline(_ container: inout KeyedEncodingContainer<StringCodingKey>) throws {
         switch self {
-            case .none:
-                try container.encode(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
-            case let .bundledModern(id):
-                try container.encode(PeerMessageSoundValue.bundledModern.rawValue, forKey: "s.v")
-                try container.encode(id, forKey: "s.i")
-            case let .bundledClassic(id):
-                try container.encode(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
-                try container.encode(id, forKey: "s.i")
-            case .default:
-                try container.encode(PeerMessageSoundValue.default.rawValue, forKey: "s.v")
+        case .none:
+            try container.encode(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
+        case let .bundledModern(id):
+            try container.encode(PeerMessageSoundValue.bundledModern.rawValue, forKey: "s.v")
+            try container.encode(id, forKey: "s.i")
+        case let .bundledClassic(id):
+            try container.encode(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
+            try container.encode(id, forKey: "s.i")
+        case let .cloud(fileId):
+            try container.encode(PeerMessageSoundValue.cloud.rawValue, forKey: "s.v")
+            try container.encode(fileId, forKey: "s.cloud.fileId")
+        case .default:
+            try container.encode(PeerMessageSoundValue.default.rawValue, forKey: "s.v")
         }
     }
     
     func encodeInline(_ encoder: PostboxEncoder) {
         switch self {
-            case .none:
-                encoder.encodeInt32(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
-            case let .bundledModern(id):
-                encoder.encodeInt32(PeerMessageSoundValue.bundledModern.rawValue, forKey: "s.v")
-                encoder.encodeInt32(id, forKey: "s.i")
-            case let .bundledClassic(id):
-                encoder.encodeInt32(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
-                encoder.encodeInt32(id, forKey: "s.i")
-            case .default:
-                encoder.encodeInt32(PeerMessageSoundValue.default.rawValue, forKey: "s.v")
+        case .none:
+            encoder.encodeInt32(PeerMessageSoundValue.none.rawValue, forKey: "s.v")
+        case let .bundledModern(id):
+            encoder.encodeInt32(PeerMessageSoundValue.bundledModern.rawValue, forKey: "s.v")
+            encoder.encodeInt32(id, forKey: "s.i")
+        case let .bundledClassic(id):
+            encoder.encodeInt32(PeerMessageSoundValue.bundledClassic.rawValue, forKey: "s.v")
+            encoder.encodeInt32(id, forKey: "s.i")
+        case let .cloud(fileId):
+            encoder.encodeInt32(PeerMessageSoundValue.cloud.rawValue, forKey: "s.v")
+            encoder.encodeInt64(fileId, forKey: "s.cloud.fileId")
+        case .default:
+            encoder.encodeInt32(PeerMessageSoundValue.default.rawValue, forKey: "s.v")
         }
     }
     
     public static func ==(lhs: PeerMessageSound, rhs: PeerMessageSound) -> Bool {
         switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .bundledModern(id):
-                if case .bundledModern(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .bundledClassic(id):
-                if case .bundledClassic(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .default:
-                if case .default = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case .none:
+            if case .none = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .bundledModern(id):
+            if case .bundledModern(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .bundledClassic(id):
+            if case .bundledClassic(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .default:
+            if case .default = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .cloud(fileId):
+            if case .cloud(fileId) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }

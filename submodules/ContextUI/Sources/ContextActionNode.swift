@@ -51,6 +51,7 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         self.requestUpdateAction = requestUpdateAction
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+        let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isAccessibilityElement = false
@@ -78,6 +79,8 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         switch action.textFont {
         case .regular:
             titleFont = textFont
+        case .small:
+            titleFont = smallTextFont
         case let .custom(customFont):
             titleFont = customFont
         }
@@ -102,6 +105,9 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
             statusNode.attributedText = NSAttributedString(string: value, font: subtitleFont, textColor: presentationData.theme.contextMenu.secondaryColor)
             statusNode.maximumNumberOfLines = 1
             self.statusNode = statusNode
+        case .multiline:
+            self.textNode.maximumNumberOfLines = 0
+            self.statusNode = nil
         }
         
         self.iconNode = ASImageNode()
@@ -290,10 +296,13 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         }
         
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+        let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
         let titleFont: UIFont
         switch self.action.textFont {
         case .regular:
             titleFont = textFont
+        case .small:
+            titleFont = smallTextFont
         case let .custom(customFont):
             titleFont = customFont
         }
@@ -334,10 +343,13 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         }
 
         let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
+        let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
         let titleFont: UIFont
         switch self.action.textFont {
         case .regular:
             titleFont = textFont
+        case .small:
+            titleFont = smallTextFont
         case let .custom(customFont):
             titleFont = customFont
         }

@@ -642,7 +642,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
         guard let navigationController = controller?.navigationController as? NavigationController else {
             return
         }
-        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(groupId), keepStack: .always))
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: groupId), keepStack: .always))
     }
     return controller
 }

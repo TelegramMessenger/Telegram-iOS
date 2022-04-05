@@ -17,7 +17,55 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(String)
+    case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case standalone
+    
+    public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
+        switch lhs {
+            case .gallery:
+                if case .gallery = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .file:
+                if case .file = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .location:
+                if case .location = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .contact:
+                if case .contact = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .poll:
+                if case .poll = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .app(lhsPeer, lhsTitle, lhsIcons):
+                if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                    return true
+                } else {
+                    return false
+                }
+            case .standalone:
+                if case .standalone = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public protocol AttachmentContainable: ViewController {
@@ -25,6 +73,9 @@ public protocol AttachmentContainable: ViewController {
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
+    var isContainerPanning: () -> Bool { get set }
+    
+    func isContainerPanningUpdated(_ panning: Bool)
     
     func resetForReuse()
     func prepareForReuse()
@@ -33,6 +84,10 @@ public protocol AttachmentContainable: ViewController {
 }
 
 public extension AttachmentContainable {
+    func isContainerPanningUpdated(_ panning: Bool) {
+        
+    }
+    
     func resetForReuse() {
         
     }
@@ -54,6 +109,11 @@ public enum AttachmentMediaPickerSendMode {
 public protocol AttachmentMediaPickerContext {
     var selectionCount: Signal<Int, NoError> { get }
     var caption: Signal<NSAttributedString?, NoError> { get }
+    
+    var loadingProgress: Signal<CGFloat?, NoError> { get }
+    var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
+    
+    func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
     func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
@@ -98,6 +158,7 @@ public class AttachmentController: ViewController {
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation
     private let buttons: [AttachmentButtonType]
+    private let initialButton: AttachmentButtonType
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         get {
@@ -130,6 +191,9 @@ public class AttachmentController: ViewController {
         private let captionDisposable = MetaDisposable()
         private let mediaSelectionCountDisposable = MetaDisposable()
         
+        private let loadingProgressDisposable = MetaDisposable()
+        private let mainButtonStateDisposable = MetaDisposable()
+        
         private var selectionCount: Int = 0
         
         fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
@@ -147,9 +211,29 @@ public class AttachmentController: ViewController {
                             strongSelf.updateSelectionCount(count)
                         }
                     }))
+                    self.loadingProgressDisposable.set((mediaPickerContext.loadingProgress
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        if let strongSelf = self {
+                            strongSelf.panel.updateLoadingProgress(progress)
+                            if let layout = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                            }
+                        }
+                    }))
+                    self.mainButtonStateDisposable.set((mediaPickerContext.mainButtonState
+                    |> deliverOnMainQueue).start(next: { [weak self] mainButtonState in
+                        if let strongSelf = self {
+                            strongSelf.panel.updateMainButtonState(mainButtonState)
+                            if let layout = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                            }
+                        }
+                    }))
                 } else {
                     self.updateSelectionCount(0)
                     self.mediaSelectionCountDisposable.set(nil)
+                    self.loadingProgressDisposable.set(nil)
+                    self.mainButtonStateDisposable.set(nil)
                 }
             }
         }
@@ -206,9 +290,15 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.panel.selectionChanged = { [weak self] type, ascending in
+            self.container.isPanningUpdated = { [weak self] value in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last, !value {
+                    currentController.isContainerPanningUpdated(value)
+                }
+            }
+            
+            self.panel.selectionChanged = { [weak self] type in
                 if let strongSelf = self {
-                    return strongSelf.switchToController(type, ascending)
+                    return strongSelf.switchToController(type)
                 } else {
                     return false
                 }
@@ -236,6 +326,12 @@ public class AttachmentController: ViewController {
                         case .schedule:
                             strongSelf.mediaPickerContext?.schedule()
                     }
+                }
+            }
+            
+            self.panel.mainButtonPressed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.mediaPickerContext?.mainButtonAction()
                 }
             }
             
@@ -268,7 +364,20 @@ public class AttachmentController: ViewController {
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
-            let _ = self.switchToController(.gallery, false)
+            if let controller = self.controller {
+                let _ = self.switchToController(controller.initialButton)
+                if case let .app(bot, _, _) = controller.initialButton {
+                    if let index = controller.buttons.firstIndex(where: {
+                        if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        self.panel.updateSelectedIndex(index)
+                    }
+                }
+            }
         }
         
         private func updateSelectionCount(_ count: Int) {
@@ -293,8 +402,11 @@ public class AttachmentController: ViewController {
             }
         }
         
-        func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) -> Bool {
+        func switchToController(_ type: AttachmentButtonType, animated: Bool = true) -> Bool {
             guard self.currentType != type else {
+                if self.animating {
+                    return false
+                }
                 if let controller = self.currentControllers.last {
                     controller.scrollToTopWithTabBar?()
                     controller.requestAttachmentMenuExpansion()
@@ -310,7 +422,9 @@ public class AttachmentController: ViewController {
                         controller._presentedInModal = true
                         controller.navigation_setPresenting(strongSelf.controller)
                         controller.requestAttachmentMenuExpansion = { [weak self] in
-                            self?.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                            if let strongSelf = self, !strongSelf.container.isTracking {
+                                strongSelf.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                            }
                         }
                         controller.updateNavigationStack = { [weak self] f in
                             if let strongSelf = self {
@@ -332,16 +446,25 @@ public class AttachmentController: ViewController {
                                 strongSelf.container.cancelPanGesture()
                             }
                         }
+                        
+                        controller.isContainerPanning = { [weak self] in
+                            if let strongSelf = self {
+                                return strongSelf.container.isTracking
+                            } else {
+                                return false
+                            }
+                        }
+                        
                         let previousController = strongSelf.currentControllers.last
                         strongSelf.currentControllers = [controller]
                         
-                        if previousType != nil {
+                        if previousType != nil && animated {
                             strongSelf.animateSwitchTransition(controller, previousController: previousController)
                         }
                         
                         if let layout = strongSelf.validLayout {
                             strongSelf.switchingController = true
-                            strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                            strongSelf.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
                             strongSelf.switchingController = false
                         }
                     }
@@ -358,8 +481,6 @@ public class AttachmentController: ViewController {
             
             snapshotView.frame = self.container.container.frame
             self.container.clipNode.view.addSubview(snapshotView)
-            
-            self.animating = true
             
             let _ = (controller.ready.get()
             |> filter {
@@ -386,13 +507,10 @@ public class AttachmentController: ViewController {
                             strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: targetPosition), to: NSValue(cgPoint: initialPosition), keyPath: "position", duration: 0.4, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, completion: { [weak self] finished in
                                 if finished {
                                     self?.container.clipNode.layer.removeAllAnimations()
-                                    self?.animating = false
                                 }
                             })
                         }
                     })
-                } else {
-                    strongSelf.animating = false
                 }
                 
                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.23, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -518,13 +636,28 @@ public class AttachmentController: ViewController {
                 self.wrapperNode.view.mask = nil
             }
             
+            var containerInsets = containerLayout.intrinsicInsets
+            var hasPanel = false
+            let hasButton = self.panel.isButtonVisible
+            if let controller = self.controller, controller.buttons.count > 1 {
+                hasPanel = true
+            }
+            
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
+            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
+            if hasPanel || hasButton {
+                containerInsets.bottom = panelHeight
+            }
+            
             var panelTransition = transition
             if isEffecitvelyCollapsedUpdated {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
-            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: containerRect.height - panelHeight), size: CGSize(width: containerRect.width, height: panelHeight)))
+            var panelY = containerRect.height - panelHeight
+            if !hasPanel && !hasButton {
+                panelY = containerRect.height
+            }
+            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)))
             
             var shadowFrame = containerRect.insetBy(dx: -60.0, dy: -60.0)
             shadowFrame.size.height -= 12.0
@@ -544,8 +677,6 @@ public class AttachmentController: ViewController {
                 let controllers = self.currentControllers
                 containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: containerRect.size))
                 
-                var containerInsets = containerLayout.intrinsicInsets
-                containerInsets.bottom = panelHeight
                 let containerLayout = containerLayout.withUpdatedIntrinsicInsets(containerInsets)
                 
                 self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
@@ -566,11 +697,12 @@ public class AttachmentController: ViewController {
         completion(nil, nil)
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType]) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
         self.buttons = buttons
+        self.initialButton = initialButton
         
         super.init(navigationBarPresentationData: nil)
         
@@ -623,9 +755,12 @@ public class AttachmentController: ViewController {
         return false
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
-
+        
+        self.validLayout = layout
         self.node.containerLayoutUpdated(layout, transition: transition)
     }
 }

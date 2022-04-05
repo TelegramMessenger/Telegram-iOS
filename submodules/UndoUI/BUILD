@@ -26,6 +26,7 @@ swift_library(
         "//submodules/SlotMachineAnimationNode:SlotMachineAnimationNode",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/ComponentFlow:ComponentFlow",
     ],
     visibility = [
         "//visibility:public",

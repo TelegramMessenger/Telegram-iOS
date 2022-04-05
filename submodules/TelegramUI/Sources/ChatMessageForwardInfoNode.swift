@@ -148,7 +148,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
                         }
                     } else {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                        completeSourceString = strings.Message_ForwardedMessage(peerString)
+                        completeSourceString = strings.Message_ForwardedMessageShort(peerString)
                     }
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)

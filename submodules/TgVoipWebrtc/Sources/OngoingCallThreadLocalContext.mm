@@ -5,6 +5,7 @@
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "v2/InstanceV2Impl.h"
+#import "v2_4_0_0/InstanceV2_4_0_0Impl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -23,6 +24,9 @@
 #import "platform/darwin/VideoSampleBufferView.h"
 #import "platform/darwin/VideoCaptureView.h"
 #import "platform/darwin/CustomExternalCapturer.h"
+
+#include "platform/darwin/iOS/tgcalls_audio_device_module_ios.h"
+
 #endif
 
 #import "group/GroupInstanceImpl.h"
@@ -803,6 +807,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     if (includeReference) {
         [list addObject:@"4.0.0"];
     }
+    [list addObject:@"4.0.1"];
     return list;
 }
 
@@ -914,6 +919,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
+            tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
             tgcalls::Register<tgcalls::InstanceV2Impl>();
         });
         
@@ -1038,9 +1044,11 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                         [strongSelf signalingDataEmitted:mappedData];
                     }
                 }];
+            },
+            .createAudioDeviceModule = [](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
+                return rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
             }
         });
-        
         _state = OngoingCallStateInitializing;
         _signalBars = 4;
     }

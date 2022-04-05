@@ -12,10 +12,108 @@ import AttachmentTextInputPanelNode
 import ChatPresentationInterfaceState
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
+import PhotoResources
+import AnimatedStickerComponent
+import SemanticStatusNode
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
+private let smallButtonWidth: CGFloat = 69.0
 private let iconSize = CGSize(width: 30.0, height: 30.0)
-private let sideInset: CGFloat = 0.0
+private let sideInset: CGFloat = 3.0
+
+private final class IconComponent: Component {
+    public let account: Account
+    public let name: String
+    public let fileReference: FileMediaReference?
+    public let animationName: String?
+    public let tintColor: UIColor?
+    
+    public init(account: Account, name: String, fileReference: FileMediaReference?, animationName: String?, tintColor: UIColor?) {
+        self.account = account
+        self.name = name
+        self.fileReference = fileReference
+        self.animationName = animationName
+        self.tintColor = tintColor
+    }
+    
+    public static func ==(lhs: IconComponent, rhs: IconComponent) -> Bool {
+        if lhs.account !== rhs.account {
+            return false
+        }
+        if lhs.name != rhs.name {
+            return false
+        }
+        if lhs.fileReference?.media != rhs.fileReference?.media {
+            return false
+        }
+        if lhs.animationName != rhs.animationName {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
+            return false
+        }
+        return false
+    }
+    
+    public final class View: UIImageView {
+        private var component: IconComponent?
+        private var disposable: Disposable?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+        }
+        
+        required public init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+        
+        func update(component: IconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            if self.component?.name != component.name || self.component?.fileReference?.media.fileId != component.fileReference?.media.fileId || self.component?.tintColor != component.tintColor {
+                if let fileReference = component.fileReference {
+                    let previousName = self.component?.name ?? ""
+                    if !previousName.isEmpty {
+                        self.image = nil
+                    }
+                    
+                    self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference, fetched: true)
+                    |> runOn(Queue.concurrentDefaultQueue())
+                    |> deliverOnMainQueue).start(next: { [weak self] transform in
+                        let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
+                        let drawingContext = transform(arguments)
+                        let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
+                        if let tintColor = component.tintColor {
+                            self?.image = generateTintedImage(image: image, color: tintColor, backgroundColor: nil)
+                        } else {
+                            self?.image = image
+                        }
+                    })
+                } else {
+                    if let tintColor = component.tintColor {
+                        self.image = generateTintedImage(image: UIImage(bundleImageName: component.name), color: tintColor, backgroundColor: nil)
+                    } else {
+                        self.image = UIImage(bundleImageName: component.name)
+                    }
+                }
+            }
+            self.component = component
+                        
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, transition: transition)
+    }
+}
+
 
 private final class AttachButtonComponent: CombinedComponent {
     let context: AccountContext
@@ -61,13 +159,17 @@ private final class AttachButtonComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let icon = Child(Image.self)
+        let icon = Child(IconComponent.self)
+        let animatedIcon = Child(AnimatedStickerComponent.self)
         let title = Child(Text.self)
         let button = Child(Rectangle.self)
 
         return { context in
             let name: String
-            let imageName: String?
+            let imageName: String
+            var imageFile: TelegramMediaFile?
+            var animationFile: TelegramMediaFile?
+            var botPeer: Peer?
             
             let component = context.component
             let strings = component.strings
@@ -88,22 +190,70 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
-            case let .app(appName):
+            case let .app(peer, appName, appIcons):
+                botPeer = peer
                 name = appName
-                imageName = nil
+                imageName = ""
+                if let file = appIcons[.iOSAnimated] {
+                    animationFile = file
+                } else if let file = appIcons[.iOSStatic] {
+                    imageFile = file
+                } else if let file = appIcons[.default] {
+                    imageFile = file
+                }
+            case .standalone:
+                name = ""
+                imageName = ""
+                imageFile = nil
             }
-            
-            let image = imageName.flatMap { UIImage(bundleImageName: $0)?.withRenderingMode(.alwaysTemplate) }
+
             let tintColor = component.isSelected ? component.theme.rootController.tabBar.selectedIconColor : component.theme.rootController.tabBar.iconColor
             
-            let icon = icon.update(
-                component: Image(
-                    image: image,
-                    tintColor: tintColor
-                ),
-                availableSize: CGSize(width: 30.0, height: 30.0),
-                transition: context.transition
-            )
+            let iconSize = CGSize(width: 30.0, height: 30.0)
+            let topInset: CGFloat = 4.0 + UIScreenPixel
+            let spacing: CGFloat = 15.0 + UIScreenPixel
+            
+            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - iconSize.width) / 2.0), y: topInset), size: iconSize)
+            if let animationFile = animationFile {
+                let icon = animatedIcon.update(
+                    component: AnimatedStickerComponent(
+                        account: component.context.account,
+                        animation: AnimatedStickerComponent.Animation(
+                            source: .file(media: animationFile),
+                            scale: UIScreenScale,
+                            loop: false,
+                            tintColor: tintColor
+                        ),
+                        isAnimating: component.isSelected,
+                        size: CGSize(width: iconSize.width, height: iconSize.height)
+                    ),
+                    availableSize: iconSize,
+                    transition: context.transition
+                )
+                context.add(icon
+                    .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
+                )
+            } else {
+                var fileReference: FileMediaReference?
+                if let peer = botPeer.flatMap({ PeerReference($0 )}), let imageFile = imageFile {
+                    fileReference = .attachBot(peer: peer, media: imageFile)
+                }
+                
+                let icon = icon.update(
+                    component: IconComponent(
+                        account: component.context.account,
+                        name: imageName,
+                        fileReference: fileReference,
+                        animationName: nil,
+                        tintColor: tintColor
+                    ),
+                    availableSize: iconSize,
+                    transition: context.transition
+                )
+                context.add(icon
+                    .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
+                )
+            }
 
             let title = title.update(
                 component: Text(
@@ -125,18 +275,10 @@ private final class AttachButtonComponent: CombinedComponent {
                 transition: .immediate
             )
 
-            let topInset: CGFloat = 4.0 + UIScreenPixel
-            let spacing: CGFloat = 15.0 + UIScreenPixel
-            
-            let iconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - icon.size.width) / 2.0), y: topInset), size: icon.size)
             let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((context.availableSize.width - title.size.width) / 2.0), y: iconFrame.midY + spacing), size: title.size)
             
             context.add(title
                 .position(CGPoint(x: titleFrame.midX, y: titleFrame.midY))
-            )
-
-            context.add(icon
-                .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
             )
             
             context.add(button
@@ -151,10 +293,164 @@ private final class AttachButtonComponent: CombinedComponent {
     }
 }
 
+private final class LoadingProgressNode: ASDisplayNode {
+    var color: UIColor {
+        didSet {
+            self.foregroundNode.backgroundColor = self.color
+        }
+    }
+    
+    private let foregroundNode: ASDisplayNode
+    
+    init(color: UIColor) {
+        self.color = color
+        
+        self.foregroundNode = ASDisplayNode()
+        self.foregroundNode.backgroundColor = color
+        
+        super.init()
+        
+        self.addSubnode(self.foregroundNode)
+    }
+        
+    private var _progress: CGFloat = 0.0
+    func updateProgress(_ progress: CGFloat, animated: Bool = false) {
+        if self._progress == progress && animated {
+            return
+        }
+        
+        var animated = animated
+        if (progress < self._progress && animated) {
+            animated = false
+        }
+        
+        let size = self.bounds.size
+        
+        self._progress = progress
+        
+        let transition: ContainedViewLayoutTransition
+        if animated && progress > 0.0 {
+            transition = .animated(duration: 0.7, curve: .spring)
+        } else {
+            transition = .immediate
+        }
+        
+        let alpaTransition: ContainedViewLayoutTransition
+        if animated {
+            alpaTransition = .animated(duration: 0.3, curve: .easeInOut)
+        } else {
+            alpaTransition = .immediate
+        }
+        
+        transition.updateFrame(node: self.foregroundNode, frame: CGRect(x: -2.0, y: 0.0, width: (size.width + 4.0) * progress, height: size.height))
+        
+        let alpha: CGFloat = progress < 0.001 || progress > 0.999 ? 0.0 : 1.0
+        alpaTransition.updateAlpha(node: self.foregroundNode, alpha: alpha)
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.foregroundNode.cornerRadius = self.frame.height / 2.0
+    }
+}
+
+public struct AttachmentMainButtonState {
+    let text: String?
+    let backgroundColor: UIColor
+    let textColor: UIColor
+    let isVisible: Bool
+    let isLoading: Bool
+    
+    public init(
+        text: String?,
+        backgroundColor: UIColor,
+        textColor: UIColor,
+        isVisible: Bool,
+        isLoading: Bool
+    ) {
+        self.text = text
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+        self.isVisible = isVisible
+        self.isLoading = isLoading
+    }
+    
+    static var initial: AttachmentMainButtonState {
+        return AttachmentMainButtonState(text: nil, backgroundColor: .clear, textColor: .clear, isVisible: false, isLoading: false)
+    }
+}
+
+private final class MainButtonNode: HighlightTrackingButtonNode {
+    private var state: AttachmentMainButtonState
+    
+    private let backgroundNode: ASDisplayNode
+    private let textNode: ImmediateTextNode
+    private let statusNode: SemanticStatusNode
+        
+    override init(pointerStyle: PointerStyle? = nil) {
+        self.state = AttachmentMainButtonState.initial
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.allowsGroupOpacity = true
+        self.backgroundNode.isUserInteractionEnabled = false
+        self.backgroundNode.cornerRadius = 12.0
+        if #available(iOS 13.0, *) {
+            self.backgroundNode.layer.cornerCurve = .continuous
+        }
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.textAlignment = .center
+        
+        self.statusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
+        
+        super.init(pointerStyle: pointerStyle)
+                
+        self.addSubnode(self.backgroundNode)
+        self.backgroundNode.addSubnode(self.textNode)
+        self.backgroundNode.addSubnode(self.statusNode)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.backgroundNode.alpha = 0.65
+                } else {
+                    strongSelf.backgroundNode.alpha = 1.0
+                    strongSelf.backgroundNode.layer.animateAlpha(from: 0.65, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+    }
+    
+    func updateLayout(size: CGSize, state: AttachmentMainButtonState, transition: ContainedViewLayoutTransition) {
+        self.state = state
+        
+        self.isUserInteractionEnabled = state.isVisible
+        
+        if let text = state.text {
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(17.0), textColor: state.textColor)
+            
+            let textSize = self.textNode.updateLayout(size)
+            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+            
+            self.backgroundNode.backgroundColor = state.backgroundColor
+        }
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        let statusSize = CGSize(width: 20.0, height: 20.0)
+        transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: size.width - statusSize.width - 15.0, y: floorToScreenPixels((size.height - statusSize.height) / 2.0)), size: statusSize))
+        
+        self.statusNode.transitionToState(state.isLoading ? .progress(value: nil, cancelEnabled: false, appearance: SemanticStatusNodeState.ProgressAppearance(inset: 0.0, lineWidth: 2.0)) : .none)
+    }
+}
+
 final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    
+    private var iconDisposables: [MediaId: Disposable] = [:]
     
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
@@ -166,21 +462,30 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var buttonViews: [Int: ComponentHostView<Empty>] = [:]
     
     private var textInputPanelNode: AttachmentTextInputPanelNode?
+    private var progressNode: LoadingProgressNode?
+    private var mainButtonNode: MainButtonNode
     
+    private var loadingProgress: CGFloat?
+    private var mainButtonState: AttachmentMainButtonState = .initial
+    
+    private var elevateProgress: Bool = false
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
     private(set) var isSelecting: Bool = false
-    
+    private(set) var isButtonVisible: Bool = false
+        
     private var validLayout: ContainerViewLayout?
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
-    var selectionChanged: (AttachmentButtonType, Bool) -> Bool = { _, _ in return false }
+    var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
     var sendMessagePressed: (AttachmentTextInputPanelSendMode) -> Void = { _ in }
     var requestLayout: () -> Void = {}
     var present: (ViewController) -> Void = { _ in }
     var presentInGlobalOverlay: (ViewController) -> Void = { _ in }
+    
+    var mainButtonPressed: () -> Void = { }
     
     init(context: AccountContext, chatLocation: ChatLocation, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?) {
         self.context = context
@@ -197,12 +502,18 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = self.presentationData.theme.rootController.tabBar.separatorColor
         
+        self.mainButtonNode = MainButtonNode()
+        
         super.init()
                         
         self.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundNode)
         self.containerNode.addSubnode(self.separatorNode)
         self.containerNode.addSubnode(self.scrollNode)
+        
+        self.addSubnode(self.mainButtonNode)
+        
+        self.mainButtonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
         }, setupEditMessage: { _, _ in
@@ -369,6 +680,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, openSendAsPeer: { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, chatController: {
+            return nil
         }, statuses: nil)
         
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
@@ -382,7 +695,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.updateChatPresentationInterfaceState({ $0.updatedTheme(presentationData.theme) })
             
                 if let layout = strongSelf.validLayout {
-                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, transition: .immediate)
+                    let _ = strongSelf.update(layout: layout, buttons: strongSelf.buttons, isSelecting: strongSelf.isSelecting, elevateProgress: strongSelf.elevateProgress, transition: .immediate)
                 }
             }
         })
@@ -390,6 +703,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        for (_, disposable) in self.iconDisposables {
+            disposable.dispose()
+        }
     }
     
     override func didLoad() {
@@ -403,6 +719,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.showsVerticalScrollIndicator = false
     }
     
+    @objc private func buttonPressed() {
+        self.mainButtonPressed()
+    }
+    
     func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updateAlpha(node: self.separatorNode, alpha: alpha)
         transition.updateAlpha(node: self.backgroundNode, alpha: alpha)
@@ -414,7 +734,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
         self.updateChatPresentationInterfaceState(animated: false, { $0.updatedInterfaceState { $0.withUpdatedComposeInputState(ChatTextInputState(inputText: caption))} })
     }
-    
+
     private func updateChatPresentationInterfaceState(animated: Bool = true, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
         self.updateChatPresentationInterfaceState(transition: animated ? .animated(duration: 0.4, curve: .spring) : .immediate, f, completion: completion)
     }
@@ -432,6 +752,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    func updateSelectedIndex(_ index: Int) {
+        self.selectedIndex = index
+        self.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+    }
+    
     func updateViews(transition: Transition) {
         guard let layout = self.validLayout else {
             return
@@ -440,19 +765,20 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let visibleRect = self.scrollNode.bounds.insetBy(dx: -180.0, dy: 0.0)
         var validButtons = Set<Int>()
         
-        let distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
+        var distanceBetweenNodes = layout.size.width / CGFloat(self.buttons.count)
         let internalWidth = distanceBetweenNodes * CGFloat(self.buttons.count - 1)
-        let leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
-                
-//        var sideInset = sideInset
-//        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
-//        if buttonsWidth < layout.size.width {
-//            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
-//        }
-//
+        var leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
+        
+        var buttonWidth = buttonSize.width
+        if self.buttons.count > 6 {
+            buttonWidth = smallButtonWidth
+            distanceBetweenNodes = buttonWidth
+            leftNodeOriginX = sideInset + buttonWidth / 2.0
+        }
+        
         for i in 0 ..< self.buttons.count {
-            let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonSize.width / 2.0)
-            let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: buttonSize)
+            let originX = floor(leftNodeOriginX + CGFloat(i) * distanceBetweenNodes - buttonWidth / 2.0)
+            let buttonFrame = CGRect(origin: CGPoint(x: originX, y: 0.0), size: CGSize(width: buttonWidth, height: buttonSize.height))
             if !visibleRect.intersects(buttonFrame) {
                 continue
             }
@@ -470,6 +796,15 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let type = self.buttons[i]
+            if case let .app(peer, _, iconFiles) = type {
+                for (name, file) in iconFiles {
+                    if [.default, .iOSAnimated].contains(name) {
+                        if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer) {
+                            self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
+                        }
+                    }
+                }
+            }
             let _ = buttonView.update(
                 transition: buttonTransition,
                 component: AnyComponent(AttachButtonComponent(
@@ -480,16 +815,19 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                     theme: self.presentationData.theme,
                     action: { [weak self] in
                         if let strongSelf = self {
-                            let ascending = i > strongSelf.selectedIndex
-                            if strongSelf.selectionChanged(type, ascending) {
+                            if strongSelf.selectionChanged(type) {
                                 strongSelf.selectedIndex = i
                                 strongSelf.updateViews(transition: .init(animation: .curve(duration: 0.2, curve: .spring)))
+                                
+                                if strongSelf.buttons.count > 6, let button = strongSelf.buttonViews[i] {
+                                    strongSelf.scrollNode.view.scrollRectToVisible(button.frame.insetBy(dx: -35.0, dy: 0.0), animated: true)
+                                }
                             }
                         }
                     })
                 ),
                 environment: {},
-                containerSize: buttonSize
+                containerSize: CGSize(width: buttonWidth, height: buttonSize.height)
             )
             buttonTransition.setFrame(view: buttonView, frame: buttonFrame)
         }
@@ -503,17 +841,15 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             return false
         }
         
-//        var sideInset = sideInset
-//        let buttonsWidth = sideInset * 2.0 + buttonSize.width * CGFloat(self.buttons.count)
-//        if buttonsWidth < layout.size.width {
-//            sideInset = floorToScreenPixels((layout.size.width - buttonsWidth) / 2.0)
-//        }
-
-        let contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
-//        CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonSize.width, height: buttonSize.height)
+        var contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
+        var buttonWidth = buttonSize.width
+        if self.buttons.count > 6 {
+            buttonWidth = smallButtonWidth
+            contentSize = CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonWidth, height: buttonSize.height)
+        }
         self.scrollLayout = (layout.size.width, contentSize)
 
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
+        transition.updateFrameAsPositionAndBounds(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting || self.isButtonVisible ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
         self.scrollNode.view.contentSize = contentSize
 
         return true
@@ -551,17 +887,35 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func updateLoadingProgress(_ progress: CGFloat?) {
+        self.loadingProgress = progress
+    }
+    
+    func updateMainButtonState(_ mainButtonState: AttachmentMainButtonState?) {
+        var currentButtonState = self.mainButtonState
+        if mainButtonState == nil {
+            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, backgroundColor: currentButtonState.backgroundColor, textColor: currentButtonState.textColor, isVisible: false, isLoading: false)
+        }
+        self.mainButtonState = mainButtonState ?? currentButtonState
+    }
+    
+    func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
+        self.elevateProgress = elevateProgress
                 
+        let isButtonVisibleUpdated = self.isButtonVisible != self.mainButtonState.isVisible
+        self.isButtonVisible = self.mainButtonState.isVisible
+        
         let isSelectingUpdated = self.isSelecting != isSelecting
         self.isSelecting = isSelecting
         
         self.scrollNode.isUserInteractionEnabled = !isSelecting
         
+        let isButtonVisible = self.mainButtonState.isVisible
+        
         var insets = layout.insets(options: [])
-        if let inputHeight = layout.inputHeight, inputHeight > 0.0 && isSelecting {
+        if let inputHeight = layout.inputHeight, inputHeight > 0.0 && (isSelecting || isButtonVisible) {
             insets.bottom = inputHeight
         } else if layout.intrinsicInsets.bottom > 0.0 {
             insets.bottom = layout.intrinsicInsets.bottom
@@ -596,18 +950,27 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: buttonSize.height + insets.bottom))
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
-        if isSelecting {
+        if isButtonVisible {
+            let height: CGFloat
+            if layout.intrinsicInsets.bottom > 0.0 && (layout.inputHeight ?? 0.0).isZero {
+                height = bounds.height + 9.0
+            } else {
+                height = bounds.height + 9.0 + 8.0
+            }
+            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: height))
+        } else if isSelecting {
             containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: textPanelHeight + insets.bottom))
         } else {
             containerFrame = bounds
         }
         let containerBounds = CGRect(origin: CGPoint(), size: containerFrame.size)
-        if isSelectingUpdated {
+        if isSelectingUpdated || isButtonVisibleUpdated {
             containerTransition = .animated(duration: 0.25, curve: .easeInOut)
         } else {
             containerTransition = transition
         }
-        containerTransition.updateAlpha(node: self.scrollNode, alpha: isSelecting ? 0.0 : 1.0)
+        containerTransition.updateAlpha(node: self.scrollNode, alpha: isSelecting || isButtonVisible ? 0.0 : 1.0)
+        containerTransition.updateTransformScale(node: self.scrollNode, scale: isSelecting || isButtonVisible ? 0.85 : 1.0)
         
         if isSelectingUpdated {
             if isSelecting {
@@ -625,16 +988,41 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         }
-
         
         containerTransition.updateFrame(node: self.containerNode, frame: containerFrame)
         containerTransition.updateFrame(node: self.backgroundNode, frame: containerBounds)
         self.backgroundNode.update(size: containerBounds.size, transition: transition)
         containerTransition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: UIScreenPixel)))
                 
-        let _ = self.updateScrollLayoutIfNeeded(force: isSelectingUpdated, transition: containerTransition)
+        let _ = self.updateScrollLayoutIfNeeded(force: isSelectingUpdated || isButtonVisibleUpdated, transition: containerTransition)
 
         self.updateViews(transition: .immediate)
+        
+        if let progress = self.loadingProgress {
+            let loadingProgressNode: LoadingProgressNode
+            if let current = self.progressNode {
+                loadingProgressNode = current
+            } else {
+                loadingProgressNode = LoadingProgressNode(color: self.presentationData.theme.rootController.tabBar.selectedIconColor)
+                self.addSubnode(loadingProgressNode)
+                self.progressNode = loadingProgressNode
+            }
+            let loadingProgressHeight: CGFloat = 2.0
+            let loadingProgressY: CGFloat = elevateProgress ? -loadingProgressHeight : -loadingProgressHeight / 2.0
+            transition.updateFrame(node: loadingProgressNode, frame: CGRect(origin: CGPoint(x: 0.0, y: loadingProgressY), size: CGSize(width: layout.size.width, height: loadingProgressHeight)))
+            
+            loadingProgressNode.updateProgress(progress, animated: true)
+        } else if let progressNode = self.progressNode {
+            self.progressNode = nil
+            progressNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak progressNode] _ in
+                progressNode?.removeFromSupernode()
+            })
+        }
+
+        let sideInset: CGFloat = 16.0
+        let buttonSize = CGSize(width: layout.size.width - (sideInset + layout.safeInsets.left) * 2.0, height: 50.0)
+        self.mainButtonNode.updateLayout(size: buttonSize, state: self.mainButtonState, transition: transition)
+        transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible ? 8.0 : containerFrame.height), size: buttonSize))
         
         return containerFrame.height
     }

@@ -248,7 +248,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.isAttachment = isAttachment
         
         var hasSpoilers = true
-        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+        if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
             hasSpoilers = false
         }
         self.inputMenu = TextInputMenu(hasSpoilers: hasSpoilers)

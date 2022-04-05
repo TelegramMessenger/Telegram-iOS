@@ -31,6 +31,7 @@ public struct BotUserInfoFlags: OptionSet {
     public static let hasAccessToChatHistory = BotUserInfoFlags(rawValue: (1 << 0))
     public static let worksWithGroups = BotUserInfoFlags(rawValue: (1 << 1))
     public static let requiresGeolocationForInlineRequests = BotUserInfoFlags(rawValue: (1 << 3))
+    public static let canBeAddedToAttachMenu = BotUserInfoFlags(rawValue: (1 << 4))
 }
 
 public struct BotUserInfo: PostboxCoding, Equatable {

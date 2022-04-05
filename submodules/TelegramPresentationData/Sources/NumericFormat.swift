@@ -38,6 +38,18 @@ public func presentationStringsFormattedNumber(_ count: Int32, _ groupingSeparat
     }
 }
 
+public func dayIntervalString(strings: PresentationStrings, days: Int32) -> String {
+    return strings.MessageTimer_Days(max(0, days))
+}
+
+public func hoursIntervalString(strings: PresentationStrings, hours: Int32) -> String {
+    return strings.MessageTimer_Hours(max(0, hours))
+}
+
+public func minutesIntervalString(strings: PresentationStrings, minutes: Int32) -> String {
+    return strings.MessageTimer_Minutes(max(0, minutes))
+}
+
 public func timeIntervalString(strings: PresentationStrings, value: Int32, preferLowerValue: Bool = false) -> String {
     if preferLowerValue {
         if value <= 60 {
@@ -50,8 +62,10 @@ public func timeIntervalString(strings: PresentationStrings, value: Int32, prefe
             return strings.MessageTimer_Days(max(1, value / (60 * 60 * 24)))
         } else if value <= 60 * 60 * 24 * 30 {
             return strings.MessageTimer_Weeks(max(1, value / (60 * 60 * 24 * 7)))
-        } else {
+        } else if value <= 60 * 60 * 24 * 365 {
             return strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30)))
+        } else {
+            return strings.MessageTimer_Years(max(1, value / (60 * 60 * 24 * 365)))
         }
     } else {
         if value < 60 {
@@ -64,8 +78,10 @@ public func timeIntervalString(strings: PresentationStrings, value: Int32, prefe
             return strings.MessageTimer_Days(max(1, value / (60 * 60 * 24)))
         } else if value < 60 * 60 * 24 * 30 {
             return strings.MessageTimer_Weeks(max(1, value / (60 * 60 * 24 * 7)))
-        } else {
+        } else if value < 60 * 60 * 24 * 365 {
             return strings.MessageTimer_Months(max(1, value / (60 * 60 * 24 * 30)))
+        } else {
+            return strings.MessageTimer_Years(max(1, value / (60 * 60 * 24 * 365)))
         }
     }
 }
@@ -113,16 +129,30 @@ public func shortTimeIntervalString(strings: PresentationStrings, value: Int32) 
         return strings.MessageTimer_ShortDays(max(1, value / (60 * 60 * 24)))
     } else if value < 60 * 60 * 24 * 31 {
         return strings.MessageTimer_ShortWeeks(max(1, value / (60 * 60 * 24 * 7)))
+    } else if value < 60 * 60 * 24 * 365 {
+        return strings.MessageTimer_ShortMonths(max(1, value / (60 * 60 * 24 * 30)))
     } else {
-        return strings.MessageTimer_ShortMonths(max(1, value / (60 * 60 * 24 * 7 * 30)))
+        return strings.MessageTimer_ShortYears(max(1, value / (60 * 60 * 24 * 365)))
     }
 }
 
 public func muteForIntervalString(strings: PresentationStrings, value: Int32) -> String {
-    if value < 60 * 60 * 24 {
+    if value < 60 * 60 {
+        return strings.MuteFor_Minutes(max(1, value / (60)))
+    } else if value < 60 * 60 * 24 {
         return strings.MuteFor_Hours(max(1, value / (60 * 60)))
     } else {
         return strings.MuteFor_Days(max(1, value / (60 * 60 * 24)))
+    }
+}
+
+public func mutedForTimeIntervalString(strings: PresentationStrings, value: Int32) -> String {
+    if value < 60 * 60 {
+        return strings.MutedForTime_Minutes(max(1, value / (60)))
+    } else if value < 60 * 60 * 24 {
+        return strings.MutedForTime_Hours(max(1, value / (60 * 60)))
+    } else {
+        return strings.MutedForTime_Days(max(1, value / (60 * 60 * 24)))
     }
 }
 

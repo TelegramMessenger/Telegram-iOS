@@ -820,7 +820,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                     1 * 30 * 24 * 60 * 60,
                     3 * 30 * 24 * 60 * 60,
                     6 * 30 * 24 * 60 * 60,
-                    12 * 30 * 24 * 60 * 60
+                    365 * 24 * 60 * 60
                 ]
                 let timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
                     return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {

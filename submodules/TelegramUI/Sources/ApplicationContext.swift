@@ -414,16 +414,14 @@ final class AuthorizedApplicationContext {
                                         }
                                         
                                         if !processed {
-                                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId)))
+                                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(id: firstMessage.id.peerId)))
                                         }
                                     }
                                     return false
                                 }, expandAction: { expandData in
                                     if let strongSelf = self {
-                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
-                                        //chatController.navigation_setNavigationController(strongSelf.rootController)
+                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
                                         chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
-                                        //strongSelf.rootController.pushViewController(chatController)
                                         (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                                     }
                                 }))
@@ -466,7 +464,7 @@ final class AuthorizedApplicationContext {
                         if let strongSelf = self, let botName = botName {
                             strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
                                 if let strongSelf = self, let peer = peer {
-                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peer.id)))
+                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peer.id)))
                                 }
                             }))
                         }
@@ -758,7 +756,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         let navigateToMessage = {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(id: messageId.peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                         }
                         
                         if chatIsVisible {
@@ -837,7 +835,7 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(id: peerId), subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput))
             } else {
                 self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }

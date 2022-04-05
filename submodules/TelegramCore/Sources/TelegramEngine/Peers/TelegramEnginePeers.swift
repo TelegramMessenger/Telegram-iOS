@@ -684,6 +684,32 @@ public extension TelegramEngine {
         public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: [String]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
             return _internal_updatePeerAllowedReactions(account: account, peerId: peerId, allowedReactions: allowedReactions)
         }
+        
+        public func notificationSoundList() -> Signal<NotificationSoundList?, NoError> {
+            let key = PostboxViewKey.cachedItem(_internal_cachedNotificationSoundListCacheKey())
+            return self.account.postbox.combinedView(keys: [key])
+            |> map { views -> NotificationSoundList? in
+                guard let view = views.views[key] as? CachedItemView else {
+                    return nil
+                }
+                return view.value?.get(NotificationSoundList.self)
+            }
+        }
+        
+        public func saveNotificationSound(file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
+            return _internal_saveNotificationSound(account: self.account, file: file)
+        }
+        public func removeNotificationSound(file: FileMediaReference) -> Signal<Never, UploadNotificationSoundError> {
+            return _internal_saveNotificationSound(account: self.account, file: file, unsave: true)
+        }
+        
+        public func uploadNotificationSound(title: String, data: Data) -> Signal<NotificationSoundList.NotificationSound, UploadNotificationSoundError> {
+            return _internal_uploadNotificationSound(account: self.account, title: title, data: data)
+        }
+        
+        public func deleteNotificationSound(fileId: Int64) -> Signal<Never, DeleteNotificationSoundError> {
+            return _internal_deleteNotificationSound(account: self.account, fileId: fileId)
+        }
     }
 }
 

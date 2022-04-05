@@ -32,7 +32,7 @@ static const void *MTNetworkAvailabilityContextRetain(const void *info)
 static void MTNetworkAvailabilityContextRelease(const void *info)
 {
     void *retainedThing = (__bridge void *)((__bridge id)info);
-    id unretainedThing = (__bridge_transfer id)retainedThing;
+    __unused id unretainedThing = (__bridge_transfer id)retainedThing;
     unretainedThing = nil;
 }
 
