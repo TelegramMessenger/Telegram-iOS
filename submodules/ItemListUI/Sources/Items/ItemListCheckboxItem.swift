@@ -106,12 +106,17 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     
     private let activateArea: AccessibilityAreaNode
     
+    private let contentParentNode: ASDisplayNode
     private let contentContainerNode: ASDisplayNode
     private let imageNode: ASImageNode
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
     private var item: ItemListCheckboxItem?
+    
+    override public var controlsContainer: ASDisplayNode {
+        return self.contentParentNode
+    }
     
     public init() {
         self.backgroundNode = ASDisplayNode()
@@ -125,6 +130,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         
         self.maskNode = ASImageNode()
         
+        self.contentParentNode = ASDisplayNode()
         self.contentContainerNode = ASDisplayNode()
         
         self.imageNode = ASImageNode()
@@ -149,7 +155,8 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.contentContainerNode)
+        self.addSubnode(self.contentParentNode)
+        self.contentParentNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.addSubnode(self.imageNode)
         self.contentContainerNode.addSubnode(self.iconNode)
         self.contentContainerNode.addSubnode(self.titleNode)
@@ -171,12 +178,12 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             
             switch item.style {
             case .left:
-                leftInset += 44.0
+                leftInset += 62.0
             case .right:
                 leftInset += 16.0
             }
             
-            let iconInset: CGFloat = 44.0
+            let iconInset: CGFloat = 62.0
             if item.icon != nil {
                 switch item.iconPlacement {
                 case .default:
@@ -225,7 +232,8 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    strongSelf.contentContainerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: layout.contentSize.height))
+                    strongSelf.contentParentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: layout.contentSize.height))
+                    strongSelf.contentContainerNode.frame = CGRect(origin: CGPoint(x: strongSelf.contentContainerNode.frame.minX, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
                     if item.checked {
@@ -269,7 +277,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.insertSubnode(strongSelf.maskNode, aboveSubnode: strongSelf.contentParentNode)
                     }
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false

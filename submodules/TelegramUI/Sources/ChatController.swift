@@ -9844,21 +9844,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.beginClearHistory(type: type)
                 }
                 
-                let _ = (self.context.account.postbox.transaction { transaction -> Bool in
+                let _ = (self.context.account.postbox.transaction { transaction -> (isLargeGroupOrChannel: Bool, canClearChannel: Bool) in
                     if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount {
-                        if memberCount > 1000 {
-                            return true
-                        } else {
-                            return false
-                        }
+                        return (memberCount > 1000, cachedData.flags.contains(.canDeleteHistory))
                     } else {
-                        return false
+                        return (false, false)
                     }
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] isLargeGroupOrChannel in
+                |> deliverOnMainQueue).start(next: { [weak self] parameters in
                     guard let strongSelf = self else {
                         return
                     }
+                    
+                    let (isLargeGroupOrChannel, canClearChannel) = parameters
                     
                     guard let peer = strongSelf.presentationInterfaceState.renderedPeer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                         return
@@ -9900,7 +9898,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if isLargeGroupOrChannel {
                                 canClearCache = true
                                 canClearForMyself = nil
-                                canClearForEveryone = nil
+                                canClearForEveryone = canClearChannel ? .channel : nil
                             } else {
                                 canClearCache = true
                                 canClearForMyself = nil
@@ -9908,15 +9906,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 switch channel.info {
                                 case .broadcast:
                                     if channel.flags.contains(.isCreator) {
-                                        canClearForEveryone = nil
+                                        canClearForEveryone = canClearChannel ? .channel : nil
                                     } else {
-                                        canClearForEveryone = nil
+                                        canClearForEveryone = canClearChannel ? .channel : nil
                                     }
                                 case .group:
                                     if channel.flags.contains(.isCreator) {
-                                        canClearForEveryone = nil
+                                        canClearForEveryone = canClearChannel ? .channel : nil
                                     } else {
-                                        canClearForEveryone = nil
+                                        canClearForEveryone = canClearChannel ? .channel : nil
                                     }
                                 }
                             }

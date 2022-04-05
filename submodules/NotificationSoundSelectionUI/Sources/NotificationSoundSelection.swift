@@ -13,6 +13,7 @@ import AppBundle
 import LegacyMediaPickerUI
 import AVFoundation
 import UndoUI
+import Postbox
 
 private struct NotificationSoundSelectionArguments {
     let account: Account
@@ -21,7 +22,7 @@ private struct NotificationSoundSelectionArguments {
     let complete: () -> Void
     let cancel: () -> Void
     let upload: () -> Void
-    let deleteSound: (PeerMessageSound) -> Void
+    let deleteSound: (PeerMessageSound, String) -> Void
 }
 
 private enum NotificationSoundSelectionSection: Int32 {
@@ -204,7 +205,7 @@ private enum NotificationSoundSelectionEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(sound)
             }, deleteAction: canBeDeleted ? {
-                arguments.deleteSound(sound)
+                arguments.deleteSound(sound, text)
             } : nil)
         }
     }
@@ -368,7 +369,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     var completeImpl: (() -> Void)?
     var cancelImpl: (() -> Void)?
     var presentFilePicker: (() -> Void)?
-    var deleteSoundImpl: ((PeerMessageSound) -> Void)?
+    var deleteSoundImpl: ((PeerMessageSound, String) -> Void)?
     
     let playSoundDisposable = MetaDisposable()
     let soundActionDisposable = MetaDisposable()
@@ -393,8 +394,8 @@ public func notificationSoundSelectionController(context: AccountContext, update
         cancelImpl?()
     }, upload: {
         presentFilePicker?()
-    }, deleteSound: { sound in
-        deleteSoundImpl?(sound)
+    }, deleteSound: { sound, title in
+        deleteSoundImpl?(sound, title)
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
@@ -442,45 +443,37 @@ public func notificationSoundSelectionController(context: AccountContext, update
         presentCustomNotificationSoundFilePicker(context: context, controller: controller, disposable: soundActionDisposable)
     }
     
-    deleteSoundImpl = { [weak controller] sound in
+    deleteSoundImpl = { [weak controller] sound, title in
         guard let controller = controller else {
             return
         }
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let actionSheet = ActionSheetController(presentationData: presentationData)
-        actionSheet.setItemGroups([
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+        
+        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.PeerInfo_DeleteToneTitle, text: presentationData.strings.PeerInfo_DeleteToneText(title).string, actions: [
+            TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                updateState { state in
+                    var state = state
                     
-                    updateState { state in
-                        var state = state
-                        
-                        state.removedSounds.append(sound)
-                        if state.selectedSound.id == sound.id {
-                            state.selectedSound = .bundledModern(id: 0)
-                        }
-                        
-                        return state
+                    state.removedSounds.append(sound)
+                    if state.selectedSound.id == sound.id {
+                        state.selectedSound = .bundledModern(id: 0)
                     }
-                    switch sound {
-                    case let .cloud(id):
-                        soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
-                        |> deliverOnMainQueue).start(completed: {
-                        }))
-                    default:
-                        break
-                    }
-                })
-            ]),
-            ActionSheetItemGroup(items: [
-                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                })
-            ])
-        ])
-        controller.present(actionSheet, in: .window(.root))
+                    
+                    return state
+                }
+                switch sound {
+                case let .cloud(id):
+                    soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
+                    |> deliverOnMainQueue).start(completed: {
+                    }))
+                default:
+                    break
+                }
+            }),
+            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+            })
+        ], parseMarkdown: true), in: .window(.root))
     }
     
     return controller
@@ -501,6 +494,8 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     controller.present(legacyICloudFilePicker(theme: presentationData.theme, documentTypes: ["public.mp3"], completion: { urls in
         guard !urls.isEmpty, let url = urls.first else {
+            Logger.shared.log("NotificationSoundSelection", "url is nil")
+            
             return
         }
         
@@ -511,7 +506,28 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
         
         let coordinator = NSFileCoordinator(filePresenter: nil)
         var error: NSError?
-        coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { url in
+        coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { souceUrl in
+            let fileName = url.lastPathComponent
+            
+            var maybeUrl: URL?
+            let tempFile = TempBox.shared.tempFile(fileName: "file.mp3")
+            do {
+                try FileManager.default.copyItem(at: url, to: URL(fileURLWithPath: tempFile.path))
+                maybeUrl = URL(fileURLWithPath: tempFile.path)
+            } catch let e {
+                Logger.shared.log("NotificationSoundSelection", "copy file error \(e)")
+                TempBox.shared.dispose(tempFile)
+                souceUrl.stopAccessingSecurityScopedResource()
+                return
+            }
+            
+            guard let url = maybeUrl else {
+                Logger.shared.log("NotificationSoundSelection", "temp url is nil")
+                TempBox.shared.dispose(tempFile)
+                souceUrl.stopAccessingSecurityScopedResource()
+                return
+            }
+            
             Queue.mainQueue().async {
                 do {
                     let asset = AVAsset(url: url)
@@ -521,37 +537,72 @@ public func presentCustomNotificationSoundFilePicker(context: AccountContext, co
                     if data.count > settings.maxSize {
                         presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
                         
-                        url.stopAccessingSecurityScopedResource()
+                        souceUrl.stopAccessingSecurityScopedResource()
+                        TempBox.shared.dispose(tempFile)
                         
                         return
                     }
                     
-                    asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
-                        if asset.statusOfValue(forKey: "duration", error: nil) != .loaded {
-                            url.stopAccessingSecurityScopedResource()
-                            
-                            return
-                        }
+                    func loadValues(asset: AVAsset, retryCount: Int, completion: @escaping () -> Void) {
+                        asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
+                            if asset.statusOfValue(forKey: "tracks", error: nil) == .loading {
+                                if retryCount < 2 {
+                                    Queue.mainQueue().after(0.1, {
+                                        loadValues(asset: asset, retryCount: retryCount + 1, completion: completion)
+                                    })
+                                } else {
+                                    completion()
+                                }
+                            } else {
+                                completion()
+                            }
+                        })
+                    }
+                    
+                    loadValues(asset: asset, retryCount: 0, completion: {
+                        var duration = 0.0
+                        
                         guard let track = asset.tracks(withMediaType: .audio).first else {
+                            Logger.shared.log("NotificationSoundSelection", "track is nil")
+                            
                             url.stopAccessingSecurityScopedResource()
+                            TempBox.shared.dispose(tempFile)
                             
                             return
                         }
-                        let duration = track.timeRange.duration.seconds
+                        
+                        duration = track.timeRange.duration.seconds
+
+                        if duration.isZero {
+                            Logger.shared.log("NotificationSoundSelection", "duration is zero")
+                            
+                            souceUrl.stopAccessingSecurityScopedResource()
+                            TempBox.shared.dispose(tempFile)
+                            
+                            return
+                        }
+                        
+                        TempBox.shared.dispose(tempFile)
                         
                         Queue.mainQueue().async {
                             if duration > Double(settings.maxDuration) {
-                                url.stopAccessingSecurityScopedResource()
+                                souceUrl.stopAccessingSecurityScopedResource()
                                 
-                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(url.lastPathComponent).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
+                                presentUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
                             } else {
-                                disposable.set((context.engine.peers.uploadNotificationSound(title: url.lastPathComponent, data: data)
+                                Logger.shared.log("NotificationSoundSelection", "Uploading sound")
+                                
+                                disposable.set((context.engine.peers.uploadNotificationSound(title: fileName, data: data)
                                 |> deliverOnMainQueue).start(next: { _ in
-                                    presentUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_UploadSuccess_Text(url.deletingPathExtension().lastPathComponent).string, action: nil))
+                                    Logger.shared.log("NotificationSoundSelection", "Upload done")
+                                    
+                                    presentUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_UploadSuccess_Text(fileName).string, action: nil))
                                 }, error: { _ in
-                                    url.stopAccessingSecurityScopedResource()
+                                    Logger.shared.log("NotificationSoundSelection", "Upload error")
+                                    
+                                    souceUrl.stopAccessingSecurityScopedResource()
                                 }, completed: {
-                                    url.stopAccessingSecurityScopedResource()
+                                    souceUrl.stopAccessingSecurityScopedResource()
                                 }))
                             }
                         }
