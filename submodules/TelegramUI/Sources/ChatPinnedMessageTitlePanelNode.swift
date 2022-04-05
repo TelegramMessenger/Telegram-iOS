@@ -316,20 +316,70 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             actionTitle = nil
         }
         
+        var displayCloseButton = false
+        var displayListButton = false
+        
         if isReplyThread || actionTitle != nil {
-            self.closeButton.isHidden = true
-            self.listButton.isHidden = true
+            displayCloseButton = false
+            displayListButton = false
         } else if let message = interfaceState.pinnedMessage {
             if message.totalCount > 1 {
-                self.listButton.isHidden = false
-                self.closeButton.isHidden = true
+                displayCloseButton = false
+                displayListButton = true
             } else {
-                self.listButton.isHidden = true
-                self.closeButton.isHidden = false
+                displayCloseButton = true
+                displayListButton = false
             }
         } else {
-            self.listButton.isHidden = false
-            self.closeButton.isHidden = true
+            displayCloseButton = false
+            displayListButton = true
+        }
+        
+        if displayCloseButton != !self.closeButton.isHidden {
+            if transition.isAnimated {
+                if displayCloseButton {
+                    self.closeButton.isHidden = false
+                    self.closeButton.layer.removeAllAnimations()
+                    
+                    self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.closeButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                } else {
+                    self.closeButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] completed in
+                        guard let strongSelf = self, completed else {
+                            return
+                        }
+                        strongSelf.closeButton.isHidden = true
+                        strongSelf.closeButton.layer.removeAllAnimations()
+                    })
+                    self.closeButton.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            } else {
+                self.closeButton.isHidden = !displayCloseButton
+                self.closeButton.layer.removeAllAnimations()
+            }
+        }
+        if displayListButton != !self.listButton.isHidden {
+            if transition.isAnimated {
+                if displayListButton {
+                    self.listButton.isHidden = false
+                    self.listButton.layer.removeAllAnimations()
+                    
+                    self.listButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.listButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                } else {
+                    self.listButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] completed in
+                        guard let strongSelf = self, completed else {
+                            return
+                        }
+                        strongSelf.listButton.isHidden = true
+                        strongSelf.listButton.layer.removeAllAnimations()
+                    })
+                    self.listButton.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                }
+            } else {
+                self.listButton.isHidden = !displayCloseButton
+                self.listButton.layer.removeAllAnimations()
+            }
         }
         
         let rightInset: CGFloat = 18.0 + rightInset
@@ -343,8 +393,21 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         if let actionTitle = actionTitle {
             var actionButtonTransition = transition
+            var animateButtonIn = false
             if self.actionButton.isHidden {
                 actionButtonTransition = .immediate
+                animateButtonIn = true
+            } else if transition.isAnimated, messageUpdated, actionTitle != self.actionButtonTitleNode.attributedText?.string {
+                if let buttonSnapshot = self.actionButton.view.snapshotView(afterScreenUpdates: false) {
+                    animateButtonIn = true
+                    buttonSnapshot.frame = self.actionButton.frame
+                    self.actionButton.view.superview?.insertSubview(buttonSnapshot, belowSubview: self.actionButton.view)
+                    
+                    buttonSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonSnapshot] _ in
+                        buttonSnapshot?.removeFromSuperview()
+                    })
+                    buttonSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
+                }
             }
             
             self.actionButton.isHidden = false
@@ -361,10 +424,27 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             actionButtonTransition.updateFrame(node: self.actionButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((actionButtonFrame.width - actionButtonTitleSize.width) / 2.0), y: floorToScreenPixels((actionButtonFrame.height - actionButtonTitleSize.height) / 2.0)), size: actionButtonTitleSize))
             
             tapButtonRightInset = 18.0 + actionButtonFrame.width
-        } else {
+            
+            if animateButtonIn {
+                self.actionButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.actionButton.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+            }
+        } else if !self.actionButton.isHidden {
             self.actionButton.isHidden = true
             self.actionButtonBackgroundNode.isHidden = true
             self.actionButtonTitleNode.isHidden = true
+            
+            if transition.isAnimated {
+                if let buttonSnapshot = self.actionButton.view.snapshotView(afterScreenUpdates: false) {
+                    buttonSnapshot.frame = self.actionButton.frame
+                    self.actionButton.view.superview?.insertSubview(buttonSnapshot, belowSubview: self.actionButton.view)
+                    
+                    buttonSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonSnapshot] _ in
+                        buttonSnapshot?.removeFromSuperview()
+                    })
+                    buttonSnapshot.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
+                }
+            }
         }
         
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: buttonsContainerSize.width - closeButtonSize.width + 1.0, y: 19.0), size: closeButtonSize))
