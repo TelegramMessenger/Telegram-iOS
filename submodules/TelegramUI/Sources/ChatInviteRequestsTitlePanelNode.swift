@@ -10,6 +10,7 @@ import TelegramStringFormatting
 import TelegramNotices
 import AnimatedAvatarSetNode
 import AccountContext
+import ChatPresentationInterfaceState
 
 private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
     private var theme: PresentationTheme?

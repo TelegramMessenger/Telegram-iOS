@@ -4,7 +4,7 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: String?) -> Signal<Never, NoError> {
+public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reaction: String?, isLarge: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .updateReaction, id: messageId, action: UpdateMessageReactionsAction())
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -19,7 +19,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
                     break loop
                 }
             }
-            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, value: reaction))
+            attributes.append(PendingReactionsMessageAttribute(accountPeerId: account.peerId, value: reaction, isLarge: isLarge))
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
     }
@@ -31,7 +31,7 @@ private enum RequestUpdateMessageReactionError {
 }
 
 private func requestUpdateMessageReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return postbox.transaction { transaction -> (Peer, String?)? in
+    return postbox.transaction { transaction -> (Peer, String?, Bool)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
         }
@@ -39,17 +39,19 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
             return nil
         }
         var value: String?
+        var isLarge: Bool = false
         for attribute in message.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
                 value = attribute.value
+                isLarge = attribute.isLarge
                 break
             }
         }
-        return (peer, value)
+        return (peer, value, isLarge)
     }
     |> castError(RequestUpdateMessageReactionError.self)
     |> mapToSignal { peerAndValue in
-        guard let (peer, value) = peerAndValue else {
+        guard let (peer, value, isLarge) = peerAndValue else {
             return .fail(.generic)
         }
         guard let inputPeer = apiInputPeer(peer) else {
@@ -58,7 +60,16 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
         if messageId.namespace != Namespaces.Message.Cloud {
             return .fail(.generic)
         }
-        let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendReaction(flags: value == nil ? 0 : 1, peer: inputPeer, msgId: messageId.id, reaction: value))
+        
+        var flags: Int32 = 0
+        if value != nil {
+            flags |= 1 << 0
+            if isLarge {
+                flags |= 1 << 1
+            }
+        }
+        
+        let signal: Signal<Never, RequestUpdateMessageReactionError> = network.request(Api.functions.messages.sendReaction(flags: flags, peer: inputPeer, msgId: messageId.id, reaction: value))
         |> mapError { _ -> RequestUpdateMessageReactionError in
             return .generic
         }
@@ -233,6 +244,7 @@ public extension EngineMessageReactionListContext.State {
     init(message: EngineMessage, reaction: String?) {
         var totalCount = 0
         var hasOutgoingReaction = false
+        var items: [EngineMessageReactionListContext.Item] = []
         if let reactionsAttribute = message._asMessage().reactionsAttribute {
             for messageReaction in reactionsAttribute.reactions {
                 if reaction == nil || messageReaction.value == reaction {
@@ -242,12 +254,22 @@ public extension EngineMessageReactionListContext.State {
                     totalCount += Int(messageReaction.count)
                 }
             }
+            for recentPeer in reactionsAttribute.recentPeers {
+                if let peer = message.peers[recentPeer.peerId] {
+                    if reaction == nil || recentPeer.value == reaction {
+                        items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: recentPeer.value))
+                    }
+                }
+            }
+        }
+        if items.count != totalCount {
+            items.removeAll()
         }
         self.init(
             hasOutgoingReaction: hasOutgoingReaction,
             totalCount: totalCount,
-            items: [],
-            canLoadMore: totalCount != 0
+            items: items,
+            canLoadMore: items.count != totalCount && totalCount != 0
         )
     }
 }
@@ -328,6 +350,8 @@ public final class EngineMessageReactionListContext {
             
             if initialState.canLoadMore {
                 self.loadMore()
+            } else {
+                self.statePromise.set(.single(self.state))
             }
         }
         
@@ -373,7 +397,7 @@ public final class EngineMessageReactionListContext {
                 |> mapToSignal { result -> Signal<InternalState, NoError> in
                     return account.postbox.transaction { transaction -> InternalState in
                         switch result {
-                        case let .messageReactionsList(_, count, reactions, users, nextOffset):
+                        case let .messageReactionsList(_, count, reactions, chats, users, nextOffset):
                             var peers: [Peer] = []
                             var peerPresences: [PeerId: PeerPresence] = [:]
                             
@@ -382,6 +406,11 @@ public final class EngineMessageReactionListContext {
                                 peers.append(telegramUser)
                                 if let presence = TelegramUserPresence(apiUser: user) {
                                     peerPresences[telegramUser.id] = presence
+                                }
+                            }
+                            for chat in chats {
+                                if let peer = parseTelegramGroupOrChannel(chat: chat) {
+                                    peers.append(peer)
                                 }
                             }
                             
@@ -393,8 +422,8 @@ public final class EngineMessageReactionListContext {
                             var items: [EngineMessageReactionListContext.Item] = []
                             for reaction in reactions {
                                 switch reaction {
-                                case let .messageUserReaction(userId, reaction):
-                                    if let peer = transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))) {
+                                case let .messagePeerReaction(_, peer, reaction):
+                                    if let peer = transaction.getPeer(peer.peerId) {
                                         items.append(EngineMessageReactionListContext.Item(peer: EnginePeer(peer), reaction: reaction))
                                     }
                                 }

@@ -349,7 +349,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                     if let inputCall = chatFullCall {
                                         switch inputCall {
                                         case let .inputGroupCall(id, accessHash):
-                                            updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false)
+                                            updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false, isStream: previous.activeCall?.isStream)
                                         }
                                     }
                                     
@@ -568,7 +568,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                 if let inputCall = inputCall {
                                                     switch inputCall {
                                                     case let .inputGroupCall(id, accessHash):
-                                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false)
+                                                        updatedActiveCall = CachedChannelData.ActiveCall(id: id, accessHash: accessHash, title: previous.activeCall?.title, scheduleTimestamp: previous.activeCall?.scheduleTimestamp, subscribedToScheduled: previous.activeCall?.subscribedToScheduled ?? false, isStream: previous.activeCall?.isStream)
                                                     }
                                                 }
                                                 

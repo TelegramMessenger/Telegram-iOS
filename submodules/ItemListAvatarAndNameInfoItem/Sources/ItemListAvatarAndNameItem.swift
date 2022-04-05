@@ -627,6 +627,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = params.leftInset + 16.0
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     hasBottomCorners = true

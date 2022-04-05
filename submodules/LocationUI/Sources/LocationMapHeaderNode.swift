@@ -207,7 +207,7 @@ final class LocationMapHeaderNode: ASDisplayNode {
         transition.updateAlpha(node: self.notificationButtonNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
         transition.updateAlpha(node: self.optionsSecondSeparatorNode, alpha: self.proximityNotification != nil ? 1.0 : 0.0)
         
-        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0, y: navigationBarHeight + topPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
+        transition.updateFrame(node: self.optionsBackgroundNode, frame: CGRect(x: size.width - inset - panelButtonSize.width - panelInset * 2.0 - layout.safeInsets.right, y: navigationBarHeight + topPadding + inset, width: panelButtonSize.width + panelInset * 2.0, height: panelHeight + panelInset * 2.0))
         
         let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
         let optionsAlpha: CGFloat = size.height > 160.0 + navigationBarHeight && !self.forceIsHidden ? 1.0 : 0.0

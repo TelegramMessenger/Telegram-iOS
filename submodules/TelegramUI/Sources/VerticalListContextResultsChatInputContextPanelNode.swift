@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import SwiftSignalKit
+import ChatPresentationInterfaceState
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action

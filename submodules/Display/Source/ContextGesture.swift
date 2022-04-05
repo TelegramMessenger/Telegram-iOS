@@ -20,8 +20,6 @@ private class TimerTargetWrapper: NSObject {
     }
 }
 
-private let beginDelay: Double = 0.12
-
 public func cancelParentGestures(view: UIView) {
     if let gestureRecognizers = view.gestureRecognizers {
         for recognizer in gestureRecognizers {
@@ -55,16 +53,19 @@ private func cancelOtherGestures(gesture: ContextGesture, view: UIView) {
 }
 
 public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    public var beginDelay: Double = 0.12
     private var currentProgress: CGFloat = 0.0
     private var delayTimer: Timer?
     private var animator: DisplayLinkAnimator?
     private var isValidated: Bool = false
+    private var wasActivated: Bool = false
     
     public var shouldBegin: ((CGPoint) -> Bool)?
     public var activationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
     public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var externalUpdated: ((UIView?, CGPoint) -> Void)?
     public var externalEnded: (((UIView?, CGPoint)?) -> Void)?
+    public var activatedAfterCompletion: (() -> Void)?
     
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
@@ -85,6 +86,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         self.externalEnded = nil
         self.animator?.invalidate()
         self.animator = nil
+        self.wasActivated = false
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -116,7 +118,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         }
         
         if self.delayTimer == nil {
-            let delayTimer = Timer(timeInterval: beginDelay, target: TimerTargetWrapper { [weak self] in
+            let delayTimer = Timer(timeInterval: self.beginDelay, target: TimerTargetWrapper { [weak self] in
                 guard let strongSelf = self, let _ = strongSelf.delayTimer else {
                     return
                 }
@@ -139,6 +141,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                             strongSelf.delayTimer?.invalidate()
                             strongSelf.animator?.invalidate()
                             strongSelf.activated?(strongSelf, location)
+                            strongSelf.wasActivated = true
                             if let view = strongSelf.view?.superview {
                                 if let window = view.window {
                                     cancelOtherGestures(gesture: strongSelf, view: window)
@@ -174,6 +177,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                         self.delayTimer?.invalidate()
                         self.animator?.invalidate()
                         self.activated?(self, touch.location(in: self.view))
+                        self.wasActivated = true
                         if let view = self.view?.superview {
                             if let window = view.window {
                                 cancelOtherGestures(gesture: self, view: window)
@@ -198,6 +202,9 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
             if !self.currentProgress.isZero, self.isValidated {
                 self.currentProgress = 0.0
                 self.activationProgress?(0.0, .ended(self.currentProgress))
+                if self.wasActivated {
+                    self.activatedAfterCompletion?()
+                }
             }
             
             self.externalEnded?((self.view, touch.location(in: self.view)))

@@ -181,7 +181,7 @@ extension Api.Peer {
 extension Api.Dialog {
     var peerId: PeerId? {
         switch self {
-            case let .dialog(_, peer, _, _, _, _, _, _, _, _, _):
+            case let .dialog(_, peer, _, _, _, _, _, _, _, _, _, _):
                 return peer.peerId
             case .dialogFolder:
                 return nil

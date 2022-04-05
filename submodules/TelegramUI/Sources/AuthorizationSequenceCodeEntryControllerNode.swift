@@ -42,7 +42,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     var currentCode: String {
         return self.codeInputView.text
-        //return self.codeField.textField.text ?? ""
     }
     
     var loginWithCode: ((String) -> Void)?
@@ -53,7 +52,6 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var inProgress: Bool = false {
         didSet {
             self.codeInputView.alpha = self.inProgress ? 0.6 : 1.0
-            //self.codeField.alpha = self.inProgress ? 0.6 : 1.0
         }
     }
     
@@ -89,11 +87,18 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.nextOptionButtonNode.isUserInteractionEnabled = nextOptionActive
         self.nextOptionButtonNode.addSubnode(self.nextOptionTitleNode)
         
-        /*self.codeSeparatorNode = ASDisplayNode()
-        self.codeSeparatorNode.isLayerBacked = true
-        self.codeSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor*/
-        
         self.codeInputView = CodeInputView()
+        self.codeInputView.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
+        self.codeInputView.textField.returnKeyType = .done
+        self.codeInputView.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
+        if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
+            self.codeInputView.textField.textContentType = .oneTimeCode
+        }
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.codeInputView.textField.keyboardType = .asciiCapableNumberPad
+        } else {
+            self.codeInputView.textField.keyboardType = .numberPad
+        }
         
         /*self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(24.0)

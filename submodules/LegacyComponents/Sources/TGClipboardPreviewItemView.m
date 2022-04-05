@@ -270,7 +270,7 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
     if ([cell isKindOfClass:[TGClipboardPreviewCell class]])
         thumbnailImage = cell.imageView.image;
     
-    TGClipboardGalleryMixin *mixin = [[TGClipboardGalleryMixin alloc] initWithContext:_context image:image images:_images parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext stickersContext:self.stickersContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder recipientName:self.recipientName];
+    TGClipboardGalleryMixin *mixin = [[TGClipboardGalleryMixin alloc] initWithContext:_context image:image images:_images parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext stickersContext:self.stickersContext hasCaptions:self.allowCaptions hasTimer:self.hasTimer hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder recipientName:self.recipientName];
     mixin.presentScheduleController = self.presentScheduleController;
     mixin.presentTimerController = self.presentTimerController;
     

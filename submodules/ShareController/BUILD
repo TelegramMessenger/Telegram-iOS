@@ -31,6 +31,7 @@ swift_library(
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/ContextUI:ContextUI",
     ],
     visibility = [
         "//visibility:public",

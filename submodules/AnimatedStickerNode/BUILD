@@ -9,7 +9,7 @@ config_setting(
 
 optimization_flags = select({
     ":debug_build": [
-        "-O",
+        #"-O",
     ],
     "//conditions:default": [],
 })
@@ -31,6 +31,11 @@ swift_library(
         "//submodules/GZip:GZip",
         "//submodules/rlottie:RLottieBinding",
         "//submodules/MediaResources:MediaResources",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/ManagedFile:ManagedFile",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/AnimationCompression:AnimationCompression",
+        "//submodules/Components/MetalImageView:MetalImageView",
     ],
     visibility = [
         "//visibility:public",

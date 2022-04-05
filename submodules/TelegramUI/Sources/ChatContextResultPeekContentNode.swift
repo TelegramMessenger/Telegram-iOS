@@ -9,6 +9,7 @@ import AVFoundation
 import PhotoResources
 import AppBundle
 import ContextUI
+import SoftwareVideo
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account

@@ -277,13 +277,6 @@ open class TransformImageNode: ASDisplayNode {
     }
 }
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 private class CaptureProtectedContentLayer: AVSampleBufferDisplayLayer {
     override func action(forKey event: String) -> CAAction? {
         return nullAction

@@ -192,7 +192,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     animation.animator.updatePosition(layer: titleNode.layer, position: titleFrame.center, completion: nil)
                     
                     if let buttonView = node.buttonView {
-                        animation.animator.updateFrame(layer: buttonView.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0)), completion: nil)
+                        buttonView.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
                     }
                     if let iconNode = node.iconNode {
                         animation.animator.updateFrame(layer: iconNode.layer, frame: CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0), completion: nil)
@@ -324,10 +324,11 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                         let buttonNode = buttonApply(animation)
                         updatedButtons.append(buttonNode)
                         if buttonNode.supernode == nil {
-                            node.addSubnode(buttonNode)
                             buttonNode.pressed = node.buttonPressedWrapper
                             buttonNode.longTapped = node.buttonLongTappedWrapper
                             buttonNode.frame = buttonFrame
+                            
+                            node.addSubnode(buttonNode)
                         } else {
                             animation.animator.updateFrame(layer: buttonNode.layer, frame: buttonFrame, completion: nil)
                         }

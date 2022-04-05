@@ -36,6 +36,7 @@ swift_library(
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/WallpaperResources:WallpaperResources",
         "//submodules/Postbox:Postbox",
+        "//submodules/ShimmerEffect:ShimmerEffect",
     ],
     visibility = [
         "//visibility:public",

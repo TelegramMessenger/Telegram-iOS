@@ -265,7 +265,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             }
             
             if let dimensions = item.stickerItem.file.dimensions {
-                if item.stickerItem.file.isAnimatedSticker {
+                if item.stickerItem.file.isAnimatedSticker || item.stickerItem.file.isVideoSticker {
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
                         animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
@@ -281,7 +281,11 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     }
                     let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(fittedSize)))
+                    if item.stickerItem.file.isVideoSticker {
+                        self.imageNode.setSignal(chatMessageSticker(account: item.account, file: item.stickerItem.file, small: false, synchronousLoad: synchronousLoads && isVisible))
+                    } else {
+                        self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.cgSize.aspectFitted(fittedSize)))
+                    }
                     self.updateVisibility()
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
                 } else {
@@ -306,13 +310,14 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             
             if let (_, _, mediaDimensions) = self.currentState {
                 let imageSize = mediaDimensions.aspectFitted(boundingSize)
+                let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
                 if self.imageNode.supernode === self {
-                    self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                    self.imageNode.frame = imageFrame
                 }
                 if let animationNode = self.animationNode {
                     if animationNode.supernode === self {
-                        animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                        animationNode.frame = imageFrame
                     }
                     animationNode.updateLayout(size: imageSize)
                 }
@@ -365,12 +370,16 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode?.visibility = isPlaying
+            
             if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
-                let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                let fitSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
-                let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
-                self.animationNode?.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                
+                if let animationNode = self.animationNode {
+                    let dimensions = item.stickerItem.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                    let fitSize = item.large ? CGSize(width: 384.0, height: 384.0) : CGSize(width: 160.0, height: 160.0)
+                    let fittedDimensions = dimensions.cgSize.aspectFitted(fitSize)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource, isVideo: item.stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                }
             }
         }
     }

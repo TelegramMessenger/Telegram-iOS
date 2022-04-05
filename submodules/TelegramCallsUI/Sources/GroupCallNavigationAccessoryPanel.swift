@@ -355,12 +355,18 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             let membersText: String
             if data.participantCount == 0 {
                 membersText = self.strings.VoiceChat_Panel_TapToJoin
+            } else if let groupCall = data.groupCall, groupCall.isStream {
+                membersText = self.strings.LiveStream_ViewerCount(Int32(data.participantCount))
             } else {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
             self.currentText = membersText
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+            if data.info.isStream {
+                self.avatarsContent = self.avatarsContext.update(peers: [], animated: false)
+            } else {
+                self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+            }
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
             
@@ -379,12 +385,18 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                     let membersText: String
                     if summaryState.participantCount == 0 {
                         membersText = strongSelf.strings.VoiceChat_Panel_TapToJoin
+                    } else if let info = summaryState.info, info.isStream {
+                        membersText = strongSelf.strings.LiveStream_ViewerCount(Int32(summaryState.participantCount))
                     } else {
                         membersText = strongSelf.strings.VoiceChat_Panel_Members(Int32(summaryState.participantCount))
                     }
                     strongSelf.currentText = membersText
-                                                            
-                    strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                                                    
+                    if let info = summaryState.info, info.isStream {
+                        strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: [], animated: false)
+                    } else {
+                        strongSelf.avatarsContent = strongSelf.avatarsContext.update(peers: summaryState.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                    }
                     
                     if let (size, leftInset, rightInset) = strongSelf.validLayout {
                         strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
@@ -456,12 +468,18 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             let membersText: String
             if data.participantCount == 0 {
                 membersText = self.strings.VoiceChat_Panel_TapToJoin
+            } else if data.info.isStream {
+                membersText = self.strings.LiveStream_ViewerCount(Int32(data.participantCount))
             } else {
                 membersText = self.strings.VoiceChat_Panel_Members(Int32(data.participantCount))
             }
             self.currentText = membersText
             
-            self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+            if data.info.isStream {
+                self.avatarsContent = self.avatarsContext.update(peers: [], animated: false)
+            } else {
+                self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+            }
             
             updateAudioLevels = true
         }
@@ -527,9 +545,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         var joinText = self.strings.VoiceChat_PanelJoin
         var title = self.strings.VoiceChat_Title
         var isChannel = false
-        if let currentData = self.currentData, currentData.isChannel {
-            title = self.strings.VoiceChatChannel_Title
-            isChannel = true
+        if let currentData = self.currentData {
+            if currentData.isChannel || currentData.info.isStream {
+                title = self.strings.VoiceChatChannel_Title
+                isChannel = true
+            }
         }
         var text = self.currentText
         var isScheduled = false

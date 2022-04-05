@@ -240,18 +240,26 @@
 
 - (SSignal *)thumbnailImageSignalForItem:(id<TGMediaEditableItem>)item
 {
-    return [self thumbnailImageSignalForItem:item withUpdates:true synchronous:false];
+    return [self thumbnailImageSignalForIdentifier:item.uniqueIdentifier];
 }
 
 - (SSignal *)thumbnailImageSignalForItem:(id<TGMediaEditableItem>)item withUpdates:(bool)withUpdates synchronous:(bool)synchronous
 {
-    NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
+    return [self thumbnailImageSignalForIdentifier:item.uniqueIdentifier withUpdates:withUpdates synchronous: synchronous];
+}
+
+- (SSignal *)thumbnailImageSignalForIdentifier:(NSString *)identifier {
+    return [self thumbnailImageSignalForIdentifier:identifier withUpdates:true synchronous:false];
+}
+
+- (SSignal *)thumbnailImageSignalForIdentifier:(NSString *)identifier withUpdates:(bool)withUpdates synchronous:(bool)synchronous {
+    NSString *itemId = [self _contextualIdForItemId:identifier];
     if (itemId == nil)
         return [SSignal fail:nil];
     
     SSignal *updateSignal = [[_thumbnailImagePipe.signalProducer() filter:^bool(TGMediaImageUpdate *update)
     {
-        return [update.item.uniqueIdentifier isEqualToString:item.uniqueIdentifier];
+        return [update.item.uniqueIdentifier isEqualToString:identifier];
     }] map:^id(TGMediaImageUpdate *update)
     {
         return update.representation;
@@ -290,25 +298,35 @@
     
     SSignal *signal = [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber)
     {
-        UIImage *result = [imageCache imageForKey:itemId attributes:NULL];
-        if (result == nil)
-        {
-            NSData *imageData = [_diskCache getValueForKey:[imageDiskUri dataUsingEncoding:NSUTF8StringEncoding]];
-            if (imageData.length > 0)
+        void (^completionBlock)(UIImage *) = ^(UIImage *result) {
+            if (result == nil)
             {
-                result = [UIImage imageWithData:imageData];
-                [imageCache setImage:result forKey:itemId attributes:NULL];
+                NSData *imageData = [_diskCache getValueForKey:[imageDiskUri dataUsingEncoding:NSUTF8StringEncoding]];
+                if (imageData.length > 0)
+                {
+                    result = [UIImage imageWithData:imageData];
+                    [imageCache setImage:result forKey:itemId attributes:NULL];
+                }
             }
-        }
+            
+            if (result != nil)
+            {
+                [subscriber putNext:result];
+                [subscriber putCompletion];
+            }
+            else
+            {
+                [subscriber putError:nil];
+            }
+        };
         
-        if (result != nil)
-        {
-            [subscriber putNext:result];
-            [subscriber putCompletion];
-        }
-        else
-        {
-            [subscriber putError:nil];
+        if (synchronous) {
+            UIImage *result = [imageCache imageForKey:itemId attributes:NULL];
+            completionBlock(result);
+        } else {
+            [imageCache imageForKey:itemId attributes:NULL completion:^(UIImage *result) {
+                completionBlock(result);
+            }];
         }
         
         return nil;
@@ -406,9 +424,34 @@
     return _forcedCaption.string.length > 0;
 }
 
+- (SSignal *)forcedCaption
+{
+    __weak TGMediaEditingContext *weakSelf = self;
+    SSignal *updateSignal = [_captionPipe.signalProducer() map:^NSAttributedString *(TGMediaCaptionUpdate *update)
+    {
+        __strong TGMediaEditingContext *strongSelf = weakSelf;
+        if (strongSelf.isForcedCaption) {
+            return strongSelf->_forcedCaption;
+        } else {
+            return nil;
+        }
+    }];
+    
+    return [[SSignal single:_forcedCaption] then:updateSignal];
+}
+
 - (void)setForcedCaption:(NSAttributedString *)caption
 {
+    [self setForcedCaption:caption skipUpdate:false];
+}
+
+- (void)setForcedCaption:(NSAttributedString *)caption skipUpdate:(bool)skipUpdate
+{
     _forcedCaption = caption;
+    
+    if (!skipUpdate) {
+        _captionPipe.sink([TGMediaCaptionUpdate captionUpdateWithItem:nil caption:caption]);
+    }
 }
 
 - (SSignal *)captionSignalForItem:(NSObject<TGMediaEditableItem> *)item

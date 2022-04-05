@@ -409,6 +409,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         EnginePeer.Presence(status: .present(until: presenceTimestamp + 1000), lastActivity: presenceTimestamp)
                     },
                     hasUnseenMentions: false,
+                    hasUnseenReactions: false,
                     draftState: nil,
                     inputActivities: hasInputActivity ? [(author, .typingText)] : [],
                     promoInfo: nil,
@@ -593,7 +594,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         sampleMessages.append(message8)
         
         items = sampleMessages.reversed().map { message in
-            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperNode, availableReactions: nil)
+            self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, messages: [message], theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.wallpaper, fontSize: self.presentationData.chatFontSize, chatBubbleCorners: self.presentationData.chatBubbleCorners, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: !message.media.isEmpty ? FileMediaResourceStatus(mediaStatus: .playbackStatus(.paused), fetchStatus: .Local) : nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperNode, availableReactions: nil, isCentered: false)
         }
                 
         let width: CGFloat

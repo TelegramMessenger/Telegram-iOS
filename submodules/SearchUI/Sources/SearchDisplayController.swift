@@ -156,7 +156,7 @@ public final class SearchDisplayController {
         self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: safeInsets, additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
-    public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?) {
+    public func activate(insertSubnode: @escaping (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode?, focus: Bool = true) {
         guard let (layout, navigationBarHeight) = self.containerLayout else {
             return
         }
@@ -231,7 +231,9 @@ public final class SearchDisplayController {
         insertSubnode(self.searchBar, true)
         self.searchBar.layout()
         
-        self.searchBar.activate()
+        if focus {
+            self.searchBar.activate()
+        }
         if let placeholder = placeholder {
             self.searchBar.animateIn(from: placeholder, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
             if self.contentNode.hasDim {

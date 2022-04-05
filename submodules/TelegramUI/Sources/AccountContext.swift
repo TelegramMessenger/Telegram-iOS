@@ -17,6 +17,7 @@ import TelegramBaseController
 import AsyncDisplayKit
 import PresentationDataUtils
 import MeshAnimationCache
+import FetchManagerImpl
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()

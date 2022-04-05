@@ -25,7 +25,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     }
     
     private final class ItemView: ASDisplayNode {
-        private let backgroundView: UIImageView
+        private let backgroundView: UIView
         private let textNode: ImmediateTextNode
         
         private var borderColorValue: UInt32?
@@ -33,7 +33,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         private var text: String = ""
         
         override init() {
-            self.backgroundView = UIImageView()
+            self.backgroundView = UIView()
             self.textNode = ImmediateTextNode()
             
             super.init()
@@ -48,11 +48,17 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             fatalError("init(coder:) has not been implemented")
         }
         
-        func update(borderColor: UInt32) {
+        func update(borderColor: UInt32, isHighlighted: Bool) {
             if self.borderColorValue != borderColor {
                 self.borderColorValue = borderColor
                 
-                self.backgroundView.image = generateStretchableFilledCircleImage(diameter: 10.0, color: nil, strokeColor: UIColor(argb: borderColor), strokeWidth: 1.0, backgroundColor: nil)
+                let previousColor = self.backgroundView.layer.borderColor
+                self.backgroundView.layer.cornerRadius = 5.0
+                self.backgroundView.layer.borderColor = UIColor(argb: borderColor).cgColor
+                self.backgroundView.layer.borderWidth = 1.0
+                if let previousColor = previousColor {
+                    self.backgroundView.layer.animate(from: previousColor, to: UIColor(argb: borderColor).cgColor, keyPath: "borderColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15)
+                }
             }
         }
         
@@ -63,7 +69,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             if animated && previousText.isEmpty != text.isEmpty {
                 if !text.isEmpty {
                     self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-                    self.textNode.layer.animatePosition(from: CGPoint(x: 0.0, y: size.height / 2.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    self.textNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: size.height / 2.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, additive: true)
                 } else {
                     if let copyView = self.textNode.view.snapshotContentTree() {
                         self.view.insertSubview(copyView, at: 0)
@@ -77,7 +83,11 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             
             let fontSize: CGFloat = floor(21.0 * size.height / 28.0)
             
-            self.textNode.attributedText = NSAttributedString(string: text, font: Font.monospace(fontSize), textColor: UIColor(argb: textColor))
+            if #available(iOS 13.0, *) {
+                self.textNode.attributedText = NSAttributedString(string: text, font: UIFont.monospacedSystemFont(ofSize: fontSize, weight: .regular), textColor: UIColor(argb: textColor))
+            } else {
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.monospace(fontSize), textColor: UIColor(argb: textColor))
+            }
             let textSize = self.textNode.updateLayout(size)
             self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
             
@@ -86,9 +96,9 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     }
     
     private let prefixLabel: ImmediateTextNode
-    private let textField: UITextField
+    public let textField: UITextField
     
-    private var focusIndex: Int?
+    private var focusIndex: Int? = 0
     private var itemViews: [ItemView] = []
     
     public var updated: (() -> Void)?
@@ -183,7 +193,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func textFieldDidEndEditing(_ textField: UITextField) {
-        self.focusIndex = nil
+        self.focusIndex = textField.text?.count ?? 0
         self.updateItemViews(animated: true)
     }
     
@@ -205,7 +215,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             let itemView = self.itemViews[i]
             let itemSize = itemView.bounds.size
             
-            itemView.update(borderColor: self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder)
+            itemView.update(borderColor: self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder, isHighlighted: self.focusIndex == i)
             let itemText: String
             if i < self.textValue.count {
                 itemText = String(self.textValue[self.textValue.index(self.textValue.startIndex, offsetBy: i)])
@@ -233,7 +243,11 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             height = 28.0
         }
         
-        self.prefixLabel.attributedText = NSAttributedString(string: prefix, font: Font.monospace(21.0), textColor: UIColor(argb: theme.foreground))
+        if #available(iOS 13.0, *) {
+            self.prefixLabel.attributedText = NSAttributedString(string: prefix, font: UIFont.monospacedSystemFont(ofSize: 21.0, weight: .regular), textColor: UIColor(argb: theme.foreground))
+        } else {
+            self.prefixLabel.attributedText = NSAttributedString(string: prefix, font: Font.monospace(21.0), textColor: UIColor(argb: theme.foreground))
+        }
         let prefixSize = self.prefixLabel.updateLayout(CGSize(width: width, height: 100.0))
         let prefixSpacing: CGFloat = prefix.isEmpty ? 0.0 : 8.0
         
@@ -255,7 +269,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
                 self.itemViews.append(itemView)
                 self.addSubnode(itemView)
             }
-            itemView.update(borderColor: self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder)
+            itemView.update(borderColor: self.focusIndex == i ? theme.activeBorder : theme.inactiveBorder, isHighlighted: self.focusIndex == i)
             let itemText: String
             if i < self.textValue.count {
                 itemText = String(self.textValue[self.textValue.index(self.textValue.startIndex, offsetBy: i)])

@@ -60,13 +60,6 @@ public final class GridMessageSelectionNode: ASDisplayNode {
     }
 }
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 public final class GridMessageSelectionLayer: CALayer {
     private var selected = false
     private let checkLayer: CheckLayer

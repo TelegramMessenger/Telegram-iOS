@@ -322,6 +322,19 @@ public extension Message {
         }
         return nil
     }
+    var hasReactions: Bool {
+        for attribute in self.attributes {
+            if let attribute = attribute as? ReactionsMessageAttribute {
+                return !attribute.reactions.isEmpty
+            }
+        }
+        for attribute in self.attributes {
+            if let attribute = attribute as? PendingReactionsMessageAttribute {
+                return attribute.value != nil
+            }
+        }
+        return false
+    }
     
     var textEntitiesAttribute: TextEntitiesMessageAttribute? {
         for attribute in self.attributes {

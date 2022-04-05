@@ -11,6 +11,7 @@ public let navigationBarSearchContentHeight: CGFloat = 54.0
 public class NavigationBarSearchContentNode: NavigationBarContentNode {
     public var theme: PresentationTheme?
     public var placeholder: String
+    public var compactPlaceholder: String
     
     public let placeholderNode: SearchBarPlaceholderNode
     public var placeholderHeight: CGFloat?
@@ -20,9 +21,10 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
 
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    public init(theme: PresentationTheme, placeholder: String, activate: @escaping () -> Void) {
+    public init(theme: PresentationTheme, placeholder: String, compactPlaceholder: String? = nil, activate: @escaping () -> Void) {
         self.theme = theme
         self.placeholder = placeholder
+        self.compactPlaceholder = compactPlaceholder ?? placeholder
         self.placeholderNode = SearchBarPlaceholderNode(fieldStyle: .modern)
         self.placeholderNode.labelNode.displaysAsynchronously = false
         
@@ -36,9 +38,10 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         self.placeholderNode.activate = activate
     }
     
-    public func updateThemeAndPlaceholder(theme: PresentationTheme, placeholder: String) {
+    public func updateThemeAndPlaceholder(theme: PresentationTheme, placeholder: String, compactPlaceholder: String? = nil) {
         self.theme = theme
         self.placeholder = placeholder
+        self.compactPlaceholder = compactPlaceholder ?? placeholder
         self.placeholderNode.accessibilityLabel = placeholder
         if let disabledOverlay = self.disabledOverlay {
             disabledOverlay.backgroundColor = theme.rootController.navigationBar.opaqueBackgroundColor.withAlphaComponent(0.5)
@@ -105,7 +108,11 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         let overscrollProgress = max(0.0, max(0.0, self.expansionProgress - 1.0 + fraction) / fraction - visibleProgress)
         
         let searchBarNodeLayout = self.placeholderNode.asyncLayout()
-        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93)), CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.opaqueBackgroundColor ?? .clear, transition)
+        
+        let placeholderString = NSAttributedString(string: self.placeholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93))
+        let compactPlaceholderString = NSAttributedString(string: self.compactPlaceholder, font: searchBarFont, textColor: self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93))
+        
+        let (searchBarHeight, searchBarApply) = searchBarNodeLayout(placeholderString, compactPlaceholderString, CGSize(width: baseWidth, height: fieldHeight), visibleProgress, self.theme?.rootController.navigationSearchBar.inputPlaceholderTextColor ?? UIColor(rgb: 0x8e8e93), self.theme?.rootController.navigationSearchBar.inputFillColor ?? .clear, self.theme?.rootController.navigationBar.opaqueBackgroundColor ?? .clear, transition)
         searchBarApply()
         
         let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))

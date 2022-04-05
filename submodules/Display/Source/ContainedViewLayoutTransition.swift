@@ -626,7 +626,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
 
-    func updateFrame(layer: CALayer, frame: CGRect, completion: ((Bool) -> Void)? = nil) {
+    func updateFrame(layer: CALayer, frame: CGRect, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if layer.frame.equalTo(frame) {
             completion?(true)
         } else {
@@ -637,7 +637,12 @@ public extension ContainedViewLayoutTransition {
                     completion(true)
                 }
             case let .animated(duration, curve):
-                let previousFrame = layer.frame
+                let previousFrame: CGRect
+                if beginWithCurrentState, let presentation = layer.presentation() {
+                    previousFrame = presentation.frame
+                } else {
+                    previousFrame = layer.frame
+                }
                 layer.frame = frame
                 layer.animateFrame(from: previousFrame, to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                     if let completion = completion {
@@ -1435,13 +1440,17 @@ public struct CombinedTransition {
 }
     
 public extension ContainedViewLayoutTransition {
-    func animateView(_ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
+    func animateView(allowUserInteraction: Bool = false, _ f: @escaping () -> Void, completion: ((Bool) -> Void)? = nil) {
         switch self {
         case .immediate:
             f()
             completion?(true)
         case let .animated(duration, curve):
-            UIView.animate(withDuration: duration, delay: 0.0, options: curve.viewAnimationOptions, animations: {
+            var options = curve.viewAnimationOptions
+            if allowUserInteraction {
+                options.insert(.allowUserInteraction)
+            }
+            UIView.animate(withDuration: duration, delay: 0.0, options: options, animations: {
                 f()
             }, completion: completion)
         }

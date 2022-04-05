@@ -12,6 +12,10 @@ import SearchUI
 import ContactListUI
 import ChatListUI
 import SegmentedControlNode
+import AttachmentTextInputPanelNode
+import ChatPresentationInterfaceState
+import ChatSendMessageActionUI
+import ChatTextLinkEditUI
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -37,7 +41,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     private let toolbarSeparatorNode: ASDisplayNode?
     private let segmentedControlNode: SegmentedControlNode?
     
-    private var textInputPanelNode: PeerSelectionTextInputPanelNode?
+    private var textInputPanelNode: AttachmentTextInputPanelNode?
     private var forwardAccessoryPanelNode: ForwardAccessoryPanelNode?
     
     var contactListNode: ContactListNode?
@@ -58,7 +62,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
-    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, PeerSelectionControllerSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
+    var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     
     private var presentationData: PresentationData {
         didSet {
@@ -378,7 +382,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.addSubnode(forwardAccessoryPanelNode)
             self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
             
-            let textInputPanelNode = PeerSelectionTextInputPanelNode(presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) })
+            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) })
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode in
                 guard let strongSelf = self else {
@@ -448,9 +452,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.searchDisplayController?.updatePresentationData(self.presentationData)
         self.chatListNode.updateThemeAndStrings(theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
         
+        self.updateChatPresentationInterfaceState({ $0.updatedTheme(self.presentationData.theme) })
+        
         self.toolbarBackgroundNode?.updateColor(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         self.toolbarSeparatorNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         self.segmentedControlNode?.updateTheme(SegmentedControlTheme(theme: self.presentationData.theme))
+        
+        if let (layout, navigationBarHeight, actualNavigationBarHeight) = self.containerLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, actualNavigationBarHeight: actualNavigationBarHeight, transition: .immediate)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -567,6 +577,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     filter: self.filter,
                     groupId: EngineChatList.Group(.root),
                     displaySearchFilters: false,
+                    hasDownloads: false,
                     openPeer: { [weak self] peer, chatPeer, _ in
                         guard let strongSelf = self else {
                             return

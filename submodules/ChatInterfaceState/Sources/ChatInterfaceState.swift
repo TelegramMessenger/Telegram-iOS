@@ -274,7 +274,7 @@ public final class ChatInterfaceState: Codable, Equatable {
     public let inputLanguage: String?
     
     public var synchronizeableInputState: SynchronizeableChatInputState? {
-        if self.composeInputState.inputText.length == 0 {
+        if self.composeInputState.inputText.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && self.replyMessageId == nil {
             return nil
         } else {
             return SynchronizeableChatInputState(replyToMessageId: self.replyMessageId, text: self.composeInputState.inputText.string, entities: generateChatInputTextEntities(self.composeInputState.inputText), timestamp: self.timestamp, textSelection: self.composeInputState.selectionRange)

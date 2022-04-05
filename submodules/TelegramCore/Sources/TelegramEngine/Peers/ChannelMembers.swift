@@ -22,7 +22,14 @@ public enum ChannelMembersCategory {
 
 func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, category: ChannelMembersCategory = .recent(.all), offset: Int32 = 0, limit: Int32 = 64, hash: Int64 = 0) -> Signal<[RenderedChannelParticipant]?, NoError> {
     return postbox.transaction { transaction -> Signal<[RenderedChannelParticipant]?, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+        if let peer = transaction.getPeer(peerId) as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
+            if case .broadcast = peer.info {
+                if let _ = peer.adminRights {
+                } else {
+                    return .single(nil)
+                }
+            }
+            
             let apiFilter: Api.ChannelParticipantsFilter
             switch category {
                 case let .recent(filter):

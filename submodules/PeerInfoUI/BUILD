@@ -74,6 +74,7 @@ swift_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
+        "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
     ],
     visibility = [
         "//visibility:public",

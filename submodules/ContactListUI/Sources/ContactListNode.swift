@@ -96,7 +96,6 @@ private enum ContactListNodeEntryId: Hashable {
 
 private final class ContactListNodeInteraction {
     fileprivate let activateSearch: () -> Void
-    fileprivate let openSortMenu: () -> Void
     fileprivate let authorize: () -> Void
     fileprivate let suppressWarning: () -> Void
     fileprivate let openPeer: (ContactListPeer, ContactListAction) -> Void
@@ -104,9 +103,8 @@ private final class ContactListNodeInteraction {
     
     let itemHighlighting = ContactItemHighlighting()
     
-    init(activateSearch: @escaping () -> Void, openSortMenu: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) {
+    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.activateSearch = activateSearch
-        self.openSortMenu = openSortMenu
         self.authorize = authorize
         self.suppressWarning = suppressWarning
         self.openPeer = openPeer
@@ -162,7 +160,6 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     text = strings.Contacts_SortedByPresence
                 }
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: text, icon: .inline(dropDownIcon, .right), highlight: .alpha, accessible: false, header: nil, action: {
-                    interaction.openSortMenu()
             })
             case let .permissionInfo(_, title, text, suppressed):
                 return InfoListItem(presentationData: ItemListPresentationData(presentationData), title: title, text: .plain(text), style: .plain, closeAction: suppressed ? nil : {
@@ -442,11 +439,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     var commonHeader: ListViewItemHeader?
     var orderedPeers: [ContactListPeer]
     var headers: [ContactListPeerId: ContactListNameIndexHeader] = [:]
-    
-    if displaySortOptions, let sortOrder = presentation.sortOrder {
-        entries.append(.sort(theme, strings, sortOrder))
-    }
-    
+        
     var addHeader = false
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         let (suppressed, syncDisabled) = warningSuppressed
@@ -808,6 +801,9 @@ public final class ContactListNode: ASDisplayNode {
     public var selectionState: ContactListNodeGroupSelectionState? {
         return self.selectionStateValue
     }
+    public var selectionStateSignal: Signal<ContactListNodeGroupSelectionState?, NoError> {
+        return self.selectionStatePromise.get()
+    }
     public var selectionStateUpdated: ((ContactListNodeGroupSelectionState?) -> Void)?
     
     public var selectedPeers: [ContactListPeer] {
@@ -867,7 +863,6 @@ public final class ContactListNode: ASDisplayNode {
     public var contentScrollingEnded: ((ListView) -> Bool)?
     
     public var activateSearch: (() -> Void)?
-    public var openSortMenu: (() -> Void)?
     public var openPeer: ((ContactListPeer, ContactListAction) -> Void)?
     public var openPrivacyPolicy: (() -> Void)?
     public var suppressPermissionWarning: (() -> Void)?
@@ -955,8 +950,6 @@ public final class ContactListNode: ASDisplayNode {
         
         let interaction = ContactListNodeInteraction(activateSearch: { [weak self] in
             self?.activateSearch?()
-        }, openSortMenu: { [weak self] in
-            self?.openSortMenu?()
         }, authorize: {
             authorizeImpl?()
         }, suppressWarning: { [weak self] in
@@ -990,8 +983,8 @@ public final class ContactListNode: ASDisplayNode {
             }
             
             var insets = layout.0.insets(options: [.input])
-            insets.left += layout.0.safeInsets.left
-            insets.right += layout.0.safeInsets.right
+            insets.left = layout.0.safeInsets.left
+            insets.right = layout.0.safeInsets.right
             
             var headerInsets = layout.1
             if headerInsets.top == insets.top {
@@ -1479,8 +1472,8 @@ public final class ContactListNode: ASDisplayNode {
         self.validLayout = (layout, headerInsets)
         
         var insets = layout.insets(options: [.input])
-        insets.left += layout.safeInsets.left
-        insets.right += layout.safeInsets.right
+        insets.left = layout.safeInsets.left
+        insets.right = layout.safeInsets.right
         
         var headerInsets = headerInsets
         if !hadValidLayout {
@@ -1498,15 +1491,18 @@ public final class ContactListNode: ASDisplayNode {
             if let inputHeight = layout.inputHeight {
                 insets.bottom -= inputHeight
             }
-            insets.left += layout.safeInsets.left
-            insets.right += layout.safeInsets.right
+            insets.left = layout.safeInsets.left
+            insets.right = layout.safeInsets.right
             
             let indexNodeFrame = CGRect(origin: CGPoint(x: layout.size.width - insets.right - 20.0, y: insets.top), size: CGSize(width: 20.0, height: layout.size.height - insets.top - insets.bottom))
             transition.updateFrame(node: indexNode, frame: indexNodeFrame)
             self.indexNode.update(size: indexNodeFrame.size, color: self.presentationData.theme.list.itemAccentColor, sections: indexSections, transition: transition)
         }
         
-        self.authorizationNode.updateLayout(size: layout.size, insets: insets, transition: transition)
+        let permissionSize = CGSize(width: layout.size.width, height: layout.size.height - 160.0)
+        var permissionInsets = insets
+        permissionInsets.bottom += 100.0
+        self.authorizationNode.updateLayout(size: permissionSize, insets: permissionInsets, transition: transition)
         transition.updateFrame(node: self.authorizationNode, frame: self.bounds)
             
         if !hadValidLayout {
@@ -1544,8 +1540,8 @@ public final class ContactListNode: ASDisplayNode {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])
-                    insets.left += layout.safeInsets.left
-                    insets.right += layout.safeInsets.right
+                    insets.left = layout.safeInsets.left
+                    insets.right = layout.safeInsets.right
                     
                     if let inputHeight = layout.inputHeight {
                         insets.bottom -= inputHeight
@@ -1574,6 +1570,6 @@ public final class ContactListNode: ASDisplayNode {
     }
     
     public func scrollToTop() {
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(-50.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
     }
 }

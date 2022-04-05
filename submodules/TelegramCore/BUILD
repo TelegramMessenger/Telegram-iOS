@@ -19,6 +19,7 @@ swift_library(
         "//submodules/CryptoUtils:CryptoUtils",
         "//submodules/NetworkLogging:NetworkLogging",
         "//submodules/Reachability:Reachability",
+        "//submodules/ManagedFile:ManagedFile",
     ],
     visibility = [
         "//visibility:public",

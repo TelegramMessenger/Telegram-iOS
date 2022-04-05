@@ -106,7 +106,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(message.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
                 } else {
                     messageText = NSAttributedString(string: textString, font: textFont, textColor: textColor)
                 }
@@ -128,7 +128,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                             imageDimensions = representation.dimensions.cgSize
                         }
                         break
-                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                    } else if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
                         updatedMediaReference = .message(message: MessageReference(message), media: file)
                         
                         if let dimensions = file.dimensions {
@@ -189,7 +189,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     if fileReference.media.isVideo {
                         updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                     } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                        updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
+                        updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                     }
                 }
             }
@@ -258,7 +258,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.contentNode.insertSubnode(dustNode, aboveSubnode: textNode)
                     }
                     dustNode.frame = textFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)
-                    dustNode.update(size: dustNode.frame.size, color: dustColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
+                    dustNode.update(size: dustNode.frame.size, color: dustColor, textColor: dustColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 1.0, dy: 1.0) })
                 } else if let dustNode = node.dustNode {
                     dustNode.removeFromSupernode()
                     node.dustNode = nil

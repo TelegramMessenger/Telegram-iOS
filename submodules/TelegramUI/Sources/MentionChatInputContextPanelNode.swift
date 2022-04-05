@@ -10,6 +10,7 @@ import TextFormat
 import AccountContext
 import LocalizedPeerData
 import ItemListUI
+import ChatPresentationInterfaceState
 
 private struct MentionChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int

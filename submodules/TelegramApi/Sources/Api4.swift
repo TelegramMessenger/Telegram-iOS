@@ -1722,6 +1722,46 @@ public struct photos {
 }
 public extension Api {
 public struct phone {
+    public enum GroupCallStreamChannels: TypeConstructorDescription {
+        case groupCallStreamChannels(channels: [Api.GroupCallStreamChannel])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallStreamChannels(let channels):
+                    if boxed {
+                        buffer.appendInt32(-790330702)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(channels.count))
+                    for item in channels {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallStreamChannels(let channels):
+                return ("groupCallStreamChannels", [("channels", channels)])
+    }
+    }
+    
+        public static func parse_groupCallStreamChannels(_ reader: BufferReader) -> GroupCallStreamChannels? {
+            var _1: [Api.GroupCallStreamChannel]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.GroupCallStreamChannel.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.phone.GroupCallStreamChannels.groupCallStreamChannels(channels: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum JoinAsPeers: TypeConstructorDescription {
         case joinAsPeers(peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
     
@@ -1775,6 +1815,44 @@ public struct phone {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.phone.JoinAsPeers.joinAsPeers(peers: _1!, chats: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum GroupCallStreamRtmpUrl: TypeConstructorDescription {
+        case groupCallStreamRtmpUrl(url: String, key: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallStreamRtmpUrl(let url, let key):
+                    if boxed {
+                        buffer.appendInt32(767505458)
+                    }
+                    serializeString(url, buffer: buffer, boxed: false)
+                    serializeString(key, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallStreamRtmpUrl(let url, let key):
+                return ("groupCallStreamRtmpUrl", [("url", url), ("key", key)])
+    }
+    }
+    
+        public static func parse_groupCallStreamRtmpUrl(_ reader: BufferReader) -> GroupCallStreamRtmpUrl? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.phone.GroupCallStreamRtmpUrl.groupCallStreamRtmpUrl(url: _1!, key: _2!)
             }
             else {
                 return nil
@@ -4605,6 +4683,74 @@ public extension Api {
                         return result
                     })
                 }
+            
+                public static func translateText(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, text: String?, fromLang: String?, toLang: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranslatedText>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(617508334)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {peer!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(msgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(text!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeString(fromLang!, buffer: buffer, boxed: false)}
+                    serializeString(toLang, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.translateText", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("text", text), ("fromLang", fromLang), ("toLang", toLang)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.TranslatedText? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.TranslatedText?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.TranslatedText
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getUnreadReactions(peer: Api.InputPeer, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-396644838)
+                    peer.serialize(buffer, true)
+                    serializeInt32(offsetId, buffer: buffer, boxed: false)
+                    serializeInt32(addOffset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    serializeInt32(maxId, buffer: buffer, boxed: false)
+                    serializeInt32(minId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.getUnreadReactions", parameters: [("peer", peer), ("offsetId", offsetId), ("addOffset", addOffset), ("limit", limit), ("maxId", maxId), ("minId", minId)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
+            
+                public static func readReactions(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-2099097129)
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.readReactions", parameters: [("peer", peer)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.AffectedHistory?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.AffectedHistory
+                        }
+                        return result
+                    })
+                }
+            
+                public static func searchSentMedia(q: String, filter: Api.MessagesFilter, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(276705696)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    filter.serialize(buffer, true)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchSentMedia", parameters: [("q", q), ("filter", filter), ("limit", limit)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Messages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Messages
+                        }
+                        return result
+                    })
+                }
             }
             public struct channels {
                 public static func readHistory(channel: Api.InputChannel, maxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
@@ -6152,6 +6298,20 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func resolvePhone(phone: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.ResolvedPeer>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1963375804)
+                    serializeString(phone, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "contacts.resolvePhone", parameters: [("phone", phone)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.contacts.ResolvedPeer? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.contacts.ResolvedPeer?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.contacts.ResolvedPeer
                         }
                         return result
                     })
@@ -8547,6 +8707,35 @@ public extension Api {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getGroupCallStreamChannels(call: Api.InputGroupCall) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCallStreamChannels>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(447879488)
+                    call.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.getGroupCallStreamChannels", parameters: [("call", call)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCallStreamChannels? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.GroupCallStreamChannels?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.GroupCallStreamChannels
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getGroupCallStreamRtmpUrl(peer: Api.InputPeer, revoke: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.phone.GroupCallStreamRtmpUrl>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-558650433)
+                    peer.serialize(buffer, true)
+                    revoke.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.getGroupCallStreamRtmpUrl", parameters: [("peer", peer), ("revoke", revoke)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.phone.GroupCallStreamRtmpUrl? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.phone.GroupCallStreamRtmpUrl?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.phone.GroupCallStreamRtmpUrl
                         }
                         return result
                     })

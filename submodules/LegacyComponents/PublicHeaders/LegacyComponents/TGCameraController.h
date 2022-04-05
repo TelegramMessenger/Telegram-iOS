@@ -8,7 +8,6 @@
 @class TGCameraPreviewView;
 @class TGMediaSelectionContext;
 @class TGMediaEditingContext;
-@class TGSuggestionContext;
 @class TGVideoEditAdjustments;
 
 @protocol TGPhotoPaintStickersContext;
@@ -42,7 +41,6 @@ typedef enum {
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool shortcut;
 
@@ -56,11 +54,13 @@ typedef enum {
 
 @property (nonatomic, copy) void(^recognizedQRCode)(NSString *code);
 
+@property (nonatomic, copy) void(^finishedTransitionIn)(void);
+
 @property (nonatomic, copy) CGRect(^beginTransitionOut)(void);
 @property (nonatomic, copy) void(^finishedTransitionOut)(void);
 @property (nonatomic, copy) void(^customPresentOverlayController)(TGOverlayController *(^)(id<LegacyComponentsContext>));
 
-@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
+@property (nonatomic, copy) void (^presentScheduleController)(bool, void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;

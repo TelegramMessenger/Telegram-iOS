@@ -9,6 +9,7 @@ import SearchBarNode
 import LocalizedPeerData
 import SwiftSignalKit
 import AccountContext
+import ChatPresentationInterfaceState
 
 private let searchBarFont = Font.regular(17.0)
 

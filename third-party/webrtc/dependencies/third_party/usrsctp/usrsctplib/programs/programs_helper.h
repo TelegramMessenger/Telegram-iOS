@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2019 Felix Weinrank
+ * Copyright (c) 2020 Felix Weinrank
  *
  * All rights reserved.
  *
@@ -73,15 +73,18 @@ handle_notification(union sctp_notification *notif, size_t n);
 #endif
 
 void
-debug_printf_runtime(void);
+debug_printf(const char *format, ...);
+
+void
+debug_printf_clean(const char *format, ...);
 
 void
 debug_printf_stack(const char *format, ...);
 
-#define debug_printf(...)                       \
-	do {                                        \
-		fprintf(stderr, "[P]");                 \
-		debug_printf_runtime();                 \
-		fprintf(stderr, __VA_ARGS__);           \
-	} while (0)
+void
+debug_set_target(FILE *fp);
+
+#define FUZZER_ASSERT(x) if (!(x)) { printf("USRSCTP assertion failed: function %s, file %s, line %d.\n", __PRETTY_FUNCTION__, __FILE__, __LINE__); abort(); }
+ 
+
 #endif /* __PROGRAMS_HELPER_H__ */

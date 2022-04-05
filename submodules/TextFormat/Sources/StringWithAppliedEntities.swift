@@ -69,7 +69,9 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         if nsString == nil {
             nsString = text as NSString
         }
-        if range.location + range.length > stringLength {
+        if range.location > stringLength {
+            continue
+        } else if range.location + range.length > stringLength {
             range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }
@@ -226,7 +228,11 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard), value: nsString!.substring(with: range), range: range)
             case .Spoiler:
-                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true as NSNumber, range: range)
+                if external {
+                    string.addAttribute(NSAttributedString.Key.backgroundColor, value: UIColor.gray, range: range)
+                } else {
+                    string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true as NSNumber, range: range)
+                }
             case let .Custom(type):
                 if type == ApplicationSpecificEntityType.Timecode {
                     string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)

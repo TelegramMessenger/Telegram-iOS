@@ -210,7 +210,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
                 )
                 let readState = EnginePeerReadCounters()
 
-                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: EngineChatList.Item.Index(pinningIndex: 0, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [message], peer: EngineRenderedPeer(peer: peer1), combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, hasUnseenMentions: false, draftState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                return ChatListItem(presentationData: chatListPresentationData, context: context, peerGroupId: .root, filterData: nil, index: EngineChatList.Item.Index(pinningIndex: 0, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1)), content: .peer(messages: [message], peer: EngineRenderedPeer(peer: peer1), combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, draftState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -540,7 +540,17 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         })
         
         if self.controlsHistoryPreload {
-            self.context.account.viewTracker.chatListPreloadItems.set(itemNode.listNode.preloadItems.get())
+            self.context.account.viewTracker.chatListPreloadItems.set(combineLatest(queue: .mainQueue(),
+                context.sharedContext.hasOngoingCall.get(),
+                itemNode.listNode.preloadItems.get()
+            )
+            |> map { hasOngoingCall, preloadItems -> [ChatHistoryPreloadItem] in
+                if hasOngoingCall {
+                    return []
+                } else {
+                    return preloadItems
+                }
+            })
         }
     }
     
@@ -1116,7 +1126,7 @@ final class ChatListControllerNode: ASDisplayNode {
         self.searchDisplayController?.updatePresentationData(presentationData)
         
         if let toolbarNode = self.toolbarNode {
-            toolbarNode.updateTheme(TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
+            toolbarNode.updateTheme(ToolbarTheme(rootControllerTheme: self.presentationData.theme))
         }
     }
     
@@ -1149,7 +1159,7 @@ final class ChatListControllerNode: ASDisplayNode {
                 transition.updateFrame(node: toolbarNode, frame: tabBarFrame)
                 toolbarNode.updateLayout(size: tabBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, additionalSideInsets: layout.additionalInsets, bottomInset: bottomInset, toolbar: toolbar, transition: transition)
             } else {
-                let toolbarNode = ToolbarNode(theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
+                let toolbarNode = ToolbarNode(theme: ToolbarTheme(rootControllerTheme: self.presentationData.theme), displaySeparator: true, left: { [weak self] in
                     self?.toolbarActionSelected?(.left)
                 }, right: { [weak self] in
                     self?.toolbarActionSelected?(.right)
@@ -1183,14 +1193,14 @@ final class ChatListControllerNode: ASDisplayNode {
         }
     }
     
-    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, initialFilter: ChatListSearchFilter, navigationController: NavigationController?) -> (ASDisplayNode, () -> Void)? {
+    func activateSearch(placeholderNode: SearchBarPlaceholderNode, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter, navigationController: NavigationController?) -> (ASDisplayNode, (Bool) -> Void)? {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }
         
         let filter: ChatListNodePeersFilter = []
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, filter: filter, groupId: self.groupId, displaySearchFilters: displaySearchFilters, initialFilter: initialFilter, openPeer: { [weak self] peer, _, dismissSearch in
+        let contentNode = ChatListSearchContainerNode(context: self.context, filter: filter, groupId: self.groupId, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
@@ -1216,7 +1226,7 @@ final class ChatListControllerNode: ASDisplayNode {
         })
         self.containerNode.accessibilityElementsHidden = true
                 
-        return (contentNode.filterContainerNode, { [weak self] in
+        return (contentNode.filterContainerNode, { [weak self] focus in
             guard let strongSelf = self else {
                 return
             }
@@ -1229,7 +1239,7 @@ final class ChatListControllerNode: ASDisplayNode {
                         strongSelf.insertSubnode(subnode, belowSubnode: navigationBar)
                     }
                 }
-            }, placeholder: placeholderNode)
+            }, placeholder: placeholderNode, focus: focus)
         })
     }
     

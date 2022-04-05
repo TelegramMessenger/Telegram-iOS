@@ -152,10 +152,12 @@ private var declaredEncodables: Void = {
     declareEncodable(TelegramMediaExpiredContent.self, f: { TelegramMediaExpiredContent(decoder: $0) })
     declareEncodable(ConsumablePersonalMentionMessageAttribute.self, f: { ConsumablePersonalMentionMessageAttribute(decoder: $0) })
     declareEncodable(ConsumePersonalMessageAction.self, f: { ConsumePersonalMessageAction(decoder: $0) })
+    declareEncodable(ReadReactionAction.self, f: { ReadReactionAction(decoder: $0) })
     declareEncodable(SynchronizeGroupedPeersOperation.self, f: { SynchronizeGroupedPeersOperation(decoder: $0) })
     declareEncodable(TelegramDeviceContactImportedData.self, f: { TelegramDeviceContactImportedData(decoder: $0) })
     declareEncodable(SecureFileMediaResource.self, f: { SecureFileMediaResource(decoder: $0) })
     declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
+    declareEncodable(SynchronizeMarkAllUnseenReactionsOperation.self, f: { SynchronizeMarkAllUnseenReactionsOperation(decoder: $0) })
     declareEncodable(SynchronizeAppLogEventsOperation.self, f: { SynchronizeAppLogEventsOperation(decoder: $0) })
     declareEncodable(TelegramMediaPoll.self, f: { TelegramMediaPoll(decoder: $0) })
     declareEncodable(TelegramMediaUnsupported.self, f: { TelegramMediaUnsupported(decoder: $0) })
@@ -388,11 +390,13 @@ public func managedCleanupAccounts(networkArguments: NetworkInitializationArgume
                 validPaths.insert("\(accountRecordIdPathName(record.id))")
             }
             
-            if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
-                for url in files {
-                    if url.lastPathComponent.hasPrefix("account-") {
-                        if !validPaths.contains(url.lastPathComponent) {
-                            try? FileManager.default.removeItem(at: url)
+            DispatchQueue.global(qos: .utility).async {
+                if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: rootPath), includingPropertiesForKeys: [], options: []) {
+                    for url in files {
+                        if url.lastPathComponent.hasPrefix("account-") {
+                            if !validPaths.contains(url.lastPathComponent) {
+                                try? FileManager.default.removeItem(at: url)
+                            }
                         }
                     }
                 }

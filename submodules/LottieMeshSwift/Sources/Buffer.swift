@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import ManagedFile
 
 private let emptyMemory = malloc(1)!
 

@@ -650,28 +650,49 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> deliverOnMainQueue).start(next: { [weak self] call in
                 if let strongSelf = self {
                     if call !== strongSelf.groupCallController?.call {
-                        strongSelf.groupCallController?.dismiss(closing: true)
+                        strongSelf.groupCallController?.dismiss(closing: true, manual: false)
                         strongSelf.groupCallController = nil
                         strongSelf.hasOngoingCall.set(false)
                         
                         if let call = call, let navigationController = mainWindow.viewController as? NavigationController {
                             mainWindow.hostView.containerView.endEditing(true)
-                            strongSelf.hasGroupCallOnScreenPromise.set(true)
-                            let groupCallController = VoiceChatController(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
-                            groupCallController.onViewDidAppear = { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreenPromise.set(true)
+                            
+                            if call.isStream {
+                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                let groupCallController = MediaStreamComponentController(call: call)
+                                groupCallController.onViewDidAppear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    }
                                 }
-                            }
-                            groupCallController.onViewDidDisappear = { [weak self] in
-                                if let strongSelf = self {
-                                    strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                groupCallController.onViewDidDisappear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                    }
                                 }
+                                groupCallController.navigationPresentation = .flatModal
+                                groupCallController.parentNavigationController = navigationController
+                                strongSelf.groupCallController = groupCallController
+                                navigationController.pushViewController(groupCallController)
+                            } else {
+                                strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                let groupCallController = VoiceChatControllerImpl(sharedContext: strongSelf, accountContext: call.accountContext, call: call)
+                                groupCallController.onViewDidAppear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(true)
+                                    }
+                                }
+                                groupCallController.onViewDidDisappear = { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.hasGroupCallOnScreenPromise.set(false)
+                                    }
+                                }
+                                groupCallController.navigationPresentation = .flatModal
+                                groupCallController.parentNavigationController = navigationController
+                                strongSelf.groupCallController = groupCallController
+                                navigationController.pushViewController(groupCallController)
                             }
-                            groupCallController.navigationPresentation = .flatModal
-                            groupCallController.parentNavigationController = navigationController
-                            strongSelf.groupCallController = groupCallController
-                            navigationController.pushViewController(groupCallController)
+                                
                             strongSelf.hasOngoingCall.set(true)
                         } else {
                             strongSelf.hasOngoingCall.set(false)
@@ -1128,6 +1149,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         navigateToChatControllerImpl(params)
     }
     
+    public func openStorageUsage(context: AccountContext) {
+        guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
+            return
+        }
+        
+        let controller = storageUsageController(context: context, isModal: true)
+        navigationController.pushViewController(controller)
+    }
+    
     public func openLocationScreen(context: AccountContext, messageId: MessageId, navigationController: NavigationController) {
         var found = false
         for controller in navigationController.viewControllers.reversed() {
@@ -1235,11 +1265,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PeerSelectionControllerImpl(params)
     }
     
-    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)? = nil, clickThroughMessage: (() -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?) -> ListViewItem {
+    public func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)? = nil, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, isCentered: Bool) -> ListViewItem {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
             }, tapMessage: { message in
@@ -1300,13 +1330,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
            pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         
+        var entryAttributes = ChatMessageEntryAttributes()
+        entryAttributes.isCentered = isCentered
+        
         let content: ChatMessageItemContent
         let chatLocation: ChatLocation
         if messages.count > 1 {
-            content = .group(messages: messages.map { ($0, true, .none, ChatMessageEntryAttributes(), nil) })
+            content = .group(messages: messages.map { ($0, true, .none, entryAttributes, nil) })
             chatLocation = .peer(messages.first!.id.peerId)
         } else {
-            content = .message(message: messages.first!, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil)
+            content = .message(message: messages.first!, read: true, selection: .none, attributes: entryAttributes, location: nil)
             chatLocation = .peer(messages.first!.id.peerId)
         }
         
@@ -1416,7 +1449,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController {
-        return ChatQrCodeScreen(context: context, peer: peer)
+        return ChatQrCodeScreen(context: context, subject: .peer(peer))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
@@ -1434,7 +1467,7 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var callMessages: [Message] = []
-        var ignoreGroupInCommon: PeerId?
+        var hintGroupInCommon: PeerId?
         switch mode {
         case let .nearbyPeer(distance):
             nearbyPeerDistance = distance
@@ -1443,9 +1476,9 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
         case .generic:
             break
         case let .group(id):
-            ignoreGroupInCommon = id
+            hintGroupInCommon = id
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, ignoreGroupInCommon: ignoreGroupInCommon)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)
     } else if peer is TelegramSecretChat {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
     }

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import DirectionalPanGesture
+import ChatPresentationInterfaceState
 
 final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
     let ready = Promise<Bool>()
@@ -66,7 +67,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             } else {
                 return false
             }
-        }, openPeer: { _, _, _ in
+        }, openPeer: { _, _, _, _ in
         }, openPeerMention: { _ in
         }, openMessageContextMenu: { _, _, _, _, _ in
         }, openMessageReactionContextMenu: { _, _, _, _ in

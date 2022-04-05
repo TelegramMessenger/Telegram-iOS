@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AccountContext
 import NaturalLanguage
+import TelegramCore
 
 // Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
 private final class LinkHelperClass: NSObject {
@@ -11,11 +12,12 @@ private final class LinkHelperClass: NSObject {
 public var supportedTranslationLanguages = [
     "en",
     "ar",
-    "zh",
+    "zh-Hans",
+    "zh-Hant",
     "fr",
     "de",
     "it",
-    "jp",
+    "ja",
     "ko",
     "pt",
     "ru",
@@ -25,9 +27,9 @@ public var supportedTranslationLanguages = [
 @available(iOS 12.0, *)
 private let languageRecognizer = NLLanguageRecognizer()
 
-public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, ignoredLanguages: [String]?) -> Bool {
+public func canTranslateText(context: AccountContext, text: String, showTranslate: Bool, ignoredLanguages: [String]?) -> (canTranslate: Bool, language: String?) {
     guard showTranslate, text.count > 0 else {
-        return false
+        return (false, nil)
     }
     
     if #available(iOS 15.0, *) {
@@ -45,21 +47,21 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         
         let filteredLanguages = hypotheses.filter { supportedTranslationLanguages.contains($0.key.rawValue) }.sorted(by: { $0.value > $1.value })
         if let language = filteredLanguages.first(where: { supportedTranslationLanguages.contains($0.key.rawValue) }) {
-            return !dontTranslateLanguages.contains(language.key.rawValue)
+            return (!dontTranslateLanguages.contains(language.key.rawValue), language.key.rawValue)
         } else {
-            return false
+            return (false, nil)
         }
     } else {
-        return false
+        return (false, nil)
     }
 }
 
-public func translateText(context: AccountContext, text: String) {
+public func translateText(context: AccountContext, text: String, fromLang: String? = nil) {
     guard !text.isEmpty else {
         return
     }
     if #available(iOS 15.0, *) {
-        let text = text.unicodeScalars.filter { !$0.properties.isEmojiPresentation}.reduce("") { $0 + String($1) }
+        let text = text.unicodeScalars.filter { !$0.properties.isEmojiPresentation }.reduce("") { $0 + String($1) }
         
         let textView = UITextView()
         textView.text = text
@@ -73,5 +75,8 @@ public func translateText(context: AccountContext, text: String) {
                 textView.removeFromSuperview()
             }
         }
+        
+        let toLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
+        let _ = context.engine.messages.translate(text: text, fromLang: fromLang, toLang: toLang).start()
     }
 }

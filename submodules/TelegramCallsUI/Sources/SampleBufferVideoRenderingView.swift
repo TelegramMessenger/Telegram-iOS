@@ -108,7 +108,7 @@ final class SampleBufferVideoRenderingView: UIView, VideoRenderingView {
         return AVSampleBufferDisplayLayer.self
     }
 
-    private var sampleBufferLayer: AVSampleBufferDisplayLayer {
+    var sampleBufferLayer: AVSampleBufferDisplayLayer {
         return self.layer as! AVSampleBufferDisplayLayer
     }
 

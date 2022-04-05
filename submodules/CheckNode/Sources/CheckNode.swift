@@ -171,7 +171,15 @@ public class CheckNode: ASDisplayNode {
             context.setLineWidth(borderWidth)
             
             let maybeScaleOut = {
-                if parameters.animatingOut {
+                let animate: Bool
+                if case .counter = parameters.content {
+                    animate = true
+                } else if parameters.animatingOut {
+                    animate = true
+                } else {
+                    animate = false
+                }
+                if animate {
                     context.translateBy(x: bounds.width / 2.0, y: bounds.height / 2.0)
                     context.scaleBy(x: parameters.animationProgress, y: parameters.animationProgress)
                     context.translateBy(x: -bounds.width / 2.0, y: -bounds.height / 2.0)
@@ -206,35 +214,41 @@ public class CheckNode: ASDisplayNode {
             let fillFrame = bounds.insetBy(dx: fillInset, dy: fillInset)
             context.fillEllipse(in: fillFrame.insetBy(dx: fillFrame.width * (1.0 - fillProgress), dy: fillFrame.height * (1.0 - fillProgress)))
             
-            let scale = (bounds.width - inset) / 18.0
-
-            let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
-            let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
-            let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
-            let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
-            
-            if !firstSegment.isZero {
-                if firstSegment < 1.0 {
-                    context.move(to: CGPoint(x: s.x + p1.x * firstSegment, y: s.y + p1.y * firstSegment))
-                    context.addLine(to: s)
-                } else {
-                    let secondSegment = (checkProgress - 0.33) * 1.5
-                    context.move(to: CGPoint(x: s.x + p1.x + p2.x * secondSegment, y: s.y + p1.y + p2.y * secondSegment))
-                    context.addLine(to: CGPoint(x: s.x + p1.x, y: s.y + p1.y))
-                    context.addLine(to: s)
-                }
+            switch parameters.content {
+                case .check:
+                    let scale = (bounds.width - inset) / 18.0
+                    let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
+                    let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
+                    let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
+                    let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
+                    
+                    if !firstSegment.isZero {
+                        if firstSegment < 1.0 {
+                            context.move(to: CGPoint(x: s.x + p1.x * firstSegment, y: s.y + p1.y * firstSegment))
+                            context.addLine(to: s)
+                        } else {
+                            let secondSegment = (checkProgress - 0.33) * 1.5
+                            context.move(to: CGPoint(x: s.x + p1.x + p2.x * secondSegment, y: s.y + p1.y + p2.y * secondSegment))
+                            context.addLine(to: CGPoint(x: s.x + p1.x, y: s.y + p1.y))
+                            context.addLine(to: s)
+                        }
+                    }
+                    
+                    context.setStrokeColor(parameters.theme.strokeColor.cgColor)
+                    if parameters.theme.strokeColor == .clear {
+                        context.setBlendMode(.clear)
+                    }
+                    context.setLineWidth(checkWidth)
+                    context.setLineCap(.round)
+                    context.setLineJoin(.round)
+                    context.setMiterLimit(10.0)
+                    
+                    context.strokePath()
+                case let .counter(number):
+                    let string = NSAttributedString(string: "\(number)", font: Font.with(size: 16.0, design: .round, weight: .semibold), textColor: parameters.theme.strokeColor)
+                    let stringSize = string.boundingRect(with: bounds.size, options: .usesLineFragmentOrigin, context: nil).size
+                    string.draw(at: CGPoint(x: floorToScreenPixels((bounds.width - stringSize.width) / 2.0), y: floorToScreenPixels((bounds.height - stringSize.height) / 2.0)))
             }
-            
-            context.setStrokeColor(parameters.theme.strokeColor.cgColor)
-            if parameters.theme.strokeColor == .clear {
-                context.setBlendMode(.clear)
-            }
-            context.setLineWidth(checkWidth)
-            context.setLineCap(.round)
-            context.setLineJoin(.round)
-            context.setMiterLimit(10.0)
-            
-            context.strokePath()
         }
     }
     
@@ -270,11 +284,9 @@ public class InteractiveCheckNode: CheckNode {
                 return
             }
             if highlighted {
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .spring)
-                transition.updateTransformScale(node: strongSelf, scale: 0.85)
-            } else {
-                let transition: ContainedViewLayoutTransition = .animated(duration: 0.5, curve: .spring)
-                transition.updateTransformScale(node: strongSelf, scale: 1.0)
+                strongSelf.layer.animateScale(from: 1.0, to: 0.85, duration: 0.15, removeOnCompletion: false)
+            } else if let presentationLayer = strongSelf.layer.presentation() {
+                strongSelf.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
             }
         }
     }
@@ -290,13 +302,6 @@ public class InteractiveCheckNode: CheckNode {
         self.buttonNode.frame = self.bounds
     }
 }
-
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
 
 public class CheckLayer: CALayer {
     private var animatingOut = false
@@ -432,35 +437,40 @@ public class CheckLayer: CALayer {
             let fillFrame = bounds.insetBy(dx: fillInset, dy: fillInset)
             context.fillEllipse(in: fillFrame.insetBy(dx: fillFrame.width * (1.0 - fillProgress), dy: fillFrame.height * (1.0 - fillProgress)))
 
-            let scale = (bounds.width - inset) / 18.0
+            switch parameters.content {
+                case .check:
+                    let scale = (bounds.width - inset) / 18.0
+                    let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
+                    let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
+                    let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
+                    let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
 
-            let firstSegment: CGFloat = max(0.0, min(1.0, checkProgress * 3.0))
-            let s = CGPoint(x: center.x - (4.0 - 0.3333) * scale, y: center.y + 0.5 * scale)
-            let p1 = CGPoint(x: 2.5 * scale, y: 3.0 * scale)
-            let p2 = CGPoint(x: 4.6667 * scale, y: -6.0 * scale)
+                    if !firstSegment.isZero {
+                        if firstSegment < 1.0 {
+                            context.move(to: CGPoint(x: s.x + p1.x * firstSegment, y: s.y + p1.y * firstSegment))
+                            context.addLine(to: s)
+                        } else {
+                            let secondSegment = (checkProgress - 0.33) * 1.5
+                            context.move(to: CGPoint(x: s.x + p1.x + p2.x * secondSegment, y: s.y + p1.y + p2.y * secondSegment))
+                            context.addLine(to: CGPoint(x: s.x + p1.x, y: s.y + p1.y))
+                            context.addLine(to: s)
+                        }
+                    }
 
-            if !firstSegment.isZero {
-                if firstSegment < 1.0 {
-                    context.move(to: CGPoint(x: s.x + p1.x * firstSegment, y: s.y + p1.y * firstSegment))
-                    context.addLine(to: s)
-                } else {
-                    let secondSegment = (checkProgress - 0.33) * 1.5
-                    context.move(to: CGPoint(x: s.x + p1.x + p2.x * secondSegment, y: s.y + p1.y + p2.y * secondSegment))
-                    context.addLine(to: CGPoint(x: s.x + p1.x, y: s.y + p1.y))
-                    context.addLine(to: s)
-                }
+                    context.setStrokeColor(parameters.theme.strokeColor.cgColor)
+                    if parameters.theme.strokeColor == .clear {
+                        context.setBlendMode(.clear)
+                    }
+                    context.setLineWidth(checkWidth)
+                    context.setLineCap(.round)
+                    context.setLineJoin(.round)
+                    context.setMiterLimit(10.0)
+
+                    context.strokePath()
+                case let .counter(number):
+                    let text = NSAttributedString(string: "\(number)", font: Font.with(size: 16.0, design: .round, weight: .regular, traits: []), textColor: parameters.theme.strokeColor)
+                    text.draw(at: CGPoint())
             }
-
-            context.setStrokeColor(parameters.theme.strokeColor.cgColor)
-            if parameters.theme.strokeColor == .clear {
-                context.setBlendMode(.clear)
-            }
-            context.setLineWidth(checkWidth)
-            context.setLineCap(.round)
-            context.setLineJoin(.round)
-            context.setMiterLimit(10.0)
-
-            context.strokePath()
         })?.cgImage
     }
 }

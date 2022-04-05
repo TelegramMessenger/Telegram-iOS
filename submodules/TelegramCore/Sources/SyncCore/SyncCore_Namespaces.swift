@@ -60,6 +60,7 @@ public struct Namespaces {
         public static let RecentlyUsedHashtags: Int32 = 8
         public static let CloudThemes: Int32 = 9
         public static let CloudGreetingStickers: Int32 = 10
+        public static let RecentDownloads: Int32 = 11
     }
     
     public struct CachedItemCollection {
@@ -81,6 +82,7 @@ public struct Namespaces {
         public static let cachedPeerExportedInvitations: Int8 = 17
         public static let cachedSendAsPeers: Int8 = 18
         public static let availableReactions: Int8 = 19
+        public static let resolvedByPhonePeers: Int8 = 20
     }
     
     public struct UnorderedItemList {
@@ -108,8 +110,9 @@ public extension MessageTags {
     static let photo = MessageTags(rawValue: 1 << 8)
     static let video = MessageTags(rawValue: 1 << 9)
     static let pinned = MessageTags(rawValue: 1 << 10)
+    static let unseenReaction = MessageTags(rawValue: 1 << 11)
     
-    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video, .pinned]
+    static let all: MessageTags = [.photoOrVideo, .file, .music, .webPage, .voiceOrInstantVideo, .unseenPersonalMessage, .liveLocation, .gif, .photo, .video, .pinned, .unseenReaction]
 }
 
 public extension GlobalMessageTags {
@@ -128,6 +131,7 @@ public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
     static let updateReaction = PendingMessageActionType(rawValue: 1)
     static let sendScheduledMessageImmediately = PendingMessageActionType(rawValue: 2)
+    static let readReaction = PendingMessageActionType(rawValue: 3)
 }
 
 public let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
@@ -154,6 +158,7 @@ public struct OperationLogTags {
     public static let SynchronizeAppLogEvents = PeerOperationLogTag(value: 18)
     public static let SynchronizeEmojiKeywords = PeerOperationLogTag(value: 19)
     public static let SynchronizeChatListFilters = PeerOperationLogTag(value: 20)
+    public static let SynchronizeMarkAllUnseenReactions = PeerOperationLogTag(value: 21)
 }
 
 public struct LegacyPeerSummaryCounterTags: OptionSet, Sequence, Hashable {

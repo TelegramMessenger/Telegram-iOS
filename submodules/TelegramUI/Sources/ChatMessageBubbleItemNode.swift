@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
@@ -21,7 +22,8 @@ import GridMessageSelectionNode
 import AppBundle
 import Markdown
 import WallpaperBackgroundNode
-import SwiftSignalKit
+import ChatPresentationInterfaceState
+import ChatMessageBackground
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -797,6 +799,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
     }
     
+    func animateContentFromGroupedMediaInput(transition: CombinedTransition) -> [CGRect] {
+        self.mainContextSourceNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        
+        var rects: [CGRect] = []
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageMediaBubbleContentNode {
+                rects.append(contentNode.frame.offsetBy(dx: -self.clippingNode.frame.minX, dy: 0.0))
+            }
+        }
+        return rects
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -805,6 +819,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let strongSelf = self {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
+                }
+                
+                if let actionButtonsNode = strongSelf.actionButtonsNode {
+                    if let _ = actionButtonsNode.hitTest(strongSelf.view.convert(point, to: actionButtonsNode.view), with: nil) {
+                        return .fail
+                    }
                 }
                 
                 if let reactionButtonsNode = strongSelf.reactionButtonsNode {
@@ -852,7 +872,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 }
                 if !strongSelf.backgroundNode.frame.contains(point) {
-                    return .waitForSingleTap
+                    return .waitForDoubleTap
                 }
             }
             
@@ -1182,7 +1202,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if isAd {
             needsShareButton = false
         }
-        
+        for attribute in item.content.firstMessage.attributes {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.platformText(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) != nil {
+                needsShareButton = false
+            }
+        }
+                
         var tmpWidth: CGFloat
         if allowFullWidth {
             tmpWidth = baseWidth
@@ -1310,9 +1335,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var isItemEdited = false
         
         switch item.content {
-            case let .message(message, value, _, _, _):
+            case let .message(message, value, _, attributes, _):
                 read = value
                 isItemPinned = message.tags.contains(.pinned)
+                if attributes.isCentered {
+                    alignment = .center
+                }
             case let .group(messages):
                 read = messages[0].1
                 for message in messages {
@@ -2083,7 +2111,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             case .center:
                 let availableWidth = params.width - params.leftInset - params.rightInset
                 backgroundFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((availableWidth - layoutBubbleSize.width) / 2.0), y: 0.0), size: layoutBubbleSize)
-                contentOrigin = CGPoint(x: backgroundFrame.minX + floor(layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left) / 2.0, y: backgroundFrame.minY + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
+                let contentOriginX: CGFloat
+                if !hideBackground {
+                    contentOriginX = (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right)
+                } else {
+                    contentOriginX = floor(layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left) / 2.0
+                }
+                contentOrigin = CGPoint(x: backgroundFrame.minX + contentOriginX, y: backgroundFrame.minY + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                 contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
         }
         
@@ -3026,6 +3060,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                 } else if case .tap = gesture {
                     item.controllerInteraction.clickThroughMessage()
+                } else if case .doubleTap = gesture {
+                    if canAddMessageReactions(message: item.message) {
+                        item.controllerInteraction.updateMessageReaction(item.message, .default)
+                    }
                 }
             }
         default:
@@ -3103,7 +3141,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                         return
                                     }
                                 }
-                                item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                                item.controllerInteraction.openPeer(openPeerId, navigate, MessageReference(item.message), item.message.peers[openPeerId])
                             }
                         }
                     })
@@ -3158,7 +3196,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 }
                                 item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                             } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                                item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil)
+                                item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
                             } else if let _ = forwardInfo.authorSignature {
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                             }
@@ -3197,7 +3235,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         })
                     case let .peerMention(peerId, _):
                         return .action({
-                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil)
+                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
                         })
                     case let .textMention(name):
                         return .action({
@@ -3435,7 +3473,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if !self.backgroundNode.frame.contains(point) {
-            if self.actionButtonsNode == nil || !self.actionButtonsNode!.frame.contains(point) {
+            if let actionButtonsNode = self.actionButtonsNode, let result = actionButtonsNode.hitTest(self.view.convert(point, to: actionButtonsNode.view), with: event) {
+                return result
             }
         }
         

@@ -7,6 +7,7 @@ import TelegramPresentationData
 import TelegramStringFormatting
 import TelegramUIPreferences
 import AccountContext
+import ChatPresentationInterfaceState
 
 final class DisabledContextResultsChatInputContextPanelNode: ChatInputContextPanelNode {
     private let containerNode: ASDisplayNode

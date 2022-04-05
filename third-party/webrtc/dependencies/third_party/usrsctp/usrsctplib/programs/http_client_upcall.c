@@ -78,7 +78,7 @@ typedef char* caddr_t;
 static void handle_upcall(struct socket *sock, void *arg, int flgs)
 {
 	int events = usrsctp_get_events(sock);
-	ssize_t bytesSent = 0;
+	ssize_t bytesSent;
 	char *buf;
 
 	if ((events & SCTP_EVENT_READ) && !done) {
@@ -93,7 +93,7 @@ static void handle_upcall(struct socket *sock, void *arg, int flgs)
 
 		memset(&rn, 0, sizeof(struct sctp_recvv_rn));
 		n = usrsctp_recvv(sock, buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, (void *)&rn,
-	                 &infolen, &infotype, &flags);
+		                  &infolen, &infotype, &flags);
 
 		if (n < 0) {
 			if (errno == ECONNREFUSED) {
@@ -103,10 +103,10 @@ static void handle_upcall(struct socket *sock, void *arg, int flgs)
 			} else {
 				result = RETVAL_CATCHALL;
 			}
-			perror("usrsctp_connect");
+			perror("usrsctp_recvv");
 		}
 
-		if (n <= 0){
+		if (n <= 0) {
 			done = 1;
 			usrsctp_close(sock);
 		} else {
@@ -132,7 +132,7 @@ static void handle_upcall(struct socket *sock, void *arg, int flgs)
 			perror("usrsctp_sendv");
 			usrsctp_close(sock);
 		} else {
-			printf("%d bytes sent\n", (int)bytesSent);
+			printf("%zd bytes sent\n", bytesSent);
 		}
 	}
 }
@@ -276,16 +276,20 @@ main(int argc, char *argv[])
 
 	if (argc > 6) {
 #ifdef _WIN32
-		_snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix);
+		if (_snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix) < 0) {
 #else
-		snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix);
+		if (snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix) < 0) {
 #endif
+			request[0] = '\0';
+		}
 	} else {
 #ifdef _WIN32
-		_snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix);
+		if (_snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix) < 0) {
 #else
-		snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix);
+		if (snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix) < 0) {
 #endif
+			request[0] = '\0';
+		}
 	}
 
 	printf("\nHTTP request:\n%s\n", request);
@@ -305,9 +309,6 @@ main(int argc, char *argv[])
 				result = RETVAL_CATCHALL;
 			}
 			perror("usrsctp_connect");
-			usrsctp_close(sock);
-
-			goto out;
 		}
 	}
 

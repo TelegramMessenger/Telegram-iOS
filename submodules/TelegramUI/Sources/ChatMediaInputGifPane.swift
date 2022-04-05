@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ContextUI
 import AccountContext
+import ChatPresentationInterfaceState
 
 private func fixListScrolling(_ multiplexedNode: MultiplexedVideoNode) {
     let searchBarHeight: CGFloat = 56.0

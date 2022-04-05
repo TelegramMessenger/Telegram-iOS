@@ -95,7 +95,7 @@
         MTPayloadData payloadData;
         NSData *data = [self payloadData:&payloadData context:context address:address];
         
-        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId scheme:[[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:address media:false] interface:nil usageCalculationInfo:nil];
+        MTTcpConnection *connection = [[MTTcpConnection alloc] initWithContext:context datacenterId:datacenterId scheme:[[MTTransportScheme alloc] initWithTransportClass:[MTTcpTransport class] address:address media:false] interface:nil usageCalculationInfo:nil getLogPrefix:nil];
         __weak MTTcpConnection *weakConnection = connection;
         connection.connectionOpened = ^
         {

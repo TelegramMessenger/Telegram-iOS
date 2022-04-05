@@ -21,6 +21,7 @@ import TelegramUIPreferences
 import PeerInfoAvatarListNode
 import AnimationUI
 import ContextUI
+import ManagedAnimationNode
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -125,13 +126,14 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     
     func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, isExpanded: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         let previousIcon = self.icon
+        let themeUpdated = self.theme != presentationData.theme
         let iconUpdated = self.icon != icon
         let isActiveUpdated = self.isActive != isActive
         self.isActive = isActive
         
         let iconSize = CGSize(width: 40.0, height: 40.0)
         
-        if self.theme != presentationData.theme || self.icon != icon {
+        if themeUpdated || iconUpdated {
             self.theme = presentationData.theme
             self.icon = icon
             
@@ -194,9 +196,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 let animationNode: AnimationNode
                 if let current = self.animationNode {
                     animationNode = current
-                    if iconUpdated {
-                        animationNode.setAnimation(name: animationName, colors: colors)
-                    }
+                    animationNode.setAnimation(name: animationName, colors: colors)
                 } else {
                     animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
                     self.referenceNode.addSubnode(animationNode)
@@ -921,13 +921,99 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
     }
 }
 
+private enum MoreIconNodeState: Equatable {
+    case more
+    case search
+    case moreToSearch(Float)
+}
+
+private final class MoreIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.21
+    private var iconState: MoreIconNodeState = .more
+    
+    init() {
+        super.init(size: CGSize(width: 30.0, height: 30.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
+    }
+        
+    func play() {
+        if case .more = self.iconState {
+            self.trackTo(item: ManagedAnimationItem(source: .local("anim_moredots"), frames: .range(startFrame: 0, endFrame: 46), duration: 0.76))
+        }
+    }
+    
+    func enqueueState(_ state: MoreIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        let source = ManagedAnimationSource.local("anim_moretosearch")
+        
+        let totalLength: Int = 90
+        if animated {
+            switch previousState {
+                case .more:
+                    switch state {
+                        case .more:
+                            break
+                        case .search:
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: totalLength), duration: self.duration))
+                        case let .moreToSearch(progress):
+                            let frame = Int(progress * Float(totalLength))
+                            let duration = self.duration * Double(progress)
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: frame), duration: duration))
+                    }
+                case .search:
+                    switch state {
+                        case .more:
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: 0), duration: self.duration))
+                        case .search:
+                            break
+                        case let .moreToSearch(progress):
+                            let frame = Int(progress * Float(totalLength))
+                            let duration = self.duration * Double((1.0 - progress))
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: frame), duration: duration))
+                    }
+                case let .moreToSearch(currentProgress):
+                    let currentFrame = Int(currentProgress * Float(totalLength))
+                    switch state {
+                        case .more:
+                            let duration = self.duration * Double(currentProgress)
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: currentFrame, endFrame: 0), duration: duration))
+                        case .search:
+                            let duration = self.duration * (1.0 - Double(currentProgress))
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: currentFrame, endFrame: totalLength), duration: duration))
+                        case let .moreToSearch(progress):
+                            let frame = Int(progress * Float(totalLength))
+                            let duration = self.duration * Double(abs(currentProgress - progress))
+                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: currentFrame, endFrame: frame), duration: duration))
+                    }
+            }
+        } else {
+            switch state {
+                case .more:
+                    self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
+                case .search:
+                    self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: totalLength), duration: 0.0))
+                case let .moreToSearch(progress):
+                    let frame = Int(progress * Float(totalLength))
+                    self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: frame, endFrame: frame), duration: 0.0))
+            }
+        }
+    }
+}
+
 final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     let containerNode: ContextControllerSourceNode
     let contextSourceNode: ContextReferenceContentNode
     private let regularTextNode: ImmediateTextNode
     private let whiteTextNode: ImmediateTextNode
     private let iconNode: ASImageNode
-    private var animationNode: AnimationNode?
+    private var animationNode: MoreIconNode?
     
     private var key: PeerInfoHeaderNavigationButtonKey?
     private var theme: PresentationTheme?
@@ -983,11 +1069,13 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     }
     
     @objc private func pressed() {
+        self.animationNode?.play()
         self.action?(self.contextSourceNode, nil)
     }
     
     func update(key: PeerInfoHeaderNavigationButtonKey, presentationData: PresentationData, height: CGFloat) -> CGSize {
         let textSize: CGSize
+        let isFirstTime = self.key == nil
         if self.key != key || self.theme !== presentationData.theme {
             self.key = key
             self.theme = presentationData.theme
@@ -996,6 +1084,8 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             var icon: UIImage?
             var isBold = false
             var isGestureEnabled = false
+            var isAnimation = false
+            var animationState: MoreIconNodeState = .more
             switch key {
                 case .edit:
                     text = presentationData.strings.Common_Edit
@@ -1006,18 +1096,24 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                     text = presentationData.strings.Common_Select
                 case .search:
                     text = ""
-                    icon = PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                    icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                    isAnimation = true
+                    animationState = .search
                 case .editPhoto:
                     text = presentationData.strings.Settings_EditPhoto
                 case .editVideo:
                     text = presentationData.strings.Settings_EditVideo
                 case .more:
                     text = ""
-                    icon = PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
+                    icon = nil// PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
                     isGestureEnabled = true
+                    isAnimation = true
+                    animationState = .more
                 case .qrCode:
                     text = ""
                     icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
+                case .moreToSearch:
+                    text = ""
             }
             self.accessibilityLabel = text
             self.containerNode.isGestureEnabled = isGestureEnabled
@@ -1027,6 +1123,26 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             self.regularTextNode.attributedText = NSAttributedString(string: text, font: font, textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
             self.whiteTextNode.attributedText = NSAttributedString(string: text, font: font, textColor: .white)
             self.iconNode.image = icon
+            
+            if isAnimation {
+                self.iconNode.isHidden = true
+                let animationNode: MoreIconNode
+                if let current = self.animationNode {
+                    animationNode = current
+                } else {
+                    animationNode = MoreIconNode()
+                    self.animationNode = animationNode
+                    self.contextSourceNode.addSubnode(animationNode)
+                }
+                animationNode.customColor = presentationData.theme.rootController.navigationBar.accentTextColor
+                animationNode.enqueueState(animationState, animated: !isFirstTime)
+            } else {
+                self.iconNode.isHidden = false
+                if let current = self.animationNode {
+                    self.animationNode = nil
+                    current.removeFromSupernode()
+                }
+            }
             
             textSize = self.regularTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
             let _ = self.whiteTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
@@ -1040,7 +1156,16 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.regularTextNode.frame = textFrame
         self.whiteTextNode.frame = textFrame
         
-        if let image = self.iconNode.image {
+        if let animationNode = self.animationNode {
+            let animationSize = CGSize(width: 30.0, height: 30.0)
+            
+            animationNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - animationSize.height) / 2.0)), size: animationSize)
+            
+            let size = CGSize(width: animationSize.width + inset * 2.0, height: height)
+            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
+            self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
+            return size
+        } else if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size)
             
             let size = CGSize(width: image.size.width + inset * 2.0, height: height)
@@ -1067,6 +1192,7 @@ enum PeerInfoHeaderNavigationButtonKey {
     case editVideo
     case more
     case qrCode
+    case moreToSearch
 }
 
 struct PeerInfoHeaderNavigationButtonSpec: Equatable {
@@ -1188,20 +1314,26 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
             for spec in rightButtons.reversed() {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
-                if let current = self.rightButtonNodes[spec.key] {
+                
+                var key = spec.key
+                if key == .more || key == .search {
+                    key = .moreToSearch
+                }
+                
+                if let current = self.rightButtonNodes[key] {
                     buttonNode = current
                 } else {
                     wasAdded = true
                     buttonNode = PeerInfoHeaderNavigationButton()
-                    self.rightButtonNodes[spec.key] = buttonNode
+                    self.rightButtonNodes[key] = buttonNode
                     self.addSubnode(buttonNode)
                     buttonNode.isWhite = self.isWhite
-                    buttonNode.action = { [weak self] _, gesture in
-                        guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[spec.key] else {
-                            return
-                        }
-                        strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
+                }
+                buttonNode.action = { [weak self] _, gesture in
+                    guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[key] else {
+                        return
                     }
+                    strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
                 }
                 let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
                 var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
@@ -1214,6 +1346,10 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
                 }
                 let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 if wasAdded {
+                    if key == .moreToSearch {
+                        buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+                    }
+                    
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
@@ -1224,20 +1360,37 @@ final class PeerInfoHeaderNavigationButtonContainerNode: ASDisplayNode {
             }
             var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
             for (key, _) in self.rightButtonNodes {
-                if !rightButtons.contains(where: { $0.key == key }) {
+                if key == .moreToSearch {
+                    if !rightButtons.contains(where: { $0.key == .more || $0.key == .search }) {
+                        removeKeys.append(key)
+                    }
+                } else if !rightButtons.contains(where: { $0.key == key }) {
                     removeKeys.append(key)
                 }
             }
             for key in removeKeys {
                 if let buttonNode = self.rightButtonNodes.removeValue(forKey: key) {
-                    buttonNode.removeFromSupernode()
+                    if key == .moreToSearch {
+                        buttonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonNode] _ in
+                            buttonNode?.removeFromSupernode()
+                        })
+                        buttonNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+                    } else {
+                        buttonNode.removeFromSupernode()
+                    }
                 }
             }
         } else {
             var nextRegularButtonOrigin = size.width - 16.0
             var nextExpandedButtonOrigin = size.width - 16.0
+                        
             for spec in rightButtons.reversed() {
-                if let buttonNode = self.rightButtonNodes[spec.key] {
+                var key = spec.key
+                if key == .more || key == .search {
+                    key = .moreToSearch
+                }
+                
+                if let buttonNode = self.rightButtonNodes[key] {
                     let buttonSize = buttonNode.bounds.size
                     var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
                     let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)

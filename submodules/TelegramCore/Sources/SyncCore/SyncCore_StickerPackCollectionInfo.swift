@@ -24,6 +24,9 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
         if flags.contains(StickerPackCollectionInfoFlags.isAnimated) {
             rawValue |= StickerPackCollectionInfoFlags.isAnimated.rawValue
         }
+        if flags.contains(StickerPackCollectionInfoFlags.isVideo) {
+            rawValue |= StickerPackCollectionInfoFlags.isVideo.rawValue
+        }
         
         self.rawValue = rawValue
     }
@@ -31,6 +34,7 @@ public struct StickerPackCollectionInfoFlags: OptionSet {
     public static let isMasks = StickerPackCollectionInfoFlags(rawValue: 1 << 0)
     public static let isOfficial = StickerPackCollectionInfoFlags(rawValue: 1 << 1)
     public static let isAnimated = StickerPackCollectionInfoFlags(rawValue: 1 << 2)
+    public static let isVideo = StickerPackCollectionInfoFlags(rawValue: 1 << 3)
 }
 
 

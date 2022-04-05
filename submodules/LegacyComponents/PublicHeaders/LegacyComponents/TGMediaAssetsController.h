@@ -2,7 +2,6 @@
 #import <LegacyComponents/LegacyComponentsContext.h>
 
 #import <LegacyComponents/TGMediaAssetsLibrary.h>
-#import <LegacyComponents/TGSuggestionContext.h>
 
 #import <LegacyComponents/TGMediaAssetsUtils.h>
 
@@ -53,7 +52,6 @@ typedef enum
 
 @property (nonatomic, readonly) TGMediaEditingContext *editingContext;
 @property (nonatomic, readonly) TGMediaSelectionContext *selectionContext;
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 @property (nonatomic, assign) bool localMediaCacheEnabled;
 @property (nonatomic, assign) bool captionsEnabled;
@@ -66,7 +64,7 @@ typedef enum
 @property (nonatomic, assign) bool hasSilentPosting;
 @property (nonatomic, assign) bool hasSchedule;
 @property (nonatomic, assign) bool reminder;
-@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
+@property (nonatomic, copy) void (^presentScheduleController)(bool, void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
 @property (nonatomic, assign) bool liveVideoUploadEnabled;
@@ -90,7 +88,11 @@ typedef enum
 
 @property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 
+- (UIBarButtonItem *)leftBarButtonItem;
 - (UIBarButtonItem *)rightBarButtonItem;
+
+- (void)send:(bool)silently;
+- (void)schedule:(bool)schedule;
 
 - (NSArray *)resultSignalsWithCurrentItem:(TGMediaAsset *)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator;
 

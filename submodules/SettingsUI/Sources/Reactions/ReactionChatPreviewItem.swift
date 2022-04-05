@@ -11,7 +11,6 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import WallpaperBackgroundNode
-import AvatarNode
 import ReactionSelectionNode
 
 class ReactionChatPreviewItem: ListViewItem, ItemListItem {
@@ -26,8 +25,9 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
     let nameDisplayOrder: PresentationPersonNameOrder
     let availableReactions: AvailableReactions?
     let reaction: String?
+    let toggleReaction: () -> Void
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: String?) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: String?, toggleReaction: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -39,6 +39,7 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
         self.nameDisplayOrder = nameDisplayOrder
         self.availableReactions = availableReactions
         self.reaction = reaction
+        self.toggleReaction = toggleReaction
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -80,7 +81,6 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
-    private let avatarNode: ASImageNode
     
     private let containerNode: ASDisplayNode
     
@@ -98,8 +98,6 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         
         self.maskNode = ASImageNode()
         
-        self.avatarNode = ASImageNode()
-        
         self.containerNode = ASDisplayNode()
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
@@ -107,7 +105,6 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         
         self.clipsToBounds = true
         
-        self.addSubnode(self.avatarNode)
         self.addSubnode(self.containerNode)
     }
     
@@ -127,45 +124,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             if let (gesture, _) = recognizer.lastRecognizedGestureAndLocation {
                 switch gesture {
                 case .doubleTap:
-                    if let item = self.item, let updatedReaction = item.reaction, let availableReactions = item.availableReactions, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
-                        if let targetView = messageNode.targetReactionView(value: updatedReaction) {
-                            for reaction in availableReactions.reactions {
-                                if reaction.value == updatedReaction {
-                                    if let standaloneReactionAnimation = self.standaloneReactionAnimation {
-                                        standaloneReactionAnimation.cancel()
-                                        standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
-                                            standaloneReactionAnimation?.removeFromSupernode()
-                                        })
-                                        self.standaloneReactionAnimation = nil
-                                    }
-                                    
-                                    if let supernode = self.supernode {
-                                        let standaloneReactionAnimation = StandaloneReactionAnimation()
-                                        self.standaloneReactionAnimation = standaloneReactionAnimation
-                                        
-                                        supernode.addSubnode(standaloneReactionAnimation)
-                                        standaloneReactionAnimation.frame = supernode.bounds
-                                        standaloneReactionAnimation.animateReactionSelection(
-                                            context: item.context, theme: item.theme, reaction: ReactionContextItem(
-                                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
-                                                appearAnimation: reaction.appearAnimation,
-                                                stillAnimation: reaction.selectAnimation,
-                                                listAnimation: reaction.activateAnimation,
-                                                applicationAnimation: reaction.effectAnimation
-                                            ),
-                                            targetView: targetView,
-                                            hideNode: true,
-                                            completion: { [weak standaloneReactionAnimation] in
-                                            standaloneReactionAnimation?.removeFromSupernode()
-                                            }
-                                        )
-                                    }
-                                    
-                                    break
-                                }
-                            }
-                        }
-                    }
+                    self.item?.toggleReaction()
                 default:
                     break
                 }
@@ -175,9 +134,64 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         }
     }
     
+    private func beginReactionAnimation() {
+        if let item = self.item, let updatedReaction = item.reaction, let availableReactions = item.availableReactions, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
+            if let targetView = messageNode.targetReactionView(value: updatedReaction) {
+                for reaction in availableReactions.reactions {
+                    guard let centerAnimation = reaction.centerAnimation else {
+                        continue
+                    }
+                    guard let aroundAnimation = reaction.aroundAnimation else {
+                        continue
+                    }
+                    
+                    if reaction.value == updatedReaction {
+                        if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                            standaloneReactionAnimation.cancel()
+                            standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                                standaloneReactionAnimation?.removeFromSupernode()
+                            })
+                            self.standaloneReactionAnimation = nil
+                        }
+                        
+                        if let supernode = self.supernode {
+                            let standaloneReactionAnimation = StandaloneReactionAnimation()
+                            self.standaloneReactionAnimation = standaloneReactionAnimation
+                            
+                            supernode.addSubnode(standaloneReactionAnimation)
+                            standaloneReactionAnimation.frame = supernode.bounds
+                            standaloneReactionAnimation.animateReactionSelection(
+                                context: item.context, theme: item.theme, reaction: ReactionContextItem(
+                                    reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                    appearAnimation: reaction.appearAnimation,
+                                    stillAnimation: reaction.selectAnimation,
+                                    listAnimation: centerAnimation,
+                                    largeListAnimation: reaction.activateAnimation,
+                                    applicationAnimation: aroundAnimation,
+                                    largeApplicationAnimation: reaction.effectAnimation
+                                ),
+                                avatarPeers: [],
+                                playHaptic: false,
+                                isLarge: false,
+                                targetView: targetView,
+                                addStandaloneReactionAnimation: nil,
+                                completion: { [weak standaloneReactionAnimation] in
+                                standaloneReactionAnimation?.removeFromSupernode()
+                                }
+                            )
+                        }
+                        
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
     func asyncLayout() -> (_ item: ReactionChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentNode = self.messageNode
 
+        let previousItem = self.item
         var currentBackgroundNode = self.backgroundNode
         
         return { item, params, neighbors in
@@ -190,13 +204,12 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let chatPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(1))
             let userPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2))
+            let chatPeerId = userPeerId
             
             var peers = SimpleDictionary<PeerId, Peer>()
             let messages = SimpleDictionary<MessageId, Message>()
             
-            peers[chatPeerId] = TelegramGroup(id: chatPeerId, title: "Chat", photo: [], participantCount: 1, role: .member, membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 1, version: 1)
             peers[userPeerId] = TelegramUser(id: userPeerId, accessHash: nil, firstName: item.strings.Settings_QuickReactionSetup_DemoMessageAuthor, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
             
             let messageText = item.strings.Settings_QuickReactionSetup_DemoMessageText
@@ -206,12 +219,12 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                 attributes.append(ReactionsMessageAttribute(canViewList: false, reactions: [MessageReaction(value: reaction, count: 1, isSelected: true)], recentPeers: []))
             }
             
-            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions)
+            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions, isCentered: true)
             
             var node: ListViewItemNode?
             if let current = currentNode {
                 node = current
-                messageItem.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .None, completion: { (layout, apply) in
+                messageItem.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .System(duration: 0.3, transition: ControlledTransition(duration: 0.3, curve: .easeInOut, interactive: false)), completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     current.contentSize = layout.contentSize
@@ -228,7 +241,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                 node?.isUserInteractionEnabled = false
             }
             
-            var contentSize = CGSize(width: params.width, height: 8.0 + 8.0)
+            var contentSize = CGSize(width: params.width, height: 16.0 + 16.0)
             if let node = node {
                 contentSize.height += node.frame.size.height
             }
@@ -252,7 +265,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     
-                    var topOffset: CGFloat = 8.0
+                    var topOffset: CGFloat = 16.0
                     if let node = node {
                         strongSelf.messageNode = node
                         if node.supernode == nil {
@@ -260,23 +273,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                         }
                         node.updateFrame(CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: node.frame.size), within: layout.contentSize)
                         
-                        let avatarSize: CGFloat = 34.0
-                        if strongSelf.avatarNode.image == nil {
-                            strongSelf.avatarNode.image = generateImage(CGSize(width: avatarSize, height: avatarSize), rotatedContext: { size, context in
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.addEllipse(in: CGRect(origin: CGPoint(), size: size))
-                                context.clip()
-                                UIGraphicsPushContext(context)
-                                if let image = UIImage(bundleImageName: "Avatar/SampleAvatar1") {
-                                    image.draw(in: CGRect(origin: CGPoint(), size: size))
-                                }
-                                UIGraphicsPopContext()
-                            })
-                        }
-                        
                         topOffset += node.frame.size.height
-                        
-                        strongSelf.avatarNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 7.0, y: topOffset - avatarSize), size: CGSize(width: avatarSize, height: avatarSize))
                     }
 
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -312,6 +309,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
@@ -333,6 +331,10 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    
+                    if let previousItem = previousItem, previousItem.reaction != item.reaction {
+                        strongSelf.beginReactionAnimation()
+                    }
                 }
             })
         }

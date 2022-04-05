@@ -9,9 +9,12 @@ private let badgeFont = Font.regular(13.0)
 enum ChatHistoryNavigationButtonType {
     case down
     case mentions
+    case reactions
 }
 
-class ChatHistoryNavigationButtonNode: ASControlNode {
+class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
+    let containerNode: ContextExtractedContentContainingNode
+    private let buttonNode: HighlightTrackingButtonNode
     private let backgroundNode: NavigationBackgroundNode
     private let imageNode: ASImageNode
     private let badgeBackgroundNode: ASImageNode
@@ -21,9 +24,9 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         didSet {
             if (oldValue != nil) != (self.tapped != nil) {
                 if self.tapped != nil {
-                    self.addTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
+                    self.buttonNode.addTarget(self, action: #selector(self.onTap), forControlEvents: .touchUpInside)
                 } else {
-                    self.removeTarget(self, action: #selector(onTap), forControlEvents: .touchUpInside)
+                    self.buttonNode.removeTarget(self, action: #selector(self.onTap), forControlEvents: .touchUpInside)
                 }
             }
         }
@@ -43,6 +46,9 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
     init(theme: PresentationTheme, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
         self.type = type
+        
+        self.containerNode = ContextExtractedContentContainingNode()
+        self.buttonNode = HighlightTrackingButtonNode()
 
         self.backgroundNode = NavigationBackgroundNode(color: theme.chat.inputPanel.panelBackgroundColor)
         
@@ -53,6 +59,8 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
                 self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
             case .mentions:
                 self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
+            case .reactions:
+                self.imageNode.image = PresentationResourcesChat.chatHistoryReactionsButtonImage(theme)
         }
         self.imageNode.isLayerBacked = true
         
@@ -68,18 +76,30 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
         self.badgeTextNode.displaysAsynchronously = false
         
         super.init()
-
-        self.addSubnode(self.backgroundNode)
-        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
-        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: 38.0 / 2.0, transition: .immediate)
-
-        self.addSubnode(self.imageNode)
-        self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
         
-        self.addSubnode(self.badgeBackgroundNode)
-        self.addSubnode(self.badgeTextNode)
+        self.targetNodeForActivationProgress = self.buttonNode
         
-        self.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
+        self.addSubnode(self.containerNode)
+        
+        let size = CGSize(width: 38.0, height: 38.0)
+        
+        self.containerNode.contentNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.containerNode.contentRect = CGRect(origin: CGPoint(), size: size)
+        
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.containerNode.contentNode.addSubnode(self.buttonNode)
+
+        self.buttonNode.addSubnode(self.backgroundNode)
+        self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: size.width / 2.0, transition: .immediate)
+
+        self.buttonNode.addSubnode(self.imageNode)
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        self.buttonNode.addSubnode(self.badgeBackgroundNode)
+        self.buttonNode.addSubnode(self.badgeTextNode)
+        
+        self.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     func updateTheme(theme: PresentationTheme) {
@@ -92,6 +112,8 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
                     self.imageNode.image = PresentationResourcesChat.chatHistoryNavigationButtonImage(theme)
                 case .mentions:
                     self.imageNode.image = PresentationResourcesChat.chatHistoryMentionsButtonImage(theme)
+                case .reactions:
+                    self.imageNode.image = PresentationResourcesChat.chatHistoryReactionsButtonImage(theme)
             }
             self.badgeBackgroundNode.image = PresentationResourcesChat.chatHistoryNavigationButtonBadgeImage(theme)
             
@@ -116,9 +138,9 @@ class ChatHistoryNavigationButtonNode: ASControlNode {
             
             let badgeSize = self.badgeTextNode.measure(CGSize(width: 200.0, height: 100.0))
             let backgroundSize = CGSize(width: max(18.0, badgeSize.width + 10.0 + 1.0), height: 18.0)
-            let backgroundFrame = CGRect(origin: CGPoint(x: floor((38.0 - backgroundSize.width) / 2.0), y: -6.0), size: backgroundSize)
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((38.0 - backgroundSize.width) / 2.0), y: -9.0), size: backgroundSize)
             self.badgeBackgroundNode.frame = backgroundFrame
-            self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: -5.0), size: badgeSize)
+            self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(backgroundFrame.midX - badgeSize.width / 2.0), y: -8.0), size: badgeSize)
         } else {
             self.badgeBackgroundNode.isHidden = true
             self.badgeTextNode.isHidden = true

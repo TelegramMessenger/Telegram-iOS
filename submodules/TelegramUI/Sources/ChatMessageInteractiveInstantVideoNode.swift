@@ -675,7 +675,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         } else {
                             state = .none
                         }
-                    case .Remote:
+                    case .Remote, .Paused:
                         state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
                 }
             default:
@@ -720,7 +720,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             playbackStatusNode.frame = videoFrame.insetBy(dx: 1.5, dy: 1.5)
             
-            let status = messageFileMediaPlaybackStatus(context: item.context, file: file, message: item.message, isRecentActions: item.associatedData.isRecentActions, isGlobalSearch: false)
+            let status = messageFileMediaPlaybackStatus(context: item.context, file: file, message: item.message, isRecentActions: item.associatedData.isRecentActions, isGlobalSearch: false, isDownloadList: false)
             playbackStatusNode.status = status
             self.durationNode?.status = status
             |> map(Optional.init)
@@ -824,7 +824,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             } else {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }
-                        case .Remote:
+                        case .Remote, .Paused:
                             if let file = self.media {
                                 self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: file, userInitiated: true).start())
                             }
