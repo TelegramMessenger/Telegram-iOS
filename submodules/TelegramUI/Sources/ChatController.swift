@@ -2940,7 +2940,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         translationSettings = TranslationSettings.defaultSettings
                     }
                     
-                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: true, ignoredLanguages: translationSettings.ignoredLanguages)
+                    var showTranslateIfTopical = false
+                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
+                        showTranslateIfTopical = true
+                    }
+                    
+                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
                     
                     let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
                     controller.pushController = { [weak self] c in
@@ -3361,7 +3366,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, openUrl: { [weak self] url in
-                            self?.openUrl(url, concealed: true)
+                            self?.openUrl(url, concealed: true, forceExternal: true)
                         })
                         strongSelf.present(controller, in: .window(.root))
     //                    controller.getNavigationController = { [weak self] in
@@ -3385,7 +3390,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, openUrl: { [weak self] url in
-                            self?.openUrl(url, concealed: true)
+                            self?.openUrl(url, concealed: true, forceExternal: true)
                         }, completion: { [weak self] in
                             self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                         })
@@ -10579,7 +10584,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     initialButton = .gallery
                 }
                 for bot in attachMenuBots.reversed() {
-                    let button: AttachmentButtonType = .app(bot.peer.id, bot.shortName, bot.icons)
+                    let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
                     buttons.insert(button, at: 1)
                     
                     if initialButton == nil && bot.peer.id == botId {
@@ -10607,9 +10612,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: icon, completion: {
-                            let _ = context.engine.messages.addBotToAttachMenu(botId: botId).start()
-                            
-                            Queue.mainQueue().after(1.0, {
+                            let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
+                            |> deliverOnMainQueue).start(error: { _ in
+                                
+                            }, completed: {
                                 strongSelf.presentAttachmentBot(botId: botId, payload: botPayload)
                             })
                         })
@@ -10884,11 +10890,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let controller = strongSelf.configurePollCreation()
                     completion(controller, nil)
                     strongSelf.controllerNavigationDisposable.set(nil)
-                case let .app(botId, botName, _):
+                case let .app(bot, botName, _):
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: botId, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, replyToMessageId: replyMessageId)
+                    let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, replyToMessageId: replyMessageId)
                     controller.openUrl = { [weak self] url in
-                        self?.openUrl(url, concealed: true)
+                        self?.openUrl(url, concealed: true, forceExternal: true)
                     }
                     controller.getNavigationController = { [weak self] in
                         return self?.effectiveNavigationController
@@ -14394,11 +14400,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?) {
+    private func openResolved(result: ResolvedUrl, sourceMessageId: MessageId?, forceExternal: Bool = false) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat(peerId: peerId, updatedPresentationData: self.updatedPresentationData), navigationController: self.effectiveNavigationController, forceExternal: forceExternal, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -14438,8 +14444,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 default:
                     break
                 }
-        }, sendFile: nil,
-        sendSticker: { [weak self] f, sourceNode, sourceRect in
+        }, sendFile: nil, sendSticker: { [weak self] f, sourceNode, sourceRect in
             return self?.interfaceInteraction?.sendSticker(f, true, sourceNode, sourceRect) ?? false
         }, requestMessageActionUrlAuth: { [weak self] subject in
             if case let .url(url) = subject {
@@ -14454,7 +14459,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    private func openUrl(_ url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil) {
+    private func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil) {
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
@@ -14513,7 +14518,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
-                self?.openResolved(result: resolved, sourceMessageId: message?.id)
+                self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal)
             })
         }, performAction: true)
     }

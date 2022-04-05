@@ -335,7 +335,7 @@ public extension TelegramEngine {
             return _internal_sendWebViewData(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, botId: botId, buttonText: buttonText, data: data)
         }
                 
-        public func addBotToAttachMenu(botId: PeerId) -> Signal<Bool, NoError> {
+        public func addBotToAttachMenu(botId: PeerId) -> Signal<Bool, AddBotToAttachMenuError> {
             return _internal_addBotToAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
@@ -343,8 +343,8 @@ public extension TelegramEngine {
             return _internal_removeBotFromAttachMenu(postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
-        public func getAttachMenuBot(botId: PeerId) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
-            return _internal_getAttachMenuBot(postbox: self.account.postbox, network: self.account.network, botId: botId)
+        public func getAttachMenuBot(botId: PeerId, cached: Bool = false) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
+            return _internal_getAttachMenuBot(postbox: self.account.postbox, network: self.account.network, botId: botId, cached: cached)
         }
         
         public func attachMenuBots() -> Signal<[AttachMenuBot], NoError> {

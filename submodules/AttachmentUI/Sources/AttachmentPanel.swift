@@ -24,14 +24,14 @@ private let sideInset: CGFloat = 3.0
 private final class IconComponent: Component {
     public let account: Account
     public let name: String
-    public let file: TelegramMediaFile?
+    public let fileReference: FileMediaReference?
     public let animationName: String?
     public let tintColor: UIColor?
     
-    public init(account: Account, name: String, file: TelegramMediaFile?, animationName: String?, tintColor: UIColor?) {
+    public init(account: Account, name: String, fileReference: FileMediaReference?, animationName: String?, tintColor: UIColor?) {
         self.account = account
         self.name = name
-        self.file = file
+        self.fileReference = fileReference
         self.animationName = animationName
         self.tintColor = tintColor
     }
@@ -43,7 +43,7 @@ private final class IconComponent: Component {
         if lhs.name != rhs.name {
             return false
         }
-        if lhs.file?.fileId != rhs.file?.fileId {
+        if lhs.fileReference?.media != rhs.fileReference?.media {
             return false
         }
         if lhs.animationName != rhs.animationName {
@@ -72,14 +72,14 @@ private final class IconComponent: Component {
         }
         
         func update(component: IconComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            if self.component?.name != component.name || self.component?.file?.fileId != component.file?.fileId || self.component?.tintColor != component.tintColor {
-                if let file = component.file {
+            if self.component?.name != component.name || self.component?.fileReference?.media.fileId != component.fileReference?.media.fileId || self.component?.tintColor != component.tintColor {
+                if let fileReference = component.fileReference {
                     let previousName = self.component?.name ?? ""
                     if !previousName.isEmpty {
                         self.image = nil
                     }
                     
-                    self.disposable = (svgIconImageFile(account: component.account, fileReference: .standalone(media: file), fetched: true)
+                    self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference, fetched: true)
                     |> runOn(Queue.concurrentDefaultQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] transform in
                         let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
@@ -169,6 +169,7 @@ private final class AttachButtonComponent: CombinedComponent {
             let imageName: String
             var imageFile: TelegramMediaFile?
             var animationFile: TelegramMediaFile?
+            var botPeer: Peer?
             
             let component = context.component
             let strings = component.strings
@@ -189,7 +190,8 @@ private final class AttachButtonComponent: CombinedComponent {
             case .poll:
                 name = strings.Attachment_Poll
                 imageName = "Chat/Attach Menu/Poll"
-            case let .app(_, appName, appIcons):
+            case let .app(peer, appName, appIcons):
+                botPeer = peer
                 name = appName
                 imageName = ""
                 if let file = appIcons[.iOSAnimated] {
@@ -232,11 +234,16 @@ private final class AttachButtonComponent: CombinedComponent {
                     .position(CGPoint(x: iconFrame.midX, y: iconFrame.midY))
                 )
             } else {
+                var fileReference: FileMediaReference?
+                if let peer = botPeer.flatMap({ PeerReference($0 )}), let imageFile = imageFile {
+                    fileReference = .attachBot(peer: peer, media: imageFile)
+                }
+                
                 let icon = icon.update(
                     component: IconComponent(
                         account: component.context.account,
                         name: imageName,
-                        file: imageFile,
+                        fileReference: fileReference,
                         animationName: nil,
                         tintColor: tintColor
                     ),
@@ -789,11 +796,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let type = self.buttons[i]
-            if case let .app(_, _, iconFiles) = type {
+            if case let .app(peer, _, iconFiles) = type {
                 for (name, file) in iconFiles {
                     if [.default, .iOSAnimated].contains(name) {
-                        if self.iconDisposables[file.fileId] == nil {
-                            self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .standalone(media: file)).start()
+                        if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer) {
+                            self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
                         }
                     }
                 }
@@ -905,14 +912,14 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         
         self.scrollNode.isUserInteractionEnabled = !isSelecting
         
+        let isButtonVisible = self.mainButtonState.isVisible
+        
         var insets = layout.insets(options: [])
-        if let inputHeight = layout.inputHeight, inputHeight > 0.0 && isSelecting {
+        if let inputHeight = layout.inputHeight, inputHeight > 0.0 && (isSelecting || isButtonVisible) {
             insets.bottom = inputHeight
         } else if layout.intrinsicInsets.bottom > 0.0 {
             insets.bottom = layout.intrinsicInsets.bottom
         }
-        
-        let isButtonVisible = self.mainButtonState.isVisible
         
         if isSelecting {
             self.loadTextNodeIfNeeded()
@@ -944,7 +951,13 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
         if isButtonVisible {
-            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: bounds.height + 9.0))
+            let height: CGFloat
+            if layout.intrinsicInsets.bottom > 0.0 && (layout.inputHeight ?? 0.0).isZero {
+                height = bounds.height + 9.0
+            } else {
+                height = bounds.height + 9.0 + 8.0
+            }
+            containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: height))
         } else if isSelecting {
             containerFrame = CGRect(origin: CGPoint(), size: CGSize(width: bounds.width, height: textPanelHeight + insets.bottom))
         } else {
