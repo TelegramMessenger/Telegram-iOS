@@ -5,6 +5,7 @@
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "v2/InstanceV2Impl.h"
+#import "v2_4_0_0/InstanceV2_4_0_0Impl.h"
 #include "StaticThreads.h"
 
 #import "VideoCaptureInterface.h"
@@ -918,6 +919,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         static dispatch_once_t onceToken;
         dispatch_once(&onceToken, ^{
             tgcalls::Register<tgcalls::InstanceImpl>();
+            tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
             tgcalls::Register<tgcalls::InstanceV2Impl>();
         });
         

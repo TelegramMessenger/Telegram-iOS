@@ -1152,6 +1152,15 @@
 "MuteFor.Days_many" = "Mute for %@ days";
 "MuteFor.Days_0" = "Mute for %@ days";
 
+"MutedForTime.Minutes_1" = "1 minute";
+"MutedForTime.Minutes_any" = "%@ minutes";
+
+"MutedForTime.Hours_1" = "1 hour";
+"MutedForTime.Hours_any" = "%@ hours";
+
+"MutedForTime.Days_1" = "1 day";
+"MutedForTime.Days_any" = "%@ days";
+
 "MuteExpires.Minutes_1" = "in 1 minute";
 "MuteExpires.Minutes_2" = "in 2 minutes";
 "MuteExpires.Minutes_3_10" = "in %@ minutes";
@@ -7469,3 +7478,10 @@ Sorry for the inconvenience.";
 "PeerInfo.ClearMessages" = "Clear Messages";
 "PeerInfo.ClearConfirmationUser" = "Are you sure you want to delete all messages with %@?";
 "PeerInfo.ClearConfirmationGroup" = "Are you sure you want to delete all messages in %@?";
+
+"PeerInfo.TooltipSoundEnabled" = "You will receive notifications with sound.";
+"PeerInfo.TooltipSoundDisabled" = "You will receive silent notifications.";
+"PeerInfo.TooltipUnmuted" = "Notifications are unmuted.";
+"PeerInfo.TooltipMutedFor" = "Notifications are muted for %@.";
+"PeerInfo.TooltipMutedUntil" = "Notifications are muted until %@.";
+"PeerInfo.TooltipMutedForever" = "Notifications are muted.";
