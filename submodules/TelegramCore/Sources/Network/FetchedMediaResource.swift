@@ -225,6 +225,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case wallpapers
     case themes
     case peerAvatars(peer: PeerReference)
+    case attachBot(peer: PeerReference)
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -536,6 +537,25 @@ final class MediaReferenceRevalidationContext {
             }
         }
     }
+    
+    func attachBot(postbox: Postbox, network: Network, background: Bool, peer: PeerReference) -> Signal<AttachMenuBot, RevalidateMediaReferenceError> {
+        return self.genericItem(key: .attachBot(peer: peer), background: background, request: { next, error in
+            return (_internal_getAttachMenuBot(postbox: postbox, network: network, botId: peer.id, cached: false)
+            |> mapError { _ -> RevalidateMediaReferenceError in
+                return .generic
+            }).start(next: { value in
+                next(value)
+            }, error: { _ in
+                error(.generic)
+            })
+        }) |> mapToSignal { next -> Signal<AttachMenuBot, RevalidateMediaReferenceError> in
+            if let next = next as? AttachMenuBot {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
 }
 
 struct RevalidatedMediaResource {
@@ -651,6 +671,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
                     |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                         for photo in result {
                             if let updatedResource = findUpdatedMediaResource(media: photo.image, previousMedia: media, resource: resource) {
+                                return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
+                            }
+                        }
+                        return .fail(.generic)
+                    }
+                case let .attachBot(peer, _):
+                    return revalidationContext.attachBot(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, peer: peer)
+                    |> mapToSignal { attachBot -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                        for (_, icon) in attachBot.icons {
+                            if let updatedResource = findUpdatedMediaResource(media: icon, previousMedia: nil, resource: resource) {
                                 return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))
                             }
                         }

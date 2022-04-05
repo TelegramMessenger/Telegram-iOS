@@ -1046,7 +1046,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })]
                 
-                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: true, ignoredLanguages: translationSettings.ignoredLanguages)
+                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
                 if canTranslate {
                     actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: { [weak self] in
                         let controller = TranslateScreen(context: context, text: text, fromLanguage: language)
@@ -1238,7 +1238,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     default:
                         strongSelf.loadProgress.set(1.0)
-                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, navigation in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peerId, navigation in
                             switch navigation {
                                 case let .chat(_, subject, peekData):
                                     if let navigationController = strongSelf.getNavigationController() {

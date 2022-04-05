@@ -181,7 +181,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 controller?.dismiss()
                 dismissImpl?()
                 
-                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {}, contentContext: nil)

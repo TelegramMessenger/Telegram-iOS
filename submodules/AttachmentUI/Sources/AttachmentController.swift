@@ -17,8 +17,55 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(PeerId, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
     case standalone
+    
+    public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
+        switch lhs {
+            case .gallery:
+                if case .gallery = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .file:
+                if case .file = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .location:
+                if case .location = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .contact:
+                if case .contact = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .poll:
+                if case .poll = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .app(lhsPeer, lhsTitle, lhsIcons):
+                if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                    return true
+                } else {
+                    return false
+                }
+            case .standalone:
+                if case .standalone = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public protocol AttachmentContainable: ViewController {
@@ -169,7 +216,7 @@ public class AttachmentController: ViewController {
                         if let strongSelf = self {
                             strongSelf.panel.updateLoadingProgress(progress)
                             if let layout = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
                             }
                         }
                     }))
@@ -319,9 +366,9 @@ public class AttachmentController: ViewController {
             
             if let controller = self.controller {
                 let _ = self.switchToController(controller.initialButton)
-                if case let .app(botId, _, _) = controller.initialButton {
+                if case let .app(bot, _, _) = controller.initialButton {
                     if let index = controller.buttons.firstIndex(where: {
-                        if case let .app(otherBotId, _, _) = $0, otherBotId == botId {
+                        if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
                             return true
                         } else {
                             return false

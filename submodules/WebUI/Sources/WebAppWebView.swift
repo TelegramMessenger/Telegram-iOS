@@ -121,4 +121,8 @@ final class WebAppWebView: WKWebView {
     @objc func handleTap() {
         self.didTouchOnce = true
     }
+    
+    override var inputAccessoryView: UIView? {
+        return nil
+    }
 }

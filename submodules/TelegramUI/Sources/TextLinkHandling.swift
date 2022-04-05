@@ -23,7 +23,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     }
     
     let openResolvedPeerImpl: (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void = { [weak controller] peerId, navigation in
-        context.sharedContext.openResolvedUrl(.peer(peerId, navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), openPeer: { (peerId, navigation) in
+        context.sharedContext.openResolvedUrl(.peer(peerId, navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), forceExternal: false, openPeer: { (peerId, navigation) in
             switch navigation {
                 case let .chat(_, subject, peekData):
                     if let navigationController = controller?.navigationController as? NavigationController {

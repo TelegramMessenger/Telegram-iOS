@@ -910,7 +910,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), .window(.root), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:
-                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peerId, _ in
                             if let strongSelf = self {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }

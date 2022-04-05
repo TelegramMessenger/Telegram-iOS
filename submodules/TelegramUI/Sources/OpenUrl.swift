@@ -188,7 +188,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if case let .externalUrl(value) = resolved {
                 context.sharedContext.applicationBindings.openUrl(value)
             } else {
-                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     switch navigation {
                         case .info:
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
