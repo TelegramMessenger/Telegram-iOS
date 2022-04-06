@@ -3360,7 +3360,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let openWebView = {
                 if fromMenu {
-                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: nil, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true)
+                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                         self?.openUrl(url, concealed: true, forceExternal: true)
                     }, getInputContainerNode: { [weak self] in

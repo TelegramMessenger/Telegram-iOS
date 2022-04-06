@@ -676,7 +676,7 @@ public class AttachmentController: ViewController {
                     containerHeight = layout.size.height
                 }
                 containerRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: containerHeight))
-             
+                
                 self.wrapperNode.cornerRadius = 0.0
                 self.shadowNode.alpha = 0.0
                 
@@ -697,7 +697,7 @@ public class AttachmentController: ViewController {
             if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
                panelHeight = inputContainerHeight
             }
-            if hasPanel || hasButton {
+            if hasPanel || hasButton || fromMenu {
                 containerInsets.bottom = panelHeight
             }
             
