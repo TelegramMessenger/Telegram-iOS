@@ -21,6 +21,7 @@ import InvisibleInkDustNode
 import TextInputMenu
 import Pasteboard
 import ChatPresentationInterfaceState
+import ManagedAnimationNode
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -255,7 +256,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     let menuButton: HighlightTrackingButtonNode
     private let menuButtonBackgroundNode: ASDisplayNode
     private let menuButtonClippingNode: ASDisplayNode
-    private let menuButtonIconNode: AnimationNode
+    private let menuButtonIconNode: MenuIconNode
     private let menuButtonTextNode: ImmediateTextNode
     
     let sendAsAvatarButtonNode: HighlightableButtonNode
@@ -483,7 +484,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButtonClippingNode = ASDisplayNode()
         self.menuButtonClippingNode.clipsToBounds = true
         
-        self.menuButtonIconNode = AnimationNode(animation: "anim_menuclose", colors: ["1.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+        self.menuButtonIconNode = MenuIconNode()
+        self.menuButtonIconNode.enqueueState(presentationInterfaceState.showMenuForWebView ? .app : .menu, animated: false)
+        self.menuButtonIconNode.customColor = presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor
         self.menuButtonTextNode = ImmediateTextNode()
         
         self.sendAsAvatarButtonNode = HighlightableButtonNode()
@@ -879,24 +882,29 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
+            if interfaceState.showMenuForWebView && self.menuButtonIconNode.iconState == .menu {
+                self.menuButtonIconNode.enqueueState(.app, animated: false)
+            } else if !interfaceState.showMenuForWebView && self.menuButtonIconNode.iconState == .app {
+                self.menuButtonIconNode.enqueueState(.menu, animated: false)
+            }
             let themeUpdated = previousState?.theme !== interfaceState.theme
-            
+            if themeUpdated {
+                self.menuButtonIconNode.customColor = interfaceState.theme.chat.inputPanel.actionControlForegroundColor
+            }
             if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty {
-                self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                self.menuButtonIconNode.enqueueState(.close, animated: false)
             } else if interfaceState.showMenuForWebView, let previousShowWebView = previousState?.showWebView, previousShowWebView != interfaceState.showWebView {
                 if interfaceState.showWebView {
-                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                    self.menuButtonIconNode.enqueueState(.close, animated: true)
                 } else {
-                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                    self.menuButtonIconNode.enqueueState(.app, animated: true)
                 }
-                self.menuButtonIconNode.playOnce()
             } else if let previousShowCommands = previousState?.showCommands, previousShowCommands != interfaceState.showCommands {
                 if interfaceState.showCommands {
-                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                    self.menuButtonIconNode.enqueueState(.close, animated: true)
                 } else {
-                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                    self.menuButtonIconNode.enqueueState(.menu, animated: true)
                 }
-                self.menuButtonIconNode.playOnce()
             }
             
             var updateSendButtonIcon = false
@@ -2734,3 +2742,74 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
 }
 
+private enum MenuIconNodeState: Equatable {
+    case menu
+    case app
+    case close
+}
+
+private final class MenuIconNode: ManagedAnimationNode {
+    private let duration: Double = 0.33
+    fileprivate var iconState: MenuIconNodeState = .menu
+    
+    init() {
+        super.init(size: CGSize(width: 30.0, height: 30.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+    }
+    
+    func enqueueState(_ state: MenuIconNodeState, animated: Bool) {
+        guard self.iconState != state else {
+            return
+        }
+        
+        let previousState = self.iconState
+        self.iconState = state
+        
+        switch previousState {
+            case .close:
+                switch state {
+                    case .menu:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 20, endFrame: 0), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .app:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 0, endFrame: 22), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 22, endFrame: 22), duration: 0.01))
+                        }
+                    case .close:
+                        break
+                }
+            case .menu:
+                switch state {
+                    case .close:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 20), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 20, endFrame: 20), duration: 0.01))
+                        }
+                    case .app:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 22, endFrame: 22), duration: 0.01))
+                    case .menu:
+                        break
+                }
+            case .app:
+                switch state {
+                    case .close:
+                        if animated {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 22, endFrame: 0), duration: self.duration))
+                        } else {
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_webview"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
+                        }
+                    case .menu:
+                        self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 20), duration: 0.01))
+                    case .app:
+                        break
+            }
+        }
+    }
+}

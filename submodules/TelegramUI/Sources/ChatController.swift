@@ -6778,18 +6778,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                     let (updatedInputMode, updatedClosedButtonKeyboardMessageId) = f($0)
-                    return $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({
+                    var updated = $0.updatedInputMode({ _ in return updatedInputMode }).updatedInterfaceState({
                         $0.withUpdatedMessageActionsState({ value in
                             var value = value
                             value.closedButtonKeyboardMessageId = updatedClosedButtonKeyboardMessageId
                             return value
                         })
                     })
+                    if updatedInputMode == .text {
+                        updated = updated.updatedShowWebView(false)
+                    }
+                    return updated
                 })
             }
         }, openStickers: { [weak self] in
             guard let strongSelf = self else {
                 return
+            }
+            strongSelf.interfaceInteraction?.updateShowWebView { _ in
+                return false
             }
             strongSelf.chatDisplayNode.openStickers()
             strongSelf.mediaRecordingModeTooltipController?.dismissImmediately()
@@ -7071,6 +7078,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             strongSelf.mediaRecordingModeTooltipController?.dismiss()
+            strongSelf.interfaceInteraction?.updateShowWebView { _ in
+                return false
+            }
             
             let requestId = strongSelf.beginMediaRecordingRequestId
             let begin: () -> Void = {
@@ -7307,7 +7317,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var updatedMode: ChatTextInputMediaRecordingButtonMode?
                 
                 strongSelf.updateChatPresentationInterfaceState(interactive: true, {
-                    return $0.updatedInterfaceState { current in
+                    return $0.updatedInterfaceState({ current in
                         let mode: ChatTextInputMediaRecordingButtonMode
                         switch current.mediaRecordingMode {
                             case .audio:
@@ -7317,7 +7327,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         updatedMode = mode
                         return current.withUpdatedMediaRecordingMode(mode)
-                    }
+                    }).updatedShowWebView(false)
                 })
                 
                 if let updatedMode = updatedMode, updatedMode == .video {
