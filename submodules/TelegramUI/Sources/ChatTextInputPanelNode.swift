@@ -22,6 +22,7 @@ import TextInputMenu
 import Pasteboard
 import ChatPresentationInterfaceState
 import ManagedAnimationNode
+import AttachmentUI
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -2754,6 +2755,10 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             sourceRect: self.view.convert(self.bounds, to: nil),
             scrollOffset: textInputNode.textView.contentOffset.y
         )
+    }
+    
+    func makeAttachmentMenuTransition(accessoryPanelNode: ASDisplayNode?) -> AttachmentController.InputPanelTransition {
+        return AttachmentController.InputPanelTransition(inputNode: self, accessoryPanelNode: accessoryPanelNode, menuButtonNode: self.menuButton, menuButtonBackgroundNode: self.menuButtonBackgroundNode, menuIconNode: self.menuButtonIconNode, menuTextNode: self.menuButtonTextNode, prepareForDismiss: { self.menuButtonIconNode.enqueueState(.app, animated: false) })
     }
 }
 

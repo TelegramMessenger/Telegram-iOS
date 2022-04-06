@@ -384,20 +384,11 @@ public struct AttachmentMainButtonState {
 private final class MainButtonNode: HighlightTrackingButtonNode {
     private var state: AttachmentMainButtonState
     
-    private let backgroundNode: ASDisplayNode
-    private let textNode: ImmediateTextNode
+    fileprivate let textNode: ImmediateTextNode
     private let statusNode: SemanticStatusNode
         
     override init(pointerStyle: PointerStyle? = nil) {
         self.state = AttachmentMainButtonState.initial
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.allowsGroupOpacity = true
-        self.backgroundNode.isUserInteractionEnabled = false
-        self.backgroundNode.cornerRadius = 12.0
-        if #available(iOS 13.0, *) {
-            self.backgroundNode.layer.cornerCurve = .continuous
-        }
         
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
@@ -406,20 +397,28 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         
         super.init(pointerStyle: pointerStyle)
                 
-        self.addSubnode(self.backgroundNode)
-        self.backgroundNode.addSubnode(self.textNode)
-        self.backgroundNode.addSubnode(self.statusNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.statusNode)
         
         self.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 0.65
+                    strongSelf.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.alpha = 0.65
                 } else {
-                    strongSelf.backgroundNode.alpha = 1.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 0.65, to: 1.0, duration: 0.2)
+                    strongSelf.alpha = 1.0
+                    strongSelf.layer.animateAlpha(from: 0.65, to: 1.0, duration: 0.2)
                 }
             }
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.cornerRadius = 12.0
+        if #available(iOS 13.0, *) {
+            self.layer.cornerCurve = .continuous
         }
     }
     
@@ -434,9 +433,8 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
             let textSize = self.textNode.updateLayout(size)
             self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
             
-            self.backgroundNode.backgroundColor = state.backgroundColor
+            self.backgroundColor = state.backgroundColor
         }
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         
         let statusSize = CGSize(width: 20.0, height: 20.0)
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: size.width - statusSize.width - 15.0, y: floorToScreenPixels((size.height - statusSize.height) / 2.0)), size: statusSize))
@@ -472,8 +470,11 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var buttons: [AttachmentButtonType] = []
     private var selectedIndex: Int = 0
     private(set) var isSelecting: Bool = false
-    private(set) var isButtonVisible: Bool = false
-        
+    private var _isButtonVisible: Bool = false
+    var isButtonVisible: Bool {
+        return self.mainButtonState.isVisible
+    }
+    
     private var validLayout: ContainerViewLayout?
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
@@ -853,7 +854,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }
         self.scrollLayout = (layout.size.width, contentSize)
 
-        transition.updateFrameAsPositionAndBounds(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting || self.isButtonVisible ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
+        transition.updateFrameAsPositionAndBounds(node: self.scrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSelecting || self._isButtonVisible ? -buttonSize.height : 0.0), size: CGSize(width: layout.size.width, height: buttonSize.height)))
         self.scrollNode.view.contentSize = contentSize
 
         return true
@@ -903,13 +904,144 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.mainButtonState = mainButtonState ?? currentButtonState
     }
     
+    let animatingTransitionPromise = ValuePromise<Bool>(false)
+    private(set) var animatingTransition = false {
+        didSet {
+            self.animatingTransitionPromise.set(self.animatingTransition)
+        }
+    }
+    
+    func animateTransitionIn(inputTransition: AttachmentController.InputPanelTransition, transition: ContainedViewLayoutTransition) {
+        guard !self.animatingTransition, let inputNodeSnapshotView = inputTransition.inputNode.view.snapshotView(afterScreenUpdates: false) else {
+            return
+        }
+        guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: false), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
+            return
+        }
+        self.animatingTransition = true
+        
+        let targetButtonColor = self.mainButtonNode.backgroundColor
+        self.mainButtonNode.backgroundColor = inputTransition.menuButtonBackgroundNode.backgroundColor
+        transition.updateBackgroundColor(node: self.mainButtonNode, color: targetButtonColor ?? .clear)
+        
+        transition.animateFrame(layer: self.mainButtonNode.layer, from: inputTransition.menuButtonNode.frame)
+        transition.animatePosition(node: self.mainButtonNode.textNode, from: CGPoint(x: inputTransition.menuButtonNode.frame.width / 2.0, y: inputTransition.menuButtonNode.frame.height / 2.0))
+        
+        let targetButtonCornerRadius = self.mainButtonNode.cornerRadius
+        self.mainButtonNode.cornerRadius = inputTransition.menuButtonNode.cornerRadius
+        transition.updateCornerRadius(node: self.mainButtonNode, cornerRadius: targetButtonCornerRadius)
+        self.mainButtonNode.subnodeTransform = CATransform3DMakeScale(0.2, 0.2, 1.0)
+        transition.updateSublayerTransformScale(node: self.mainButtonNode, scale: 1.0)
+        self.mainButtonNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        let menuContentDelta = (self.mainButtonNode.frame.width - inputTransition.menuButtonNode.frame.width) / 2.0
+        menuIconSnapshotView.frame = inputTransition.menuIconNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX, dy: inputTransition.menuButtonNode.frame.minY)
+        self.view.addSubview(menuIconSnapshotView)
+        menuIconSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak menuIconSnapshotView] _ in
+            menuIconSnapshotView?.removeFromSuperview()
+        })
+        transition.updatePosition(layer: menuIconSnapshotView.layer, position: CGPoint(x: menuIconSnapshotView.center.x + menuContentDelta, y: self.mainButtonNode.position.y))
+        
+        menuTextSnapshotView.frame = inputTransition.menuTextNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + 19.0, dy: inputTransition.menuButtonNode.frame.minY)
+        self.view.addSubview(menuTextSnapshotView)
+        menuTextSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak menuTextSnapshotView] _ in
+            menuTextSnapshotView?.removeFromSuperview()
+        })
+        transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x + menuContentDelta, y: self.mainButtonNode.position.y))
+        
+        inputNodeSnapshotView.clipsToBounds = true
+        inputNodeSnapshotView.contentMode = .right
+        inputNodeSnapshotView.frame = CGRect(x: inputTransition.menuButtonNode.frame.maxX, y: 0.0, width: inputNodeSnapshotView.frame.width - inputTransition.menuButtonNode.frame.maxX, height: inputNodeSnapshotView.frame.height)
+        self.view.addSubview(inputNodeSnapshotView)
+        
+        let targetInputPosition = CGPoint(x: inputNodeSnapshotView.center.x + inputNodeSnapshotView.frame.width, y: self.mainButtonNode.position.y)
+        transition.updatePosition(layer: inputNodeSnapshotView.layer, position: targetInputPosition, completion: { [weak inputNodeSnapshotView] _ in
+            inputNodeSnapshotView?.removeFromSuperview()
+            self.animatingTransition = false
+        })
+    }
+    
+    private var dismissed = false
+    func animateTransitionOut(inputTransition: AttachmentController.InputPanelTransition, dismissed: Bool, transition: ContainedViewLayoutTransition) {
+        guard !self.animatingTransition, let inputNodeSnapshotView = inputTransition.inputNode.view.snapshotView(afterScreenUpdates: false) else {
+            return
+        }
+        if dismissed {
+            inputTransition.prepareForDismiss()
+        }
+      
+        self.animatingTransition = true
+        self.dismissed = dismissed
+        
+        let action = {
+            guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: true), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
+                return
+            }
+            
+            let sourceButtonColor = self.mainButtonNode.backgroundColor
+            transition.updateBackgroundColor(node: self.mainButtonNode, color: inputTransition.menuButtonBackgroundNode.backgroundColor ?? .clear)
+            
+            let sourceButtonFrame = self.mainButtonNode.frame
+            transition.updateFrame(node: self.mainButtonNode, frame: inputTransition.menuButtonNode.frame)
+            let sourceButtonTextPosition = self.mainButtonNode.textNode.position
+            transition.updatePosition(node: self.mainButtonNode.textNode, position: CGPoint(x: inputTransition.menuButtonNode.frame.width / 2.0, y: inputTransition.menuButtonNode.frame.height / 2.0))
+            
+            let sourceButtonCornerRadius = self.mainButtonNode.cornerRadius
+            transition.updateCornerRadius(node: self.mainButtonNode, cornerRadius: inputTransition.menuButtonNode.cornerRadius)
+            transition.updateSublayerTransformScale(node: self.mainButtonNode, scale: 0.2)
+            self.mainButtonNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            
+            let menuContentDelta = (sourceButtonFrame.width - inputTransition.menuButtonNode.frame.width) / 2.0
+            var menuIconSnapshotViewFrame = inputTransition.menuIconNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + menuContentDelta, dy: inputTransition.menuButtonNode.frame.minY)
+            menuIconSnapshotViewFrame.origin.y = self.mainButtonNode.position.y - menuIconSnapshotViewFrame.height / 2.0
+            menuIconSnapshotView.frame = menuIconSnapshotViewFrame
+            self.view.addSubview(menuIconSnapshotView)
+            menuIconSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            transition.updatePosition(layer: menuIconSnapshotView.layer, position: CGPoint(x: menuIconSnapshotView.center.x - menuContentDelta, y: inputTransition.menuButtonNode.position.y))
+            
+            var menuTextSnapshotViewFrame = inputTransition.menuTextNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + 19.0 + menuContentDelta, dy: inputTransition.menuButtonNode.frame.minY)
+            menuTextSnapshotViewFrame.origin.y = self.mainButtonNode.position.y - menuTextSnapshotViewFrame.height / 2.0
+            menuTextSnapshotView.frame = menuTextSnapshotViewFrame
+            self.view.addSubview(menuTextSnapshotView)
+            menuTextSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x - menuContentDelta, y: inputTransition.menuButtonNode.position.y))
+            
+            inputNodeSnapshotView.clipsToBounds = true
+            inputNodeSnapshotView.contentMode = .right
+            let targetInputFrame = CGRect(x: inputTransition.menuButtonNode.frame.maxX, y: 0.0, width: inputNodeSnapshotView.frame.width - inputTransition.menuButtonNode.frame.maxX, height: inputNodeSnapshotView.frame.height)
+            inputNodeSnapshotView.frame = targetInputFrame.offsetBy(dx: targetInputFrame.width, dy: self.mainButtonNode.position.y - inputNodeSnapshotView.frame.height / 2.0)
+            self.view.addSubview(inputNodeSnapshotView)
+            transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
+                inputNodeSnapshotView?.removeFromSuperview()
+                self.animatingTransition = false
+                
+                if !dismissed {
+                    menuIconSnapshotView?.removeFromSuperview()
+                    menuTextSnapshotView?.removeFromSuperview()
+                    
+                    self.mainButtonNode.backgroundColor = sourceButtonColor
+                    self.mainButtonNode.frame = sourceButtonFrame
+                    self.mainButtonNode.textNode.position = sourceButtonTextPosition
+                    self.mainButtonNode.textNode.layer.removeAllAnimations()
+                    self.mainButtonNode.cornerRadius = sourceButtonCornerRadius
+                }
+            })
+        }
+        
+        if dismissed {
+            Queue.mainQueue().after(0.01, action)
+        } else {
+            action()
+        }
+    }
+    
     func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = layout
         self.buttons = buttons
         self.elevateProgress = elevateProgress
                 
-        let isButtonVisibleUpdated = self.isButtonVisible != self.mainButtonState.isVisible
-        self.isButtonVisible = self.mainButtonState.isVisible
+        let isButtonVisibleUpdated = self._isButtonVisible != self.mainButtonState.isVisible
+        self._isButtonVisible = self.mainButtonState.isVisible
         
         let isSelectingUpdated = self.isSelecting != isSelecting
         self.isSelecting = isSelecting
@@ -1025,8 +1157,12 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
 
         let sideInset: CGFloat = 16.0
         let buttonSize = CGSize(width: layout.size.width - (sideInset + layout.safeInsets.left) * 2.0, height: 50.0)
-        self.mainButtonNode.updateLayout(size: buttonSize, state: self.mainButtonState, transition: transition)
-        transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible || self.fromMenu ? 8.0 : containerFrame.height), size: buttonSize))
+        if !self.dismissed {
+            self.mainButtonNode.updateLayout(size: buttonSize, state: self.mainButtonState, transition: transition)
+        }
+        if !self.animatingTransition {
+            transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible || self.fromMenu ? 8.0 : containerFrame.height), size: buttonSize))
+        }
         
         return containerFrame.height
     }
@@ -1035,3 +1171,4 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.updateViews(transition: .immediate)
     }
 }
+
