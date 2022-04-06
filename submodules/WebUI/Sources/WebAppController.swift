@@ -149,7 +149,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
             })
                 
-            if let url = controller.url {
+            if let url = controller.url, !controller.fromMenu {
                 self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
                     self.webView?.load(URLRequest(url: parsedUrl))
