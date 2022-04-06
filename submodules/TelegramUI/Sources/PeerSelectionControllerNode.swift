@@ -347,6 +347,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, openSendAsPeer: { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, openWebView: { _, _, _, _ in
+        }, updateShowWebView: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)

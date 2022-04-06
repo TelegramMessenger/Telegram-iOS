@@ -69,7 +69,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload, adminRights):
-            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title))
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title))
             controller.peerSelected = { [weak controller] peer in
                 let peerId = peer.id
                 

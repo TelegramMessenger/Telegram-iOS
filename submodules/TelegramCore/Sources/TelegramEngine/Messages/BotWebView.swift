@@ -93,7 +93,7 @@ private func keepWebViewSignal(network: Network, stateManager: AccountStateManag
     return signal
 }
 
-func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, fromMenu: Bool, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -118,6 +118,9 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
         }
         if let _ = payload {
             flags |= (1 << 3)
+        }
+        if fromMenu {
+            flags |= (1 << 4)
         }
         return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId))
         |> mapError { _ -> RequestWebViewError in

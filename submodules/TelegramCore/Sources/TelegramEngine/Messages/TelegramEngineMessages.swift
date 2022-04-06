@@ -322,8 +322,8 @@ public extension TelegramEngine {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
         
-        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
-            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, botId: botId, url: url, payload: payload, themeParams: themeParams, replyToMessageId: replyToMessageId)
+        public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, fromMenu: Bool, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
+            return _internal_requestWebView(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, botId: botId, url: url, payload: payload, themeParams: themeParams, fromMenu: fromMenu, replyToMessageId: replyToMessageId)
         }
         
         public func requestSimpleWebView(botId: PeerId, url: String, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {

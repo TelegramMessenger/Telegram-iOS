@@ -261,7 +261,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                 case let .openUserProfile(peerId):
                     self.controllerInteraction.openPeer(peerId, .info, nil, nil)
                 case let .openWebView(url, simple):
-                    self.controllerInteraction.openWebView(markupButton.title, url, simple)
+                    self.controllerInteraction.openWebView(markupButton.title, url, simple, false)
             }
             if dismissIfOnce {
                 if let message = self.message {

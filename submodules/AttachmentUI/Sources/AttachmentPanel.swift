@@ -477,6 +477,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var validLayout: ContainerViewLayout?
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
+    var fromMenu: Bool = false
+    
     var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
     var beganTextEditing: () -> Void = {}
     var textUpdated: (NSAttributedString) -> Void = { _ in }
@@ -680,6 +682,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, openSendAsPeer: { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, openWebView: { _, _, _, _ in  
+        }, updateShowWebView: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)
@@ -1022,7 +1026,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let sideInset: CGFloat = 16.0
         let buttonSize = CGSize(width: layout.size.width - (sideInset + layout.safeInsets.left) * 2.0, height: 50.0)
         self.mainButtonNode.updateLayout(size: buttonSize, state: self.mainButtonState, transition: transition)
-        transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible ? 8.0 : containerFrame.height), size: buttonSize))
+        transition.updateFrame(node: self.mainButtonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + sideInset, y: isButtonVisible || self.fromMenu ? 8.0 : containerFrame.height), size: buttonSize))
         
         return containerFrame.height
     }

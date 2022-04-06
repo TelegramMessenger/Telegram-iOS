@@ -131,7 +131,7 @@ public final class ChatControllerInteraction {
     let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
     let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
     let openJoinLink: (String) -> Void
-    let openWebView: (String, String, Bool) -> Void
+    let openWebView: (String, String, Bool, Bool) -> Void
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
@@ -231,7 +231,7 @@ public final class ChatControllerInteraction {
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
-        openWebView: @escaping (String, String, Bool) -> Void,
+        openWebView: @escaping (String, String, Bool, Bool) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
@@ -377,7 +377,7 @@ public final class ChatControllerInteraction {
         }, commitEmojiInteraction: { _, _, _, _ in  
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
-        }, openWebView: { _, _, _ in
+        }, openWebView: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

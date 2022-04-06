@@ -826,7 +826,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case let .openUserProfile(peerId):
                         controllerInteraction.openPeer(peerId, .info, nil, nil)
                     case let .openWebView(url, simple):
-                        controllerInteraction.openWebView(button.title, url, simple)
+                        controllerInteraction.openWebView(button.title, url, simple, false)
                     }
                     
                     break

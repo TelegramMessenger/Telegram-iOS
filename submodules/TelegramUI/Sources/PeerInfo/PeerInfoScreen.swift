@@ -346,6 +346,8 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { node, save in
             displayCopyProtectionTip(node, save)
+        }, openWebView: { _, _, _, _ in
+        }, updateShowWebView: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)
@@ -2268,7 +2270,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, commitEmojiInteraction: { _, _, _, _ in
         }, openLargeEmojiInfo: { _, _, _ in
         }, openJoinLink: { _ in
-        }, openWebView: { _, _, _ in
+        }, openWebView: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

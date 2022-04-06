@@ -18,6 +18,37 @@ import PhotoResources
 import LegacyComponents
 import UrlHandling
 
+public struct WebAppParameters {
+    let peerId: PeerId
+    let botId: PeerId
+    let botName: String
+    let url: String?
+    let queryId: Int64?
+    let buttonText: String?
+    let keepAliveSignal: Signal<Never, KeepWebViewError>?
+    let fromMenu: Bool
+    
+    public init(
+        peerId: PeerId,
+        botId: PeerId,
+        botName: String,
+        url: String?,
+        queryId: Int64?,
+        buttonText: String?,
+        keepAliveSignal: Signal<Never, KeepWebViewError>?,
+        fromMenu: Bool
+    ) {
+        self.peerId = peerId
+        self.botId = botId
+        self.botName = botName
+        self.url = url
+        self.queryId = queryId
+        self.buttonText = buttonText
+        self.keepAliveSignal = keepAliveSignal
+        self.fromMenu = fromMenu
+    }
+}
+
 public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
     var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
     if backgroundColor == 0x000000 {
@@ -39,7 +70,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
-    
+        
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -137,7 +168,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: nil, themeParams: generateWebAppThemeParams(presentationData.theme), replyToMessageId: controller.replyToMessageId)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: nil, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -259,6 +290,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+        func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+            decisionHandler(.prompt)
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
@@ -278,16 +314,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             if let placeholderNode = self.placeholderNode {
-//                let height: CGFloat
-//                if case .compact = layout.metrics.widthClass {
-//                    height = layout.size.height - layout.additionalInsets.bottom - layout.intrinsicInsets.bottom
-//                } else {
-//                    height = layout.size.height - layout.intrinsicInsets.bottom
-//                }
+                let height: CGFloat
+                if case .compact = layout.metrics.widthClass {
+                    height = layout.size.height - layout.additionalInsets.bottom - layout.intrinsicInsets.bottom
+                } else {
+                    height = layout.size.height - layout.intrinsicInsets.bottom
+                }
                 
-                let grid = true
+                let grid = self.controller?.botId.id._internalGetInt64Value() == 2200339955
                 let placeholderSize = self.updatePlaceholder(grid: grid, layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
-                let placeholderY: CGFloat = 0.0 // grid ? 0.0 : floorToScreenPixels((height - placeholderSize.height) / 2.0)
+                let placeholderY: CGFloat = grid ? 0.0 : floorToScreenPixels((height - placeholderSize.height) / 2.0)
                 let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
@@ -324,12 +360,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let webView = self.webView, !webView.didTouchOnce {
                         
                     } else if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
-                        if let isVisible = json["is_visible"] as? Bool {
+                        if var isVisible = json["is_visible"] as? Bool {
                             let text = json["text"] as? String
+                            if (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                isVisible = false
+                            }
+                            
                             let backgroundColorString = json["color"] as? String
-                            let backgroundColor = backgroundColorString.flatMap({ UIColor(hexString: $0) }) ?? .clear
+                            let backgroundColor = backgroundColorString.flatMap({ UIColor(hexString: $0) }) ?? self.presentationData.theme.list.itemCheckColors.fillColor
                             let textColorString = json["text_color"] as? String
-                            let textColor = textColorString.flatMap({ UIColor(hexString: $0) }) ?? .clear
+                            let textColor = textColorString.flatMap({ UIColor(hexString: $0) }) ?? self.presentationData.theme.list.itemCheckColors.foregroundColor
                             
                             let isLoading = json["is_progress_visible"] as? Bool
                             let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false)
@@ -409,6 +449,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let url: String?
     private let queryId: Int64?
     private let buttonText: String?
+    private let fromMenu: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
     
@@ -420,14 +461,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
         
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String?, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, replyToMessageId: MessageId?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?) {
         self.context = context
-        self.peerId = peerId
-        self.botId = botId
-        self.url = url
-        self.queryId = queryId
-        self.buttonText = buttonText
-        self.keepAliveSignal = keepAliveSignal
+        self.peerId = params.peerId
+        self.botId = params.botId
+        self.url = params.url
+        self.queryId = params.queryId
+        self.buttonText = params.buttonText
+        self.fromMenu = params.fromMenu
+        self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
         
         self.updatedPresentationData = updatedPresentationData
@@ -447,7 +489,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.navigationItem.rightBarButtonItem?.target = self
         
         let titleView = CounterContollerTitleView(theme: self.presentationData.theme)
-        titleView.title = CounterContollerTitle(title: botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
+        titleView.title = CounterContollerTitle(title: params.botName, counter: self.presentationData.strings.Bot_GenericBotStatus)
         self.navigationItem.titleView = titleView
         self.titleView = titleView
         
@@ -466,7 +508,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 strongSelf.titleView?.theme = presentationData.theme
                 
-                strongSelf.controllerNode.updatePresentationData(presentationData)
+                if strongSelf.isNodeLoaded {
+                    strongSelf.controllerNode.updatePresentationData(presentationData)
+                }
             }
         })
     }
@@ -622,13 +666,15 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, botId: PeerId, botName: String, url: String, queryId: Int64?, buttonText: String?, keepAliveSignal: Signal<Never, KeepWebViewError>?, openUrl: @escaping (String) -> Void, completion: @escaping () -> Void = {}) -> ViewController {
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: peerId), buttons: [.standalone], initialButton: .standalone)
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode)? = { return nil }, completion: @escaping () -> Void = {}, dismissed: @escaping () -> Void = {}) -> ViewController {
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu)
+    controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
-        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, botId: botId, botName: botName, url: url, queryId: queryId, buttonText: buttonText, keepAliveSignal: keepAliveSignal, replyToMessageId: nil)
+        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil)
         webAppController.openUrl = openUrl
         webAppController.completion = completion
         present(webAppController, webAppController.mediaPickerContext)
     }
+    controller.dismissed = dismissed
     return controller
 }

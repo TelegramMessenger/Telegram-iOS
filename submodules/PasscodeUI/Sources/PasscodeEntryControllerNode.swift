@@ -78,6 +78,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.cancelButtonNode = HighlightableButtonNode()
         self.deleteButtonNode = HighlightableButtonNode()
+        self.deleteButtonNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: -16.0, bottom: -10.0, right: -16.0)
         self.biometricButtonNode = HighlightableButtonNode()
         self.effectView = UIVisualEffectView(effect: nil)
             

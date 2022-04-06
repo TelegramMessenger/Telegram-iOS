@@ -159,6 +159,9 @@ public class AttachmentController: ViewController {
     private let chatLocation: ChatLocation
     private let buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
+    private let fromMenu: Bool
+    
+    public var dismissed: () -> Void = {}
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         get {
@@ -256,7 +259,8 @@ public class AttachmentController: ViewController {
             self.container = AttachmentContainer()
             self.container.canHaveKeyboardFocus = true
             self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, updatedPresentationData: controller.updatedPresentationData)
-                        
+            self.panel.fromMenu = controller.fromMenu
+            
             super.init()
             
             self.addSubnode(self.dim)
@@ -359,6 +363,8 @@ public class AttachmentController: ViewController {
             self.mediaSelectionCountDisposable.dispose()
         }
         
+        private var inputContainerHeight: CGFloat?
+        private var inputContainerNode: ASDisplayNode?
         override func didLoad() {
             super.didLoad()
             
@@ -377,6 +383,12 @@ public class AttachmentController: ViewController {
                         self.panel.updateSelectedIndex(index)
                     }
                 }
+            }
+            
+            if let (inputContainerHeight, inputContainerNode) = self.controller?.getInputContainerNode() {
+                self.inputContainerHeight = inputContainerHeight
+                self.inputContainerNode = inputContainerNode
+                self.addSubnode(inputContainerNode)
             }
         }
         
@@ -595,8 +607,14 @@ public class AttachmentController: ViewController {
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
+            guard let controller = self.controller else {
+                return
+            }
+            
             transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
-                          
+                     
+            let fromMenu = controller.fromMenu
+            
             var containerLayout = layout
             let containerRect: CGRect
             if case .regular = layout.metrics.widthClass {
@@ -628,8 +646,18 @@ public class AttachmentController: ViewController {
                     self.shadowNode.image = generateShadowImage()
                 }
             } else {
-                containerRect = CGRect(origin: CGPoint(), size: layout.size)
-                
+                let containerHeight: CGFloat
+                if fromMenu {
+                    if let inputContainerHeight = self.inputContainerHeight {
+                        containerHeight = layout.size.height - inputContainerHeight
+                    } else {
+                        containerHeight = layout.size.height
+                    }
+                } else {
+                    containerHeight = layout.size.height
+                }
+                containerRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: containerHeight))
+             
                 self.wrapperNode.cornerRadius = 0.0
                 self.shadowNode.alpha = 0.0
                 
@@ -642,9 +670,12 @@ public class AttachmentController: ViewController {
             if let controller = self.controller, controller.buttons.count > 1 {
                 hasPanel = true
             }
-            
+                        
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
+            var panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
+            if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
+               panelHeight = inputContainerHeight
+            }
             if hasPanel || hasButton {
                 containerInsets.bottom = panelHeight
             }
@@ -654,10 +685,23 @@ public class AttachmentController: ViewController {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
             var panelY = containerRect.height - panelHeight
-            if !hasPanel && !hasButton {
+            if fromMenu {
+                panelY = layout.size.height - panelHeight
+            } else if !hasPanel && !hasButton {
                 panelY = containerRect.height
             }
-            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)))
+            
+            if fromMenu {
+                if hasButton {
+                    self.panel.isHidden = false
+                }
+            }
+            
+            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)), completion: { [weak self] finished in
+                if finished && fromMenu {
+                    self?.panel.isHidden = !hasButton
+                }
+            })
             
             var shadowFrame = containerRect.insetBy(dx: -60.0, dy: -60.0)
             shadowFrame.size.height -= 12.0
@@ -683,7 +727,11 @@ public class AttachmentController: ViewController {
                                     
                 if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
                     self.wrapperNode.addSubnode(self.container)
-                    self.container.addSubnode(self.panel)
+                    if controller.fromMenu {
+                        self.addSubnode(self.panel)
+                    } else {
+                        self.container.addSubnode(self.panel)
+                    }
                     
                     self.animateIn()
                 }
@@ -697,12 +745,15 @@ public class AttachmentController: ViewController {
         completion(nil, nil)
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery) {
+    public var getInputContainerNode: () -> (CGFloat, ASDisplayNode)? = { return nil }
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
         self.buttons = buttons
         self.initialButton = initialButton
+        self.fromMenu = fromMenu
         
         super.init(navigationBarPresentationData: nil)
         
@@ -731,6 +782,7 @@ public class AttachmentController: ViewController {
     }
     
     public func _dismiss() {
+        self.dismissed()
         super.dismiss(animated: false, completion: {})
     }
     
@@ -742,7 +794,7 @@ public class AttachmentController: ViewController {
                 completion?()
             })
         } else {
-            super.dismiss(animated: false, completion: {})
+            self._dismiss()
             completion?()
         }
     }

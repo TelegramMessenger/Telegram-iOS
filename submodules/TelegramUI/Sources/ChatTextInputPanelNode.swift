@@ -883,6 +883,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             
             if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty {
                 self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+            } else if interfaceState.showMenuForWebView, let previousShowWebView = previousState?.showWebView, previousShowWebView != interfaceState.showWebView {
+                if interfaceState.showWebView {
+                    self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                } else {
+                    self.menuButtonIconNode.setAnimation(name: "anim_closemenu", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
+                }
+                self.menuButtonIconNode.playOnce()
             } else if let previousShowCommands = previousState?.showCommands, previousShowCommands != interfaceState.showCommands {
                 if interfaceState.showCommands {
                     self.menuButtonIconNode.setAnimation(name: "anim_menuclose", colors: ["1.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "2.2.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor, "3.1.Обводка 1": interfaceState.theme.chat.inputPanel.actionControlForegroundColor])
@@ -1146,7 +1153,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let context = self.context, let peer = currentPeer {
                 self.sendAsAvatarNode.setPeer(context: context, theme: interfaceState.theme, peer: EnginePeer(peer), emptyColor: interfaceState.theme.list.mediaPlaceholderColor)
             }
-        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, interfaceState.hasBotCommands && interfaceState.editMessageState == nil {
+        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, (interfaceState.hasBotCommands || interfaceState.showMenuForWebView) && interfaceState.editMessageState == nil {
             hasMenuButton = true
             
             if !inputHasText {
@@ -2525,9 +2532,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     @objc func menuButtonPressed() {
         self.hapticFeedback.impact(.light)
-        if let sendAsPeers = self.presentationInterfaceState?.sendAsPeers, !sendAsPeers.isEmpty {
+        guard let presentationInterfaceState = self.presentationInterfaceState else {
+            return
+        }
+        
+        if let sendAsPeers = presentationInterfaceState.sendAsPeers, !sendAsPeers.isEmpty {
             self.interfaceInteraction?.updateShowSendAsPeers { value in
                 return !value
+            }
+        } else if presentationInterfaceState.showMenuForWebView {
+            var show = false
+            self.interfaceInteraction?.updateShowWebView { value in
+                show = !value
+                return show
+            }
+            if show {
+                self.interfaceInteraction?.openWebView("Menu", "", false, true)
             }
         } else {
             self.interfaceInteraction?.updateShowCommands { value in
