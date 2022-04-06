@@ -377,7 +377,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     self.listButton.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                 }
             } else {
-                self.listButton.isHidden = !displayCloseButton
+                self.listButton.isHidden = !displayListButton
                 self.listButton.layer.removeAllAnimations()
             }
         }

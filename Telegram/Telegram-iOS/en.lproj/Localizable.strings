@@ -7485,3 +7485,19 @@ Sorry for the inconvenience.";
 "PeerInfo.TooltipMutedFor" = "Notifications are muted for %@.";
 "PeerInfo.TooltipMutedUntil" = "Notifications are muted until %@.";
 "PeerInfo.TooltipMutedForever" = "Notifications are muted.";
+
+"PeerInfo.DeleteToneTitle" = "Delete Tone";
+"PeerInfo.DeleteToneText" = "Are you sure you want to delete\n**%@** notification sound?";
+
+"PeerInfo.AlertLeaveAction" = "Leave";
+"PeerInfo.LeaveGroupTitle" = "Leave Group";
+"PeerInfo.LeaveGroupText" = "Are you sure you want to leave the group **%@**?";
+
+"PeerInfo.LeaveChannelTitle" = "Leave Channel";
+"PeerInfo.LeaveChannelText" = "Are you sure you want to leave the channel **%@**?";
+
+"PeerInfo.DeleteGroupTitle" = "Delete for All";
+"PeerInfo.DeleteGroupText" = "Are you sure you want to delete the group **%@** and all of its messages for all members of the group?";
+
+"PeerInfo.DeleteChannelTitle" = "Delete for All";
+"PeerInfo.DeleteChannelText" = "Are you sure you want to delete the channel **%@** and all of its messages for all subscribers of the channel?";

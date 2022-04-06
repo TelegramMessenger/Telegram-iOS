@@ -3676,7 +3676,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 return
                             }
                             if let muteInterval = muteInterval, muteInterval == Int32.max {
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                let iconColor: UIColor = .white
+                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                    "Middle.Group 1.Fill 1": iconColor,
+                                    "Top.Group 1.Fill 1": iconColor,
+                                    "Bottom.Group 1.Fill 1": iconColor,
+                                    "EXAMPLE.Group 1.Fill 1": iconColor,
+                                    "Line.Group 1.Stroke 1": iconColor
+                            ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                             }
                         })
                     }, updatePeerDisplayPreviews: { peerId, displayPreviews in
@@ -3703,7 +3710,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     
                     let _ = strongSelf.context.engine.peers.updatePeerMuteSetting(peerId: strongSelf.peerId, muteInterval: Int32.max).start()
                     
-                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_mute_for", scale: 0.056, colors: [:], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                    let iconColor: UIColor = .white
+                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                        "Middle.Group 1.Fill 1": iconColor,
+                        "Top.Group 1.Fill 1": iconColor,
+                        "Bottom.Group 1.Fill 1": iconColor,
+                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                        "Line.Group 1.Stroke 1": iconColor
+                ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                 })))
                 
                 self.view.endEditing(true)
@@ -4084,21 +4098,40 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
-                                self?.openLeavePeer()
+                                self?.openLeavePeer(delete: false)
                             })))
+                            
+                            if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canDeleteHistory) {
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteChannel, textColor: .destructive, icon: { theme in
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
+                                }, action: { [weak self] _, f in
+                                    f(.dismissWithoutContent)
+                                    
+                                    self?.openLeavePeer(delete: true)
+                                })))
+                            }
                         }
                     case .group:
                         if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
                             if !items.isEmpty {
                                 items.append(.separator)
                             }
-                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .destructive, icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor)
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_LeaveGroup, textColor: .primary, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 
-                                self?.openLeavePeer()
+                                self?.openLeavePeer(delete: false)
                             })))
+                            if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canDeleteHistory) {
+                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_DeleteGroup, textColor: .destructive, icon: { theme in
+                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
+                                }, action: { [weak self] _, f in
+                                    f(.dismissWithoutContent)
+                                    
+                                    self?.openLeavePeer(delete: true)
+                                })))
+                            }
                         }
                     }
                 } else if let group = peer as? TelegramGroup {
@@ -4120,8 +4153,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }, action: { [weak self] _, f in
                             f(.dismissWithoutContent)
                             
-                            self?.openLeavePeer()
+                            self?.openLeavePeer(delete: false)
                         })))
+                        
+                        if case .creator = group.role {
+                            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Group_DeleteGroup, textColor: .destructive, icon: { theme in
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
+                            }, action: { [weak self] _, f in
+                                f(.dismissWithoutContent)
+                                
+                                self?.openLeavePeer(delete: true)
+                            })))
+                        }
                     }
                 }
                 
@@ -4148,7 +4191,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         case .search:
             self.openChatWithMessageSearch()
         case .leave:
-            self.openLeavePeer()
+            self.openLeavePeer(delete: false)
         case .stop:
             self.updateBlocked(block: true)
         }
@@ -5549,7 +5592,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
     }
     
-    private func openLeavePeer() {
+    private func openLeavePeer(delete: Bool) {
         let peerId = self.peerId
         let _ = (self.context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)
@@ -5558,6 +5601,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             guard let strongSelf = self, let peer = peer else {
                 return
             }
+            
             var isGroup = false
             if let channel = peer as? TelegramChannel {
                 if case .group = channel.info {
@@ -5566,22 +5610,40 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             } else if peer is TelegramGroup {
                 isGroup = true
             }
-            let presentationData = strongSelf.presentationData
-            let actionSheet = ActionSheetController(presentationData: presentationData)
-            let dismissAction: () -> Void = { [weak actionSheet] in
-                actionSheet?.dismissAnimated()
+            
+            let title: String
+            let text: String
+            let actionText: String
+            
+            if delete {
+                if isGroup {
+                    title = strongSelf.presentationData.strings.PeerInfo_DeleteGroupTitle
+                    text = strongSelf.presentationData.strings.PeerInfo_DeleteGroupText(peer.debugDisplayTitle).string
+                } else {
+                    title = strongSelf.presentationData.strings.PeerInfo_DeleteChannelTitle
+                    text = strongSelf.presentationData.strings.PeerInfo_DeleteChannelText(peer.debugDisplayTitle).string
+                }
+                actionText = strongSelf.presentationData.strings.Common_Delete
+            } else {
+                if isGroup {
+                    title = strongSelf.presentationData.strings.PeerInfo_LeaveGroupTitle
+                    text = strongSelf.presentationData.strings.PeerInfo_LeaveGroupText(peer.debugDisplayTitle).string
+                } else {
+                    title = strongSelf.presentationData.strings.PeerInfo_LeaveChannelTitle
+                    text = strongSelf.presentationData.strings.PeerInfo_LeaveChannelText(peer.debugDisplayTitle).string
+                }
+                actionText = strongSelf.presentationData.strings.PeerInfo_AlertLeaveAction
             }
-            actionSheet.setItemGroups([
-                ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: isGroup ? presentationData.strings.Group_LeaveGroup : presentationData.strings.Channel_LeaveChannel, color: .destructive, action: {
-                        dismissAction()
-                        self?.deletePeerChat(peer: peer, globally: false)
-                    }),
-                ]),
-            ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
+            
             strongSelf.view.endEditing(true)
-            strongSelf.controller?.present(actionSheet, in: .window(.root))
+            
+            strongSelf.controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: title, text: text, actions: [
+                TextAlertAction(type: .destructiveAction, title: actionText, action: {
+                    self?.deletePeerChat(peer: peer, globally: delete)
+                }),
+                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                })
+            ], parseMarkdown: true), in: .window(.root))
         })
     }
     

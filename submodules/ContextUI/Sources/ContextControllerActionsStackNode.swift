@@ -155,6 +155,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         let titleSubtitleSpacing: CGFloat = 1.0
         let iconSideInset: CGFloat = 12.0
         let standardIconWidth: CGFloat = 32.0
+        let iconSpacing: CGFloat = 8.0
         
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
@@ -232,6 +233,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         maxTextWidth -= sideInset
         if let iconSize = iconSize {
             maxTextWidth -= max(standardIconWidth, iconSize.width)
+            maxTextWidth -= iconSpacing
         } else {
             maxTextWidth -= sideInset
         }
@@ -246,6 +248,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         if let iconSize = iconSize {
             minSize.width += max(standardIconWidth, iconSize.width)
             minSize.width += iconSideInset
+            minSize.width += iconSpacing
         } else {
             minSize.width += sideInset
         }
