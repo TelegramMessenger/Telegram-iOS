@@ -127,6 +127,70 @@ public extension Api {
     }
 }
 public extension Api {
+    enum BotMenuButton: TypeConstructorDescription {
+        case botMenuButton(text: String, url: String)
+        case botMenuButtonCommands
+        case botMenuButtonDefault
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .botMenuButton(let text, let url):
+                    if boxed {
+                        buffer.appendInt32(-944407322)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeString(url, buffer: buffer, boxed: false)
+                    break
+                case .botMenuButtonCommands:
+                    if boxed {
+                        buffer.appendInt32(1113113093)
+                    }
+                    
+                    break
+                case .botMenuButtonDefault:
+                    if boxed {
+                        buffer.appendInt32(1966318984)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .botMenuButton(let text, let url):
+                return ("botMenuButton", [("text", String(describing: text)), ("url", String(describing: url))])
+                case .botMenuButtonCommands:
+                return ("botMenuButtonCommands", [])
+                case .botMenuButtonDefault:
+                return ("botMenuButtonDefault", [])
+    }
+    }
+    
+        public static func parse_botMenuButton(_ reader: BufferReader) -> BotMenuButton? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.BotMenuButton.botMenuButton(text: _1!, url: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_botMenuButtonCommands(_ reader: BufferReader) -> BotMenuButton? {
+            return Api.BotMenuButton.botMenuButtonCommands
+        }
+        public static func parse_botMenuButtonDefault(_ reader: BufferReader) -> BotMenuButton? {
+            return Api.BotMenuButton.botMenuButtonDefault
+        }
+    
+    }
+}
+public extension Api {
     enum CdnConfig: TypeConstructorDescription {
         case cdnConfig(publicKeys: [Api.CdnPublicKey])
     

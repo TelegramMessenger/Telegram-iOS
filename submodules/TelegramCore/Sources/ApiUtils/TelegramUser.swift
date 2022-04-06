@@ -67,9 +67,6 @@ extension TelegramUser {
                 if (flags & (1 << 27)) != 0 {
                     botFlags.insert(.canBeAddedToAttachMenu)
                 }
-                if (flags & (1 << 28)) != 0 {
-                    botFlags.insert(.menuStartsWebView)
-                }
                 botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
             }
             
@@ -126,9 +123,6 @@ extension TelegramUser {
                             }
                             if (flags & (1 << 27)) != 0 {
                                 botFlags.insert(.canBeAddedToAttachMenu)
-                            }
-                            if (flags & (1 << 28)) != 0 {
-                                botFlags.insert(.menuStartsWebView)
                             }
                             botInfo = BotUserInfo(flags: botFlags, inlinePlaceholder: botInlinePlaceholder)
                         }

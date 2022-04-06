@@ -70,7 +70,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1071145937] = { return Api.BotCommandScope.parse_botCommandScopePeerAdmins($0) }
     dict[169026035] = { return Api.BotCommandScope.parse_botCommandScopePeerUser($0) }
     dict[1011811544] = { return Api.BotCommandScope.parse_botCommandScopeUsers($0) }
-    dict[460632885] = { return Api.BotInfo.parse_botInfo($0) }
+    dict[-468280483] = { return Api.BotInfo.parse_botInfo($0) }
     dict[1984755728] = { return Api.BotInlineMessage.parse_botInlineMessageMediaAuto($0) }
     dict[416402882] = { return Api.BotInlineMessage.parse_botInlineMessageMediaContact($0) }
     dict[85477117] = { return Api.BotInlineMessage.parse_botInlineMessageMediaGeo($0) }
@@ -79,6 +79,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1937807902] = { return Api.BotInlineMessage.parse_botInlineMessageText($0) }
     dict[400266251] = { return Api.BotInlineResult.parse_botInlineMediaResult($0) }
     dict[295067450] = { return Api.BotInlineResult.parse_botInlineResult($0) }
+    dict[-944407322] = { return Api.BotMenuButton.parse_botMenuButton($0) }
+    dict[1113113093] = { return Api.BotMenuButton.parse_botMenuButtonCommands($0) }
+    dict[1966318984] = { return Api.BotMenuButton.parse_botMenuButtonDefault($0) }
     dict[1462101002] = { return Api.CdnConfig.parse_cdnConfig($0) }
     dict[-914167110] = { return Api.CdnPublicKey.parse_cdnPublicKey($0) }
     dict[531458253] = { return Api.ChannelAdminLogEvent.parse_channelAdminLogEvent($0) }
@@ -711,6 +714,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1299263278] = { return Api.Update.parse_updateBotCommands($0) }
     dict[1232025500] = { return Api.Update.parse_updateBotInlineQuery($0) }
     dict[317794823] = { return Api.Update.parse_updateBotInlineSend($0) }
+    dict[347625491] = { return Api.Update.parse_updateBotMenuButton($0) }
     dict[-1934976362] = { return Api.Update.parse_updateBotPrecheckoutQuery($0) }
     dict[-1246823043] = { return Api.Update.parse_updateBotShippingQuery($0) }
     dict[-997782967] = { return Api.Update.parse_updateBotStopped($0) }
@@ -1117,6 +1121,8 @@ public extension Api {
             case let _1 as Api.BotInlineMessage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotInlineResult:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.BotMenuButton:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.CdnConfig:
                 _1.serialize(buffer, boxed)

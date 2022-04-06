@@ -278,7 +278,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 var botInfos: [CachedPeerBotInfo] = []
                                 for botInfo in chatFullBotInfo ?? [] {
                                     switch botInfo {
-                                    case let .botInfo(userId, _, _):
+                                    case let .botInfo(userId, _, _, _):
                                         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                         let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
                                         botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))
@@ -449,7 +449,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             var botInfos: [CachedPeerBotInfo] = []
                                             for botInfo in apiBotInfos {
                                                 switch botInfo {
-                                                case let .botInfo(userId, _, _):
+                                                case let .botInfo(userId, _, _, _):
                                                     let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                                     let parsedBotInfo = BotInfo(apiBotInfo: botInfo)
                                                     botInfos.append(CachedPeerBotInfo(peerId: peerId, botInfo: parsedBotInfo))

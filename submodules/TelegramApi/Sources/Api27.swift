@@ -1591,6 +1591,21 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
+                static func getBotMenuButton(userId: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.BotMenuButton>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1671369944)
+                    userId.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.getBotMenuButton", parameters: [("userId", String(describing: userId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.BotMenuButton? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.BotMenuButton?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.BotMenuButton
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func resetBotCommands(scope: Api.BotCommandScope, langCode: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1032708345)
@@ -1623,6 +1638,21 @@ public extension Api.functions.bots {
                 }
 }
 public extension Api.functions.bots {
+                static func setBotBroadcastDefaultAdminRights(adminRights: Api.ChatAdminRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2021942497)
+                    adminRights.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.setBotBroadcastDefaultAdminRights", parameters: [("adminRights", String(describing: adminRights))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func setBotCommands(scope: Api.BotCommandScope, langCode: String, commands: [Api.BotCommand]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(85399130)
@@ -1634,6 +1664,37 @@ public extension Api.functions.bots {
                         item.serialize(buffer, true)
                     }
                     return (FunctionDescription(name: "bots.setBotCommands", parameters: [("scope", String(describing: scope)), ("langCode", String(describing: langCode)), ("commands", String(describing: commands))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
+                static func setBotGroupDefaultAdminRights(adminRights: Api.ChatAdminRights) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1839281686)
+                    adminRights.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.setBotGroupDefaultAdminRights", parameters: [("adminRights", String(describing: adminRights))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
+                static func setBotMenuButton(userId: Api.InputUser, button: Api.BotMenuButton) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1157944655)
+                    userId.serialize(buffer, true)
+                    button.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.setBotMenuButton", parameters: [("userId", String(describing: userId)), ("button", String(describing: button))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -5630,12 +5691,12 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendWebViewResultMessage(queryId: Int64, result: Api.InputBotInlineResult) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewMessageSent>) {
+                static func sendWebViewResultMessage(botQueryId: String, result: Api.InputBotInlineResult) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewMessageSent>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-573615893)
-                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(172168437)
+                    serializeString(botQueryId, buffer: buffer, boxed: false)
                     result.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.sendWebViewResultMessage", parameters: [("queryId", String(describing: queryId)), ("result", String(describing: result))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewMessageSent? in
+                    return (FunctionDescription(name: "messages.sendWebViewResultMessage", parameters: [("botQueryId", String(describing: botQueryId)), ("result", String(describing: result))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewMessageSent? in
                         let reader = BufferReader(buffer)
                         var result: Api.WebViewMessageSent?
                         if let signature = reader.readInt32() {

@@ -856,13 +856,13 @@ public extension Api {
 }
 public extension Api {
     enum BotInfo: TypeConstructorDescription {
-        case botInfo(userId: Int64, description: String, commands: [Api.BotCommand])
+        case botInfo(userId: Int64, description: String, commands: [Api.BotCommand], menuButton: Api.BotMenuButton)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .botInfo(let userId, let description, let commands):
+                case .botInfo(let userId, let description, let commands, let menuButton):
                     if boxed {
-                        buffer.appendInt32(460632885)
+                        buffer.appendInt32(-468280483)
                     }
                     serializeInt64(userId, buffer: buffer, boxed: false)
                     serializeString(description, buffer: buffer, boxed: false)
@@ -871,14 +871,15 @@ public extension Api {
                     for item in commands {
                         item.serialize(buffer, true)
                     }
+                    menuButton.serialize(buffer, true)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .botInfo(let userId, let description, let commands):
-                return ("botInfo", [("userId", String(describing: userId)), ("description", String(describing: description)), ("commands", String(describing: commands))])
+                case .botInfo(let userId, let description, let commands, let menuButton):
+                return ("botInfo", [("userId", String(describing: userId)), ("description", String(describing: description)), ("commands", String(describing: commands)), ("menuButton", String(describing: menuButton))])
     }
     }
     
@@ -891,11 +892,16 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
             }
+            var _4: Api.BotMenuButton?
+            if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.BotMenuButton
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.BotInfo.botInfo(userId: _1!, description: _2!, commands: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.BotInfo.botInfo(userId: _1!, description: _2!, commands: _3!, menuButton: _4!)
             }
             else {
                 return nil

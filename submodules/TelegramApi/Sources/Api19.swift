@@ -512,6 +512,7 @@ public extension Api {
         case updateBotCommands(peer: Api.Peer, botId: Int64, commands: [Api.BotCommand])
         case updateBotInlineQuery(flags: Int32, queryId: Int64, userId: Int64, query: String, geo: Api.GeoPoint?, peerType: Api.InlineQueryPeerType?, offset: String)
         case updateBotInlineSend(flags: Int32, userId: Int64, query: String, geo: Api.GeoPoint?, id: String, msgId: Api.InputBotInlineMessageID?)
+        case updateBotMenuButton(botId: Int64, button: Api.BotMenuButton)
         case updateBotPrecheckoutQuery(flags: Int32, queryId: Int64, userId: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, currency: String, totalAmount: Int64)
         case updateBotShippingQuery(queryId: Int64, userId: Int64, payload: Buffer, shippingAddress: Api.PostAddress)
         case updateBotStopped(userId: Int64, date: Int32, stopped: Api.Bool, qts: Int32)
@@ -673,6 +674,13 @@ public extension Api {
                     if Int(flags) & Int(1 << 0) != 0 {geo!.serialize(buffer, true)}
                     serializeString(id, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {msgId!.serialize(buffer, true)}
+                    break
+                case .updateBotMenuButton(let botId, let button):
+                    if boxed {
+                        buffer.appendInt32(347625491)
+                    }
+                    serializeInt64(botId, buffer: buffer, boxed: false)
+                    button.serialize(buffer, true)
                     break
                 case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
                     if boxed {
@@ -1496,6 +1504,8 @@ public extension Api {
                 return ("updateBotInlineQuery", [("flags", String(describing: flags)), ("queryId", String(describing: queryId)), ("userId", String(describing: userId)), ("query", String(describing: query)), ("geo", String(describing: geo)), ("peerType", String(describing: peerType)), ("offset", String(describing: offset))])
                 case .updateBotInlineSend(let flags, let userId, let query, let geo, let id, let msgId):
                 return ("updateBotInlineSend", [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("query", String(describing: query)), ("geo", String(describing: geo)), ("id", String(describing: id)), ("msgId", String(describing: msgId))])
+                case .updateBotMenuButton(let botId, let button):
+                return ("updateBotMenuButton", [("botId", String(describing: botId)), ("button", String(describing: button))])
                 case .updateBotPrecheckoutQuery(let flags, let queryId, let userId, let payload, let info, let shippingOptionId, let currency, let totalAmount):
                 return ("updateBotPrecheckoutQuery", [("flags", String(describing: flags)), ("queryId", String(describing: queryId)), ("userId", String(describing: userId)), ("payload", String(describing: payload)), ("info", String(describing: info)), ("shippingOptionId", String(describing: shippingOptionId)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount))])
                 case .updateBotShippingQuery(let queryId, let userId, let payload, let shippingAddress):
@@ -1833,6 +1843,22 @@ public extension Api {
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.Update.updateBotInlineSend(flags: _1!, userId: _2!, query: _3!, geo: _4, id: _5!, msgId: _6)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateBotMenuButton(_ reader: BufferReader) -> Update? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Api.BotMenuButton?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.BotMenuButton
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Update.updateBotMenuButton(botId: _1!, button: _2!)
             }
             else {
                 return nil

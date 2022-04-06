@@ -485,7 +485,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.menuButtonClippingNode.clipsToBounds = true
         
         self.menuButtonIconNode = MenuIconNode()
-        self.menuButtonIconNode.enqueueState(presentationInterfaceState.showMenuForWebView ? .app : .menu, animated: false)
         self.menuButtonIconNode.customColor = presentationInterfaceState.theme.chat.inputPanel.actionControlForegroundColor
         self.menuButtonTextNode = ImmediateTextNode()
         
@@ -882,9 +881,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             let previousState = self.presentationInterfaceState
             self.presentationInterfaceState = interfaceState
             
-            if interfaceState.showMenuForWebView && self.menuButtonIconNode.iconState == .menu {
+            if case .webView = interfaceState.botMenuButton, self.menuButtonIconNode.iconState == .menu {
                 self.menuButtonIconNode.enqueueState(.app, animated: false)
-            } else if !interfaceState.showMenuForWebView && self.menuButtonIconNode.iconState == .app {
+            } else if case .commands = interfaceState.botMenuButton, self.menuButtonIconNode.iconState == .app {
                 self.menuButtonIconNode.enqueueState(.menu, animated: false)
             }
             let themeUpdated = previousState?.theme !== interfaceState.theme
@@ -893,7 +892,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty {
                 self.menuButtonIconNode.enqueueState(.close, animated: false)
-            } else if interfaceState.showMenuForWebView, let previousShowWebView = previousState?.showWebView, previousShowWebView != interfaceState.showWebView {
+            } else if case .webView = interfaceState.botMenuButton, let previousShowWebView = previousState?.showWebView, previousShowWebView != interfaceState.showWebView {
                 if interfaceState.showWebView {
                     self.menuButtonIconNode.enqueueState(.close, animated: true)
                 } else {
@@ -944,7 +943,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.theme = interfaceState.theme
                 
                 self.menuButtonBackgroundNode.backgroundColor = interfaceState.theme.chat.inputPanel.actionControlFillColor
-                self.menuButtonTextNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_InputMenu, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+                
+                let buttonTitle: String
+                if case let .webView(title, _) = interfaceState.botMenuButton {
+                    buttonTitle = title
+                } else {
+                    buttonTitle = interfaceState.strings.Conversation_InputMenu
+                }
+                
+                self.menuButtonTextNode.attributedText = NSAttributedString(string: buttonTitle, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
                 self.menuButton.accessibilityLabel = interfaceState.strings.Conversation_InputMenu
                 menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
                 
@@ -1148,6 +1155,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         var hasMenuButton = false
         var menuButtonExpanded = false
         var isSendAsButton = false
+        
+        var shouldDisplayMenuButton = false
+        if interfaceState.hasBotCommands {
+            shouldDisplayMenuButton = true
+        } else if case .webView = interfaceState.botMenuButton {
+            shouldDisplayMenuButton = true
+        }
+        
         if let sendAsPeers = interfaceState.sendAsPeers, !sendAsPeers.isEmpty && interfaceState.editMessageState == nil {
             hasMenuButton = true
             menuButtonExpanded = false
@@ -1161,7 +1176,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let context = self.context, let peer = currentPeer {
                 self.sendAsAvatarNode.setPeer(context: context, theme: interfaceState.theme, peer: EnginePeer(peer), emptyColor: interfaceState.theme.list.mediaPlaceholderColor)
             }
-        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, (interfaceState.hasBotCommands || interfaceState.showMenuForWebView) && interfaceState.editMessageState == nil {
+        } else if let peer = interfaceState.renderedPeer?.peer as? TelegramUser, let _ = peer.botInfo, shouldDisplayMenuButton && interfaceState.editMessageState == nil {
             hasMenuButton = true
             
             if !inputHasText {
@@ -2548,14 +2563,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.interfaceInteraction?.updateShowSendAsPeers { value in
                 return !value
             }
-        } else if presentationInterfaceState.showMenuForWebView {
+        } else if case let .webView(title, url) = presentationInterfaceState.botMenuButton {
             var show = false
             self.interfaceInteraction?.updateShowWebView { value in
                 show = !value
                 return show
             }
             if show {
-                self.interfaceInteraction?.openWebView("Menu", "", false, true)
+                self.interfaceInteraction?.openWebView(title, url, false, true)
             }
         } else {
             self.interfaceInteraction?.updateShowCommands { value in

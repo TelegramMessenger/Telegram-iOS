@@ -3920,15 +3920,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         var hasBots: Bool = false
                         var hasBotCommands: Bool = false
-                        var hasMenuForWebView: Bool = false
+                        var botMenuButton: BotMenuButton = .commands
                         var currentSendAsPeerId: PeerId?
                         var autoremoveTimeout: Int32?
                         var copyProtectionEnabled: Bool = false
                         if let peer = peerView.peers[peerView.peerId] {
-                            if let peer = peer as? TelegramUser, let botInfo = peer.botInfo, botInfo.flags.contains(.menuStartsWebView) {
-                                hasMenuForWebView = true
-                            }
-                            
                             copyProtectionEnabled = peer.isCopyProtectionEnabled
                             if let cachedGroupData = peerView.cachedData as? CachedGroupData {
                                 if !cachedGroupData.botInfos.isEmpty {
@@ -3960,6 +3956,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     autoremoveTimeout = value?.effectiveValue
                                 }
                             } else if let cachedUserData = peerView.cachedData as? CachedUserData {
+                                botMenuButton = cachedUserData.botInfo?.menuButton ?? .commands
                                 if case let .known(value) = cachedUserData.autoremoveTimeout {
                                     autoremoveTimeout = value?.effectiveValue
                                 }
@@ -4041,7 +4038,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateChatPresentationInterfaceState(animated: animated, interactive: false, {
                             return $0.updatedPeer { _ in
                                 return renderedPeer
-                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedHasBotCommands(hasBotCommands).updatedShowMenuForWebView(hasMenuForWebView).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
+                            }.updatedIsNotAccessible(isNotAccessible).updatedContactStatus(contactStatus).updatedHasBots(hasBots).updatedHasBotCommands(hasBotCommands).updatedBotMenuButton(botMenuButton).updatedIsArchived(isArchived).updatedPeerIsMuted(peerIsMuted).updatedPeerDiscussionId(peerDiscussionId).updatedPeerGeoLocation(peerGeoLocation).updatedExplicitelyCanPinMessages(explicitelyCanPinMessages).updatedHasScheduledMessages(hasScheduledMessages)
                                 .updatedAutoremoveTimeout(autoremoveTimeout)
                                 .updatedCurrentSendAsPeerId(currentSendAsPeerId)
                                 .updatedCopyProtectionEnabled(copyProtectionEnabled)
@@ -5212,7 +5209,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return FoundPeer(peer: peer, subscribers: nil)
         }
         
-        if let peerId = self.chatLocation.peerId {
+        if let peerId = self.chatLocation.peerId, [Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup].contains(peerId.namespace) {
             self.sendAsPeersDisposable = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: peerId)))
             .start(next: { [weak self] currentAccountPeer, peerView, peers in
                 guard let strongSelf = self else {
