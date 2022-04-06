@@ -904,7 +904,13 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.mainButtonState = mainButtonState ?? currentButtonState
     }
     
-    var animatingTransition = false
+    let animatingTransitionPromise = ValuePromise<Bool>(false)
+    private(set) var animatingTransition = false {
+        didSet {
+            self.animatingTransitionPromise.set(self.animatingTransition)
+        }
+    }
+    
     func animateTransitionIn(inputTransition: AttachmentController.InputPanelTransition, transition: ContainedViewLayoutTransition) {
         guard !self.animatingTransition, let inputNodeSnapshotView = inputTransition.inputNode.view.snapshotView(afterScreenUpdates: false) else {
             return
@@ -960,58 +966,73 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         guard !self.animatingTransition, let inputNodeSnapshotView = inputTransition.inputNode.view.snapshotView(afterScreenUpdates: false) else {
             return
         }
-        guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: false), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
-            return
+        if dismissed {
+            inputTransition.prepareForDismiss()
         }
+      
         self.animatingTransition = true
         self.dismissed = dismissed
         
-        let sourceButtonColor = self.mainButtonNode.backgroundColor
-        transition.updateBackgroundColor(node: self.mainButtonNode, color: inputTransition.menuButtonBackgroundNode.backgroundColor ?? .clear)
-        
-        let sourceButtonFrame = self.mainButtonNode.frame
-        transition.updateFrame(node: self.mainButtonNode, frame: inputTransition.menuButtonNode.frame)
-        let sourceButtonTextPosition = self.mainButtonNode.textNode.position
-        transition.updatePosition(node: self.mainButtonNode.textNode, position: CGPoint(x: inputTransition.menuButtonNode.frame.width / 2.0, y: inputTransition.menuButtonNode.frame.height / 2.0))
-        
-        let sourceButtonCornerRadius = self.mainButtonNode.cornerRadius
-        transition.updateCornerRadius(node: self.mainButtonNode, cornerRadius: inputTransition.menuButtonNode.cornerRadius)
-        transition.updateSublayerTransformScale(node: self.mainButtonNode, scale: 0.2)
-        self.mainButtonNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-        
-        let menuContentDelta = (sourceButtonFrame.width - inputTransition.menuButtonNode.frame.width) / 2.0
-        menuIconSnapshotView.frame = inputTransition.menuIconNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + menuContentDelta, dy: inputTransition.menuButtonNode.frame.minY)
-        self.view.addSubview(menuIconSnapshotView)
-        menuIconSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        transition.updatePosition(layer: menuIconSnapshotView.layer, position: CGPoint(x: menuIconSnapshotView.center.x - menuContentDelta, y: inputTransition.menuButtonNode.position.y))
-        
-        menuTextSnapshotView.frame = inputTransition.menuTextNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + 19.0 + menuContentDelta, dy: inputTransition.menuButtonNode.frame.minY)
-        self.view.addSubview(menuTextSnapshotView)
-        menuTextSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x - menuContentDelta, y: inputTransition.menuButtonNode.position.y))
-        
-        inputNodeSnapshotView.clipsToBounds = true
-        inputNodeSnapshotView.contentMode = .right
-        let targetInputFrame = CGRect(x: inputTransition.menuButtonNode.frame.maxX, y: 0.0, width: inputNodeSnapshotView.frame.width - inputTransition.menuButtonNode.frame.maxX, height: inputNodeSnapshotView.frame.height)
-        inputNodeSnapshotView.frame = targetInputFrame.offsetBy(dx: targetInputFrame.width, dy: self.mainButtonNode.position.y - inputNodeSnapshotView.frame.height / 2.0)
-        self.view.addSubview(inputNodeSnapshotView)
-        transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
-            inputNodeSnapshotView?.removeFromSuperview()
-            self.animatingTransition = false
-            
-            if dismissed {
-                
-            } else {
-                menuIconSnapshotView?.removeFromSuperview()
-                menuTextSnapshotView?.removeFromSuperview()
-                
-                self.mainButtonNode.backgroundColor = sourceButtonColor
-                self.mainButtonNode.frame = sourceButtonFrame
-                self.mainButtonNode.textNode.position = sourceButtonTextPosition
-                self.mainButtonNode.textNode.layer.removeAllAnimations()
-                self.mainButtonNode.cornerRadius = sourceButtonCornerRadius
+        let action = {
+            guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: true), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
+                return
             }
-        })
+            
+            let sourceButtonColor = self.mainButtonNode.backgroundColor
+            transition.updateBackgroundColor(node: self.mainButtonNode, color: inputTransition.menuButtonBackgroundNode.backgroundColor ?? .clear)
+            
+            let sourceButtonFrame = self.mainButtonNode.frame
+            transition.updateFrame(node: self.mainButtonNode, frame: inputTransition.menuButtonNode.frame)
+            let sourceButtonTextPosition = self.mainButtonNode.textNode.position
+            transition.updatePosition(node: self.mainButtonNode.textNode, position: CGPoint(x: inputTransition.menuButtonNode.frame.width / 2.0, y: inputTransition.menuButtonNode.frame.height / 2.0))
+            
+            let sourceButtonCornerRadius = self.mainButtonNode.cornerRadius
+            transition.updateCornerRadius(node: self.mainButtonNode, cornerRadius: inputTransition.menuButtonNode.cornerRadius)
+            transition.updateSublayerTransformScale(node: self.mainButtonNode, scale: 0.2)
+            self.mainButtonNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            
+            let menuContentDelta = (sourceButtonFrame.width - inputTransition.menuButtonNode.frame.width) / 2.0
+            var menuIconSnapshotViewFrame = inputTransition.menuIconNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + menuContentDelta, dy: inputTransition.menuButtonNode.frame.minY)
+            menuIconSnapshotViewFrame.origin.y = self.mainButtonNode.position.y - menuIconSnapshotViewFrame.height / 2.0
+            menuIconSnapshotView.frame = menuIconSnapshotViewFrame
+            self.view.addSubview(menuIconSnapshotView)
+            menuIconSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            transition.updatePosition(layer: menuIconSnapshotView.layer, position: CGPoint(x: menuIconSnapshotView.center.x - menuContentDelta, y: inputTransition.menuButtonNode.position.y))
+            
+            var menuTextSnapshotViewFrame = inputTransition.menuTextNode.frame.offsetBy(dx: inputTransition.menuButtonNode.frame.minX + 19.0 + menuContentDelta, dy: inputTransition.menuButtonNode.frame.minY)
+            menuTextSnapshotViewFrame.origin.y = self.mainButtonNode.position.y - menuTextSnapshotViewFrame.height / 2.0
+            menuTextSnapshotView.frame = menuTextSnapshotViewFrame
+            self.view.addSubview(menuTextSnapshotView)
+            menuTextSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            transition.updatePosition(layer: menuTextSnapshotView.layer, position: CGPoint(x: menuTextSnapshotView.center.x - menuContentDelta, y: inputTransition.menuButtonNode.position.y))
+            
+            inputNodeSnapshotView.clipsToBounds = true
+            inputNodeSnapshotView.contentMode = .right
+            let targetInputFrame = CGRect(x: inputTransition.menuButtonNode.frame.maxX, y: 0.0, width: inputNodeSnapshotView.frame.width - inputTransition.menuButtonNode.frame.maxX, height: inputNodeSnapshotView.frame.height)
+            inputNodeSnapshotView.frame = targetInputFrame.offsetBy(dx: targetInputFrame.width, dy: self.mainButtonNode.position.y - inputNodeSnapshotView.frame.height / 2.0)
+            self.view.addSubview(inputNodeSnapshotView)
+            transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
+                inputNodeSnapshotView?.removeFromSuperview()
+                self.animatingTransition = false
+                
+                if !dismissed {
+                    menuIconSnapshotView?.removeFromSuperview()
+                    menuTextSnapshotView?.removeFromSuperview()
+                    
+                    self.mainButtonNode.backgroundColor = sourceButtonColor
+                    self.mainButtonNode.frame = sourceButtonFrame
+                    self.mainButtonNode.textNode.position = sourceButtonTextPosition
+                    self.mainButtonNode.textNode.layer.removeAllAnimations()
+                    self.mainButtonNode.cornerRadius = sourceButtonCornerRadius
+                }
+            })
+        }
+        
+        if dismissed {
+            Queue.mainQueue().after(0.01, action)
+        } else {
+            action()
+        }
     }
     
     func update(layout: ContainerViewLayout, buttons: [AttachmentButtonType], isSelecting: Bool, elevateProgress: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {

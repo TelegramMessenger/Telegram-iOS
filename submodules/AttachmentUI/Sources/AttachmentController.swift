@@ -226,10 +226,18 @@ public class AttachmentController: ViewController {
                     self.mainButtonStateDisposable.set((mediaPickerContext.mainButtonState
                     |> deliverOnMainQueue).start(next: { [weak self] mainButtonState in
                         if let strongSelf = self {
-                            strongSelf.panel.updateMainButtonState(mainButtonState)
-                            if let layout = strongSelf.validLayout {
-                                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                            let _ = (strongSelf.panel.animatingTransitionPromise.get()
+                            |> filter { value in
+                                return !value
                             }
+                            |> take(1)).start(next: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.panel.updateMainButtonState(mainButtonState)
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                                    }
+                                }
+                            })
                         }
                     }))
                 } else {
@@ -854,6 +862,7 @@ public class AttachmentController: ViewController {
         let menuButtonBackgroundNode: ASDisplayNode
         let menuIconNode: ASDisplayNode
         let menuTextNode: ASDisplayNode
+        let prepareForDismiss: () -> Void
 
         public init(
             inputNode: ASDisplayNode,
@@ -861,7 +870,8 @@ public class AttachmentController: ViewController {
             menuButtonNode: ASDisplayNode,
             menuButtonBackgroundNode: ASDisplayNode,
             menuIconNode: ASDisplayNode,
-            menuTextNode: ASDisplayNode
+            menuTextNode: ASDisplayNode,
+            prepareForDismiss: @escaping () -> Void
         ) {
             self.inputNode = inputNode
             self.accessoryPanelNode = accessoryPanelNode
@@ -869,6 +879,7 @@ public class AttachmentController: ViewController {
             self.menuButtonBackgroundNode = menuButtonBackgroundNode
             self.menuIconNode = menuIconNode
             self.menuTextNode = menuTextNode
+            self.prepareForDismiss = prepareForDismiss
         }
     }
 }
