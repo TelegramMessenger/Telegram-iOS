@@ -16,24 +16,24 @@ public final class AnimatedStickerComponent: Component {
         public var source: Source
         public var scale: CGFloat
         public var loop: Bool
-        public var tintColor: UIColor?
         
-        public init(source: Source, scale: CGFloat = 2.0, loop: Bool, tintColor: UIColor? = nil) {
+        public init(source: Source, scale: CGFloat = 2.0, loop: Bool) {
             self.source = source
             self.scale = scale
             self.loop = loop
-            self.tintColor = tintColor
         }
     }
     
     public let account: Account
     public let animation: Animation
+    public var tintColor: UIColor?
     public let isAnimating: Bool
     public let size: CGSize
     
-    public init(account: Account, animation: Animation, isAnimating: Bool = true, size: CGSize) {
+    public init(account: Account, animation: Animation, tintColor: UIColor? = nil, isAnimating: Bool = true, size: CGSize) {
         self.account = account
         self.animation = animation
+        self.tintColor = tintColor
         self.isAnimating = isAnimating
         self.size = size
     }
@@ -43,6 +43,9 @@ public final class AnimatedStickerComponent: Component {
             return false
         }
         if lhs.animation != rhs.animation {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
             return false
         }
         if lhs.isAnimating != rhs.isAnimating {
@@ -100,7 +103,6 @@ public final class AnimatedStickerComponent: Component {
                     case let .file(media):
                         source = AnimatedStickerResourceSource(account: component.account, resource: media.resource, fitzModifier: nil, isVideo: false)
                 }
-                animationNode.setOverlayColor(component.animation.tintColor, replace: true, animated: false)
                 
                 var playbackMode: AnimatedStickerPlaybackMode = .still(.start)
                 if component.animation.loop {
@@ -114,6 +116,8 @@ public final class AnimatedStickerComponent: Component {
                 self.animationNode = animationNode
                 self.addSubnode(animationNode)
             }
+            
+            self.animationNode?.setOverlayColor(component.tintColor, replace: true, animated: false)
             
             if !component.animation.loop && component.isAnimating != self.component?.isAnimating {
                 if component.isAnimating {

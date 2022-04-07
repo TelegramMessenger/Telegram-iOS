@@ -221,9 +221,9 @@ private final class AttachButtonComponent: CombinedComponent {
                         animation: AnimatedStickerComponent.Animation(
                             source: .file(media: animationFile),
                             scale: UIScreenScale,
-                            loop: false,
-                            tintColor: tintColor
+                            loop: false
                         ),
+                        tintColor: tintColor,
                         isAnimating: component.isSelected,
                         size: CGSize(width: iconSize.width, height: iconSize.height)
                     ),
@@ -361,23 +361,26 @@ public struct AttachmentMainButtonState {
     let textColor: UIColor
     let isVisible: Bool
     let isLoading: Bool
+    let isEnabled: Bool
     
     public init(
         text: String?,
         backgroundColor: UIColor,
         textColor: UIColor,
         isVisible: Bool,
-        isLoading: Bool
+        isLoading: Bool,
+        isEnabled: Bool
     ) {
         self.text = text
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.isVisible = isVisible
         self.isLoading = isLoading
+        self.isEnabled = isEnabled
     }
     
     static var initial: AttachmentMainButtonState {
-        return AttachmentMainButtonState(text: nil, backgroundColor: .clear, textColor: .clear, isVisible: false, isLoading: false)
+        return AttachmentMainButtonState(text: nil, backgroundColor: .clear, textColor: .clear, isVisible: false, isLoading: false, isEnabled: false)
     }
 }
 
@@ -401,7 +404,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         self.addSubnode(self.statusNode)
         
         self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
+            if let strongSelf = self, strongSelf.state.isEnabled {
                 if highlighted {
                     strongSelf.layer.removeAnimation(forKey: "opacity")
                     strongSelf.alpha = 0.65
@@ -899,7 +902,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     func updateMainButtonState(_ mainButtonState: AttachmentMainButtonState?) {
         var currentButtonState = self.mainButtonState
         if mainButtonState == nil {
-            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, backgroundColor: currentButtonState.backgroundColor, textColor: currentButtonState.textColor, isVisible: false, isLoading: false)
+            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, backgroundColor: currentButtonState.backgroundColor, textColor: currentButtonState.textColor, isVisible: false, isLoading: false, isEnabled: currentButtonState.isEnabled)
         }
         self.mainButtonState = mainButtonState ?? currentButtonState
     }

@@ -372,7 +372,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             let textColor = textColorString.flatMap({ UIColor(hexString: $0) }) ?? self.presentationData.theme.list.itemCheckColors.foregroundColor
                             
                             let isLoading = json["is_progress_visible"] as? Bool
-                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false)
+                            let isEnabled = json["is_active"] as? Bool
+                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false, isEnabled: isEnabled ?? true)
                             self.mainButtonStatePromise.set(.single(state))
                         }
                     }

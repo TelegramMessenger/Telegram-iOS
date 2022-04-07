@@ -907,6 +907,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
             }
             
+            let buttonTitle: String
+            if case let .webView(title, _) = interfaceState.botMenuButton {
+                buttonTitle = title
+            } else {
+                buttonTitle = interfaceState.strings.Conversation_InputMenu
+            }
+            
+            self.menuButtonTextNode.attributedText = NSAttributedString(string: buttonTitle, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
+            self.menuButton.accessibilityLabel = self.menuButtonTextNode.attributedText?.string
+            menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
+            
             var updateSendButtonIcon = false
             if (previousState?.interfaceState.editMessage != nil) != (interfaceState.interfaceState.editMessage != nil) {
                 updateSendButtonIcon = true
@@ -944,17 +955,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.theme = interfaceState.theme
                 
                 self.menuButtonBackgroundNode.backgroundColor = interfaceState.theme.chat.inputPanel.actionControlFillColor
-                
-                let buttonTitle: String
-                if case let .webView(title, _) = interfaceState.botMenuButton {
-                    buttonTitle = title
-                } else {
-                    buttonTitle = interfaceState.strings.Conversation_InputMenu
-                }
-                
-                self.menuButtonTextNode.attributedText = NSAttributedString(string: buttonTitle, font: Font.with(size: 16.0, design: .round, weight: .medium, traits: []), textColor: interfaceState.theme.chat.inputPanel.actionControlForegroundColor)
-                self.menuButton.accessibilityLabel = interfaceState.strings.Conversation_InputMenu
-                menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
                 
                 if isEditingMedia {
                     self.attachmentButton.setImage(PresentationResourcesChat.chatInputPanelEditAttachmentButtonImage(interfaceState.theme), for: [])
