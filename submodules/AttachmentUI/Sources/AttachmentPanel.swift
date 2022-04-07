@@ -958,9 +958,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(inputNodeSnapshotView)
         
         let targetInputPosition = CGPoint(x: inputNodeSnapshotView.center.x + inputNodeSnapshotView.frame.width, y: self.mainButtonNode.position.y)
-        transition.updatePosition(layer: inputNodeSnapshotView.layer, position: targetInputPosition, completion: { [weak inputNodeSnapshotView] _ in
+        transition.updatePosition(layer: inputNodeSnapshotView.layer, position: targetInputPosition, completion: { [weak inputNodeSnapshotView, weak self] _ in
             inputNodeSnapshotView?.removeFromSuperview()
-            self.animatingTransition = false
+            self?.animatingTransition = false
         })
     }
     
@@ -977,7 +977,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.dismissed = dismissed
         
         let action = {
-            guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: true), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
+            guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: false), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
                 return
             }
             
@@ -1014,19 +1014,19 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             let targetInputFrame = CGRect(x: inputTransition.menuButtonNode.frame.maxX, y: 0.0, width: inputNodeSnapshotView.frame.width - inputTransition.menuButtonNode.frame.maxX, height: inputNodeSnapshotView.frame.height)
             inputNodeSnapshotView.frame = targetInputFrame.offsetBy(dx: targetInputFrame.width, dy: self.mainButtonNode.position.y - inputNodeSnapshotView.frame.height / 2.0)
             self.view.addSubview(inputNodeSnapshotView)
-            transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
+            transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView, weak self] _ in
                 inputNodeSnapshotView?.removeFromSuperview()
-                self.animatingTransition = false
+                self?.animatingTransition = false
                 
                 if !dismissed {
                     menuIconSnapshotView?.removeFromSuperview()
                     menuTextSnapshotView?.removeFromSuperview()
                     
-                    self.mainButtonNode.backgroundColor = sourceButtonColor
-                    self.mainButtonNode.frame = sourceButtonFrame
-                    self.mainButtonNode.textNode.position = sourceButtonTextPosition
-                    self.mainButtonNode.textNode.layer.removeAllAnimations()
-                    self.mainButtonNode.cornerRadius = sourceButtonCornerRadius
+                    self?.mainButtonNode.backgroundColor = sourceButtonColor
+                    self?.mainButtonNode.frame = sourceButtonFrame
+                    self?.mainButtonNode.textNode.position = sourceButtonTextPosition
+                    self?.mainButtonNode.textNode.layer.removeAllAnimations()
+                    self?.mainButtonNode.cornerRadius = sourceButtonCornerRadius
                 }
             })
         }
