@@ -175,30 +175,6 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
     }
 }
 
-public func translateText(context: AccountContext, text: String, fromLang: String? = nil) {
-    guard !text.isEmpty else {
-        return
-    }
-    if #available(iOS 15.0, *) {
-        let text = text.unicodeScalars.filter { !$0.properties.isEmojiPresentation }.reduce("") { $0 + String($1) }
-        
-        let textView = UITextView()
-        textView.text = text
-        textView.isEditable = false
-        if let navigationController = context.sharedContext.mainWindow?.viewController as? NavigationController, let topController = navigationController.topViewController as? ViewController {
-            topController.view.addSubview(textView)
-            textView.selectAll(nil)
-            
-            DispatchQueue.main.async {
-                textView.removeFromSuperview()
-            }
-        }
-        
-        let toLang = context.sharedContext.currentPresentationData.with { $0 }.strings.baseLanguageCode
-        let _ = context.engine.messages.translate(text: text, fromLang: fromLang, toLang: toLang).start()
-    }
-}
-
 public struct TextTranslationResult: Equatable {
     let text: String
     let detectedLanguage: String?
