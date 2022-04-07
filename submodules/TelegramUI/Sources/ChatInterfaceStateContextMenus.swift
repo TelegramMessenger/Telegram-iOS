@@ -683,7 +683,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         for media in message.media {
-            if let file = media as? TelegramMediaFile, let size = file.size, size < 1 * 1024 * 1024, let duration = file.duration, duration < 60,  (["audio/mpeg", "audio/mp3", "audio/mpeg3"] as [String]).contains(file.mimeType.lowercased()), let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "mp3" {
+            if let file = media as? TelegramMediaFile, let size = file.size, size < 1 * 1024 * 1024, let duration = file.duration, duration < 60, (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/ogg"] as [String]).contains(file.mimeType.lowercased()) {
+                let fileName = file.fileName ?? "Tone"
+                
                 var isAlreadyAdded = false
                 if let notificationSoundList = notificationSoundList, notificationSoundList.sounds.contains(where: { $0.file.fileId == file.fileId }) {
                     isAlreadyAdded = true

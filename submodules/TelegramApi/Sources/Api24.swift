@@ -1,4 +1,40 @@
 public extension Api.messages {
+    enum CheckedHistoryImportPeer: TypeConstructorDescription {
+        case checkedHistoryImportPeer(confirmText: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .checkedHistoryImportPeer(let confirmText):
+                    if boxed {
+                        buffer.appendInt32(-1571952873)
+                    }
+                    serializeString(confirmText, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .checkedHistoryImportPeer(let confirmText):
+                return ("checkedHistoryImportPeer", [("confirmText", String(describing: confirmText))])
+    }
+    }
+    
+        public static func parse_checkedHistoryImportPeer(_ reader: BufferReader) -> CheckedHistoryImportPeer? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.CheckedHistoryImportPeer.checkedHistoryImportPeer(confirmText: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
     enum DhConfig: TypeConstructorDescription {
         case dhConfig(g: Int32, p: Buffer, version: Int32, random: Buffer)
         case dhConfigNotModified(random: Buffer)

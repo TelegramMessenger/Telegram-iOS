@@ -45,6 +45,19 @@ private func soundName(strings: PresentationStrings, sound: PeerMessageSound, no
         }
         return "Sound \(id)"
     case let .cloud(fileId):
+        if let (id, legacyCategory) = getCloudLegacySound(id: fileId) {
+            switch legacyCategory {
+            case .modern:
+                if id >= 0 && Int(id) < modernSoundsNamePaths.count {
+                    return strings[keyPath: modernSoundsNamePaths[Int(id)]]
+                }
+            case .classic:
+                if id >= 0 && Int(id) < classicSoundNamePaths.count {
+                    return strings[keyPath: classicSoundNamePaths[Int(id)]]
+                }
+            }
+        }
+        
         guard let notificationSoundList = notificationSoundList else {
             return strings.Channel_NotificationLoading
         }
@@ -87,15 +100,14 @@ public func localizedPeerNotificationSoundString(strings: PresentationStrings, n
             let name = soundName(strings: strings, sound: defaultSound, notificationSoundList: notificationSoundList)
             let actualName: String
             if name.isEmpty {
-                actualName = soundName(strings: strings, sound: .bundledModern(id: 0), notificationSoundList: notificationSoundList)
+                actualName = soundName(strings: strings, sound: defaultCloudPeerNotificationSound, notificationSoundList: notificationSoundList)
             } else {
                 actualName = name
             }
             return strings.UserInfo_NotificationsDefaultSound(actualName).string
         } else {
-            let name = soundName(strings: strings, sound: .bundledModern(id: 0), notificationSoundList: notificationSoundList)
+            let name = soundName(strings: strings, sound: defaultCloudPeerNotificationSound, notificationSoundList: notificationSoundList)
             return name
-            //return strings.UserInfo_NotificationsDefault
         }
     default:
         let name = soundName(strings: strings, sound: sound, notificationSoundList: notificationSoundList)

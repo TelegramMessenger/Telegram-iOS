@@ -795,16 +795,16 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func saveRingtone(id: Api.InputDocument, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func saveRingtone(id: Api.InputDocument, unsave: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.SavedRingtone>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-369618141)
+                    buffer.appendInt32(1038768899)
                     id.serialize(buffer, true)
                     unsave.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.saveRingtone", parameters: [("id", String(describing: id)), ("unsave", String(describing: unsave))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "account.saveRingtone", parameters: [("id", String(describing: id)), ("unsave", String(describing: unsave))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.SavedRingtone? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.account.SavedRingtone?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.account.SavedRingtone
                         }
                         return result
                     })

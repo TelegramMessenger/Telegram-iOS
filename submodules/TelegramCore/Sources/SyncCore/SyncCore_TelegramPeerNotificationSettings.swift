@@ -1,6 +1,78 @@
 import Foundation
 import Postbox
 
+private let cloudSoundMapping: [Int32: Int64] = [
+    2: 5078299559046677200,
+    3: 5078299559046677201,
+    4: 5078299559046677202,
+    5: 5078299559046677203,
+    6: 5078299559046677204,
+    7: 5078299559046677205,
+    8: 5078299559046677206,
+    9: 5078299559046677207,
+    100: 5078299559046677208,
+    101: 5078299559046677209,
+    102: 5078299559046677210,
+    103: 5078299559046677211,
+    104: 5078299559046677212,
+    105: 5078299559046677213,
+    106: 5078299559046677214,
+    107: 5078299559046677215,
+    108: 5078299559046677216,
+    109: 5078299559046677217,
+    110: 5078299559046677218,
+    111: 5078299559046677219
+]
+
+public let defaultCloudPeerNotificationSound: PeerMessageSound = .cloud(fileId: cloudSoundMapping[100]!)
+
+public enum CloudSoundBuiltinCategory {
+    case modern
+    case classic
+    
+    public init?(id: Int64) {
+        for (key, value) in cloudSoundMapping {
+            if value == id {
+                if key < 50 {
+                    self = .classic
+                    return
+                } else {
+                    self = .modern
+                    return
+                }
+            }
+        }
+        return nil
+    }
+}
+
+private func getCloudSoundOrDefault(id: Int32, isModern: Bool) -> Int64 {
+    if isModern {
+        if let value = cloudSoundMapping[id + 100] {
+            return value
+        }
+    } else {
+        if let value = cloudSoundMapping[id + 2] {
+            return value
+        }
+    }
+    
+    return cloudSoundMapping[100]!
+}
+
+public func getCloudLegacySound(id: Int64) -> (id: Int32, category: CloudSoundBuiltinCategory)? {
+    for (key, value) in cloudSoundMapping {
+        if value == id {
+            if key < 50 {
+                return (key - 2, .classic)
+            } else {
+                return (key - 100, .modern)
+            }
+        }
+    }
+    return nil
+}
+
 public enum PeerMuteState: Equatable {
     case `default`
     case unmuted
@@ -75,9 +147,9 @@ public enum PeerMessageSound: Equatable {
         case PeerMessageSoundValue.none.rawValue:
             return .none
         case PeerMessageSoundValue.bundledModern.rawValue:
-            return .bundledModern(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
+            return .cloud(fileId: getCloudSoundOrDefault(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0, isModern: true))
         case PeerMessageSoundValue.bundledClassic.rawValue:
-            return .bundledClassic(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0)
+            return .cloud(fileId: getCloudSoundOrDefault(id: (try? container.decode(Int32.self, forKey: "s.i")) ?? 0, isModern: false))
         case PeerMessageSoundValue.default.rawValue:
             return .default
         case PeerMessageSoundValue.cloud.rawValue:
@@ -88,7 +160,7 @@ public enum PeerMessageSound: Equatable {
             }
         default:
             assertionFailure()
-            return .bundledModern(id: 0)
+            return defaultCloudPeerNotificationSound
         }
     }
 
@@ -97,16 +169,16 @@ public enum PeerMessageSound: Equatable {
         case PeerMessageSoundValue.none.rawValue:
             return .none
         case PeerMessageSoundValue.bundledModern.rawValue:
-            return .bundledModern(id: container.decodeInt32ForKey("s.i", orElse: 0))
+            return .cloud(fileId: getCloudSoundOrDefault(id: container.decodeInt32ForKey("s.i", orElse: 0), isModern: true))
         case PeerMessageSoundValue.bundledClassic.rawValue:
-            return .bundledClassic(id: container.decodeInt32ForKey("s.i", orElse: 0))
+            return .cloud(fileId: getCloudSoundOrDefault(id: container.decodeInt32ForKey("s.i", orElse: 0), isModern: false))
         case PeerMessageSoundValue.default.rawValue:
             return .default
         case PeerMessageSoundValue.cloud.rawValue:
             return .cloud(fileId: container.decodeInt64ForKey("s.cloud.fileId", orElse: 0))
         default:
             assertionFailure()
-            return .bundledModern(id: 0)
+            return defaultCloudPeerNotificationSound
         }
     }
 

@@ -68,7 +68,7 @@ extension PeerMessageSound {
                 } else if soundId >= 2 && soundId <= 9 {
                     parsedSound = .bundledClassic(id: soundId - 2)
                 } else {
-                    parsedSound = .bundledModern(id: 0)
+                    parsedSound = defaultCloudPeerNotificationSound
                 }
             }
             self = parsedSound
