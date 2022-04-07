@@ -15,11 +15,10 @@ import MultilineTextComponent
 import BundleIconComponent
 import UndoUI
 
-private func generateExpandBackground(size: CGSize) -> UIImage {
+private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage {
     return generateImage(size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        let color = UIColor.white
         var locations: [CGFloat] = [0.0, 1.0]
         let colors: [CGColor] = [color.withAlphaComponent(0.0).cgColor, color.cgColor]
         
@@ -88,7 +87,7 @@ private final class TranslateScreenComponent: CombinedComponent {
         private var speechHolder: SpeechSynthesizerHolder?
         fileprivate var availableSpeakLanguages: Set<String>
         
-        fileprivate var moreBackgroundImage: (CGSize, UIImage)?
+        fileprivate var moreBackgroundImage: (CGSize, UIImage, UIColor)?
         
         init(context: AccountContext, fromLanguage: String?, text: String, toLanguage: String, expand: @escaping () -> Void) {
             self.context = context
@@ -115,6 +114,7 @@ private final class TranslateScreenComponent: CombinedComponent {
         }
         
         deinit {
+            self.speechHolder?.stop()
             self.translationDisposable.dispose()
         }
         
@@ -346,6 +346,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                                 ))),
                                 AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
                                     state: state.isSpeakingOriginalText ? .pause : .play,
+                                    tintColor: theme.list.itemCheckColors.foregroundColor,
                                     size: CGSize(width: 18.0, height: 18.0)
                                 ))),
                             ])),
@@ -381,14 +382,15 @@ private final class TranslateScreenComponent: CombinedComponent {
                 
                 let originalMoreBackgroundSize = CGSize(width: originalMoreButton.size.width + 50.0, height: originalMoreButton.size.height)
                 let originalMoreBackgroundImage: UIImage
-                if let (size, image) = state.moreBackgroundImage, size == originalMoreBackgroundSize {
+                let backgroundColor = theme.list.itemBlocksBackgroundColor
+                if let (size, image, color) = state.moreBackgroundImage, size == originalMoreBackgroundSize && color == backgroundColor {
                     originalMoreBackgroundImage = image
                 } else {
-                    originalMoreBackgroundImage = generateExpandBackground(size: originalMoreBackgroundSize)
-                    state.moreBackgroundImage = (originalMoreBackgroundSize, originalMoreBackgroundImage)
+                    originalMoreBackgroundImage = generateExpandBackground(size: originalMoreBackgroundSize, color: backgroundColor)
+                    state.moreBackgroundImage = (originalMoreBackgroundSize, originalMoreBackgroundImage, backgroundColor)
                 }
                 let originalMoreBackground = originalMoreBackground.update(
-                    component: Image(image: originalMoreBackgroundImage, tintColor: theme.list.itemBlocksBackgroundColor),
+                    component: Image(image: originalMoreBackgroundImage, tintColor: backgroundColor),
                     availableSize: originalMoreBackgroundSize,
                     transition: .immediate
                 )
@@ -426,6 +428,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                             ))),
                             AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
                                 state: state.isSpeakingTranslatedText ? .pause : .play,
+                                tintColor: theme.list.itemCheckColors.foregroundColor,
                                 size: CGSize(width: 18.0, height: 18.0)
                             ))),
                         ])),

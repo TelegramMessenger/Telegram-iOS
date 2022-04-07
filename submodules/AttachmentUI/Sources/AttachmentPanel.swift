@@ -482,6 +482,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
     var fromMenu: Bool = false
+    var isStandalone: Bool = false
     
     var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
     var beganTextEditing: () -> Void = {}
@@ -1090,9 +1091,16 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
         if isButtonVisible {
-            let height: CGFloat
+            var height: CGFloat
             if layout.intrinsicInsets.bottom > 0.0 && (layout.inputHeight ?? 0.0).isZero {
                 height = bounds.height + 9.0
+                if case .regular = layout.metrics.widthClass {
+                    if self.isStandalone {
+                        height -= 3.0
+                    } else {
+                        height += 6.0
+                    }
+                }
             } else {
                 height = bounds.height + 9.0 + 8.0
             }

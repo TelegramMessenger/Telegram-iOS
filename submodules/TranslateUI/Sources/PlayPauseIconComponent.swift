@@ -55,15 +55,20 @@ private final class PlayPauseIconNode: ManagedAnimationNode {
 
 final class PlayPauseIconComponent: Component {
     let state: PlayPauseIconNodeState
+    let tintColor: UIColor?
     let size: CGSize
     
-    init(state: PlayPauseIconNodeState, size: CGSize) {
+    init(state: PlayPauseIconNodeState, tintColor: UIColor?, size: CGSize) {
         self.state = state
+        self.tintColor = tintColor
         self.size = size
     }
 
     static func ==(lhs: PlayPauseIconComponent, rhs: PlayPauseIconComponent) -> Bool {
         if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
             return false
         }
         if lhs.size != rhs.size {
@@ -94,6 +99,8 @@ final class PlayPauseIconComponent: Component {
                 
                 self.animationNode.enqueueState(component.state, animated: true)
             }
+            
+            self.animationNode.customColor = component.tintColor
           
             let animationSize = component.size
             let size = CGSize(width: min(animationSize.width, availableSize.width), height: min(animationSize.height, availableSize.height))

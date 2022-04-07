@@ -109,6 +109,8 @@ public final class AnimatedStickerComponent: Component {
                     playbackMode = .loop
                 } else if component.isAnimating {
                     playbackMode = .once
+                } else {
+                    animationNode.autoplay = true
                 }
                 animationNode.setup(source: source, width: Int(component.size.width * component.animation.scale), height: Int(component.size.height * component.animation.scale), playbackMode: playbackMode, mode: .direct(cachePathPrefix: nil))
                 animationNode.visibility = self.isInHierarchy

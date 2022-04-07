@@ -2931,6 +2931,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .speak:
                 let _ = speakText(text.string)
             case .translate:
+                strongSelf.chatDisplayNode.dismissInput()
+                
                 let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { sharedData in
@@ -3364,7 +3366,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                         self?.openUrl(url, concealed: true, forceExternal: true)
                     }, getInputContainerNode: { [weak self] in
-                        if let strongSelf = self {
+                        if let strongSelf = self, let layout = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
                             return (strongSelf.chatDisplayNode.getWindowInputAccessoryHeight(), strongSelf.chatDisplayNode.inputPanelContainerNode, {
                                 return strongSelf.chatDisplayNode.textInputPanelNode?.makeAttachmentMenuTransition(accessoryPanelNode: nil)
                             })
