@@ -337,6 +337,11 @@ private final class TranslateScreenComponent: CombinedComponent {
             
             if state.textExpanded {
                 if let fromLanguage = state.fromLanguage, state.availableSpeakLanguages.contains(fromLanguage) {
+                    var checkColor = theme.list.itemCheckColors.foregroundColor
+                    if checkColor.rgb == theme.list.itemPrimaryTextColor.rgb {
+                        checkColor = theme.list.plainBackgroundColor
+                    }
+                    
                     let originalSpeakButton = originalSpeakButton.update(
                         component: Button(
                             content: AnyComponent(ZStack([
@@ -346,7 +351,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                                 ))),
                                 AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
                                     state: state.isSpeakingOriginalText ? .pause : .play,
-                                    tintColor: theme.list.itemCheckColors.foregroundColor,
+                                    tintColor: checkColor,
                                     size: CGSize(width: 18.0, height: 18.0)
                                 ))),
                             ])),

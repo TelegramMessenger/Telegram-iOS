@@ -15,6 +15,7 @@ import ChatTextLinkEditUI
 import PhotoResources
 import AnimatedStickerComponent
 import SemanticStatusNode
+import MediaResources
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -79,7 +80,7 @@ private final class IconComponent: Component {
                         self.image = nil
                     }
                     
-                    self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference, fetched: true)
+                    self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference)
                     |> runOn(Queue.concurrentDefaultQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] transform in
                         let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
@@ -809,7 +810,27 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 for (name, file) in iconFiles {
                     if [.default, .iOSAnimated, .placeholder].contains(name) {
                         if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer) {
-                            self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
+                            if case .placeholder = name {
+                                let account = self.context.account
+                                let path = account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+                                if !FileManager.default.fileExists(atPath: path) {
+                                    let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                                        let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                                        
+                                        let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                        let fetchedFullSizeDisposable = fetchedFullSize.start()
+                                        let fullSizeDisposable = accountResource.start()
+                                        
+                                        return ActionDisposable {
+                                            fetchedFullSizeDisposable.dispose()
+                                            fullSizeDisposable.dispose()
+                                        }
+                                    }
+                                    self.iconDisposables[file.fileId] = accountFullSizeData.start()
+                                }
+                            } else {
+                                self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
+                            }
                         }
                     }
                 }
