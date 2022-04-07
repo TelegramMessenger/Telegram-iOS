@@ -6,7 +6,7 @@ public struct MessageNotificationSettings: Codable, Equatable {
     public var sound: PeerMessageSound
     
     public static var defaultSettings: MessageNotificationSettings {
-        return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: .bundledModern(id: 0))
+        return MessageNotificationSettings(enabled: true, displayPreviews: true, sound: defaultCloudPeerNotificationSound)
     }
     
     public init(enabled: Bool, displayPreviews: Bool, sound: PeerMessageSound) {

@@ -274,9 +274,12 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         
         index = 1000
         
-        //entries.append(.none(section: .cloud, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound == .none))
         if let notificationSoundList = notificationSoundList {
-            for listSound in notificationSoundList.sounds {
+            let cloudSounds = notificationSoundList.sounds.filter({ CloudSoundBuiltinCategory(id: $0.file.fileId.id) == nil })
+            let modernSounds = notificationSoundList.sounds.filter({ CloudSoundBuiltinCategory(id: $0.file.fileId.id) == .modern })
+            let classicSounds = notificationSoundList.sounds.filter({ CloudSoundBuiltinCategory(id: $0.file.fileId.id) == .classic })
+            
+            for listSound in cloudSounds {
                 let sound: PeerMessageSound = .cloud(fileId: listSound.file.fileId.id)
                 if state.removedSounds.contains(where: { $0.id == sound.id }) {
                     continue
@@ -284,38 +287,38 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
                 entries.append(.sound(index: index, section: .soundCloud, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: selectedSound.id == sound.id, canBeDeleted: true))
                 index += 1
             }
-        }
-        
-        index = 2000
-        
-        entries.append(.uploadSound(index: index, text: presentationData.strings.Notifications_UploadSound))
-        index += 1
-        entries.append(.cloudInfo(index: index, text: presentationData.strings.Notifications_MessageSoundInfo))
-        index += 1
-        
-        entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
-        
-        index = 3000
-        
-        entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: state.defaultSound), selected: selectedSound == .default))
-        index += 1
-
-        entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound == .none))
-        index += 1
-
-        for i in 0 ..< 12 {
-            let sound: PeerMessageSound = .bundledModern(id: Int32(i))
-            entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
+            
+            index = 2000
+            
+            entries.append(.uploadSound(index: index, text: presentationData.strings.Notifications_UploadSound))
             index += 1
-        }
-        
-        entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
-        index += 1
-        
-        for i in 0 ..< 8 {
-            let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
-            entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
+            entries.append(.cloudInfo(index: index, text: presentationData.strings.Notifications_MessageSoundInfo))
             index += 1
+            
+            entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
+            
+            index = 3000
+            
+            entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: state.defaultSound), selected: selectedSound == .default))
+            index += 1
+
+            entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound == .none))
+            index += 1
+
+            for i in 0 ..< modernSounds.count {
+                let sound: PeerMessageSound = .cloud(fileId: modernSounds[i].file.fileId.id)
+                entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
+                index += 1
+            }
+            
+            entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
+            index += 1
+            
+            for i in 0 ..< classicSounds.count {
+                let sound: PeerMessageSound = .cloud(fileId: classicSounds[i].file.fileId.id)
+                entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
+                index += 1
+            }
         }
     }
     
@@ -516,7 +519,7 @@ public func notificationPeerExceptionController(context: AccountContext, updated
                     
                     state.removedSounds.append(sound)
                     if state.selectedSound.id == sound.id {
-                        state.selectedSound = .bundledModern(id: 0)
+                        state.selectedSound = defaultCloudPeerNotificationSound
                     }
                     
                     return state

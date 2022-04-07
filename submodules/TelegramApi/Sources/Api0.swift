@@ -855,6 +855,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-478701471] = { return Api.account.ResetPasswordResult.parse_resetPasswordFailedWait($0) }
     dict[-383330754] = { return Api.account.ResetPasswordResult.parse_resetPasswordOk($0) }
     dict[-370148227] = { return Api.account.ResetPasswordResult.parse_resetPasswordRequestedWait($0) }
+    dict[-1222230163] = { return Api.account.SavedRingtone.parse_savedRingtone($0) }
+    dict[523271863] = { return Api.account.SavedRingtone.parse_savedRingtoneConverted($0) }
     dict[-1041683259] = { return Api.account.SavedRingtones.parse_savedRingtones($0) }
     dict[-67704655] = { return Api.account.SavedRingtones.parse_savedRingtonesNotModified($0) }
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
@@ -1569,6 +1571,8 @@ public extension Api {
             case let _1 as Api.account.PrivacyRules:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.ResetPasswordResult:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.account.SavedRingtone:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.SavedRingtones:
                 _1.serialize(buffer, boxed)

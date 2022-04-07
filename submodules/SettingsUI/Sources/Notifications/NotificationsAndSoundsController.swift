@@ -492,7 +492,7 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
 
 private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound {
     if case .default = sound {
-        return .bundledModern(id: 0)
+        return defaultCloudPeerNotificationSound
     } else {
         return sound
     }
