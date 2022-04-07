@@ -279,7 +279,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var bankCardDisposable: MetaDisposable?
     private var hasActiveGroupCallDisposable: Disposable?
     private var sendAsPeersDisposable: Disposable?
-    private let preloadAttachBotIconsDisposables = DisposableSet()
+    private var preloadAttachBotIconsDisposables: DisposableSet?
     
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -4832,7 +4832,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.nextChannelToReadDisposable?.dispose()
         self.inviteRequestsDisposable.dispose()
         self.sendAsPeersDisposable?.dispose()
-        self.preloadAttachBotIconsDisposables.dispose()
+        self.preloadAttachBotIconsDisposables?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -9063,7 +9063,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            self.preloadAttachBotIcons()
+            self.preloadAttachBotIconsDisposables = AttachmentController.preloadAttachBotIcons(context: self.context)
         }
         
         if let _ = self.focusOnSearchAfterAppearance {
@@ -15721,23 +15721,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             return false
         }
-    }
-    
-    func preloadAttachBotIcons() {
-        let _ = (self.context.engine.messages.attachMenuBots()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] bots in
-            guard let strongSelf = self else {
-                return
-            }
-            for bot in bots {
-                for (name, file) in bot.icons {
-                    if [.iOSAnimated].contains(name), let peer = PeerReference(bot.peer) {
-                        strongSelf.preloadAttachBotIconsDisposables.add(freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: file)).start())
-                    }
-                }
-            }
-        })
     }
 }
 

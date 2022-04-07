@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import TelegramStringFormatting
 import UIKitRuntimeUtils
+import MediaResources
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -911,5 +912,40 @@ public class AttachmentController: ViewController {
             self.menuTextNode = menuTextNode
             self.prepareForDismiss = prepareForDismiss
         }
+    }
+    
+    public static func preloadAttachBotIcons(context: AccountContext) -> DisposableSet {
+        let disposableSet = DisposableSet()
+        let _ = (context.engine.messages.attachMenuBots()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { bots in
+            for bot in bots {
+                for (name, file) in bot.icons {
+                    if [.iOSAnimated, .placeholder].contains(name), let peer = PeerReference(bot.peer) {
+                        if case .placeholder = name {
+                            let path = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+                            if !FileManager.default.fileExists(atPath: path) {
+                                let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                                    let accountResource = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                                    
+                                    let fetchedFullSize = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                    let fetchedFullSizeDisposable = fetchedFullSize.start()
+                                    let fullSizeDisposable = accountResource.start()
+                                    
+                                    return ActionDisposable {
+                                        fetchedFullSizeDisposable.dispose()
+                                        fullSizeDisposable.dispose()
+                                    }
+                                }
+                                disposableSet.add(accountFullSizeData.start())
+                            }
+                        } else {
+                            disposableSet.add(freeMediaFileInteractiveFetched(account: context.account, fileReference: .attachBot(peer: peer, media: file)).start())
+                        }
+                    }
+                }
+            }
+        })
+        return disposableSet
     }
 }
