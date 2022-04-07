@@ -308,7 +308,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let webView = self.webView {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
-                transition.updateFrame(view: webView, frame: frame)
+                
+                if previousLayout != nil && previousLayout?.inputHeight == nil, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
+                    Queue.mainQueue().after(0.4, {
+                        transition.updateFrame(view: webView, frame: frame)
+                    })
+                } else {
+                    transition.updateFrame(view: webView, frame: frame)
+                }
                 
                 webView.updateFrame(frame: viewportFrame, transition: transition)
             }
