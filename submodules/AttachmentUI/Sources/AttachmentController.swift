@@ -829,8 +829,12 @@ public class AttachmentController: ViewController {
         super.dismiss(animated: false, completion: {})
     }
     
+    public var ensureUnfocused = true
+    
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        self.view.endEditing(true)
+        if self.ensureUnfocused {
+            self.view.endEditing(true)
+        }
         if flag {
             if !self.didDismiss {
                 self.didDismiss = true

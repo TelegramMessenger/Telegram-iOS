@@ -806,7 +806,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             let type = self.buttons[i]
             if case let .app(peer, _, iconFiles) = type {
                 for (name, file) in iconFiles {
-                    if [.default, .iOSAnimated].contains(name) {
+                    if [.default, .iOSAnimated, .placeholder].contains(name) {
                         if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer) {
                             self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
                         }

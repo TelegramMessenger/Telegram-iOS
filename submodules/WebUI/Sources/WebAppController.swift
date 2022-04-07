@@ -75,7 +75,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private weak var controller: WebAppController?
         
         fileprivate var webView: WebAppWebView?
-        private var placeholderIcon: UIImage?
+        private var placeholderIcon: (UIImage, Bool)?
         private var placeholderNode: ShimmerEffectNode?
     
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
@@ -124,22 +124,31 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 guard let strongSelf = self else {
                     return
                 }
-                var iconFile: TelegramMediaFile?
-                if let file = bot.icons[.iOSStatic] {
-                    iconFile = file
+                var imageFile: TelegramMediaFile?
+                var isPlaceholder = false
+                if let file = bot.icons[.placeholder] {
+                    imageFile = file
+                    isPlaceholder = true
+                } else if let file = bot.icons[.iOSStatic] {
+                    imageFile = file
                 } else if let file = bot.icons[.default] {
-                    iconFile = file
+                    imageFile = file
                 }
-                if let iconFile = iconFile, let peer = PeerReference(bot.peer) {
-                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: iconFile)).start()
-                    strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: iconFile))
+                if let imageFile = imageFile, let peer = PeerReference(bot.peer) {
+                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: imageFile)).start()
+                    strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: imageFile), stickToTop: isPlaceholder)
                     |> deliverOnMainQueue).start(next: { [weak self] transform in
                         if let strongSelf = self {
-                            let imageSize = CGSize(width: 75.0, height: 75.0)
+                            let imageSize: CGSize
+                            if isPlaceholder, let (layout, _) = strongSelf.validLayout {
+                                imageSize = layout.size
+                            } else {
+                                imageSize = CGSize(width: 75.0, height: 75.0)
+                            }
                             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
                             let drawingContext = transform(arguments)
                             if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
-                                strongSelf.placeholderIcon = image
+                                strongSelf.placeholderIcon = (image, isPlaceholder)
                                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                                 }
@@ -213,31 +222,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
         
-        private func updatePlaceholder(grid: Bool, layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+        private func updatePlaceholder(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
             var shapes: [ShimmerEffect.ShimmerEffectNode.Shape] = []
             var placeholderSize: CGSize = CGSize()
-            if grid {
-                let spacing: CGFloat = 8.0
-                let cols: Int = min(4, Int(floor(layout.size.width / 118.0)))
-                let itemSize: CGSize = CGSize(width: cols == 4 ? 111.0 : 118.0, height: 150.0)
-                let rows: Int = 4
-                
-                let sideInset = floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - itemSize.width * CGFloat(cols) - spacing * CGFloat(cols - 1)) / 2.0)
-                
-                for row in 0 ..< rows {
-                    for col in 0 ..< cols {
-                        shapes.append(.roundedRect(rect: CGRect(x: layout.safeInsets.left + sideInset + CGFloat(col) * (itemSize.width + spacing), y: navigationBarHeight + CGFloat(row) * (itemSize.height + spacing), width: itemSize.width, height: itemSize.height), cornerRadius: 10.0))
-                    }
-                }
-                
-                placeholderSize = layout.size
-            } else {
-                if let icon = self.placeholderIcon {
-                    shapes = [.image(image: icon, rect: CGRect(origin: CGPoint(), size: icon.size))]
-                    placeholderSize = icon.size
-                }
-            }
             
+            if let (image, _) = self.placeholderIcon {
+                shapes = [.image(image: image, rect: CGRect(origin: CGPoint(), size: image.size))]
+                placeholderSize = image.size
+            }
+         
             let theme = self.presentationData.theme
             self.placeholderNode?.update(backgroundColor: self.backgroundColor ?? .clear, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: placeholderSize)
             
@@ -294,7 +287,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
             decisionHandler(.prompt)
         }
-        
+                
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
@@ -309,7 +302,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
                 
-                if previousLayout != nil && previousLayout?.inputHeight == nil, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
+                if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
                     Queue.mainQueue().after(0.4, {
                         transition.updateFrame(view: webView, frame: frame)
                     })
@@ -328,9 +321,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     height = layout.size.height - layout.intrinsicInsets.bottom
                 }
                 
-                let grid = self.controller?.botId.id._internalGetInt64Value() == 2200339955
-                let placeholderSize = self.updatePlaceholder(grid: grid, layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
-                let placeholderY: CGFloat = grid ? 0.0 : floorToScreenPixels((height - placeholderSize.height) / 2.0)
+                let placeholderSize = self.updatePlaceholder(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
+                let placeholderY: CGFloat
+                if let (_, isPlaceholder) = self.placeholderIcon, isPlaceholder {
+                    placeholderY = navigationBarHeight
+                } else {
+                    placeholderY = floorToScreenPixels((height - placeholderSize.height) / 2.0)
+                }
                 let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)

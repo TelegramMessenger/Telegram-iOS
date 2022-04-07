@@ -111,6 +111,10 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         return nil;
     }
     
+    if (CGSizeEqualToSize(size, CGSizeZero)) {
+        size = CGSizeMake(image->width, image->height);
+    }
+    
     double deltaTime = -1.0f * [startTime timeIntervalSinceNow];
     printf("parseTime = %f\n", deltaTime);
     

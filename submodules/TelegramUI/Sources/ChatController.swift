@@ -3377,7 +3377,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self?.interfaceInteraction?.updateShowWebView { _ in
                             return false
                         }
+                        let isFocused = strongSelf.chatDisplayNode.textInputPanelNode?.isFocused ?? false
                         strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
+                        if isFocused {
+                            strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
+                        }
                     })
                     strongSelf.present(controller, in: .window(.root))
                     strongSelf.currentMenuWebAppController = controller
@@ -9772,6 +9776,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      
         if let currentMenuWebAppController = self.currentMenuWebAppController, !self.presentationInterfaceState.showWebView {
             self.currentMenuWebAppController = nil
+            if let currentMenuWebAppController = currentMenuWebAppController as? AttachmentController {
+                currentMenuWebAppController.ensureUnfocused = false
+            }
             currentMenuWebAppController.dismiss(animated: true, completion: nil)
         }
         

@@ -16,6 +16,7 @@ public final class AttachMenuBots: Equatable, Codable {
             case iOSStatic
             case iOSAnimated
             case macOSAnimated
+            case placeholder
             
             init?(string: String) {
                 switch string {
@@ -27,6 +28,8 @@ public final class AttachMenuBots: Equatable, Codable {
                         self = .iOSAnimated
                     case "macos_animated":
                         self = .macOSAnimated
+                    case "placeholder_static":
+                        self = .placeholder
                     default:
                         return nil
                 }

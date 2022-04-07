@@ -2283,7 +2283,7 @@ public func instantPageImageFile(account: Account, fileReference: FileMediaRefer
     }
 }
 
-public func svgIconImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func svgIconImageFile(account: Account, fileReference: FileMediaReference, stickToTop: Bool = false, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: false)
     |> map { value in
         let fullSizePath = value._1
@@ -2300,11 +2300,14 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
             
             if let fullSizePath = fullSizePath {
                 if fullSizeComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath)) {
-                    fullSizeImage = drawSvgImage(data, CGSize(width: 90.0, height: 90.0), .clear, .black, false)
+                    fullSizeImage = drawSvgImage(data, CGSize.zero, .clear, .black, false)
                 }
             }
             
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            var fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            if stickToTop {
+                fittedRect.origin.y = 0.0
+            }
             
             context.withFlippedContext { c in
                 if let fullSizeImage = fullSizeImage?.cgImage {
