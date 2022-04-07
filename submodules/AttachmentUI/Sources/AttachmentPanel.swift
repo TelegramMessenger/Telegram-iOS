@@ -778,10 +778,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         var leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
         
         var buttonWidth = buttonSize.width
-        if self.buttons.count > 6 {
+        if self.buttons.count > 6 && layout.size.width < layout.size.height {
             buttonWidth = smallButtonWidth
             distanceBetweenNodes = buttonWidth
-            leftNodeOriginX = sideInset + buttonWidth / 2.0
+            leftNodeOriginX = layout.safeInsets.left + sideInset + buttonWidth / 2.0
         }
         
         for i in 0 ..< self.buttons.count {
@@ -851,9 +851,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         
         var contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
         var buttonWidth = buttonSize.width
-        if self.buttons.count > 6 {
+        if self.buttons.count > 6 && layout.size.width < layout.size.height {
             buttonWidth = smallButtonWidth
-            contentSize = CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonWidth, height: buttonSize.height)
+            contentSize.width = layout.safeInsets.left + layout.safeInsets.right + sideInset * 2.0 + CGFloat(self.buttons.count) * buttonWidth
         }
         self.scrollLayout = (layout.size.width, contentSize)
 

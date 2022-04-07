@@ -141,7 +141,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         if let strongSelf = self {
                             let imageSize: CGSize
                             if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                                imageSize = layout.size
+                                let minSize = min(layout.size.width, layout.size.height)
+                                imageSize = CGSize(width: minSize, height: minSize * 3.0)
                             } else {
                                 imageSize = CGSize(width: 75.0, height: 75.0)
                             }

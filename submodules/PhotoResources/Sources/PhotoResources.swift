@@ -2293,7 +2293,7 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             let drawingRect = arguments.drawingRect
-            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+            var fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
             
             var fullSizeImage: UIImage?
             let imageOrientation: UIImage.Orientation = .up
@@ -2301,12 +2301,15 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
             if let fullSizePath = fullSizePath {
                 if fullSizeComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath)) {
                     fullSizeImage = drawSvgImage(data, CGSize.zero, .clear, .black, false)
+                    if let image = fullSizeImage {
+                        fittedSize = image.size.aspectFitted(arguments.boundingSize)
+                    }
                 }
             }
             
             var fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
             if stickToTop {
-                fittedRect.origin.y = 0.0
+                fittedRect.origin.y = drawingRect.size.height - fittedSize.height
             }
             
             context.withFlippedContext { c in
