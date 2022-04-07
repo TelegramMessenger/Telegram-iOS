@@ -2283,28 +2283,35 @@ public func instantPageImageFile(account: Account, fileReference: FileMediaRefer
     }
 }
 
-public func svgIconImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: false)
+public func svgIconImageFile(account: Account, fileReference: FileMediaReference, stickToTop: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let data = account.postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+
+    return data
     |> map { value in
-        let fullSizePath = value._1
-        let fullSizeComplete = value._2
+        let fullSizePath = value.path
+        let fullSizeComplete = value.complete
         return { arguments in
-//            assertNotOnMainThread()
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
             
             let drawingRect = arguments.drawingRect
-            let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
+            var fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
             
             var fullSizeImage: UIImage?
             let imageOrientation: UIImage.Orientation = .up
             
-            if let fullSizePath = fullSizePath {
-                if fullSizeComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath)) {
-                    fullSizeImage = drawSvgImage(data, CGSize(width: 90.0, height: 90.0), .clear, .black, false)
+            if fullSizeComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath)) {
+                fullSizeImage = renderPreparedImage(data, CGSize.zero, .clear, UIScreenScale)
+                
+//                fullSizeImage = drawSvgImage(data, stickToTop ? CGSize.zero : CGSize(width: 90.0, height: 90.0), .clear, .black, false)
+                if let image = fullSizeImage {
+                    fittedSize = image.size.aspectFitted(arguments.boundingSize)
                 }
             }
             
-            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            var fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            if stickToTop {
+                fittedRect.origin.y = drawingRect.size.height - fittedSize.height
+            }
             
             context.withFlippedContext { c in
                 if let fullSizeImage = fullSizeImage?.cgImage {

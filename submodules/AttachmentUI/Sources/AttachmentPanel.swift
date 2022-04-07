@@ -15,6 +15,7 @@ import ChatTextLinkEditUI
 import PhotoResources
 import AnimatedStickerComponent
 import SemanticStatusNode
+import MediaResources
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -79,7 +80,7 @@ private final class IconComponent: Component {
                         self.image = nil
                     }
                     
-                    self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference, fetched: true)
+                    self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference)
                     |> runOn(Queue.concurrentDefaultQueue())
                     |> deliverOnMainQueue).start(next: { [weak self] transform in
                         let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
@@ -221,9 +222,9 @@ private final class AttachButtonComponent: CombinedComponent {
                         animation: AnimatedStickerComponent.Animation(
                             source: .file(media: animationFile),
                             scale: UIScreenScale,
-                            loop: false,
-                            tintColor: tintColor
+                            loop: false
                         ),
+                        tintColor: tintColor,
                         isAnimating: component.isSelected,
                         size: CGSize(width: iconSize.width, height: iconSize.height)
                     ),
@@ -361,23 +362,26 @@ public struct AttachmentMainButtonState {
     let textColor: UIColor
     let isVisible: Bool
     let isLoading: Bool
+    let isEnabled: Bool
     
     public init(
         text: String?,
         backgroundColor: UIColor,
         textColor: UIColor,
         isVisible: Bool,
-        isLoading: Bool
+        isLoading: Bool,
+        isEnabled: Bool
     ) {
         self.text = text
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.isVisible = isVisible
         self.isLoading = isLoading
+        self.isEnabled = isEnabled
     }
     
     static var initial: AttachmentMainButtonState {
-        return AttachmentMainButtonState(text: nil, backgroundColor: .clear, textColor: .clear, isVisible: false, isLoading: false)
+        return AttachmentMainButtonState(text: nil, backgroundColor: .clear, textColor: .clear, isVisible: false, isLoading: false, isEnabled: false)
     }
 }
 
@@ -401,7 +405,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         self.addSubnode(self.statusNode)
         
         self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
+            if let strongSelf = self, strongSelf.state.isEnabled {
                 if highlighted {
                     strongSelf.layer.removeAnimation(forKey: "opacity")
                     strongSelf.alpha = 0.65
@@ -479,6 +483,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var scrollLayout: (width: CGFloat, contentSize: CGSize)?
     
     var fromMenu: Bool = false
+    var isStandalone: Bool = false
     
     var selectionChanged: (AttachmentButtonType) -> Bool = { _ in return false }
     var beganTextEditing: () -> Void = {}
@@ -775,10 +780,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         var leftNodeOriginX = (layout.size.width - internalWidth) / 2.0
         
         var buttonWidth = buttonSize.width
-        if self.buttons.count > 6 {
+        if self.buttons.count > 6 && layout.size.width < layout.size.height {
             buttonWidth = smallButtonWidth
             distanceBetweenNodes = buttonWidth
-            leftNodeOriginX = sideInset + buttonWidth / 2.0
+            leftNodeOriginX = layout.safeInsets.left + sideInset + buttonWidth / 2.0
         }
         
         for i in 0 ..< self.buttons.count {
@@ -803,9 +808,29 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             let type = self.buttons[i]
             if case let .app(peer, _, iconFiles) = type {
                 for (name, file) in iconFiles {
-                    if [.default, .iOSAnimated].contains(name) {
+                    if [.default, .iOSAnimated, .placeholder].contains(name) {
                         if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer) {
-                            self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
+                            if case .placeholder = name {
+                                let account = self.context.account
+                                let path = account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+                                if !FileManager.default.fileExists(atPath: path) {
+                                    let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                                        let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                                        
+                                        let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                        let fetchedFullSizeDisposable = fetchedFullSize.start()
+                                        let fullSizeDisposable = accountResource.start()
+                                        
+                                        return ActionDisposable {
+                                            fetchedFullSizeDisposable.dispose()
+                                            fullSizeDisposable.dispose()
+                                        }
+                                    }
+                                    self.iconDisposables[file.fileId] = accountFullSizeData.start()
+                                }
+                            } else {
+                                self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
+                            }
                         }
                     }
                 }
@@ -848,9 +873,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         
         var contentSize = CGSize(width: layout.size.width, height: buttonSize.height)
         var buttonWidth = buttonSize.width
-        if self.buttons.count > 6 {
+        if self.buttons.count > 6 && layout.size.width < layout.size.height {
             buttonWidth = smallButtonWidth
-            contentSize = CGSize(width: sideInset * 2.0 + CGFloat(self.buttons.count) * buttonWidth, height: buttonSize.height)
+            contentSize.width = layout.safeInsets.left + layout.safeInsets.right + sideInset * 2.0 + CGFloat(self.buttons.count) * buttonWidth
         }
         self.scrollLayout = (layout.size.width, contentSize)
 
@@ -899,7 +924,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     func updateMainButtonState(_ mainButtonState: AttachmentMainButtonState?) {
         var currentButtonState = self.mainButtonState
         if mainButtonState == nil {
-            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, backgroundColor: currentButtonState.backgroundColor, textColor: currentButtonState.textColor, isVisible: false, isLoading: false)
+            currentButtonState = AttachmentMainButtonState(text: currentButtonState.text, backgroundColor: currentButtonState.backgroundColor, textColor: currentButtonState.textColor, isVisible: false, isLoading: false, isEnabled: currentButtonState.isEnabled)
         }
         self.mainButtonState = mainButtonState ?? currentButtonState
     }
@@ -955,9 +980,9 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(inputNodeSnapshotView)
         
         let targetInputPosition = CGPoint(x: inputNodeSnapshotView.center.x + inputNodeSnapshotView.frame.width, y: self.mainButtonNode.position.y)
-        transition.updatePosition(layer: inputNodeSnapshotView.layer, position: targetInputPosition, completion: { [weak inputNodeSnapshotView] _ in
+        transition.updatePosition(layer: inputNodeSnapshotView.layer, position: targetInputPosition, completion: { [weak inputNodeSnapshotView, weak self] _ in
             inputNodeSnapshotView?.removeFromSuperview()
-            self.animatingTransition = false
+            self?.animatingTransition = false
         })
     }
     
@@ -974,7 +999,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         self.dismissed = dismissed
         
         let action = {
-            guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: true), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
+            guard let menuIconSnapshotView = inputTransition.menuIconNode.view.snapshotView(afterScreenUpdates: false), let menuTextSnapshotView = inputTransition.menuTextNode.view.snapshotView(afterScreenUpdates: false) else {
                 return
             }
             
@@ -1011,19 +1036,19 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             let targetInputFrame = CGRect(x: inputTransition.menuButtonNode.frame.maxX, y: 0.0, width: inputNodeSnapshotView.frame.width - inputTransition.menuButtonNode.frame.maxX, height: inputNodeSnapshotView.frame.height)
             inputNodeSnapshotView.frame = targetInputFrame.offsetBy(dx: targetInputFrame.width, dy: self.mainButtonNode.position.y - inputNodeSnapshotView.frame.height / 2.0)
             self.view.addSubview(inputNodeSnapshotView)
-            transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView] _ in
+            transition.updateFrame(layer: inputNodeSnapshotView.layer, frame: targetInputFrame, completion: { [weak inputNodeSnapshotView, weak menuIconSnapshotView, weak menuTextSnapshotView, weak self] _ in
                 inputNodeSnapshotView?.removeFromSuperview()
-                self.animatingTransition = false
+                self?.animatingTransition = false
                 
                 if !dismissed {
                     menuIconSnapshotView?.removeFromSuperview()
                     menuTextSnapshotView?.removeFromSuperview()
                     
-                    self.mainButtonNode.backgroundColor = sourceButtonColor
-                    self.mainButtonNode.frame = sourceButtonFrame
-                    self.mainButtonNode.textNode.position = sourceButtonTextPosition
-                    self.mainButtonNode.textNode.layer.removeAllAnimations()
-                    self.mainButtonNode.cornerRadius = sourceButtonCornerRadius
+                    self?.mainButtonNode.backgroundColor = sourceButtonColor
+                    self?.mainButtonNode.frame = sourceButtonFrame
+                    self?.mainButtonNode.textNode.position = sourceButtonTextPosition
+                    self?.mainButtonNode.textNode.layer.removeAllAnimations()
+                    self?.mainButtonNode.cornerRadius = sourceButtonCornerRadius
                 }
             })
         }
@@ -1087,9 +1112,16 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         let containerTransition: ContainedViewLayoutTransition
         let containerFrame: CGRect
         if isButtonVisible {
-            let height: CGFloat
+            var height: CGFloat
             if layout.intrinsicInsets.bottom > 0.0 && (layout.inputHeight ?? 0.0).isZero {
                 height = bounds.height + 9.0
+                if case .regular = layout.metrics.widthClass {
+                    if self.isStandalone {
+                        height -= 3.0
+                    } else {
+                        height += 6.0
+                    }
+                }
             } else {
                 height = bounds.height + 9.0 + 8.0
             }

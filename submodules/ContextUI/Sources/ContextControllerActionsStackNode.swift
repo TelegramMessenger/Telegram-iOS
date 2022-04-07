@@ -714,7 +714,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         override init() {
             self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: false)
             self.parentShadowNode = ASImageNode()
-            self.parentShadowNode.image = UIImage(bundleImageName: "Components/Context Menu/Shadow")?.stretchableImage(withLeftCapWidth: 60, topCapHeight: 60)
+            self.parentShadowNode.image = UIImage(bundleImageName: "Components/Context Menu/Shadow")?.stretchableImage(withLeftCapWidth: 60, topCapHeight: 48)
             
             super.init()
             

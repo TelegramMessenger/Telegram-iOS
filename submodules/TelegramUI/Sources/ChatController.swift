@@ -279,6 +279,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var bankCardDisposable: MetaDisposable?
     private var hasActiveGroupCallDisposable: Disposable?
     private var sendAsPeersDisposable: Disposable?
+    private let preloadAttachBotIconsDisposables = DisposableSet()
     
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -2931,6 +2932,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case .speak:
                 let _ = speakText(text.string)
             case .translate:
+                strongSelf.chatDisplayNode.dismissInput()
+                
                 let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { sharedData in
@@ -3360,11 +3363,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let openWebView = {
                 if fromMenu {
-                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true)
+                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                         self?.openUrl(url, concealed: true, forceExternal: true)
                     }, getInputContainerNode: { [weak self] in
-                        if let strongSelf = self {
+                        if let strongSelf = self, let layout = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
                             return (strongSelf.chatDisplayNode.getWindowInputAccessoryHeight(), strongSelf.chatDisplayNode.inputPanelContainerNode, {
                                 return strongSelf.chatDisplayNode.textInputPanelNode?.makeAttachmentMenuTransition(accessoryPanelNode: nil)
                             })
@@ -3373,11 +3376,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, completion: { [weak self] in
                         self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                    }, dismissed: { [weak self] in
+                    }, willDismiss: { [weak self] in
                         self?.interfaceInteraction?.updateShowWebView { _ in
                             return false
                         }
-                        strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
+                    }, didDismiss: { [weak self] in
+                        if let strongSelf = self {
+                            let isFocused = strongSelf.chatDisplayNode.textInputPanelNode?.isFocused ?? false
+                            strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
+                            if isFocused {
+                                strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
+                            }
+                        }
                     })
                     strongSelf.present(controller, in: .window(.root))
                     strongSelf.currentMenuWebAppController = controller
@@ -3390,7 +3400,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false)
+                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         })
@@ -3410,7 +3420,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false)
+                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         }, completion: { [weak self] in
@@ -4822,6 +4832,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.nextChannelToReadDisposable?.dispose()
         self.inviteRequestsDisposable.dispose()
         self.sendAsPeersDisposable?.dispose()
+        self.preloadAttachBotIconsDisposables.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {
@@ -6784,7 +6795,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return value
                         })
                     })
-                    if updatedInputMode == .text {
+                    var dismissWebView = false
+                    switch updatedInputMode {
+                        case .text, .media, .inputButtons:
+                            dismissWebView = true
+                        default:
+                            break
+                    }
+                    if dismissWebView {
                         updated = updated.updatedShowWebView(false)
                     }
                     return updated
@@ -6793,9 +6811,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openStickers: { [weak self] in
             guard let strongSelf = self else {
                 return
-            }
-            strongSelf.interfaceInteraction?.updateShowWebView { _ in
-                return false
             }
             strongSelf.chatDisplayNode.openStickers()
             strongSelf.mediaRecordingModeTooltipController?.dismissImmediately()
@@ -9047,6 +9062,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }).start())
                 }
             }
+            
+            self.preloadAttachBotIcons()
         }
         
         if let _ = self.focusOnSearchAfterAppearance {
@@ -9772,6 +9789,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
      
         if let currentMenuWebAppController = self.currentMenuWebAppController, !self.presentationInterfaceState.showWebView {
             self.currentMenuWebAppController = nil
+            if let currentMenuWebAppController = currentMenuWebAppController as? AttachmentController {
+                currentMenuWebAppController.ensureUnfocused = false
+            }
             currentMenuWebAppController.dismiss(animated: true, completion: nil)
         }
         
@@ -10941,7 +10961,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     completion(controller, nil)
                     strongSelf.controllerNavigationDisposable.set(nil)
                 case let .app(bot, botName, _):
-                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, buttonText: nil, keepAliveSignal: nil, fromMenu: false)
+                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: botPayload, buttonText: nil, keepAliveSignal: nil, fromMenu: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId)
                     controller.openUrl = { [weak self] url in
@@ -15701,6 +15721,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             return false
         }
+    }
+    
+    func preloadAttachBotIcons() {
+        let _ = (self.context.engine.messages.attachMenuBots()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] bots in
+            guard let strongSelf = self else {
+                return
+            }
+            for bot in bots {
+                for (name, file) in bot.icons {
+                    if [.iOSAnimated].contains(name), let peer = PeerReference(bot.peer) {
+                        strongSelf.preloadAttachBotIconsDisposables.add(freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: file)).start())
+                    }
+                }
+            }
+        })
     }
 }
 

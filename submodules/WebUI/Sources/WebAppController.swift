@@ -24,6 +24,7 @@ public struct WebAppParameters {
     let botName: String
     let url: String?
     let queryId: Int64?
+    let payload: String?
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let fromMenu: Bool
@@ -34,6 +35,7 @@ public struct WebAppParameters {
         botName: String,
         url: String?,
         queryId: Int64?,
+        payload: String?,
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
         fromMenu: Bool
@@ -43,6 +45,7 @@ public struct WebAppParameters {
         self.botName = botName
         self.url = url
         self.queryId = queryId
+        self.payload = payload
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.fromMenu = fromMenu
@@ -75,7 +78,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private weak var controller: WebAppController?
         
         fileprivate var webView: WebAppWebView?
-        private var placeholderIcon: UIImage?
+        private var placeholderIcon: (UIImage, Bool)?
         private var placeholderNode: ShimmerEffectNode?
     
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
@@ -124,22 +127,32 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 guard let strongSelf = self else {
                     return
                 }
-                var iconFile: TelegramMediaFile?
-                if let file = bot.icons[.iOSStatic] {
-                    iconFile = file
+                var imageFile: TelegramMediaFile?
+                var isPlaceholder = false
+                if let file = bot.icons[.placeholder] {
+                    imageFile = file
+                    isPlaceholder = true
+                } else if let file = bot.icons[.iOSStatic] {
+                    imageFile = file
                 } else if let file = bot.icons[.default] {
-                    iconFile = file
+                    imageFile = file
                 }
-                if let iconFile = iconFile, let peer = PeerReference(bot.peer) {
-                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: iconFile)).start()
-                    strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: iconFile))
+                if let imageFile = imageFile, let peer = PeerReference(bot.peer) {
+                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: imageFile)).start()
+                    strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: imageFile), stickToTop: isPlaceholder)
                     |> deliverOnMainQueue).start(next: { [weak self] transform in
                         if let strongSelf = self {
-                            let imageSize = CGSize(width: 75.0, height: 75.0)
+                            let imageSize: CGSize
+                            if isPlaceholder, let (layout, _) = strongSelf.validLayout {
+                                let minSize = min(layout.size.width, layout.size.height)
+                                imageSize = CGSize(width: minSize, height: minSize * 3.0)
+                            } else {
+                                imageSize = CGSize(width: 75.0, height: 75.0)
+                            }
                             let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
                             let drawingContext = transform(arguments)
                             if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
-                                strongSelf.placeholderIcon = image
+                                strongSelf.placeholderIcon = (image, isPlaceholder)
                                 if let (layout, navigationBarHeight) = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                                 }
@@ -168,7 +181,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: nil, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -213,31 +226,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
         
-        private func updatePlaceholder(grid: Bool, layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+        private func updatePlaceholder(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
             var shapes: [ShimmerEffect.ShimmerEffectNode.Shape] = []
             var placeholderSize: CGSize = CGSize()
-            if grid {
-                let spacing: CGFloat = 8.0
-                let cols: Int = min(4, Int(floor(layout.size.width / 118.0)))
-                let itemSize: CGSize = CGSize(width: cols == 4 ? 111.0 : 118.0, height: 150.0)
-                let rows: Int = 4
-                
-                let sideInset = floorToScreenPixels((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - itemSize.width * CGFloat(cols) - spacing * CGFloat(cols - 1)) / 2.0)
-                
-                for row in 0 ..< rows {
-                    for col in 0 ..< cols {
-                        shapes.append(.roundedRect(rect: CGRect(x: layout.safeInsets.left + sideInset + CGFloat(col) * (itemSize.width + spacing), y: navigationBarHeight + CGFloat(row) * (itemSize.height + spacing), width: itemSize.width, height: itemSize.height), cornerRadius: 10.0))
-                    }
-                }
-                
-                placeholderSize = layout.size
-            } else {
-                if let icon = self.placeholderIcon {
-                    shapes = [.image(image: icon, rect: CGRect(origin: CGPoint(), size: icon.size))]
-                    placeholderSize = icon.size
-                }
-            }
             
+            if let (image, _) = self.placeholderIcon {
+                shapes = [.image(image: image, rect: CGRect(origin: CGPoint(), size: image.size))]
+                placeholderSize = image.size
+            }
+         
             let theme = self.presentationData.theme
             self.placeholderNode?.update(backgroundColor: self.backgroundColor ?? .clear, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, horizontal: true, size: placeholderSize)
             
@@ -263,38 +260,29 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             return nil
         }
+                        
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            Queue.mainQueue().after(0.65, {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+                transition.updateAlpha(layer: webView.layer, alpha: 1.0)
+                if let placeholderNode = self.placeholderNode {
+                    self.placeholderNode = nil
+                    transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
+                        placeholderNode?.removeFromSupernode()
+                    })
+                }
                 
-        private var loadCount = 0
-        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            self.loadCount += 1
-        }
-                
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            self.loadCount -= 1
-            
-            Queue.mainQueue().after(0.1, {
-                if self.loadCount == 0, let webView = self.webView {
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
-                    transition.updateAlpha(layer: webView.layer, alpha: 1.0)
-                    if let placeholderNode = self.placeholderNode {
-                        self.placeholderNode = nil
-                        transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
-                            placeholderNode?.removeFromSupernode()
-                        })
-                    }
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
             })
-            
-            if let (layout, navigationBarHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            }
         }
         
         @available(iOSApplicationExtension 15.0, iOS 15.0, *)
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
             decisionHandler(.prompt)
         }
-        
+                
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
@@ -308,7 +296,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let webView = self.webView {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
-                transition.updateFrame(view: webView, frame: frame)
+                
+                if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
+                    Queue.mainQueue().after(0.4, {
+                        transition.updateFrame(view: webView, frame: frame)
+                    })
+                } else {
+                    transition.updateFrame(view: webView, frame: frame)
+                }
                 
                 webView.updateFrame(frame: viewportFrame, transition: transition)
             }
@@ -321,9 +316,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     height = layout.size.height - layout.intrinsicInsets.bottom
                 }
                 
-                let grid = self.controller?.botId.id._internalGetInt64Value() == 2200339955
-                let placeholderSize = self.updatePlaceholder(grid: grid, layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
-                let placeholderY: CGFloat = grid ? 0.0 : floorToScreenPixels((height - placeholderSize.height) / 2.0)
+                let placeholderSize = self.updatePlaceholder(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
+                let placeholderY: CGFloat
+                if let (_, isPlaceholder) = self.placeholderIcon, isPlaceholder {
+                    placeholderY = navigationBarHeight
+                } else {
+                    placeholderY = floorToScreenPixels((height - placeholderSize.height) / 2.0)
+                }
                 let placeholderFrame =  CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - placeholderSize.width) / 2.0), y: placeholderY), size: placeholderSize)
                 transition.updateFrame(node: placeholderNode, frame: placeholderFrame)
                 placeholderNode.updateAbsoluteRect(placeholderFrame, within: layout.size)
@@ -372,7 +371,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             let textColor = textColorString.flatMap({ UIColor(hexString: $0) }) ?? self.presentationData.theme.list.itemCheckColors.foregroundColor
                             
                             let isLoading = json["is_progress_visible"] as? Bool
-                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false)
+                            let isEnabled = json["is_active"] as? Bool
+                            let state = AttachmentMainButtonState(text: text, backgroundColor: backgroundColor, textColor: textColor, isVisible: isVisible, isLoading: isLoading ?? false, isEnabled: isEnabled ?? true)
                             self.mainButtonStatePromise.set(.single(state))
                         }
                     }
@@ -448,6 +448,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let botId: PeerId
     private let url: String?
     private let queryId: Int64?
+    private let payload: String?
     private let buttonText: String?
     private let fromMenu: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
@@ -467,6 +468,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.botId = params.botId
         self.url = params.url
         self.queryId = params.queryId
+        self.payload = params.payload
         self.buttonText = params.buttonText
         self.fromMenu = params.fromMenu
         self.keepAliveSignal = params.keepAliveSignal
@@ -666,7 +668,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, dismissed: @escaping () -> Void = {}) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu)
     controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
@@ -675,6 +677,7 @@ public func standaloneWebAppController(context: AccountContext, updatedPresentat
         webAppController.completion = completion
         present(webAppController, webAppController.mediaPickerContext)
     }
-    controller.dismissed = dismissed
+    controller.willDismiss = willDismiss
+    controller.didDismiss = didDismiss
     return controller
 }

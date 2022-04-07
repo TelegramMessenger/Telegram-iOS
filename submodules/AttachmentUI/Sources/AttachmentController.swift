@@ -161,7 +161,8 @@ public class AttachmentController: ViewController {
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     
-    public var dismissed: () -> Void = {}
+    public var willDismiss: () -> Void = {}
+    public var didDismiss: () -> Void = {}
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         get {
@@ -268,6 +269,7 @@ public class AttachmentController: ViewController {
             self.container.canHaveKeyboardFocus = true
             self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, updatedPresentationData: controller.updatedPresentationData)
             self.panel.fromMenu = controller.fromMenu
+            self.panel.isStandalone = controller.isStandalone
             
             super.init()
             
@@ -636,7 +638,10 @@ public class AttachmentController: ViewController {
             
             var containerLayout = layout
             let containerRect: CGRect
+            var isCompact = true
             if case .regular = layout.metrics.widthClass {
+                isCompact = false
+                
                 let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0) - 60.0
                 
                 let size = CGSize(width: 390.0, height: min(620.0, availableHeight))
@@ -645,17 +650,28 @@ public class AttachmentController: ViewController {
                 let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
                 let position: CGPoint = CGPoint(x: masterWidth - 174.0, y: layout.size.height - size.height - insets.bottom - 40.0)
                 
-                containerRect = CGRect(origin: position, size: size)
+                if controller.isStandalone {
+                    var containerY = floorToScreenPixels((layout.size.height - size.height) / 2.0)
+                    if let inputHeight = layout.inputHeight, inputHeight > 88.0 {
+                        containerY = layout.size.height - inputHeight - size.height - 80.0
+                    }
+                    containerRect = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: containerY), size: size)
+                } else {
+                    containerRect = CGRect(origin: position, size: size)
+                }
                 containerLayout.size = containerRect.size
                 containerLayout.intrinsicInsets.bottom = 12.0
                 containerLayout.inputHeight = nil
                 
-                if self.wrapperNode.view.mask == nil {
+                if controller.isStandalone {
+                    self.wrapperNode.cornerRadius = 10.0
+                } else if self.wrapperNode.view.mask == nil {
                     let maskView = UIImageView()
                     maskView.image = generateMaskImage()
                     maskView.contentMode = .scaleToFill
                     self.wrapperNode.view.mask = maskView
                 }
+                
                 if let maskView = self.wrapperNode.view.mask {
                     transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(), size: size))
                 }
@@ -697,7 +713,7 @@ public class AttachmentController: ViewController {
             if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
                panelHeight = inputContainerHeight
             }
-            if hasPanel || hasButton || fromMenu {
+            if hasPanel || hasButton || (fromMenu && isCompact) {
                 containerInsets.bottom = panelHeight
             }
             
@@ -716,13 +732,13 @@ public class AttachmentController: ViewController {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
             var panelY = containerRect.height - panelHeight
-            if fromMenu {
+            if fromMenu && isCompact {
                 panelY = layout.size.height - panelHeight
             } else if !hasPanel && !hasButton {
                 panelY = containerRect.height
             }
             
-            if fromMenu {
+            if fromMenu && isCompact {
                 if hasButton {
                     self.panel.isHidden = false
                     self.inputContainerNode?.isHidden = true
@@ -735,7 +751,7 @@ public class AttachmentController: ViewController {
             }
             
             panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)), completion: { [weak self] finished in
-                if transitioning && finished {
+                if transitioning && finished, isCompact {
                     self?.panel.isHidden = !hasButton
                     self?.inputContainerNode?.isHidden = hasButton
                 }
@@ -765,7 +781,8 @@ public class AttachmentController: ViewController {
                                     
                 if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
                     self.wrapperNode.addSubnode(self.container)
-                    if controller.fromMenu {
+                    
+                    if fromMenu, let _ = controller.getInputContainerNode() {
                         self.addSubnode(self.panel)
                     } else {
                         self.container.addSubnode(self.panel)
@@ -814,6 +831,10 @@ public class AttachmentController: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    fileprivate var isStandalone: Bool {
+        return self.buttons.contains(.standalone)
+    }
+    
     private var node: Node {
         return self.displayNode as! Node
     }
@@ -823,24 +844,29 @@ public class AttachmentController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    private var didDismiss = false
+    private var dismissedFlag = false
     public func _dismiss() {
-        self.dismissed()
         super.dismiss(animated: false, completion: {})
     }
     
+    public var ensureUnfocused = true
+    
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        self.view.endEditing(true)
+        if self.ensureUnfocused {
+            self.view.endEditing(true)
+        }
         if flag {
-            if !self.didDismiss {
-                self.didDismiss = true
-                self.dismissed()
+            if !self.dismissedFlag {
+                self.dismissedFlag = true
+                self.willDismiss()
                 self.node.animateOut(completion: { [weak self] in
+                    self?.didDismiss()
                     self?._dismiss()
                     completion?()
                 })
             }
         } else {
+            self.didDismiss()
             self._dismiss()
             completion?()
         }
