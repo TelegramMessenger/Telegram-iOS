@@ -260,31 +260,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             return nil
         }
+                        
+        func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+            Queue.mainQueue().after(0.65, {
+                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+                transition.updateAlpha(layer: webView.layer, alpha: 1.0)
+                if let placeholderNode = self.placeholderNode {
+                    self.placeholderNode = nil
+                    transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
+                        placeholderNode?.removeFromSupernode()
+                    })
+                }
                 
-        private var loadCount = 0
-        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            self.loadCount += 1
-        }
-                
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            self.loadCount -= 1
-            
-            Queue.mainQueue().after(0.1, {
-                if self.loadCount == 0, let webView = self.webView {
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
-                    transition.updateAlpha(layer: webView.layer, alpha: 1.0)
-                    if let placeholderNode = self.placeholderNode {
-                        self.placeholderNode = nil
-                        transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
-                            placeholderNode?.removeFromSupernode()
-                        })
-                    }
+                if let (layout, navigationBarHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                 }
             })
-            
-            if let (layout, navigationBarHeight) = self.validLayout {
-                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-            }
         }
         
         @available(iOSApplicationExtension 15.0, iOS 15.0, *)
@@ -677,7 +668,7 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, dismissed: @escaping () -> Void = {}) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu)
     controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
@@ -686,6 +677,7 @@ public func standaloneWebAppController(context: AccountContext, updatedPresentat
         webAppController.completion = completion
         present(webAppController, webAppController.mediaPickerContext)
     }
-    controller.dismissed = dismissed
+    controller.willDismiss = willDismiss
+    controller.didDismiss = didDismiss
     return controller
 }

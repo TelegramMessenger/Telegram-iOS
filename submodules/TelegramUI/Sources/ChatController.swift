@@ -3376,14 +3376,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, completion: { [weak self] in
                         self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
-                    }, dismissed: { [weak self] in
+                    }, willDismiss: { [weak self] in
                         self?.interfaceInteraction?.updateShowWebView { _ in
                             return false
                         }
-                        let isFocused = strongSelf.chatDisplayNode.textInputPanelNode?.isFocused ?? false
-                        strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
-                        if isFocused {
-                            strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
+                    }, didDismiss: { [weak self] in
+                        if let strongSelf = self {
+                            let isFocused = strongSelf.chatDisplayNode.textInputPanelNode?.isFocused ?? false
+                            strongSelf.chatDisplayNode.insertSubnode(strongSelf.chatDisplayNode.inputPanelContainerNode, aboveSubnode: strongSelf.chatDisplayNode.historyNodeContainer)
+                            if isFocused {
+                                strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
+                            }
                         }
                     })
                     strongSelf.present(controller, in: .window(.root))
@@ -6792,7 +6795,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return value
                         })
                     })
-                    if updatedInputMode == .text {
+                    var dismissWebView = false
+                    switch updatedInputMode {
+                        case .text, .media, .inputButtons:
+                            dismissWebView = true
+                        default:
+                            break
+                    }
+                    if dismissWebView {
                         updated = updated.updatedShowWebView(false)
                     }
                     return updated
@@ -6801,9 +6811,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openStickers: { [weak self] in
             guard let strongSelf = self else {
                 return
-            }
-            strongSelf.interfaceInteraction?.updateShowWebView { _ in
-                return false
             }
             strongSelf.chatDisplayNode.openStickers()
             strongSelf.mediaRecordingModeTooltipController?.dismissImmediately()

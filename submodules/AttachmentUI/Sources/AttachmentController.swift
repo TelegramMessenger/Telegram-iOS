@@ -161,7 +161,8 @@ public class AttachmentController: ViewController {
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     
-    public var dismissed: () -> Void = {}
+    public var willDismiss: () -> Void = {}
+    public var didDismiss: () -> Void = {}
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         get {
@@ -843,9 +844,8 @@ public class AttachmentController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    private var didDismiss = false
+    private var dismissedFlag = false
     public func _dismiss() {
-        self.dismissed()
         super.dismiss(animated: false, completion: {})
     }
     
@@ -856,15 +856,17 @@ public class AttachmentController: ViewController {
             self.view.endEditing(true)
         }
         if flag {
-            if !self.didDismiss {
-                self.didDismiss = true
-                self.dismissed()
+            if !self.dismissedFlag {
+                self.dismissedFlag = true
+                self.willDismiss()
                 self.node.animateOut(completion: { [weak self] in
+                    self?.didDismiss()
                     self?._dismiss()
                     completion?()
                 })
             }
         } else {
+            self.didDismiss()
             self._dismiss()
             completion?()
         }
