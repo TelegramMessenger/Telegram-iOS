@@ -24,6 +24,7 @@ public struct WebAppParameters {
     let botName: String
     let url: String?
     let queryId: Int64?
+    let payload: String?
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let fromMenu: Bool
@@ -34,6 +35,7 @@ public struct WebAppParameters {
         botName: String,
         url: String?,
         queryId: Int64?,
+        payload: String?,
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
         fromMenu: Bool
@@ -43,6 +45,7 @@ public struct WebAppParameters {
         self.botName = botName
         self.url = url
         self.queryId = queryId
+        self.payload = payload
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.fromMenu = fromMenu
@@ -178,7 +181,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: nil, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -454,6 +457,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let botId: PeerId
     private let url: String?
     private let queryId: Int64?
+    private let payload: String?
     private let buttonText: String?
     private let fromMenu: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
@@ -473,6 +477,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.botId = params.botId
         self.url = params.url
         self.queryId = params.queryId
+        self.payload = params.payload
         self.buttonText = params.buttonText
         self.fromMenu = params.fromMenu
         self.keepAliveSignal = params.keepAliveSignal
