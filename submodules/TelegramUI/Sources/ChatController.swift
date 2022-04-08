@@ -465,6 +465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private weak var attachmentController: AttachmentController?
     private weak var currentMenuWebAppController: ViewController?
+    private weak var currentWebAppController: ViewController?
     
     private weak var currentImportMessageTooltip: UndoOverlayController?
 
@@ -3408,6 +3409,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         })
+                        strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }, error: { [weak self] error in
                         if let strongSelf = self {
@@ -3430,6 +3432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }, completion: { [weak self] in
                             self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                         })
+                        strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }, error: { [weak self] error in
                         if let strongSelf = self {
@@ -14487,6 +14490,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+            if let currentWebAppController = strongSelf.currentWebAppController {
+                strongSelf.currentWebAppController = nil
+                currentWebAppController.dismiss(animated: true, completion: nil)
+            } else if let currentWebAppController = strongSelf.currentMenuWebAppController {
+                strongSelf.currentMenuWebAppController = nil
+                currentWebAppController.dismiss(animated: true, completion: nil)
+            }
+            
             switch navigation {
                 case let .chat(_, subject, peekData):
                     if case .peer(peerId) = strongSelf.chatLocation {
