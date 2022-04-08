@@ -2283,9 +2283,20 @@ public func instantPageImageFile(account: Account, fileReference: FileMediaRefer
     }
 }
 
-public func svgIconImageFile(account: Account, fileReference: FileMediaReference, stickToTop: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let data = account.postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
-
+public func svgIconImageFile(account: Account, fileReference: FileMediaReference?, stickToTop: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let data: Signal<MediaResourceData, NoError>
+    if let fileReference = fileReference {
+        data = account.postbox.mediaBox.cachedResourceRepresentation(fileReference.media.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+    } else {
+        data = Signal { subscriber in
+            if let url = getAppBundle().url(forResource: "durgerking", withExtension: "placeholder"), let data = try? Data(contentsOf: url, options: .mappedRead) {
+                subscriber.putNext(MediaResourceData(path: url.path, offset: 0, size: data.count, complete: true))
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
     return data
     |> map { value in
         let fullSizePath = value.path
@@ -2301,8 +2312,6 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
             
             if fullSizeComplete, let data = try? Data(contentsOf: URL(fileURLWithPath: fullSizePath)) {
                 fullSizeImage = renderPreparedImage(data, CGSize.zero, .clear, UIScreenScale)
-                
-//                fullSizeImage = drawSvgImage(data, stickToTop ? CGSize.zero : CGSize(width: 90.0, height: 90.0), .clear, .black, false)
                 if let image = fullSizeImage {
                     fittedSize = image.size.aspectFitted(arguments.boundingSize)
                 }
