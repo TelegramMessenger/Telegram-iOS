@@ -692,7 +692,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
                 
                 if !isAlreadyAdded {
-                    actions.append(.action(ContextMenuActionItem(text: "Save for Notifications", icon: { theme in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_SaveForNotifications, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
                         f(.default)
