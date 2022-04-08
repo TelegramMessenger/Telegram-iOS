@@ -262,7 +262,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
                         
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            Queue.mainQueue().after(0.65, {
+            Queue.mainQueue().after(1.0, {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
                 transition.updateAlpha(layer: webView.layer, alpha: 1.0)
                 if let placeholderNode = self.placeholderNode {
@@ -283,9 +283,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             decisionHandler(.prompt)
         }
                 
+        private var targetContentOffset: CGPoint?
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
+            
+            if let targetContentOffset = self.targetContentOffset, scrollView.contentOffset != targetContentOffset {
+                scrollView.contentOffset = targetContentOffset
+            }
         }
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
@@ -298,8 +303,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
                 
                 if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
+                    webView.scrollToActiveElement(layout: layout, transition: transition)
                     Queue.mainQueue().after(0.4, {
+                        let contentOffset = webView.scrollView.contentOffset
                         transition.updateFrame(view: webView, frame: frame)
+                        webView.scrollView.contentOffset = contentOffset
+                        self.targetContentOffset = contentOffset                        
+                        Queue.mainQueue().after(0.1) {
+                            self.targetContentOffset = nil
+                        }
                     })
                 } else {
                     transition.updateFrame(view: webView, frame: frame)

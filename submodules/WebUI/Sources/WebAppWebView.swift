@@ -4,6 +4,10 @@ import Display
 import WebKit
 import SwiftSignalKit
 
+private let findActiveElementY = """
+document.activeElement.getBoundingClientRect().y
+"""
+
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
     private let f: (WKScriptMessage) -> ()
     
@@ -104,6 +108,10 @@ final class WebAppWebView: WKWebView {
                 }
                 contentView?.removeInteraction(dragInteraction)
             })
+            
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
     }
     
@@ -120,6 +128,29 @@ final class WebAppWebView: WKWebView {
     private(set) var didTouchOnce = true
     @objc func handleTap() {
         self.didTouchOnce = true
+    }
+    
+    func scrollToActiveElement(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.evaluateJavaScript(findActiveElementY, completionHandler: { result, _ in
+            if let result = result as? CGFloat {
+                Queue.mainQueue().async {
+                    let convertedY = result - self.scrollView.contentOffset.y
+                    let viewportHeight = self.frame.height - (layout.inputHeight ?? 0.0)
+                    if convertedY < 0.0 || convertedY > viewportHeight {
+                        let targetOffset: CGFloat
+                        if convertedY < 0.0 {
+                            targetOffset = max(0.0, result - 36.0)
+                        } else {
+                            targetOffset = max(0.0, result + 60.0 - viewportHeight)
+                        }
+                        transition.animateView({
+                            self.scrollView.contentOffset = CGPoint(x: 0.0, y: targetOffset)
+                        })
+//                        transition.updateBounds(layer: self.scrollView.layer, bounds: CGRect(x: 0.0, y: targetOffset, width: self.scrollView.layer.bounds.width, height: self.scrollView.layer.bounds.height))
+                    }
+                }
+            }
+        })
     }
     
     override var inputAccessoryView: UIView? {
