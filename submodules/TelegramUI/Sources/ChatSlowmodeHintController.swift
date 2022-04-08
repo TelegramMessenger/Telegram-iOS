@@ -3,6 +3,7 @@ import Display
 import TelegramPresentationData
 import SwiftSignalKit
 import TelegramStringFormatting
+import ChatPresentationInterfaceState
 
 private func timeoutValue(strings: PresentationStrings, slowmodeState: ChatSlowmodeState) -> String {
     switch slowmodeState.variant {

@@ -13,7 +13,8 @@ import AccountContext
 public class ItemListReactionItem: ListViewItem, ItemListItem {
     let context: AccountContext
     let presentationData: ItemListPresentationData
-    let file: TelegramMediaFile?
+    let availableReactions: AvailableReactions?
+    let reaction: String
     let title: String
     let value: Bool
     let enabled: Bool
@@ -25,7 +26,8 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
     public init(
         context: AccountContext,
         presentationData: ItemListPresentationData,
-        file: TelegramMediaFile?,
+        availableReactions: AvailableReactions?,
+        reaction: String,
         title: String,
         value: Bool,
         enabled: Bool = true,
@@ -36,7 +38,8 @@ public class ItemListReactionItem: ListViewItem, ItemListItem {
     ) {
         self.context = context
         self.presentationData = presentationData
-        self.file = file
+        self.availableReactions = availableReactions
+        self.reaction = reaction
         self.title = title
         self.value = value
         self.enabled = enabled
@@ -122,7 +125,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     private let maskNode: ASImageNode
     
-    private let imageNode: ReactionFileImageNode
+    private var imageNode: ReactionImageNode?
     private let titleNode: TextNode
     private var switchNode: ASDisplayNode & ItemListSwitchNodeImpl
     private let switchGestureNode: ASDisplayNode
@@ -150,8 +153,6 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
-        self.imageNode = ReactionFileImageNode()
-        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         
@@ -166,7 +167,6 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.imageNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.switchNode)
         self.addSubnode(self.switchGestureNode)
@@ -191,7 +191,6 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func asyncLayout() -> (_ item: ItemListReactionItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
-        let makeImageLayout = self.imageNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
@@ -226,8 +225,6 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                 contentSize = CGSize(width: params.width, height: 44.0)
                 insets = itemListNeighborsGroupedInsets(neighbors, params)
             }
-            
-            let (imageSize, imageApply) = makeImageLayout(item.context, item.file)
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 80.0 - sideImageInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -346,6 +343,7 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = 16.0 + params.leftInset + sideImageInset
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
                                     hasBottomCorners = true
@@ -360,9 +358,17 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    let imageFitSize = imageSize.aspectFitted(CGSize(width: 30.0, height: 30.0))
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor(sideImageInset - imageFitSize.width), y: floor((contentSize.height - imageFitSize.height) / 2.0)), size: imageFitSize)
-                    imageApply()
+                    if strongSelf.imageNode == nil, let availableReactions = item.availableReactions {
+                        let imageNode = ReactionImageNode(context: item.context, availableReactions: availableReactions, reaction: item.reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
+                        strongSelf.imageNode = imageNode
+                        strongSelf.addSubnode(imageNode)
+                    }
+                    
+                    if let imageNode = strongSelf.imageNode {
+                        let imageFitSize = CGSize(width: 30.0, height: 30.0)
+                        imageNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor(sideImageInset - imageFitSize.width), y: floor((contentSize.height - imageFitSize.height) / 2.0)), size: imageFitSize)
+                        imageNode.update(size: imageFitSize)
+                    }
                     
                     strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floorToScreenPixels((contentSize.height - titleLayout.size.height) / 2.0)), size: titleLayout.size)
                     if let switchView = strongSelf.switchNode.view as? UISwitch {

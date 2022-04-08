@@ -416,6 +416,7 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                         switch neighbors.bottom {
                             case .sameSection(false):
                                 bottomStripeInset = leftInset
+                                strongSelf.bottomStripeNode.isHidden = false
                             default:
                                 bottomStripeInset = 0.0
                                 hasBottomCorners = true

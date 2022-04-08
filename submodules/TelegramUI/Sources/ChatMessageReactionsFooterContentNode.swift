@@ -59,7 +59,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     private var bubbleBackgroundNode: WallpaperBubbleBackgroundNode?
     private let container: ReactionButtonsAsyncLayoutContainer
-    private let backgroundMaskView: UIView
+    private var backgroundMaskView: UIView?
     private var backgroundMaskButtons: [String: UIView] = [:]
     
     var reactionSelected: ((String) -> Void)?
@@ -67,7 +67,6 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     override init() {
         self.container = ReactionButtonsAsyncLayoutContainer()
-        self.backgroundMaskView = UIView()
         
         super.init()
     }
@@ -140,12 +139,14 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 strongSelf.reactionSelected?(value)
             },
             reactions: reactions.reactions.map { reaction in
-                var iconFile: TelegramMediaFile?
+                var centerAnimation: TelegramMediaFile?
+                var legacyIcon: TelegramMediaFile?
                 
                 if let availableReactions = availableReactions {
                     for availableReaction in availableReactions.reactions {
                         if availableReaction.value == reaction.value {
-                            iconFile = availableReaction.staticIcon
+                            centerAnimation = availableReaction.centerAnimation
+                            legacyIcon = availableReaction.staticIcon
                             break
                         }
                     }
@@ -170,7 +171,8 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 return ReactionButtonsAsyncLayoutContainer.Reaction(
                     reaction: ReactionButtonComponent.Reaction(
                         value: reaction.value,
-                        iconFile: iconFile
+                        centerAnimation: centerAnimation,
+                        legacyIcon: legacyIcon
                     ),
                     count: Int(reaction.count),
                     peers: peers,
@@ -214,6 +216,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
             return (size: size, apply: { animation in
                 guard let strongSelf = self else {
                     return
+                }
+                
+                if strongSelf.backgroundMaskView == nil {
+                    strongSelf.backgroundMaskView = UIView()
                 }
                 
                 let backgroundInsets: CGFloat = 10.0
@@ -305,24 +311,29 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                             item.node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                         }
                         item.node.frame = itemFrame
-                        
-                        let itemValue = item.value
-                        let itemNode = item.node
-                        item.node.isGestureEnabled = canViewMessageReactionList(message: message)
-                        item.node.activated = { [weak itemNode] gesture, _ in
-                            guard let strongSelf = self, let itemNode = itemNode else {
-                                gesture.cancel()
-                                return
-                            }
-                            strongSelf.openReactionPreview?(gesture, itemNode.containerNode, itemValue)
-                        }
-                        item.node.additionalActivationProgressLayer = itemMaskView.layer
                     } else {
                         animation.animator.updateFrame(layer: item.node.layer, frame: itemFrame, completion: nil)
                     }
                     
+                    let itemValue = item.value
+                    let itemNode = item.node
+                    item.node.isGestureEnabled = true
+                    let canViewReactionList = canViewMessageReactionList(message: message)
+                    item.node.activateAfterCompletion = !canViewReactionList
+                    item.node.activated = { [weak itemNode] gesture, _ in
+                        guard let strongSelf = self, let itemNode = itemNode else {
+                            gesture.cancel()
+                            return
+                        }
+                        if !canViewReactionList {
+                            return
+                        }
+                        strongSelf.openReactionPreview?(gesture, itemNode.containerNode, itemValue)
+                    }
+                    item.node.additionalActivationProgressLayer = itemMaskView.layer
+                    
                     if itemMaskView.superview == nil {
-                        strongSelf.backgroundMaskView.addSubview(itemMaskView)
+                        strongSelf.backgroundMaskView?.addSubview(itemMaskView)
                         if animation.isAnimated {
                             itemMaskView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                             itemMaskView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -482,7 +493,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
                     context: item.context,
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
-                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
+                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
                      
                 return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { boundingWidth in
                     var boundingSize = CGSize()

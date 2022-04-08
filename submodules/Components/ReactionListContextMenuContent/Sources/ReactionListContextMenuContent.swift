@@ -8,7 +8,6 @@ import TelegramCore
 import AccountContext
 import TelegramPresentationData
 import UIKit
-import WebPBinding
 import AnimatedAvatarSetNode
 import ContextUI
 import AvatarNode
@@ -127,7 +126,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.titleLabelNode.isUserInteractionEnabled = false
                 
                 if let reaction = reaction {
-                    self.reactionIconNode = ReactionImageNode(context: context, availableReactions: availableReactions, reaction: reaction)
+                    self.reactionIconNode = ReactionImageNode(context: context, availableReactions: availableReactions, reaction: reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
                     self.reactionIconNode?.isUserInteractionEnabled = false
                     self.iconNode = nil
                 } else {
@@ -168,8 +167,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 let iconSpacing: CGFloat = 4.0
                 
                 var iconSize = CGSize(width: 22.0, height: 22.0)
-                if let reactionIconNode = self.reactionIconNode {
-                    iconSize = reactionIconNode.size.aspectFitted(iconSize)
+                if let _ = self.reactionIconNode {
                 } else if let iconNode = self.iconNode, let image = iconNode.image {
                     iconSize = image.size.aspectFitted(iconSize)
                 }
@@ -183,6 +181,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 
                 if let reactionIconNode = self.reactionIconNode {
                     reactionIconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
+                    reactionIconNode.update(size: iconSize)
                 } else if let iconNode = self.iconNode {
                     iconNode.frame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((constrainedSize.height - iconSize.height) / 2.0)), size: iconSize)
                 }
@@ -355,7 +354,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 let reaction: String? = item.reaction
                 if let reaction = reaction {
                     if self.reactionIconNode == nil {
-                        let reactionIconNode = ReactionImageNode(context: self.context, availableReactions: self.availableReactions, reaction: reaction)
+                        let reactionIconNode = ReactionImageNode(context: self.context, availableReactions: self.availableReactions, reaction: reaction, displayPixelSize: CGSize(width: 30.0 * UIScreenScale, height: 30.0 * UIScreenScale))
                         self.reactionIconNode = reactionIconNode
                         self.addSubnode(reactionIconNode)
                     }
@@ -386,8 +385,9 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.titleLabelNode.frame = CGRect(origin: CGPoint(x: avatarInset + avatarSize + avatarSpacing, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
                 
                 if let reactionIconNode = self.reactionIconNode {
-                    let reactionSize = reactionIconNode.size.aspectFitted(CGSize(width: 22.0, height: 22.0))
+                    let reactionSize = CGSize(width: 22.0, height: 22.0)
                     reactionIconNode.frame = CGRect(origin: CGPoint(x: size.width - 32.0 - floor((32.0 - reactionSize.width) / 2.0), y: floor((size.height - reactionSize.height) / 2.0)), size: reactionSize)
+                    reactionIconNode.update(size: reactionSize)
                 }
                 
                 self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height), size: CGSize(width: size.width, height: UIScreenPixel))

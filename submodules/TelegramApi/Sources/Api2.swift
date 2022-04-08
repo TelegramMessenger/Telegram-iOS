@@ -3569,6 +3569,48 @@ public extension Api {
         }
     
     }
+    public enum GroupCallStreamChannel: TypeConstructorDescription {
+        case groupCallStreamChannel(channel: Int32, scale: Int32, lastTimestampMs: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
+                    if boxed {
+                        buffer.appendInt32(-2132064081)
+                    }
+                    serializeInt32(channel, buffer: buffer, boxed: false)
+                    serializeInt32(scale, buffer: buffer, boxed: false)
+                    serializeInt64(lastTimestampMs, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .groupCallStreamChannel(let channel, let scale, let lastTimestampMs):
+                return ("groupCallStreamChannel", [("channel", channel), ("scale", scale), ("lastTimestampMs", lastTimestampMs)])
+    }
+    }
+    
+        public static func parse_groupCallStreamChannel(_ reader: BufferReader) -> GroupCallStreamChannel? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.GroupCallStreamChannel.groupCallStreamChannel(channel: _1!, scale: _2!, lastTimestampMs: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
     public enum InputEncryptedFile: TypeConstructorDescription {
         case inputEncryptedFileEmpty
         case inputEncryptedFileUploaded(id: Int64, parts: Int32, md5Checksum: String, keyFingerprint: Int32)
@@ -4236,14 +4278,14 @@ public extension Api {
     
     }
     public enum Dialog: TypeConstructorDescription {
-        case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?)
+        case dialog(flags: Int32, peer: Api.Peer, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, notifySettings: Api.PeerNotifySettings, pts: Int32?, draft: Api.DraftMessage?, folderId: Int32?)
         case dialogFolder(flags: Int32, folder: Api.Folder, peer: Api.Peer, topMessage: Int32, unreadMutedPeersCount: Int32, unreadUnmutedPeersCount: Int32, unreadMutedMessagesCount: Int32, unreadUnmutedMessagesCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft, let folderId):
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId):
                     if boxed {
-                        buffer.appendInt32(739712882)
+                        buffer.appendInt32(-1460809483)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
@@ -4252,6 +4294,7 @@ public extension Api {
                     serializeInt32(readOutboxMaxId, buffer: buffer, boxed: false)
                     serializeInt32(unreadCount, buffer: buffer, boxed: false)
                     serializeInt32(unreadMentionsCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadReactionsCount, buffer: buffer, boxed: false)
                     notifySettings.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(pts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {draft!.serialize(buffer, true)}
@@ -4275,8 +4318,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let notifySettings, let pts, let draft, let folderId):
-                return ("dialog", [("flags", flags), ("peer", peer), ("topMessage", topMessage), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("unreadMentionsCount", unreadMentionsCount), ("notifySettings", notifySettings), ("pts", pts), ("draft", draft), ("folderId", folderId)])
+                case .dialog(let flags, let peer, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let notifySettings, let pts, let draft, let folderId):
+                return ("dialog", [("flags", flags), ("peer", peer), ("topMessage", topMessage), ("readInboxMaxId", readInboxMaxId), ("readOutboxMaxId", readOutboxMaxId), ("unreadCount", unreadCount), ("unreadMentionsCount", unreadMentionsCount), ("unreadReactionsCount", unreadReactionsCount), ("notifySettings", notifySettings), ("pts", pts), ("draft", draft), ("folderId", folderId)])
                 case .dialogFolder(let flags, let folder, let peer, let topMessage, let unreadMutedPeersCount, let unreadUnmutedPeersCount, let unreadMutedMessagesCount, let unreadUnmutedMessagesCount):
                 return ("dialogFolder", [("flags", flags), ("folder", folder), ("peer", peer), ("topMessage", topMessage), ("unreadMutedPeersCount", unreadMutedPeersCount), ("unreadUnmutedPeersCount", unreadUnmutedPeersCount), ("unreadMutedMessagesCount", unreadMutedMessagesCount), ("unreadUnmutedMessagesCount", unreadUnmutedMessagesCount)])
     }
@@ -4299,18 +4342,20 @@ public extension Api {
             _6 = reader.readInt32()
             var _7: Int32?
             _7 = reader.readInt32()
-            var _8: Api.PeerNotifySettings?
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: Api.PeerNotifySettings?
             if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
+                _9 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
-            var _9: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_9 = reader.readInt32() }
-            var _10: Api.DraftMessage?
+            var _10: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_10 = reader.readInt32() }
+            var _11: Api.DraftMessage?
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.DraftMessage
+                _11 = Api.parse(reader, signature: signature) as? Api.DraftMessage
             } }
-            var _11: Int32?
-            if Int(_1!) & Int(1 << 4) != 0 {_11 = reader.readInt32() }
+            var _12: Int32?
+            if Int(_1!) & Int(1 << 4) != 0 {_12 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -4319,11 +4364,12 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 0) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 4) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, notifySettings: _8!, pts: _9, draft: _10, folderId: _11)
+            let _c9 = _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 0) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 1) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 4) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.Dialog.dialog(flags: _1!, peer: _2!, topMessage: _3!, readInboxMaxId: _4!, readOutboxMaxId: _5!, unreadCount: _6!, unreadMentionsCount: _7!, unreadReactionsCount: _8!, notifySettings: _9!, pts: _10, draft: _11, folderId: _12)
             }
             else {
                 return nil
@@ -8922,13 +8968,13 @@ public extension Api {
     
     }
     public enum MessageReactions: TypeConstructorDescription {
-        case messageReactions(flags: Int32, results: [Api.ReactionCount], recentReactons: [Api.MessageUserReaction]?)
+        case messageReactions(flags: Int32, results: [Api.ReactionCount], recentReactions: [Api.MessagePeerReaction]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageReactions(let flags, let results, let recentReactons):
+                case .messageReactions(let flags, let results, let recentReactions):
                     if boxed {
-                        buffer.appendInt32(142306870)
+                        buffer.appendInt32(1328256121)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
@@ -8937,8 +8983,8 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(recentReactons!.count))
-                    for item in recentReactons! {
+                    buffer.appendInt32(Int32(recentReactions!.count))
+                    for item in recentReactions! {
                         item.serialize(buffer, true)
                     }}
                     break
@@ -8947,8 +8993,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageReactions(let flags, let results, let recentReactons):
-                return ("messageReactions", [("flags", flags), ("results", results), ("recentReactons", recentReactons)])
+                case .messageReactions(let flags, let results, let recentReactions):
+                return ("messageReactions", [("flags", flags), ("results", results), ("recentReactions", recentReactions)])
     }
     }
     
@@ -8959,15 +9005,15 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.ReactionCount.self)
             }
-            var _3: [Api.MessageUserReaction]?
+            var _3: [Api.MessagePeerReaction]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserReaction.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessagePeerReaction.self)
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!, recentReactons: _3)
+                return Api.MessageReactions.messageReactions(flags: _1!, results: _2!, recentReactions: _3)
             }
             else {
                 return nil
@@ -12964,6 +13010,8 @@ public extension Api {
         case inputReportReasonCopyright
         case inputReportReasonGeoIrrelevant
         case inputReportReasonFake
+        case inputReportReasonIllegalDrugs
+        case inputReportReasonPersonalDetails
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -13015,6 +13063,18 @@ public extension Api {
                     }
                     
                     break
+                case .inputReportReasonIllegalDrugs:
+                    if boxed {
+                        buffer.appendInt32(177124030)
+                    }
+                    
+                    break
+                case .inputReportReasonPersonalDetails:
+                    if boxed {
+                        buffer.appendInt32(-1631091139)
+                    }
+                    
+                    break
     }
     }
     
@@ -13036,6 +13096,10 @@ public extension Api {
                 return ("inputReportReasonGeoIrrelevant", [])
                 case .inputReportReasonFake:
                 return ("inputReportReasonFake", [])
+                case .inputReportReasonIllegalDrugs:
+                return ("inputReportReasonIllegalDrugs", [])
+                case .inputReportReasonPersonalDetails:
+                return ("inputReportReasonPersonalDetails", [])
     }
     }
     
@@ -13062,6 +13126,12 @@ public extension Api {
         }
         public static func parse_inputReportReasonFake(_ reader: BufferReader) -> ReportReason? {
             return Api.ReportReason.inputReportReasonFake
+        }
+        public static func parse_inputReportReasonIllegalDrugs(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonIllegalDrugs
+        }
+        public static func parse_inputReportReasonPersonalDetails(_ reader: BufferReader) -> ReportReason? {
+            return Api.ReportReason.inputReportReasonPersonalDetails
         }
     
     }
@@ -20236,13 +20306,13 @@ public extension Api {
     
     }
     public enum AvailableReaction: TypeConstructorDescription {
-        case availableReaction(flags: Int32, reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document)
+        case availableReaction(flags: Int32, reaction: String, title: String, staticIcon: Api.Document, appearAnimation: Api.Document, selectAnimation: Api.Document, activateAnimation: Api.Document, effectAnimation: Api.Document, aroundAnimation: Api.Document?, centerIcon: Api.Document?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
+                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation, let aroundAnimation, let centerIcon):
                     if boxed {
-                        buffer.appendInt32(35486795)
+                        buffer.appendInt32(-1065882623)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(reaction, buffer: buffer, boxed: false)
@@ -20252,14 +20322,16 @@ public extension Api {
                     selectAnimation.serialize(buffer, true)
                     activateAnimation.serialize(buffer, true)
                     effectAnimation.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 1) != 0 {aroundAnimation!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {centerIcon!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation):
-                return ("availableReaction", [("flags", flags), ("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation)])
+                case .availableReaction(let flags, let reaction, let title, let staticIcon, let appearAnimation, let selectAnimation, let activateAnimation, let effectAnimation, let aroundAnimation, let centerIcon):
+                return ("availableReaction", [("flags", flags), ("reaction", reaction), ("title", title), ("staticIcon", staticIcon), ("appearAnimation", appearAnimation), ("selectAnimation", selectAnimation), ("activateAnimation", activateAnimation), ("effectAnimation", effectAnimation), ("aroundAnimation", aroundAnimation), ("centerIcon", centerIcon)])
     }
     }
     
@@ -20290,6 +20362,14 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _8 = Api.parse(reader, signature: signature) as? Api.Document
             }
+            var _9: Api.Document?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
+            var _10: Api.Document?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.Document
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -20298,8 +20378,10 @@ public extension Api {
             let _c6 = _6 != nil
             let _c7 = _7 != nil
             let _c8 = _8 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
-                return Api.AvailableReaction.availableReaction(flags: _1!, reaction: _2!, title: _3!, staticIcon: _4!, appearAnimation: _5!, selectAnimation: _6!, activateAnimation: _7!, effectAnimation: _8!)
+            let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 1) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.AvailableReaction.availableReaction(flags: _1!, reaction: _2!, title: _3!, staticIcon: _4!, appearAnimation: _5!, selectAnimation: _6!, activateAnimation: _7!, effectAnimation: _8!, aroundAnimation: _9, centerIcon: _10)
             }
             else {
                 return nil
@@ -20307,16 +20389,17 @@ public extension Api {
         }
     
     }
-    public enum MessageUserReaction: TypeConstructorDescription {
-        case messageUserReaction(userId: Int64, reaction: String)
+    public enum MessagePeerReaction: TypeConstructorDescription {
+        case messagePeerReaction(flags: Int32, peerId: Api.Peer, reaction: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .messageUserReaction(let userId, let reaction):
+                case .messagePeerReaction(let flags, let peerId, let reaction):
                     if boxed {
-                        buffer.appendInt32(-1826077446)
+                        buffer.appendInt32(1370914559)
                     }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peerId.serialize(buffer, true)
                     serializeString(reaction, buffer: buffer, boxed: false)
                     break
     }
@@ -20324,20 +20407,25 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .messageUserReaction(let userId, let reaction):
-                return ("messageUserReaction", [("userId", userId), ("reaction", reaction)])
+                case .messagePeerReaction(let flags, let peerId, let reaction):
+                return ("messagePeerReaction", [("flags", flags), ("peerId", peerId), ("reaction", reaction)])
     }
     }
     
-        public static func parse_messageUserReaction(_ reader: BufferReader) -> MessageUserReaction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: String?
-            _2 = parseString(reader)
+        public static func parse_messagePeerReaction(_ reader: BufferReader) -> MessagePeerReaction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _3: String?
+            _3 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageUserReaction.messageUserReaction(userId: _1!, reaction: _2!)
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessagePeerReaction.messagePeerReaction(flags: _1!, peerId: _2!, reaction: _3!)
             }
             else {
                 return nil

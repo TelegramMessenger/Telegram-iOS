@@ -97,6 +97,18 @@ public extension TelegramEngine {
                 }
             }
         }
+        
+        public func resolvePeerByPhone(phone: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<EnginePeer?, NoError> {
+            return _internal_resolvePeerByPhone(account: self.account, phone: phone, ageLimit: ageLimit)
+            |> mapToSignal { peerId -> Signal<EnginePeer?, NoError> in
+                guard let peerId = peerId else {
+                    return .single(nil)
+                }
+                return self.account.postbox.transaction { transaction -> EnginePeer? in
+                    return transaction.getPeer(peerId).flatMap(EnginePeer.init)
+                }
+            }
+        }
 
         public func updatedRemotePeer(peer: PeerReference) -> Signal<Peer, UpdatedRemotePeerError> {
             return _internal_updatedRemotePeer(postbox: self.account.postbox, network: self.account.network, peer: peer)

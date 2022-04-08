@@ -38,17 +38,17 @@ public extension PresentationFontSize {
     }
 }
 
-public extension TabBarControllerTheme {
+public extension ToolbarTheme {
     convenience init(rootControllerTheme: PresentationTheme) {
         let theme = rootControllerTheme.rootController.tabBar
-        self.init(backgroundColor: rootControllerTheme.list.plainBackgroundColor, tabBarBackgroundColor: theme.backgroundColor, tabBarSeparatorColor: theme.separatorColor, tabBarIconColor: theme.iconColor, tabBarSelectedIconColor: theme.selectedIconColor, tabBarTextColor: theme.textColor, tabBarSelectedTextColor: theme.selectedTextColor, tabBarBadgeBackgroundColor: theme.badgeBackgroundColor, tabBarBadgeStrokeColor: theme.badgeStrokeColor, tabBarBadgeTextColor: theme.badgeTextColor, tabBarExtractedIconColor: rootControllerTheme.contextMenu.extractedContentTintColor, tabBarExtractedTextColor: rootControllerTheme.contextMenu.extractedContentTintColor)
+        self.init(barBackgroundColor: theme.backgroundColor, barSeparatorColor: theme.separatorColor, barTextColor: theme.textColor, barSelectedTextColor: theme.selectedTextColor)
     }
 }
 
 public extension NavigationBarTheme {
-    convenience init(rootControllerTheme: PresentationTheme, enableBackgroundBlur: Bool = true, hideBackground: Bool = false, hideBadge: Bool = false) {
+    convenience init(rootControllerTheme: PresentationTheme, enableBackgroundBlur: Bool = true, hideBackground: Bool = false, hideBadge: Bool = false, hideSeparator: Bool = false) {
         let theme = rootControllerTheme.rootController.navigationBar
-        self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.blurredBackgroundColor, enableBackgroundBlur: enableBackgroundBlur, separatorColor: hideBackground ? .clear : theme.separatorColor, badgeBackgroundColor: hideBadge ? .clear : theme.badgeBackgroundColor, badgeStrokeColor: hideBadge ? .clear : theme.badgeStrokeColor, badgeTextColor: hideBadge ? .clear : theme.badgeTextColor)
+        self.init(buttonColor: theme.buttonColor, disabledButtonColor: theme.disabledButtonColor, primaryTextColor: theme.primaryTextColor, backgroundColor: hideBackground ? .clear : theme.blurredBackgroundColor, enableBackgroundBlur: enableBackgroundBlur, separatorColor: hideBackground || hideSeparator ? .clear : theme.separatorColor, badgeBackgroundColor: hideBadge ? .clear : theme.badgeBackgroundColor, badgeStrokeColor: hideBadge ? .clear : theme.badgeStrokeColor, badgeTextColor: hideBadge ? .clear : theme.badgeTextColor)
     }
 }
 
@@ -63,8 +63,8 @@ public extension NavigationBarPresentationData {
         self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
     }
     
-    convenience init(presentationData: PresentationData, hideBackground: Bool, hideBadge: Bool) {
-        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, hideBackground: hideBackground, hideBadge: hideBadge), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
+    convenience init(presentationData: PresentationData, hideBackground: Bool, hideBadge: Bool, hideSeparator: Bool = false) {
+        self.init(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme, hideBackground: hideBackground, hideBadge: hideBadge, hideSeparator: hideSeparator), strings: NavigationBarStrings(presentationStrings: presentationData.strings))
     }
     
     convenience init(presentationTheme: PresentationTheme, presentationStrings: PresentationStrings) {

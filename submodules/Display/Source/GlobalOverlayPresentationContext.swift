@@ -53,6 +53,8 @@ final class GlobalOverlayPresentationContext {
     
     private(set) var controllers: [ContainableController] = []
     
+    private var globalPortalViews: [GlobalPortalView] = []
+    
     private var presentationDisposables = DisposableSet()
     private var layout: ContainerViewLayout?
     
@@ -184,6 +186,34 @@ final class GlobalOverlayPresentationContext {
                 transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(), size: layout.size))
                 controller.containerLayoutUpdated(layout, transition: transition)
             }
+            
+            for globalPortalView in self.globalPortalViews {
+                transition.updateFrame(view: globalPortalView.view, frame: CGRect(origin: CGPoint(), size: layout.size))
+            }
+        }
+    }
+    
+    public func addGlobalPortalHostView(sourceView: PortalSourceView) {
+        guard let globalPortalView = GlobalPortalView(wasRemoved: { [weak self] globalPortalView in
+            guard let strongSelf = self else {
+                return
+            }
+            if let index = strongSelf.globalPortalViews.firstIndex(where: { $0 === globalPortalView }) {
+                strongSelf.globalPortalViews.remove(at: index)
+            }
+            globalPortalView.view.removeFromSuperview()
+        }) else {
+            return
+        }
+        
+        globalPortalView.view.isUserInteractionEnabled = false
+        self.globalPortalViews.append(globalPortalView)
+        
+        sourceView.setGlobalPortal(view: globalPortalView)
+        
+        if let presentationView = self.currentPresentationView(underStatusBar: true), let initialLayout = self.layout {
+            presentationView.addSubview(globalPortalView.view)
+            globalPortalView.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
         }
     }
     
@@ -220,6 +250,14 @@ final class GlobalOverlayPresentationContext {
                     }
                 }
             }
+            
+            if !self.globalPortalViews.isEmpty, let view = self.currentPresentationView(underStatusBar: true) {
+                for globalPortalView in self.globalPortalViews {
+                    view.addSubview(globalPortalView.view)
+                    
+                    globalPortalView.view.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size)
+                }
+            }
         }
     }
     
@@ -228,6 +266,10 @@ final class GlobalOverlayPresentationContext {
             controller.viewWillDisappear(false)
             controller.view.removeFromSuperview()
             controller.viewDidDisappear(false)
+        }
+        
+        for globalPortalView in self.globalPortalViews {
+            globalPortalView.view.removeFromSuperview()
         }
     }
     

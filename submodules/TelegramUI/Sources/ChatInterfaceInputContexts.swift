@@ -6,6 +6,7 @@ import Display
 import AccountContext
 import Emoji
 import ChatInterfaceState
+import ChatPresentationInterfaceState
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32

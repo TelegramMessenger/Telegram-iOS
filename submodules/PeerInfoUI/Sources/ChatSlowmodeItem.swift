@@ -240,6 +240,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                         case .sameSection(false):
                             bottomStripeInset = 0.0
                             bottomStripeOffset = -separatorHeight
+                            strongSelf.bottomStripeNode.isHidden = false
                         default:
                             bottomStripeInset = 0.0
                             hasBottomCorners = true

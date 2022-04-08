@@ -1,5 +1,6 @@
 #import <TgVoipWebrtc/OngoingCallThreadLocalContext.h>
 
+#import "MediaUtils.h"
 
 #import "Instance.h"
 #import "InstanceImpl.h"
@@ -1363,10 +1364,14 @@ private:
     requestVideoBroadcastPart:(id<OngoingGroupCallBroadcastPartTask> _Nonnull (^ _Nonnull)(int64_t, int64_t, int32_t, OngoingGroupCallRequestedVideoQuality, void (^ _Nonnull)(OngoingGroupCallBroadcastPart * _Nullable)))requestVideoBroadcastPart
     outgoingAudioBitrateKbit:(int32_t)outgoingAudioBitrateKbit
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
-    enableNoiseSuppression:(bool)enableNoiseSuppression {
+    enableNoiseSuppression:(bool)enableNoiseSuppression
+    disableAudioInput:(bool)disableAudioInput
+    preferX264:(bool)preferX264 {
     self = [super init];
     if (self != nil) {
         _queue = queue;
+        
+        tgcalls::PlatformInterface::SharedInstance()->preferX264 = preferX264;
 
         _sinks = [[NSMutableDictionary alloc] init];
         
@@ -1529,6 +1534,7 @@ private:
             },
             .outgoingAudioBitrateKbit = outgoingAudioBitrateKbit,
             .disableOutgoingAudioProcessing = disableOutgoingAudioProcessing,
+            .disableAudioInput = disableAudioInput,
             .videoContentType = _videoContentType,
             .videoCodecPreferences = videoCodecPreferences,
             .initialEnableNoiseSuppression = enableNoiseSuppression,
@@ -1577,7 +1583,7 @@ private:
     }
 }
 
-- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled {
+- (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast {
     if (_instance) {
         tgcalls::GroupConnectionMode mappedConnectionMode;
         switch (connectionMode) {
@@ -1598,7 +1604,7 @@ private:
                 break;
             }
         }
-        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled);
+        _instance->setConnectionMode(mappedConnectionMode, keepBroadcastConnectedIfWasEnabled, isUnifiedBroadcast);
     }
 }
 

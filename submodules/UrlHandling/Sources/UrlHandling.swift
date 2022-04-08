@@ -41,6 +41,7 @@ public enum ParsedInternalUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
+    case phone(String)
 }
 
 private enum ParsedUrl {
@@ -154,7 +155,12 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents[0].hasPrefix(phonebookUsernamePathPrefix), let idValue = Int64(String(pathComponents[0][pathComponents[0].index(pathComponents[0].startIndex, offsetBy: phonebookUsernamePathPrefix.count)...])) {
                     return .peerId(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(idValue)))
                 } else if pathComponents[0].hasPrefix("+") || pathComponents[0].hasPrefix("%20") {
-                    return .join(String(pathComponents[0].dropFirst()))
+                    let component = pathComponents[0].replacingOccurrences(of: "%20", with: "+")
+                    if component.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789+").inverted) == nil {
+                        return .phone(component.replacingOccurrences(of: "+", with: ""))
+                    } else {
+                        return .join(String(component.dropFirst()))
+                    }
                 }
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {
@@ -350,6 +356,16 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
 
 private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
     switch url {
+        case let .phone(phone):
+            return context.engine.peers.resolvePeerByPhone(phone: phone)
+            |> take(1)
+            |> map { peer -> ResolvedUrl? in
+                if let peer = peer?._asPeer() {
+                    return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
+                } else {
+                    return .peer(nil, .info)
+                }
+            }
         case let .peerName(name, parameter):
             return context.engine.peers.resolvePeerByName(name: name)
             |> take(1)
@@ -383,11 +399,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.joinVoiceChat(peer.id, invite))
                         }
                     } else {
-                        if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
-                        } else {
-                            return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
-                        }
+                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
                     }
                 } else {
                     return .single(.peer(nil, .info))

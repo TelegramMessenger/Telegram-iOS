@@ -4,6 +4,7 @@ import TelegramApi
 import SwiftSignalKit
 import MtProtoKit
 import CryptoUtils
+import ManagedFile
 
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 

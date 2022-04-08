@@ -184,7 +184,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                                     sentStickers.append(file)
                                 }
                             case .Animated:
-                                sentGifs.append(file)
+                                if !file.isAnimatedSticker && !file.isVideoSticker {
+                                    sentGifs.append(file)
+                                }
                             default:
                                 break
                             }
@@ -364,7 +366,9 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                                         sentStickers.append(file)
                                     }
                                 case .Animated:
-                                    sentGifs.append(file)
+                                    if !file.isAnimatedSticker && !file.isVideoSticker {
+                                        sentGifs.append(file)
+                                    }
                                 default:
                                     break
                                 }

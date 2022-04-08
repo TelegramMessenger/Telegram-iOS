@@ -240,7 +240,15 @@ struct VoiceChatPeerEntry: Identifiable {
     }
 }
 
-public final class VoiceChatController: ViewController {
+public protocol VoiceChatController: ViewController {
+    var call: PresentationGroupCall { get }
+    var currentOverlayController: VoiceChatOverlayController? { get }
+    var parentNavigationController: NavigationController? { get set }
+    
+    func dismiss(closing: Bool, manual: Bool)
+}
+
+public final class VoiceChatControllerImpl: ViewController, VoiceChatController {
     enum DisplayMode {
         case modal(isExpanded: Bool, isFilled: Bool)
         case fullscreen(controlsHidden: Bool)
@@ -748,7 +756,7 @@ public final class VoiceChatController: ViewController {
         
         private var configuration: VoiceChatConfiguration?
         
-        private weak var controller: VoiceChatController?
+        private weak var controller: VoiceChatControllerImpl?
         private let sharedContext: SharedAccountContext
         private let context: AccountContext
         private let call: PresentationGroupCall
@@ -952,7 +960,7 @@ public final class VoiceChatController: ViewController {
 
         private var statsDisposable: Disposable?
         
-        init(controller: VoiceChatController, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
+        init(controller: VoiceChatControllerImpl, sharedContext: SharedAccountContext, call: PresentationGroupCall) {
             self.controller = controller
             self.sharedContext = sharedContext
             self.context = call.accountContext
@@ -7082,6 +7090,6 @@ private final class VoiceChatContextReferenceContentSource: ContextReferenceCont
     }
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

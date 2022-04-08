@@ -5,8 +5,8 @@
 
 @interface TGBridgeUserCache : NSObject
 
-- (TGBridgeUser *)userWithId:(int32_t)userId;
-- (NSDictionary *)usersWithIndexSet:(NSIndexSet *)indexSet;
+- (TGBridgeUser *)userWithId:(int64_t)userId;
+- (NSDictionary *)usersWithIds:(NSArray<NSNumber *> *)indexSet;
 - (void)storeUser:(TGBridgeUser *)user;
 - (void)storeUsers:(NSArray *)users;
 - (NSArray *)applyUserChanges:(NSArray *)userChanges;

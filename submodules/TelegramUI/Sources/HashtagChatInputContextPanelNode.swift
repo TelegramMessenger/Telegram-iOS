@@ -10,6 +10,7 @@ import MergeLists
 import AccountContext
 import AccountContext
 import ItemListUI
+import ChatPresentationInterfaceState
 
 private struct HashtagChatInputContextPanelEntryStableId: Hashable {
     let text: String

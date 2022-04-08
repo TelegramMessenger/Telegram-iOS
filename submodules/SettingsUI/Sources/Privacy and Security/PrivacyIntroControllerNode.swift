@@ -8,6 +8,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import AuthorizationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 private func generateButtonImage(backgroundColor: UIColor, highlightColor: UIColor?) -> UIImage? {
     return generateImage(CGSize(width: 24.0, height: 44.0), contextGenerator: { size, context in
@@ -39,6 +41,7 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
     private let proceedAction: () -> Void
     
     private let iconNode: ASImageNode
+    private let animationNode: AnimatedStickerNode
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -55,6 +58,8 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.proceedAction = proceedAction
         
         self.iconNode = ASImageNode()
+        self.animationNode = AnimatedStickerNode()
+        
         self.titleNode = ASTextNode()
         self.textNode = ASTextNode()
         self.buttonNode = HighlightTrackingButtonNode()
@@ -68,7 +73,19 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         
         super.init()
         
+        if let animationName = mode.animationName {
+            self.iconNode.isHidden = true
+            self.animationNode.isHidden = false
+            
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 380, height: 380, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.visibility = true
+        } else {
+            self.iconNode.isHidden = false
+            self.animationNode.isHidden = true
+        }
+        
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.animationNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.buttonBackgroundNode)
@@ -98,7 +115,9 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         self.presentationData = presentationData
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
-        self.iconNode.image = self.mode.icon(theme: presentationData.theme)
+        if self.animationNode.isHidden {
+            self.iconNode.image = self.mode.icon(theme: presentationData.theme)
+        }
         self.titleNode.attributedText = NSAttributedString(string: self.mode.title(strings: presentationData.strings), font: titleFont, textColor: presentationData.theme.list.sectionHeaderTextColor, paragraphAlignment: .center)
         self.textNode.attributedText = NSAttributedString(string: self.mode.text(strings: presentationData.strings), font: textFont, textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
         self.noticeNode.attributedText = NSAttributedString(string: self.mode.notice(strings: presentationData.strings), font: textFont, textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
@@ -120,7 +139,18 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         insets.top += navigationBarHeight
         
         var iconSize = CGSize()
-        if let size = self.iconNode.image?.size {
+        var animationSize = CGSize()
+        if !self.animationNode.isHidden {
+            animationSize = CGSize(width: 180.0, height: 180.0)
+            self.animationNode.updateLayout(size: animationSize)
+            
+            var iconAlpha: CGFloat = 1.0
+            if case .compact = layout.metrics.widthClass, layout.size.width > layout.size.height {
+                iconAlpha = 0.0
+                iconSize = CGSize()
+            }
+            transition.updateAlpha(node: self.animationNode, alpha: iconAlpha)
+        } else if let size = self.iconNode.image?.size {
             iconSize = size
             
             var iconAlpha: CGFloat = 1.0
@@ -142,9 +172,10 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         } else {
             buttonInset = 0.0
         }
-        
+            
         let items: [AuthorizationLayoutItem] = [
             AuthorizationLayoutItem(node: self.iconNode, size: iconSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.textNode, size: textSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 16.0, maxValue: 16.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.buttonNode, size: CGSize(width: layout.size.width - buttonInset * 2.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 40.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),

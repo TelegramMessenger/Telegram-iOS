@@ -1,7 +1,9 @@
 # usrsctp
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/13430/badge.svg)](https://scan.coverity.com/projects/usrsctp)
 
-This is a userland SCTP stack supporting FreeBSD, Linux, Mac OS X and Windows.
+![GitHub Actions Build Status (CMake-based build only)](https://github.com/sctplab/usrsctp/workflows/Build%20with%20CMake/badge.svg)
+
+This is a userland SCTP stack supporting FreeBSD, OpenBSD, Linux, Mac OS X and Windows.
 
 See [manual](Manual.md) for more information.
 

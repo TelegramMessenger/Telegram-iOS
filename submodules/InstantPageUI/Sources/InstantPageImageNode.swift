@@ -299,7 +299,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
                                     default:
                                         break
                                 }
-                            case .Remote:
+                            case .Remote, .Paused:
                                 if case .tap = gesture {
                                     self.fetchControls?.fetch(true)
                                 }

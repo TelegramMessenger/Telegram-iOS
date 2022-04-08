@@ -201,7 +201,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if ((_mtState & MTProtoStatePaused) == 0)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p pause]", self, _context);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p pause]", self, _context);
             }
             MTShortLog(@"[MTProto#%p@%p pause]", self, _context);
             
@@ -220,7 +220,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (_mtState & MTProtoStatePaused)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p resume]", self, _context);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p resume]", self, _context);
             }
             MTShortLog(@"[MTProto#%p@%p resume]", self, _context);
             
@@ -274,7 +274,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p changing transport %@#%p to %@#%p]", self, _context, [_transport class] == nil ? @"" : NSStringFromClass([_transport class]), _transport, [transport class] == nil ? @"" : NSStringFromClass([transport class]), transport);
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p changing transport %@#%p to %@#%p]", self, _context, [_transport class] == nil ? @"" : NSStringFromClass([_transport class]), _transport, [transport class] == nil ? @"" : NSStringFromClass([transport class]), transport);
         }
         
         [self allTransactionsMayHaveFailed];
@@ -331,7 +331,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             }
         } else {
             assert(transportSchemes.count != 0);
-            MTTransport *transport = [[MTTcpTransport alloc] initWithDelegate:self context:_context datacenterId:_datacenterId schemes:transportSchemes proxySettings:_context.apiEnvironment.socksProxySettings usageCalculationInfo:_usageCalculationInfo];
+            MTTransport *transport = [[MTTcpTransport alloc] initWithDelegate:self context:_context datacenterId:_datacenterId schemes:transportSchemes proxySettings:_context.apiEnvironment.socksProxySettings usageCalculationInfo:_usageCalculationInfo getLogPrefix:_getLogPrefix];
             
             [self setTransport:transport];
         }
@@ -343,7 +343,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     [[MTProto managerQueue] dispatchOnQueue:^
     {
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p resetting session]", self, _context);
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p resetting session]", self, _context);
         }
         MTShortLog(@"[MTProto#%p@%p resetting session]", self, _context);
         
@@ -383,9 +383,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (!alreadySyncing)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p begin time sync]", self, _context);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p begin time sync]", self, _context);
             }
-            MTShortLog(@"[MTProto#%p@%p begin time sync]", self, _context);
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p begin time sync]", self, _context);
             
             MTTimeSyncMessageService *timeSyncService = [[MTTimeSyncMessageService alloc] init];
             timeSyncService.delegate = self;
@@ -416,7 +416,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         }
         
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, haveResendMessagesPending ? "yes" : "no");
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, haveResendMessagesPending ? "yes" : "no");
         }
         MTShortLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, haveResendMessagesPending ? "yes" : "no");
         
@@ -467,7 +467,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         if (notifyAboutServiceTask)
         {
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "yes");
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "yes");
             }
             MTShortLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "yes");
             
@@ -520,7 +520,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 if (!performingServiceTasks)
                 {
                     if (MTLogEnabled()) {
-                        MTLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "no");
+                        MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "no");
                     }
                     MTShortLog(@"[MTProto#%p@%p service tasks state: %d, resend: %s]", self, _context, _mtState, "no");
                     
@@ -682,7 +682,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             return;
         
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p network state: %s]", self, _context, isNetworkAvailable ? "available" : "waiting");
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p network state: %s]", self, _context, isNetworkAvailable ? "available" : "waiting");
         }
         
         for (id<MTMessageService> messageService in _messageServices)
@@ -713,7 +713,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             return;
         
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p transport #%p connection state: %s]", self, _context, transport, isConnected ? "connected" : "connecting");
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p transport #%p connection state: %s]", self, _context, transport, isConnected ? "connected" : "connecting");
         }
         
         for (id<MTMessageService> messageService in _messageServices)
@@ -740,7 +740,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             return;
         
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p connection context update state: %s]", self, _context, isUpdatingConnectionContext ? "updating" : "up to date");
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p connection context update state: %s]", self, _context, isUpdatingConnectionContext ? "updating" : "up to date");
         }
         
         for (id<MTMessageService> messageService in _messageServices)
@@ -1048,7 +1048,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                     
                     if (MTLogEnabled()) {
                         NSString *messageDescription = [self outgoingMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo];
-                        MTLog(@"[MTProto#%p@%p preparing %@]", self, _context, messageDescription);
+                        MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p preparing %@]", self, _context, messageDescription);
                     }
                     NSString *shortMessageDescription = [self outgoingShortMessageDescription:outgoingMessage messageId:messageId messageSeqNo:messageSeqNo];
                     MTShortLog(@"[MTProto#%p@%p preparing %@]", self, _context, shortMessageDescription);
@@ -1094,7 +1094,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 if (monotonityViolated)
                 {
                     if (MTLogEnabled()) {
-                        MTLog(@"[MTProto#%p@%p client message id monotonity violated]", self, _context);
+                        MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p client message id monotonity violated]", self, _context);
                     }
                     MTShortLog(@"[MTProto#%p@%p client message id monotonity violated]", self, _context);
                     
@@ -1283,7 +1283,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                                         }
                                         
                                         if (MTLogEnabled()) {
-                                            MTLog(@"[MTProto#%p@%p transport did not accept transactions with messages (%@)]", self, _context, idsString);
+                                            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p transport did not accept transactions with messages (%@)]", self, _context, idsString);
                                         }
                                     }
                                 }];
@@ -1339,7 +1339,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             MTOutputStream *decryptedOs = [[MTOutputStream alloc] init];
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p sending time fix ping (%" PRId64 "/%" PRId32 ", %" PRId64 ")]", self, _context, timeFixMessageId, timeFixSeqNo, _sessionInfo.sessionId);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p sending time fix ping (%" PRId64 "/%" PRId32 ", %" PRId64 ")]", self, _context, timeFixMessageId, timeFixSeqNo, _sessionInfo.sessionId);
             }
             MTShortLog(@"[MTProto#%p@%p sending time fix ping (%" PRId64 "/%" PRId32 ", %" PRId64 ")]", self, _context, timeFixMessageId, timeFixSeqNo, _sessionInfo.sessionId);
             
@@ -1455,7 +1455,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             [idsString appendFormat:@"%lld", [nMessageId longLongValue]];
         }
         if (MTLogEnabled()) {
-            MTLog(@"    container (%" PRId64 ") of (%@), in %" PRId64 "", containerMessageId, idsString, sessionInfo.sessionId);
+            MTLogWithPrefix(_getLogPrefix, @"    container (%" PRId64 ") of (%@), in %" PRId64 "", containerMessageId, idsString, sessionInfo.sessionId);
         }
         MTShortLog(@"    container (%" PRId64 ") of (%@), in %" PRId64 "", containerMessageId, idsString, sessionInfo.sessionId);
     }
@@ -1931,7 +1931,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             [data getBytes:&protocolErrorCode range:NSMakeRange(0, 4)];
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p protocol error %" PRId32 "", self, _context, protocolErrorCode);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p protocol error %" PRId32 "", self, _context, protocolErrorCode);
             }
             MTShortLog(@"[MTProto#%p@%p protocol error %" PRId32 "", self, _context, protocolErrorCode);
             
@@ -1991,7 +1991,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                         MTRpcError *rpcError = maybeInternalMessage;
                         if (rpcError.errorCode == 401 && [rpcError.errorDescription isEqualToString:@"AUTH_KEY_PERM_EMPTY"]) {
                             if (MTLogEnabled()) {
-                                MTLog(@"[MTProto#%p@%p received AUTH_KEY_PERM_EMPTY]", self, _context);
+                                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p received AUTH_KEY_PERM_EMPTY]", self, _context);
                             }
                             MTShortLog(@"[MTProto#%p@%p received AUTH_KEY_PERM_EMPTY]", self, _context);
                             [self handleMissingKey:scheme];
@@ -2004,7 +2004,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             }
             if (parseError) {
                 if (MTLogEnabled()) {
-                    MTLog(@"[MTProto#%p@%p incoming data parse error, header: %d:%@]", self, _context, (int)decryptedData.length, dumpHexString(decryptedData, 128));
+                    MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p incoming data parse error, header: %d:%@]", self, _context, (int)decryptedData.length, dumpHexString(decryptedData, 128));
                 }
                 MTShortLog(@"[MTProto#%p@%p incoming data parse error, header: %d:%@]", self, _context, (int)decryptedData.length, dumpHexString(decryptedData, 128));
                 
@@ -2026,7 +2026,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             }
         } else {
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p couldn't decrypt incoming data]", self, _context);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p couldn't decrypt incoming data]", self, _context);
             }
             MTShortLog(@"[MTProto#%p@%p couldn't decrypt incoming data]", self, _context);
             
@@ -2046,7 +2046,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     
     if (_useUnauthorizedMode) {
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p don't handleMissingKey when useUnauthorizedMode]", self, _context);
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p don't handleMissingKey when useUnauthorizedMode]", self, _context);
         }
         return;
     }
@@ -2055,7 +2055,7 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
     [self getAuthKeyForCurrentScheme:scheme createIfNeeded:false authInfoSelector:&authInfoSelector];
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTProto#%p@%p missing key %lld selector %d useExplicitAuthKey: %lld, canResetAuthData: %s]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector, _useExplicitAuthKey.authKeyId, _canResetAuthData ? "true" : "false");
+        MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p missing key %lld selector %d useExplicitAuthKey: %lld, canResetAuthData: %s]", self, _context, _validAuthInfo.authInfo.authKeyId, authInfoSelector, _useExplicitAuthKey.authKeyId, _canResetAuthData ? "true" : "false");
     }
     
     if (_useExplicitAuthKey != nil) {
@@ -2346,7 +2346,7 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
     if ([_sessionInfo messageProcessed:incomingMessage.messageId])
     {
         if (MTLogEnabled()) {
-            MTLog(@"[MTProto#%p@%p received duplicate message %" PRId64 "]", self, _context, incomingMessage.messageId);
+            MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p received duplicate message %" PRId64 "]", self, _context, incomingMessage.messageId);
         }
         MTShortLog(@"[MTProto#%p@%p received duplicate message %" PRId64 "]", self, _context, incomingMessage.messageId);
         [_sessionInfo scheduleMessageConfirmation:incomingMessage.messageId size:incomingMessage.size];
@@ -2358,7 +2358,7 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
     }
     
     if (MTLogEnabled()) {
-        MTLog(@"[MTProto#%p@%p [%d] received %@]", self, _context, totalSize, [self incomingMessageDescription:incomingMessage]);
+        MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p [%d] received %@]", self, _context, totalSize, [self incomingMessageDescription:incomingMessage]);
     }
     
     [_sessionInfo setMessageProcessed:incomingMessage.messageId];
@@ -2473,7 +2473,7 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
             int64_t requestMessageId = ((MTMsgDetailedResponseInfoMessage *)detailedInfoMessage).requestMessageId;
             
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p detailed info %" PRId64 " is for %" PRId64 "", self, _context, incomingMessage.messageId, requestMessageId);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p detailed info %" PRId64 " is for %" PRId64 "", self, _context, incomingMessage.messageId, requestMessageId);
             }
             MTShortLog(@"[MTProto#%p@%p detailed info %" PRId64 " is for %" PRId64 "", self, _context, incomingMessage.messageId, requestMessageId);
             
@@ -2496,7 +2496,7 @@ static bool isDataEqualToDataConstTime(NSData *data1, NSData *data2) {
         {
             [self requestMessageWithId:detailedInfoMessage.responseMessageId];
             if (MTLogEnabled()) {
-                MTLog(@"[MTProto#%p@%p will request message %" PRId64 "", self, _context, detailedInfoMessage.responseMessageId);
+                MTLogWithPrefix(_getLogPrefix, @"[MTProto#%p@%p will request message %" PRId64 "", self, _context, detailedInfoMessage.responseMessageId);
             }
             MTShortLog(@"[MTProto#%p@%p will request message %" PRId64 "", self, _context, detailedInfoMessage.responseMessageId);
         }

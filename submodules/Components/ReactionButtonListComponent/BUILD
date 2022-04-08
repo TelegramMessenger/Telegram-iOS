@@ -19,6 +19,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
+        "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
     ],
     visibility = [
         "//visibility:public",

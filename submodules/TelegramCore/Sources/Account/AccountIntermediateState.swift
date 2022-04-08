@@ -72,7 +72,7 @@ enum AccountStateMutationOperation {
     case ResetReadState(peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, maxOutgoingReadId: MessageId.Id, maxKnownId: MessageId.Id, count: Int32, markedUnread: Bool?)
     case ResetIncomingReadState(groupId: PeerGroupId, peerId: PeerId, namespace: MessageId.Namespace, maxIncomingReadId: MessageId.Id, count: Int32, pts: Int32)
     case UpdatePeerChatUnreadMark(PeerId, MessageId.Namespace, Bool)
-    case ResetMessageTagSummary(PeerId, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
+    case ResetMessageTagSummary(PeerId, MessageTags, MessageId.Namespace, Int32, MessageHistoryTagNamespaceCountValidityRange)
     case ReadGroupFeedInbox(PeerGroupId, MessageIndex)
     case UpdateState(AuthorizedAccountState.State)
     case UpdateChannelState(PeerId, Int32)
@@ -306,8 +306,8 @@ struct AccountMutableState {
         self.addOperation(.UpdatePeerChatUnreadMark(peerId, namespace, value))
     }
     
-    mutating func resetMessageTagSummary(_ peerId: PeerId, namespace: MessageId.Namespace, count: Int32, range: MessageHistoryTagNamespaceCountValidityRange) {
-        self.addOperation(.ResetMessageTagSummary(peerId, namespace, count, range))
+    mutating func resetMessageTagSummary(_ peerId: PeerId, tag: MessageTags, namespace: MessageId.Namespace, count: Int32, range: MessageHistoryTagNamespaceCountValidityRange) {
+        self.addOperation(.ResetMessageTagSummary(peerId, tag, namespace, count, range))
     }
     
     mutating func updateState(_ state: AuthorizedAccountState.State) {
@@ -610,7 +610,7 @@ struct AccountFinalState {
 struct AccountReplayedFinalState {
     let state: AccountFinalState
     let addedIncomingMessageIds: [MessageId]
-    let addedReactionEvents: [(reactionAuthor: Peer, message: Message, timestamp: Int32)]
+    let addedReactionEvents: [(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)]
     let wasScheduledMessageIds: [MessageId]
     let addedSecretMessageIds: [MessageId]
     let deletedMessageIds: [DeletedMessageId]
@@ -628,7 +628,7 @@ struct AccountReplayedFinalState {
 
 struct AccountFinalStateEvents {
     let addedIncomingMessageIds: [MessageId]
-    let addedReactionEvents: [(reactionAuthor: Peer, message: Message, timestamp: Int32)]
+    let addedReactionEvents: [(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)]
     let wasScheduledMessageIds:[MessageId]
     let deletedMessageIds: [DeletedMessageId]
     let updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]]
@@ -651,7 +651,7 @@ struct AccountFinalStateEvents {
         return self.addedIncomingMessageIds.isEmpty && self.addedReactionEvents.isEmpty && self.wasScheduledMessageIds.isEmpty && self.deletedMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.addedCallSignalingData.isEmpty && self.updatedGroupCallParticipants.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && self.delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty && !authorizationListUpdated && self.updatedIncomingThreadReadStates.isEmpty && self.updatedOutgoingThreadReadStates.isEmpty
     }
     
-    init(addedIncomingMessageIds: [MessageId] = [], addedReactionEvents: [(reactionAuthor: Peer, message: Message, timestamp: Int32)] = [], wasScheduledMessageIds: [MessageId] = [], deletedMessageIds: [DeletedMessageId] = [], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], addedCallSignalingData: [(Int64, Data)] = [], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set(), authorizationListUpdated: Bool = false, updatedIncomingThreadReadStates: [MessageId: MessageId.Id] = [:], updatedOutgoingThreadReadStates: [MessageId: MessageId.Id] = [:]) {
+    init(addedIncomingMessageIds: [MessageId] = [], addedReactionEvents: [(reactionAuthor: Peer, reaction: String, message: Message, timestamp: Int32)] = [], wasScheduledMessageIds: [MessageId] = [], deletedMessageIds: [DeletedMessageId] = [], updatedTypingActivities: [PeerActivitySpace: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], addedCallSignalingData: [(Int64, Data)] = [], updatedGroupCallParticipants: [(Int64, GroupCallParticipantsContext.Update)] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set(), authorizationListUpdated: Bool = false, updatedIncomingThreadReadStates: [MessageId: MessageId.Id] = [:], updatedOutgoingThreadReadStates: [MessageId: MessageId.Id] = [:]) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
         self.addedReactionEvents = addedReactionEvents
         self.wasScheduledMessageIds = wasScheduledMessageIds

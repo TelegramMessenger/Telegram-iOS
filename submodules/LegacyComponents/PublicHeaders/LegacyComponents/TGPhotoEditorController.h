@@ -8,7 +8,6 @@
 
 @class SSignal;
 @class PGCameraShotMetadata;
-@class TGSuggestionContext;
 @class TGPhotoEditorController;
 @class AVPlayer;
 
@@ -26,7 +25,6 @@ typedef enum {
 
 @interface TGPhotoEditorController : TGOverlayController
 
-@property (nonatomic, strong) TGSuggestionContext *suggestionContext;
 @property (nonatomic, strong) TGMediaEditingContext *editingContext;
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 

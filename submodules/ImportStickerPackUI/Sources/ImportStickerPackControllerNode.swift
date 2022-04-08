@@ -32,8 +32,6 @@ private struct StickerPackPreviewGridEntry: Comparable, Equatable, Identifiable 
     func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
         return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isVerified: self.isVerified)
     }
-    
-    
 }
 
 private struct StickerPackPreviewGridTransaction {
@@ -607,9 +605,9 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 if let localResource = item.stickerItem.resource {
                     self.context.account.postbox.mediaBox.copyResourceData(from: localResource.id, to: resource.id)
                 }
-                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType))
             } else if let resource = item.stickerItem.resource {
-                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions))
+                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType))
             }
         }
         var thumbnailSticker: ImportSticker?
@@ -620,7 +618,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             }
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: thumbnail.data)
-            thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions)
+            thumbnailSticker = ImportSticker(resource: resource, emojis: [], dimensions: dimensions, mimeType: thumbnail.mimeType)
         }
         
         let firstStickerItem = thumbnailSticker ?? stickers.first
@@ -631,13 +629,17 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition:  .animated(duration: 0.2, curve: .easeInOut))
         }
         
-        self.disposable.set((self.context.engine.stickers.createStickerSet(title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, isAnimated: stickerPack.isAnimated, software: stickerPack.software)
+        self.disposable.set((self.context.engine.stickers.createStickerSet(title: title, shortName: shortName, stickers: stickers, thumbnail: thumbnailSticker, type: stickerPack.type.importType, software: stickerPack.software)
         |> deliverOnMainQueue).start(next: { [weak self] status in
             if let strongSelf = self {
                 if case let .complete(info, items) = status {
                     if let (_, _, count) = strongSelf.progress {
                         strongSelf.progress = (1.0, count, count)
-                        strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: !stickerPack.isAnimated, synchronous: true, completion: {})
+                        var animated = false
+                        if case .image = stickerPack.type {
+                            animated = true
+                        }
+                        strongSelf.radialStatus.transitionToState(.progress(color: strongSelf.presentationData.theme.list.itemAccentColor, lineWidth: 6.0, value: 1.0, cancelEnabled: false, animateRotation: false), animated: animated, synchronous: true, completion: {})
                         if let (layout, navigationBarHeight) = strongSelf.containerLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                         }
@@ -675,7 +677,20 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     Queue.mainQueue().after(1.0) {
                         var firstItem: StickerPackItem?
                         if let firstStickerItem = firstStickerItem, let resource = firstStickerItem.resource as? TelegramMediaResource {
-                            firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: stickerPack.isAnimated ? "application/x-tgsticker": "image/png", size: nil, attributes: [.FileName(fileName: stickerPack.isAnimated ? "sticker.tgs" : "sticker.png"), .ImageSize(size: firstStickerItem.dimensions)]), indexKeys: [])
+                            var fileAttributes: [TelegramMediaFileAttribute] = []
+                            if firstStickerItem.mimeType == "video/webm" {
+                                fileAttributes.append(.FileName(fileName: "sticker.webm"))
+                                fileAttributes.append(.Animated)
+                                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                            } else if firstStickerItem.mimeType == "application/x-tgsticker" {
+                                fileAttributes.append(.FileName(fileName: "sticker.tgs"))
+                                fileAttributes.append(.Animated)
+                                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
+                            } else {
+                                fileAttributes.append(.FileName(fileName: "sticker.webp"))
+                            }
+                            fileAttributes.append(.ImageSize(size: firstStickerItem.dimensions))
+                            firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: firstStickerItem.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
                         }
                         strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { action in
                             if case .info = action {
@@ -781,11 +796,16 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                 item.resource = resource
                 self.stickerResources[item.uuid] = resource
             }
-            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item, isVerified: !item.isAnimated || verifiedStickers.contains(item.uuid)))
+            var isInitiallyVerified = false
+            if case .image = item.content {
+                isInitiallyVerified = true
+            }
+            updatedItems.append(StickerPackPreviewGridEntry(index: updatedItems.count, stickerItem: item, isVerified: isInitiallyVerified || verifiedStickers.contains(item.uuid)))
         }
         self.pendingItems = updatedItems
       
-        if stickerPack.isAnimated {
+        if case .image = stickerPack.type {
+        } else {
             self.stickerPackReady = stickerPack.stickers.count == (verifiedStickers.count + declinedStickers.count) && updatedItems.count > 0
         }
         

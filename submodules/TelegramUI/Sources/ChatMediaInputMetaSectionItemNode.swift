@@ -239,11 +239,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                         } else {
                             animatedStickerNode = AnimatedStickerNode()
                             self.animatedStickerNode = animatedStickerNode
-    //                        if let placeholderNode = self.placeholderNode {
-    //                            self.scalingNode.insertSubnode(animatedStickerNode, belowSubnode: placeholderNode)
-    //                        } else {
-                                self.scalingNode.addSubnode(animatedStickerNode)
-    //                        }
+                            self.scalingNode.addSubnode(animatedStickerNode)
                             animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: account, resource: file.resource), width: 128, height: 128, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers

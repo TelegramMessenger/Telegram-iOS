@@ -57,6 +57,9 @@ private final class ChildWindowHostView: UIView, WindowHost {
     
     func presentInGlobalOverlay(_ controller: ContainableController) {
     }
+    
+    func addGlobalPortalHostView(sourceView: PortalSourceView) {
+    }
 }
 
 public func childWindowHostView(parent: UIView) -> WindowHostView {

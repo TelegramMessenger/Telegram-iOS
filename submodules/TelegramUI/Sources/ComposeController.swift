@@ -157,7 +157,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] result in
-                    if let strongSelf = self, let (contactPeers, _) = result, case let .peer(peer, _, _) = contactPeers.first {
+                    if let strongSelf = self, let (contactPeers, _, _, _, _) = result, case let .peer(peer, _, _) = contactPeers.first {
                         controller?.dismissSearch()
                         controller?.displayNavigationActivity = true
                         strongSelf.createActionDisposable.set((strongSelf.context.engine.peers.createSecretChat(peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in

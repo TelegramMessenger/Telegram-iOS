@@ -43,6 +43,9 @@ extension StickerPackCollectionInfo {
                 if (flags & (1 << 5)) != 0 {
                     setFlags.insert(.isAnimated)
                 }
+                if (flags & (1 << 6)) != 0 {
+                    setFlags.insert(.isVideo)
+                }
                 
                 var thumbnailRepresentation: TelegramMediaImageRepresentation?
                 var immediateThumbnailData: Data?

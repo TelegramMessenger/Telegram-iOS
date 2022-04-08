@@ -120,7 +120,7 @@ public extension TelegramEngine {
             return _internal_markAllChatsAsRead(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager)
         }
 
-        public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], strategy: GetMessagesStrategy = .cloud) -> Signal <[Message], NoError> {
+        public func getMessagesLoadIfNecessary(_ messageIds: [MessageId], strategy: GetMessagesStrategy = .cloud(skipLocal: false)) -> Signal <[Message], NoError> {
             return _internal_getMessagesLoadIfNecessary(messageIds, postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, strategy: strategy)
         }
 
@@ -130,6 +130,10 @@ public extension TelegramEngine {
 
         public func installInteractiveReadMessagesAction(peerId: PeerId) -> Disposable {
             return _internal_installInteractiveReadMessagesAction(postbox: self.account.postbox, stateManager: self.account.stateManager, peerId: peerId)
+        }
+        
+        public func installInteractiveReadReactionsAction(peerId: PeerId, getVisibleRange: @escaping () -> VisibleMessageRange?, didReadReactionsInMessages: @escaping ([MessageId: [ReactionsMessageAttribute.RecentPeer]]) -> Void) -> Disposable {
+            return _internal_installInteractiveReadReactionsAction(postbox: self.account.postbox, stateManager: self.account.stateManager, peerId: peerId, getVisibleRange: getVisibleRange, didReadReactionsInMessages: didReadReactionsInMessages)
         }
 
         public func requestMessageSelectPollOption(messageId: MessageId, opaqueIdentifiers: [Data]) -> Signal<TelegramMediaPoll?, RequestMessageSelectPollOptionError> {
@@ -146,6 +150,10 @@ public extension TelegramEngine {
 
         public func earliestUnseenPersonalMentionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
             return _internal_earliestUnseenPersonalMentionMessage(account: self.account, peerId: peerId)
+        }
+        
+        public func earliestUnseenPersonalReactionMessage(peerId: PeerId) -> Signal<EarliestUnseenPersonalMentionMessageResult, NoError> {
+            return _internal_earliestUnseenPersonalReactionMessage(account: self.account, peerId: peerId)
         }
 
         public func exportMessageLink(peerId: PeerId, messageId: MessageId, isThread: Bool = false) -> Signal<String?, NoError> {
@@ -304,6 +312,10 @@ public extension TelegramEngine {
         
         public func messageReactionList(message: EngineMessage, reaction: String?) -> EngineMessageReactionListContext {
             return EngineMessageReactionListContext(account: self.account, message: message, reaction: reaction)
+        }
+        
+        public func translate(text: String, fromLang: String?, toLang: String) -> Signal<String?, NoError> {
+            return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
     }
 }

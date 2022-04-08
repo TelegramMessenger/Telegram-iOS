@@ -256,16 +256,20 @@ main(int argc, char *argv[])
 
 	if (argc > 6) {
 #ifdef _WIN32
-		_snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix);
+		if (_snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix) < 0) {
 #else
-		snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix);
+		if (snprintf(request, sizeof(request), "%s %s %s", request_prefix, argv[6], request_postfix) < 0) {
 #endif
+			request[0] = '\0';
+		}
 	} else {
 #ifdef _WIN32
-		_snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix);
+		if (_snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix) < 0) {
 #else
-		snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix);
+		if (snprintf(request, sizeof(request), "%s %s %s", request_prefix, "/", request_postfix) < 0) {
 #endif
+			request[0] = '\0';
+		}
 	}
 
 	printf("\nHTTP request:\n%s\n", request);

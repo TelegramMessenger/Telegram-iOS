@@ -18,6 +18,7 @@ swift_library(
         "//submodules/TelegramAudio:TelegramAudio",
         "//submodules/FFMpegBinding:FFMpegBinding",
         "//submodules/RingBuffer:RingBuffer",
+        "//submodules/YuvConversion:YuvConversion",
     ],
     visibility = [
         "//visibility:public",

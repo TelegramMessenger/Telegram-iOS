@@ -245,7 +245,7 @@ private final class PrefetchManagerInnerImpl {
         |> mapToSignal { sticker -> Signal<Void, NoError> in
             if let sticker = sticker {
                 let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: sticker)).start()
-                return chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: sticker.resource, fitzModifier: nil, width: 384, height: 384, synchronousLoad: false)
+                return chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: sticker.resource, fitzModifier: nil, isVideo: sticker.isVideoSticker, width: 384, height: 384, synchronousLoad: false)
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     return .complete()
                 }

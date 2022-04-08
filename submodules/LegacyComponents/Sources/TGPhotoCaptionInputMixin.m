@@ -4,12 +4,7 @@
 
 #import <LegacyComponents/TGObserverProxy.h>
 
-#import "TGSuggestionContext.h"
 #import "TGPhotoPaintStickersContext.h"
-
-#import "TGModernConversationMentionsAssociatedPanel.h"
-#import "TGModernConversationHashtagsAssociatedPanel.h"
-#import "TGModernConversationAlphacodeAssociatedPanel.h"
 
 @interface TGPhotoCaptionInputMixin ()
 {
@@ -167,165 +162,9 @@
 
 #pragma mark - Input Panel Delegate
 
-
-//- (void)inputPanelMentionEntered:(TGMediaPickerCaptionInputPanel *)__unused inputTextPanel mention:(NSString *)mention startOfLine:(bool)__unused startOfLine
-//{
-//    if (mention == nil)
-//    {
-//        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationMentionsAssociatedPanel class]])
-//            [inputTextPanel setAssociatedPanel:nil animated:true];
-//    }
-//    else
-//    {
-//        TGModernConversationMentionsAssociatedPanel *panel = nil;
-//        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationMentionsAssociatedPanel class]])
-//            panel = (TGModernConversationMentionsAssociatedPanel *)[inputTextPanel associatedPanel];
-//        else
-//        {
-//            panel = [[TGModernConversationMentionsAssociatedPanel alloc] initWithStyle:TGModernConversationAssociatedInputPanelDarkStyle];
-//
-//            __weak TGPhotoCaptionInputMixin *weakSelf = self;
-//            panel.userSelected = ^(TGUser *user)
-//            {
-//                __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
-//                if (strongSelf != nil)
-//                {
-//                    if ([[strongSelf->_inputPanel associatedPanel] isKindOfClass:[TGModernConversationMentionsAssociatedPanel class]])
-//                        [strongSelf->_inputPanel setAssociatedPanel:nil animated:false];
-//
-//                    if (user.userName.length == 0) {
-//                        [strongSelf->_inputPanel replaceMention:[[NSString alloc] initWithFormat:@"%@", user.displayFirstName] username:false userId:user.uid];
-//                    } else {
-//                        [strongSelf->_inputPanel replaceMention:[[NSString alloc] initWithFormat:@"%@", user.userName] username:true userId:user.uid];
-//                    }
-//                }
-//            };
-//        }
-//
-//        SSignal *userListSignal = nil;
-//        if (self.suggestionContext.userListSignal != nil)
-//            userListSignal = self.suggestionContext.userListSignal(mention);
-//
-//        [panel setUserListSignal:userListSignal];
-//
-//        [inputTextPanel setAssociatedPanel:panel animated:true];
-//    }
-//}
-//
-//- (void)inputPanelHashtagEntered:(TGMediaPickerCaptionInputPanel *)inputTextPanel hashtag:(NSString *)hashtag
-//{
-//    if (hashtag == nil)
-//    {
-//        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationHashtagsAssociatedPanel class]])
-//            [inputTextPanel setAssociatedPanel:nil animated:true];
-//    }
-//    else
-//    {
-//        TGModernConversationHashtagsAssociatedPanel *panel = nil;
-//        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationHashtagsAssociatedPanel class]])
-//            panel = (TGModernConversationHashtagsAssociatedPanel *)[inputTextPanel associatedPanel];
-//        else
-//        {
-//            panel = [[TGModernConversationHashtagsAssociatedPanel alloc] initWithStyle:TGModernConversationAssociatedInputPanelDarkStyle];
-//
-//            __weak TGPhotoCaptionInputMixin *weakSelf = self;
-//            panel.hashtagSelected = ^(NSString *hashtag)
-//            {
-//                __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
-//                if (strongSelf != nil)
-//                {
-//                    if ([[strongSelf->_inputPanel associatedPanel] isKindOfClass:[TGModernConversationHashtagsAssociatedPanel class]])
-//                        [strongSelf->_inputPanel setAssociatedPanel:nil animated:false];
-//
-//                    [strongSelf->_inputPanel replaceHashtag:hashtag];
-//                }
-//            };
-//            [inputTextPanel setAssociatedPanel:panel animated:true];
-//        }
-//
-//        SSignal *hashtagListSignal = nil;
-//        if (self.suggestionContext.hashtagListSignal != nil)
-//            hashtagListSignal = self.suggestionContext.hashtagListSignal(hashtag);
-//
-//        [panel setHashtagListSignal:hashtagListSignal];
-//    }
-//}
-//
-//- (void)inputPanelAlphacodeEntered:(TGMediaPickerCaptionInputPanel *)inputTextPanel alphacode:(NSString *)alphacode
-//{
-//    if (alphacode == nil)
-//    {
-//        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationAlphacodeAssociatedPanel class]])
-//            [inputTextPanel setAssociatedPanel:nil animated:true];
-//    }
-//    else
-//    {
-//        TGModernConversationAlphacodeAssociatedPanel *panel = nil;
-//        if ([[inputTextPanel associatedPanel] isKindOfClass:[TGModernConversationAlphacodeAssociatedPanel class]])
-//            panel = ((TGModernConversationAlphacodeAssociatedPanel *)[inputTextPanel associatedPanel]);
-//        else
-//        {
-//            panel = [[TGModernConversationAlphacodeAssociatedPanel alloc] initWithStyle:TGModernConversationAssociatedInputPanelDarkStyle];
-//            __weak TGPhotoCaptionInputMixin *weakSelf = self;
-//            panel.alphacodeSelected = ^(TGAlphacodeEntry *entry)
-//            {
-//                __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
-//                if (strongSelf != nil)
-//                {
-//                    if ([[strongSelf->_inputPanel associatedPanel] isKindOfClass:[TGModernConversationAlphacodeAssociatedPanel class]])
-//                    {
-//                        [strongSelf->_inputPanel setAssociatedPanel:nil animated:false];
-//                    }
-//
-//                    NSString *codeText = entry.emoji;
-//
-//                    [strongSelf appendAlphacode:[codeText stringByAppendingString:@" "]];
-//                }
-//            };
-//            [inputTextPanel setAssociatedPanel:panel animated:true];
-//        }
-//
-//        SSignal *alphacodeListSignal = nil;
-//        if (self.suggestionContext.alphacodeSignal != nil)
-//            alphacodeListSignal = self.suggestionContext.alphacodeSignal(alphacode, inputTextPanel.inputField.textInputMode.primaryLanguage);
-//
-//        [panel setAlphacodeListSignal:alphacodeListSignal];
-//    }
-//}
-//
-//- (void)appendAlphacode:(NSString *)alphacode
-//{
-//    NSString *currentText = [_inputPanel inputField].text;
-//    NSRange selectRange = NSMakeRange(0, 0);
-//
-//    if (currentText.length == 0)
-//        currentText = alphacode;
-//    else
-//    {
-//        NSInteger caretIndex = [_inputPanel textCaretPosition];
-//
-//        for (NSInteger i = caretIndex - 1; i >= 0; i--)
-//        {
-//            if ([currentText characterAtIndex:i] == ':') {
-//                currentText = [currentText stringByReplacingCharactersInRange:NSMakeRange(i, caretIndex - i) withString:alphacode];
-//                selectRange = NSMakeRange(i + alphacode.length, 0);
-//                break;
-//            }
-//        }
-//    }
-//
-//    [[_inputPanel inputField] setAttributedText:[[NSAttributedString alloc] initWithString:currentText] animated:false];
-//    [[_inputPanel inputField] selectRange:selectRange force:true];
-//
-//    [_inputPanel inputField].internalTextView.enableFirstResponder = true;
-//}
-//
 - (void)setContentAreaHeight:(CGFloat)contentAreaHeight
 {
     _contentAreaHeight = contentAreaHeight;
-    
-    CGFloat finalHeight = _contentAreaHeight - _keyboardHeight;
-//    [_inputPanel setContentAreaHeight:finalHeight];
 }
 
 - (UIView *)_parentView
@@ -383,13 +222,21 @@
     _currentEdgeInsets = edgeInsets;
     
     CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0];
-    _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
+    
+    CGFloat y = 0.0;
+    if (frame.size.width > frame.size.height && !TGIsPad()) {
+        y = edgeInsets.top + frame.size.height;
+    } else {
+        y = edgeInsets.top + frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight);
+    }
+    
+    _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
     
     CGFloat backgroundHeight = panelHeight;
     if (_keyboardHeight > 0.0) {
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
-    _backgroundView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, backgroundHeight);
+    _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
 }
 
 @end

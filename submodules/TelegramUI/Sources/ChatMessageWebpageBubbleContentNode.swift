@@ -76,7 +76,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                         }
-                        item.controllerInteraction.openPeer(id, navigationData, nil)
+                        item.controllerInteraction.openPeer(id, navigationData, nil, nil)
                     case let .join(_, joinHash):
                         item.controllerInteraction.openJoinLink(joinHash)
                     }
@@ -292,6 +292,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if let type = webpage.type {
                     switch type {
+                        case "photo":
+                            if webpage.displayUrl.hasPrefix("t.me/") {
+                                actionTitle = item.presentationData.strings.Conversation_ViewMessage
+                            }
+                        case "telegram_user":
+                            actionTitle = item.presentationData.strings.Conversation_UserSendMessage
                         case "telegram_channel_request":
                             actionTitle = item.presentationData.strings.Conversation_RequestToJoinChannel
                         case "telegram_chat_request", "telegram_megagroup_request":

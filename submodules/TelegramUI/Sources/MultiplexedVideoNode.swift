@@ -9,6 +9,7 @@ import AVFoundation
 import ContextUI
 import TelegramPresentationData
 import ShimmerEffect
+import SoftwareVideo
 
 final class MultiplexedVideoPlaceholderNode: ASDisplayNode {
     private let effectNode: ShimmerEffectNode

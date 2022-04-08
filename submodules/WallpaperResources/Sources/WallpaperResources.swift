@@ -1316,7 +1316,11 @@ private let qrIconImage: UIImage = {
     })!
 }()
 
-public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+private let messageImage: UIImage = {
+    return messageBubbleImage(maxCornerRadius: 16.0, minCornerRadius: 16.0, incoming: true, fillColor: .white, strokeColor: .clear, neighbors: .none, shadow: nil, wallpaper: .color(0x000000), knockout: false)
+}()
+
+public func themeIconImage(account: Account, accountManager: AccountManager<TelegramAccountManagerTypes>, theme: PresentationThemeReference, color: PresentationThemeAccentColor?, wallpaper: TelegramWallpaper? = nil, nightMode: Bool? = nil, emoticon: Bool = false, large: Bool = false, qr: Bool = false, message: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let colorsSignal: Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError>
 
     var reference: MediaResourceReference?
@@ -1442,7 +1446,7 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                                     
                                     return patternWallpaperImage(account: account, accountManager: accountManager, representations: convertedPreviewRepresentations, mode: .thumbnail, autoFetchFullSize: true)
                                     |> mapToSignal { generator -> Signal<((UIColor, UIColor?, [UInt32]), [UIColor], [UIColor], UIImage?, Bool, Bool, CGFloat, Int32?), NoError> in
-                                        let imageSize = CGSize(width: 148, height: 320)
+                                        let imageSize = CGSize(width: 148.0, height: 320.0)
                                         let imageArguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, custom: arguments)
                                         let context = generator?(imageArguments)
                                         let image = context?.generateImage()
@@ -1568,7 +1572,15 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
                     }
                 }
                 
-                if qr {
+                if message {
+                    if let image = messageImage.cgImage {
+                        c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                        
+                        c.draw(image, in: CGRect(x: floor((drawingRect.width - 43.0) / 2.0) - 2.0, y: floor((drawingRect.height - 37.0) / 2.0), width: 43.0, height: 37.0))
+                    }
+                } else if qr {
                     if let image = qrIconImage.cgImage {
                         c.draw(image, in: CGRect(x: floor((drawingRect.width - 36.0) / 2.0), y: floor((drawingRect.height - 36.0) / 2.0), width: 36.0, height: 36.0))
                     }

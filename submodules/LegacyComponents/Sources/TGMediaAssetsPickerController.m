@@ -89,7 +89,11 @@
         _assetGroup = assetGroup;
         _intent = intent;
         
-        [self setTitle:_assetGroup.title];
+        if (_intent == TGMediaAssetsControllerSendMediaIntent) {
+            [self setTitle:TGLocalized(@"Attachment.Gallery")];
+        } else {
+            [self setTitle:assetGroup.title];
+        }
         
         _assetsDisposable = [[SMetaDisposable alloc] init];
     }
@@ -145,6 +149,18 @@
         NSUInteger index = [self.selectionContext indexOfItem:(id<TGMediaSelectableItem>)cell.item];
         [cell.checkButton setNumber:index];
     }
+    
+    NSString *title;
+    if (self.selectionContext.count > 0) {
+        title = [legacyEffectiveLocalization() getPluralized:@"Attachment.SelectedMedia" count:(int32_t)self.selectionContext.count];
+    } else {
+        if (_intent == TGMediaAssetsControllerSendMediaIntent) {
+            title = TGLocalized(@"Attachment.Gallery");
+        } else {
+            title = _assetGroup.title;
+        }
+    }
+    [self setTitle:title];
 }
 
 - (void)viewDidLoad
@@ -152,10 +168,15 @@
     [super viewDidLoad];
     
     SSignal *groupSignal = nil;
-    if (_assetGroup != nil)
+    bool reversed = false;
+    if (_assetGroup != nil) {
         groupSignal = [SSignal single:_assetGroup];
-    else
+    } else {
         groupSignal = [_assetsLibrary cameraRollGroup];
+        if (_intent == TGMediaAssetsControllerSendMediaIntent) {
+            reversed = true;
+        }
+    }
     
     __weak TGMediaAssetsPickerController *weakSelf = self;
     [_assetsDisposable setDisposable:[[[[groupSignal deliverOn:[SQueue mainQueue]] mapToSignal:^SSignal *(TGMediaAssetGroup *assetGroup)
@@ -167,9 +188,12 @@
         if (strongSelf->_assetGroup == nil)
             strongSelf->_assetGroup = assetGroup;
         
-        [strongSelf setTitle:assetGroup.title];
-        
-        return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:false];
+        if (strongSelf->_intent == TGMediaAssetsControllerSendMediaIntent) {
+            [strongSelf setTitle:TGLocalized(@"Attachment.Gallery")];
+        } else {
+            [strongSelf setTitle:assetGroup.title];
+        }
+        return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:reversed];
     }] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
     {
         __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
@@ -190,13 +214,16 @@
         {
             TGMediaAssetFetchResult *fetchResult = (TGMediaAssetFetchResult *)next;
             
-            bool scrollToBottom = (strongSelf->_fetchResult == nil);
+            bool scrollToTop = (strongSelf->_fetchResult == nil && strongSelf->_intent == TGMediaAssetsControllerSendMediaIntent);
+            bool scrollToBottom = (strongSelf->_fetchResult == nil && strongSelf->_intent != TGMediaAssetsControllerSendMediaIntent);
             
             strongSelf->_fetchResult = fetchResult;
             [strongSelf->_collectionView reloadData];
-            
-            if (scrollToBottom)
-            {
+
+            if (scrollToTop) {
+                [strongSelf->_collectionView layoutSubviews];
+                [strongSelf->_collectionView setContentOffset:CGPointMake(0.0, -strongSelf->_collectionView.contentInset.top) animated:false];
+            } else if (scrollToBottom) {
                 [strongSelf->_collectionView layoutSubviews];
                 [strongSelf _adjustContentOffsetToBottom];
             }
@@ -219,6 +246,7 @@
     [super viewWillAppear:animated];
     
     [self setup3DTouch];
+    [self setLeftBarButtonItem:[(TGMediaAssetsController *)self.navigationController leftBarButtonItem]];
     [self setRightBarButtonItem:[(TGMediaAssetsController *)self.navigationController rightBarButtonItem]];
 }
 
@@ -329,9 +357,9 @@
     };
 }
 
-- (TGMediaPickerModernGalleryMixin *)_galleryMixinForContext:(id<LegacyComponentsContext>)context item:(id)item thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext suggestionContext:(TGSuggestionContext *)suggestionContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities inhibitDocumentCaptions:(bool)inhibitDocumentCaptions asFile:(bool)asFile
+- (TGMediaPickerModernGalleryMixin *)_galleryMixinForContext:(id<LegacyComponentsContext>)context item:(id)item thumbnailImage:(UIImage *)thumbnailImage selectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext hasCaptions:(bool)hasCaptions allowCaptionEntities:(bool)allowCaptionEntities inhibitDocumentCaptions:(bool)inhibitDocumentCaptions asFile:(bool)asFile
 {
-    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext suggestionContext:suggestionContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:asFile itemsLimit:0 recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder stickersContext:self.stickersContext];
+    return [[TGMediaPickerModernGalleryMixin alloc] initWithContext:context item:item fetchResult:_fetchResult parentController:self thumbnailImage:thumbnailImage selectionContext:selectionContext editingContext:editingContext hasCaptions:hasCaptions allowCaptionEntities:allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:asFile itemsLimit:0 recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule reminder:self.reminder stickersContext:self.stickersContext];
 }
 
 - (TGMediaPickerModernGalleryMixin *)galleryMixinForIndexPath:(NSIndexPath *)indexPath previewMode:(bool)previewMode outAsset:(TGMediaAsset **)outAsset
@@ -348,7 +376,7 @@
     
     bool asFile = (_intent == TGMediaAssetsControllerSendFileIntent);
     
-    TGMediaPickerModernGalleryMixin *mixin = [self _galleryMixinForContext:_context item:asset thumbnailImage:thumbnailImage selectionContext:self.selectionContext editingContext:self.editingContext suggestionContext:self.suggestionContext hasCaptions:self.captionsEnabled allowCaptionEntities:self.allowCaptionEntities inhibitDocumentCaptions:self.inhibitDocumentCaptions asFile:asFile];
+    TGMediaPickerModernGalleryMixin *mixin = [self _galleryMixinForContext:_context item:asset thumbnailImage:thumbnailImage selectionContext:self.selectionContext editingContext:self.editingContext hasCaptions:self.captionsEnabled allowCaptionEntities:self.allowCaptionEntities inhibitDocumentCaptions:self.inhibitDocumentCaptions asFile:asFile];
     mixin.presentScheduleController = self.presentScheduleController;
     mixin.presentTimerController = self.presentTimerController;
     __weak TGMediaAssetsPickerController *weakSelf = self;
@@ -369,6 +397,8 @@
 
 - (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath
 {
+    [self.view.window endEditing:true];
+    
     TGMediaAsset *asset = [self _itemAtIndexPath:indexPath];
 
     TGMediaSelectionContext *selectionContext = ((TGMediaAssetsController *)self.navigationController).selectionContext;

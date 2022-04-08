@@ -60,9 +60,10 @@ public final class EngineMediaResource: Equatable {
     }
 
     public enum FetchStatus: Equatable {
-        case Remote
+        case Remote(progress: Float)
         case Local
         case Fetching(isActive: Bool, progress: Float)
+        case Paused(progress: Float)
     }
 
     public struct Id: Equatable, Hashable {
@@ -105,23 +106,27 @@ public extension EngineMediaResource.ResourceData {
 public extension EngineMediaResource.FetchStatus {
     init(_ status: MediaResourceStatus) {
         switch status {
-        case .Remote:
-            self = .Remote
+        case let .Remote(progress):
+            self = .Remote(progress: progress)
         case .Local:
             self = .Local
         case let .Fetching(isActive, progress):
             self = .Fetching(isActive: isActive, progress: progress)
+        case let .Paused(progress):
+            self = .Paused(progress: progress)
         }
     }
 
     func _asStatus() -> MediaResourceStatus {
         switch self {
-        case .Remote:
-            return .Remote
+        case let .Remote(progress):
+            return .Remote(progress: progress)
         case .Local:
             return .Local
         case let .Fetching(isActive, progress):
             return .Fetching(isActive: isActive, progress: progress)
+        case let .Paused(progress):
+            return .Paused(progress: progress)
         }
     }
 }
@@ -142,7 +147,7 @@ public extension TelegramEngine {
             return _internal_collectCacheUsageStats(account: self.account, peerId: peerId, additionalCachePaths: additionalCachePaths, logFilesPath: logFilesPath)
         }
 
-        public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Void, NoError> {
+        public func clearCachedMediaResources(mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
             return _internal_clearCachedMediaResources(account: self.account, mediaResourceIds: mediaResourceIds)
         }
 

@@ -111,6 +111,14 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchAnimatedStickerRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
         }
+    } else if let representation = representation as? CachedVideoStickerRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchVideoStickerRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
+        }
     } else if let representation = representation as? CachedAnimatedStickerFirstFrameRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -710,15 +718,11 @@ private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, reso
 private func fetchAnimatedStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            if #available(iOS 9.0, *) {
-                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.stringRepresentation)-\(representation.uniqueId)").start(next: { value in
-                    subscriber.putNext(value)
-                }, completed: {
-                    subscriber.putCompletion()
-                })
-            } else {
-                return EmptyDisposable
-            }
+            return cacheAnimatedStickerFrames(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.stringRepresentation)-\(representation.uniqueId)").start(next: { value in
+                subscriber.putNext(value)
+            }, completed: {
+                subscriber.putCompletion()
+            })
         } else {
             return EmptyDisposable
         }
@@ -726,6 +730,16 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     |> runOn(Queue.concurrentDefaultQueue())
 }
 
+private func fetchVideoStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedVideoStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        return cacheVideoStickerFrames(path: resourceData.path, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), cacheKey: "\(resource.id.stringRepresentation)-\(representation.uniqueId)").start(next: { value in
+            subscriber.putNext(value)
+        }, completed: {
+            subscriber.putCompletion()
+        })
+    })
+    |> runOn(Queue.concurrentDefaultQueue())
+}
 
 private func fetchPreparedPatternWallpaperRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPreparedPatternWallpaperRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in

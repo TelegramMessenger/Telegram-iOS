@@ -7,13 +7,6 @@ private struct Vector2 {
     var y: Float
 }
 
-private final class NullActionClass: NSObject, CAAction {
-    @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
-    }
-}
-
-private let nullAction = NullActionClass()
-
 private final class ParticleLayer: CALayer {
     let mass: Float
     var velocity: Vector2

@@ -20,6 +20,7 @@ swift_library(
         "//submodules/ChatListUI:ChatListUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/ListMessageItem:ListMessageItem",
+        "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
     ],
     visibility = [
         "//visibility:public",

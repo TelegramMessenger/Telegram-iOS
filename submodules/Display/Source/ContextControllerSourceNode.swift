@@ -1,12 +1,17 @@
 import Foundation
 import AsyncDisplayKit
 
-open class ContextControllerSourceNode: ASDisplayNode {
-    private var contextGesture: ContextGesture?
+open class ContextControllerSourceNode: ContextReferenceContentNode {
+    public private(set) var contextGesture: ContextGesture?
     
     public var isGestureEnabled: Bool = true {
         didSet {
             self.contextGesture?.isEnabled = self.isGestureEnabled
+        }
+    }
+    public var beginDelay: Double = 0.12 {
+        didSet {
+            self.contextGesture?.beginDelay = self.beginDelay
         }
     }
     public var animateScale: Bool = true
@@ -30,6 +35,9 @@ open class ContextControllerSourceNode: ASDisplayNode {
         let contextGesture = ContextGesture(target: self, action: nil)
         self.contextGesture = contextGesture
         self.view.addGestureRecognizer(contextGesture)
+        
+        contextGesture.beginDelay = self.beginDelay
+        contextGesture.isEnabled = self.isGestureEnabled
         
         contextGesture.shouldBegin = { [weak self] point in
             guard let strongSelf = self, !strongSelf.bounds.width.isZero else {

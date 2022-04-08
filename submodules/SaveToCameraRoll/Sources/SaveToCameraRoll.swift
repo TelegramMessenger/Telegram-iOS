@@ -56,6 +56,8 @@ public func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefer
                         subscriber.putNext(.progress(0.0))
                     case let .Fetching(_, progress):
                         subscriber.putNext(.progress(progress))
+                    case let .Paused(progress):
+                        subscriber.putNext(.progress(progress))
                 }
             })
             let data = postbox.mediaBox.resourceData(resource, pathExtension: fileExtension, option: .complete(waitUntilFetchStatus: true)).start(next: { next in

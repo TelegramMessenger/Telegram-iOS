@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 import UIKit
 import Display
 import AsyncDisplayKit
@@ -24,6 +25,14 @@ import WallpaperBackgroundNode
 import QrCode
 import AvatarNode
 import ShareController
+import TelegramStringFormatting
+import PhotoResources
+import TextFormat
+import UniversalMediaPlayer
+import TelegramUniversalVideoContent
+import GalleryUI
+import SaveToCameraRoll
+import SegmentedControlNode
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -56,6 +65,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
+    let message: Bool
     
     var stableId: Int {
         return index
@@ -87,6 +97,9 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
         if lhs.wallpaper != rhs.wallpaper {
             return false
         }
+        if lhs.message != rhs.message {
+            return false
+        }
         return true
     }
     
@@ -95,7 +108,7 @@ private struct ThemeSettingsThemeEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, action: @escaping (String?) -> Void) -> ListViewItem {
-        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, action: action)
+        return ThemeSettingsThemeIconItem(context: context, emoticon: self.emoticon, emojiFile: self.emojiFile, themeReference: self.themeReference, nightMode: self.nightMode, selected: self.selected, theme: self.theme, strings: self.strings, wallpaper: self.wallpaper, message: self.message, action: action)
     }
 }
 
@@ -110,9 +123,10 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let wallpaper: TelegramWallpaper?
+    let message: Bool
     let action: (String?) -> Void
     
-    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, nightMode: Bool, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, action: @escaping (String?) -> Void) {
+    public init(context: AccountContext, emoticon: String?, emojiFile: TelegramMediaFile?, themeReference: PresentationThemeReference?, nightMode: Bool, selected: Bool, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper?, message: Bool, action: @escaping (String?) -> Void) {
         self.context = context
         self.emoticon = emoticon
         self.emojiFile = emojiFile
@@ -122,6 +136,7 @@ private class ThemeSettingsThemeIconItem: ListViewItem {
         self.theme = theme
         self.strings = strings
         self.wallpaper = wallpaper
+        self.message = message
         self.action = action
     }
     
@@ -433,7 +448,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         
                     if updatedThemeReference || updatedWallpaper || updatedNightMode {
                         if let themeReference = item.themeReference {
-                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true, qr: true))
+                            strongSelf.imageNode.setSignal(themeIconImage(account: item.context.account, accountManager: item.context.sharedContext.accountManager, theme: themeReference, color: nil, wallpaper: item.wallpaper, nightMode: item.nightMode, emoticon: true, qr: !item.message, message: item.message))
                             strongSelf.imageNode.backgroundColor = nil
                         }
                     }
@@ -548,6 +563,26 @@ final class ChatQrCodeScreen: ViewController {
     static let themeCrossfadeDuration: Double = 0.3
     static let themeCrossfadeDelay: Double = 0.05
     
+    enum Subject {
+        case peer(Peer)
+        case messages([Message])
+        
+        var fileName: String {
+            switch self {
+            case let .peer(peer):
+                return "t_me-\(peer.addressName ?? "")"
+            case let .messages(messages):
+                if let message = messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
+                    return "t_me-\(addressName)-\(message.id.id)"
+                } else if let message = messages.first {
+                    return "t_me-\(message.id.id)"
+                } else {
+                    return "telegram_message"
+                }
+            }
+        }
+    }
+    
     private var controllerNode: ChatQrCodeScreenNode {
         return self.displayNode as! ChatQrCodeScreenNode
     }
@@ -555,7 +590,7 @@ final class ChatQrCodeScreen: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peer: Peer
+    fileprivate let subject: ChatQrCodeScreen.Subject
     
     private var presentationData: PresentationData
     private var presentationThemePromise = Promise<PresentationTheme?>()
@@ -563,10 +598,10 @@ final class ChatQrCodeScreen: ViewController {
     
     var dismissed: (() -> Void)?
     
-    init(context: AccountContext, peer: Peer) {
+    init(context: AccountContext, subject: ChatQrCodeScreen.Subject) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.peer = peer
+        self.subject = subject
                 
         super.init(navigationBarPresentationData: nil)
         
@@ -603,7 +638,7 @@ final class ChatQrCodeScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatQrCodeScreenNode(context: self.context, presentationData: self.presentationData, controller: self, peer: self.peer)
+        self.displayNode = ChatQrCodeScreenNode(context: self.context, presentationData: self.presentationData, controller: self)
         self.controllerNode.previewTheme = { [weak self] _, _, theme in
             self?.presentationThemePromise.set(.single(theme))
         }
@@ -681,20 +716,34 @@ private func iconColors(theme: PresentationTheme) -> [String: UIColor] {
 
 private let defaultEmoticon = "🏠"
 
+private func generateShadowImage() -> UIImage? {
+    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setShadow(offset: CGSize(width: 0.0, height: -0.5), blur: 10.0, color: UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
+        context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.4).cgColor)
+        let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 0.0, y: 8.0), size: CGSize(width: 40.0, height: 40.0)), cornerRadius: 16.0)
+        context.addPath(path.cgPath)
+        context.fillPath()
+    })?.stretchableImage(withLeftCapWidth: 20, topCapHeight: 0)
+}
+
 private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var presentationData: PresentationData
     private weak var controller: ChatQrCodeScreen?
     
-    private let contentNode: QrContentNode
+    private let contentNode: ContentNode
     
     private let wrappingScrollNode: ASScrollNode
     private let contentContainerNode: ASDisplayNode
     private let topContentContainerNode: SparseNode
+    private let shadowNode: ASImageNode
     private let effectNode: ASDisplayNode
     private let backgroundNode: ASDisplayNode
     private let contentBackgroundNode: ASDisplayNode
     private let titleNode: ASTextNode
+    private let segmentedNode: SegmentedControlNode
     private let cancelButton: HighlightableButtonNode
     private let switchThemeButton: HighlightTrackingButtonNode
     private let animationContainerNode: ASDisplayNode
@@ -708,8 +757,6 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     private var themes: [TelegramTheme] = []
     
     let ready = Promise<Bool>()
-    
-    private let peer: Peer
     
     private var initiallySelectedEmoticon: String?
     private var selectedEmoticon: String? = nil {
@@ -736,10 +783,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen, peer: Peer) {
+    init(context: AccountContext, presentationData: PresentationData, controller: ChatQrCodeScreen) {
         self.context = context
         self.controller = controller
-        self.peer = peer
         self.presentationData = presentationData
         
         self.wrappingScrollNode = ASScrollNode()
@@ -747,7 +793,13 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.wrappingScrollNode.view.delaysContentTouches = false
         self.wrappingScrollNode.view.canCancelContentTouches = true
                 
-        self.contentNode = QrContentNode(context: context, peer: peer, isStatic: false)
+        switch controller.subject {
+            case let .peer(peer):
+                self.contentNode = QrContentNode(context: context, peer: peer, isStatic: false)
+            case let .messages(messages):
+                self.contentNode = MessageContentNode(context: context, messages: messages)
+        }
+        
         
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
@@ -755,6 +807,10 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.topContentContainerNode = SparseNode()
         self.topContentContainerNode.isOpaque = false
 
+        self.shadowNode = ASImageNode()
+        self.shadowNode.contentMode = .scaleToFill
+        self.shadowNode.image = generateShadowImage()
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.clipsToBounds = true
         self.backgroundNode.cornerRadius = 16.0
@@ -774,7 +830,18 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.PeerInfo_QRCode_Title, font: Font.semibold(16.0), textColor: textColor)
+        let title: String
+        switch controller.subject {
+        case .peer:
+            title = self.presentationData.strings.PeerInfo_QRCode_Title
+        case .messages:
+            title = self.presentationData.strings.Share_MessagePreview
+        }
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(16.0), textColor: textColor)
+        
+        self.segmentedNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: [SegmentedControlItem(title: "Video"), SegmentedControlItem(title: "Image")], selectedIndex: self.contentNode.hasVideo ? 0 : 1)
+        self.segmentedNode.isHidden = !self.contentNode.hasVideo
+        self.titleNode.isHidden = !self.segmentedNode.isHidden
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setImage(closeButtonImage(theme: self.presentationData.theme), for: .normal)
@@ -787,7 +854,12 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.animationNode.isUserInteractionEnabled = false
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
-        self.doneButton.title = self.presentationData.strings.InviteLink_QRCode_Share
+        switch controller.subject {
+        case .peer:
+            self.doneButton.title = self.presentationData.strings.InviteLink_QRCode_Share
+        case .messages:
+            self.doneButton.title = self.presentationData.strings.Share_ShareMessage
+        }
         
         self.listNode = ListView()
         self.listNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
@@ -801,6 +873,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.wrappingScrollNode.addSubnode(self.contentNode)
         
+        self.wrappingScrollNode.addSubnode(self.shadowNode)
         self.wrappingScrollNode.addSubnode(self.backgroundNode)
         self.wrappingScrollNode.addSubnode(self.contentContainerNode)
         self.wrappingScrollNode.addSubnode(self.topContentContainerNode)
@@ -808,6 +881,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.backgroundNode.addSubnode(self.effectNode)
         self.backgroundNode.addSubnode(self.contentBackgroundNode)
         self.contentContainerNode.addSubnode(self.titleNode)
+        self.contentContainerNode.addSubnode(self.segmentedNode)
         self.contentContainerNode.addSubnode(self.doneButton)
         
         self.topContentContainerNode.addSubnode(self.animationContainerNode)
@@ -818,17 +892,59 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         
         self.switchThemeButton.addTarget(self, action: #selector(self.switchThemePressed), forControlEvents: .touchUpInside)
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
+        
+        self.segmentedNode.selectedIndexChanged = { [weak self] index in
+            guard let strongSelf = self, let contentNode = strongSelf.contentNode as? MessageContentNode, let videoNode = contentNode.videoNode else {
+                return
+            }
+            if index == 0 {
+                videoNode.play()
+            } else {
+                videoNode.pause()
+                videoNode.seek(0)
+            }
+        }
+        
+        let fileName = controller.subject.fileName
         self.doneButton.pressed = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.doneButton.isUserInteractionEnabled = false
-                
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.doneButton.isUserInteractionEnabled = false
+            
+            if strongSelf.segmentedNode.selectedIndex == 0 {
+                strongSelf.contentNode.generateVideo { [weak self] url in
+                    if let strongSelf = self {
+                        let tempFilePath = NSTemporaryDirectory() + "\(fileName).mp4"
+                        try? FileManager.default.removeItem(atPath: tempFilePath)
+                        let tempFileUrl = URL(fileURLWithPath: tempFilePath)
+                        try? FileManager.default.moveItem(at: url, to: tempFileUrl)
+                        
+                        let activityController = UIActivityViewController(activityItems: [tempFileUrl], applicationActivities: [ShareToInstagramActivity(context: strongSelf.context)])
+                        activityController.completionWithItemsHandler = { [weak self] _, finished, _, _ in
+                            if let strongSelf = self {
+                                if finished {
+                                    strongSelf.completion?(strongSelf.selectedEmoticon)
+                                } else {
+                                    strongSelf.doneButton.isUserInteractionEnabled = true
+                                }
+                            }
+                        }
+                        if let window = strongSelf.view.window {
+                            activityController.popoverPresentationController?.sourceView = window
+                            activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                        }
+                        context.sharedContext.applicationBindings.presentNativeController(activityController)
+                    }
+                }
+            } else {
                 strongSelf.contentNode.generateImage { [weak self] image in
                     if let strongSelf = self, let image = image, let jpgData = image.jpegData(compressionQuality: 0.9) {
-                        let tempFilePath = NSTemporaryDirectory() + "t_me-\(peer.addressName ?? "").jpg"
+                        let tempFilePath = NSTemporaryDirectory() + "\(fileName).jpg"
                         try? FileManager.default.removeItem(atPath: tempFilePath)
                         let tempFileUrl = URL(fileURLWithPath: tempFilePath)
                         try? jpgData.write(to: tempFileUrl)
-                        
+
                         let activityController = UIActivityViewController(activityItems: [tempFileUrl], applicationActivities: [ShareToInstagramActivity(context: strongSelf.context)])
                         activityController.completionWithItemsHandler = { [weak self] _, finished, _, _ in
                             if let strongSelf = self {
@@ -872,18 +988,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let initiallySelectedEmoticon: Signal<String, NoError>
         let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> take(1)
-        if self.peer.id == self.context.account.peerId {
-            initiallySelectedEmoticon = sharedData
-            |> map { sharedData -> String in
-                let themeSettings: PresentationThemeSettings
-                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
-                    themeSettings = current
-                } else {
-                    themeSettings = PresentationThemeSettings.defaultSettings
-                }
-                return themeSettings.theme.emoticon ?? defaultEmoticon
-            }
-        } else {
+        if case let .peer(peer) = controller.subject, peer.id != self.context.account.peerId {
             let cachedData = self.context.account.postbox.transaction { transaction in
                 return transaction.getPeerCachedData(peerId: peer.id)
             }
@@ -907,8 +1012,23 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                     return currentDefaultEmoticon
                 }
             }
+        } else {
+            initiallySelectedEmoticon = sharedData
+            |> map { sharedData -> String in
+                let themeSettings: PresentationThemeSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings]?.get(PresentationThemeSettings.self) {
+                    themeSettings = current
+                } else {
+                    themeSettings = PresentationThemeSettings.defaultSettings
+                }
+                return themeSettings.theme.emoticon ?? defaultEmoticon
+            }
         }
         
+        var isMessage = false
+        if case .messages = controller.subject {
+            isMessage = true
+        }
         self.disposable.set(combineLatest(queue: Queue.mainQueue(), animatedEmojiStickers, initiallySelectedEmoticon, self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] animatedEmojiStickers, initiallySelectedEmoticon, themes, selectedEmoticon, isDarkAppearance in
             guard let strongSelf = self else {
                 return
@@ -933,15 +1053,16 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             } else {
                 defaultWallpaper = nil
             }
-            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: defaultWallpaper))
+            entries.append(ThemeSettingsThemeEntry(index: 0, emoticon: defaultEmoticon, emojiFile: animatedEmojiStickers[defaultEmoticon]?.first?.file, themeReference: .builtin(isDarkAppearance ? .night : .dayClassic), nightMode: isDarkAppearance, selected: selectedEmoticon == defaultEmoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: defaultWallpaper, message: isMessage))
             for theme in themes {
                 guard let emoticon = theme.emoticon else {
                     continue
                 }
-                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil))
+                entries.append(ThemeSettingsThemeEntry(index: entries.count, emoticon: emoticon, emojiFile: animatedEmojiStickers[emoticon]?.first?.file, themeReference: .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil, creatorAccountId: nil)), nightMode: isDarkAppearance, selected: selectedEmoticon == theme.emoticon, theme: presentationData.theme, strings: presentationData.strings, wallpaper: nil, message: isMessage))
             }
             
             let wallpaper: TelegramWallpaper
+            let previewTheme: PresentationTheme
             if selectedEmoticon == defaultEmoticon {
                 let presentationTheme = makeDefaultPresentationTheme(reference: isDarkAppearance ? .night : .dayClassic, serviceBackgroundColor: nil)
                 if isDarkAppearance {
@@ -949,10 +1070,13 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                 } else {
                     wallpaper = presentationTheme.chat.defaultWallpaper
                 }
+                previewTheme = presentationTheme
             } else if let theme = themes.first(where: { $0.emoticon == selectedEmoticon }), let presentationTheme = makePresentationTheme(cloudTheme: theme, dark: isDarkAppearance) {
                 wallpaper = presentationTheme.chat.defaultWallpaper
+                previewTheme = presentationTheme
             } else {
                 wallpaper = .color(0x000000)
+                previewTheme = defaultPresentationTheme
             }
             
             let action: (String?) -> Void = { [weak self] emoticon in
@@ -982,7 +1106,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             strongSelf.entries = entries
             strongSelf.themes = themes
             
-            strongSelf.contentNode.update(wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+            strongSelf.contentNode.update(theme: previewTheme, wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
             
             if isFirstTime {
                 for theme in themes {
@@ -1074,6 +1198,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.presentationData = presentationData
                         
         self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(16.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.segmentedNode.updateTheme(SegmentedControlTheme(theme: self.presentationData.theme))
         
         if previousTheme !== presentationData.theme, let (layout, navigationBarHeight) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
@@ -1251,6 +1376,8 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
             backgroundFrame.origin.y = contentFrame.minY
         }
         
+        let shadowFrame = CGRect(x: backgroundFrame.minX, y: backgroundFrame.minY - 8.0, width: backgroundFrame.width, height: 40.0)
+        transition.updateFrame(node: self.shadowNode, frame: shadowFrame)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.effectNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
         transition.updateFrame(node: self.contentBackgroundNode, frame: CGRect(origin: CGPoint(), size: backgroundFrame.size))
@@ -1259,6 +1386,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let titleSize = self.titleNode.measure(CGSize(width: width - 90.0, height: titleHeight))
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 19.0 + UIScreenPixel), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        let segmentedSize = self.segmentedNode.updateLayout(.sizeToFit(maximumWidth: width - 90.0, minimumWidth: 160.0, height: 32.0), transition: transition)
+        transition.updateFrame(node: self.segmentedNode, frame: CGRect(origin: CGPoint(x: floor((contentFrame.width - segmentedSize.width) / 2.0), y: 12.0), size: segmentedSize))
                 
         let switchThemeSize = CGSize(width: 44.0, height: 44.0)
         let switchThemeFrame = CGRect(origin: CGPoint(x: 3.0, y: 6.0), size: switchThemeSize)
@@ -1292,7 +1422,20 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     }
 }
 
-private class QrContentNode: ASDisplayNode {
+private protocol ContentNode: ASDisplayNode {
+    var containerNode: ASDisplayNode { get }
+    var wallpaperBackgroundNode: WallpaperBackgroundNode { get }
+    var isReady: Signal<Bool, NoError> { get }
+    
+    var hasVideo: Bool { get }
+    
+    func generateImage(completion: @escaping (UIImage?) -> Void)
+    func generateVideo(completion: @escaping (URL) -> Void)
+    func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?)
+    func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition)
+}
+
+private class QrContentNode: ASDisplayNode, ContentNode {
     private let context: AccountContext
     private let peer: Peer
     private let isStatic: Bool
@@ -1312,12 +1455,16 @@ private class QrContentNode: ASDisplayNode {
     private let avatarNode: ImageNode
     private var qrCodeSize: Int?
         
-    private var currentParams: (TelegramWallpaper, Bool, String?)?
+    private var currentParams: (PresentationTheme, TelegramWallpaper, Bool, String?)?
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
     private let _ready = Promise<Bool>()
     var isReady: Signal<Bool, NoError> {
         return self._ready.get()
+    }
+    
+    var hasVideo: Bool {
+        return false
     }
     
     init(context: AccountContext, peer: Peer, isStatic: Bool = false) {
@@ -1425,7 +1572,7 @@ private class QrContentNode: ASDisplayNode {
     }
     
     func generateImage(completion: @escaping (UIImage?) -> Void) {
-        guard let (wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
+        guard let (theme, wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
             return
         }
         
@@ -1443,11 +1590,10 @@ private class QrContentNode: ASDisplayNode {
         prepare(view: copyNode.view, scale: scale)
         
         copyNode.updateLayout(size: size, topInset: 0.0, bottomInset: 0.0, transition: .immediate)
-        copyNode.update(wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+        copyNode.update(theme: theme, wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
         copyNode.frame = CGRect(x: -1000, y: -1000, width: size.width, height: size.height)
         
         self.addSubnode(copyNode)
-
         
         let _ = (copyNode.isReady
         |> take(1)
@@ -1472,9 +1618,12 @@ private class QrContentNode: ASDisplayNode {
             }
         })
     }
+    
+    func generateVideo(completion: @escaping(URL) -> Void) {
+    }
         
-    func update(wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
-        self.currentParams = (wallpaper, isDarkAppearance, selectedEmoticon)
+    func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
+        self.currentParams = (theme, wallpaper, isDarkAppearance, selectedEmoticon)
         
         self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
         
@@ -1534,9 +1683,9 @@ private class QrContentNode: ASDisplayNode {
         
         self.codeTextNode.attributedText = NSAttributedString(string: self.codeTextNode.attributedText?.string ?? "", font: Font.with(size: fontSize, design: .round, weight: .bold, traits: []), textColor: .black)
         
-        let codeBackgroundWidth = size.width - codeInset * 2.0
+        let codeBackgroundWidth = min(300.0, size.width - codeInset * 2.0)
         let codeBackgroundHeight = floor(codeBackgroundWidth * 1.1)
-        let codeBackgroundFrame = CGRect(x: codeInset, y: topInset + floor((size.height - bottomInset - codeBackgroundHeight) / 2.0), width: codeBackgroundWidth, height: codeBackgroundHeight)
+        let codeBackgroundFrame = CGRect(x: floor((size.width - codeBackgroundWidth) / 2.0), y: topInset + floor((size.height - bottomInset - codeBackgroundHeight) / 2.0), width: codeBackgroundWidth, height: codeBackgroundHeight)
         transition.updateFrame(node: self.codeBackgroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeForegroundNode, frame: codeBackgroundFrame)
         transition.updateFrame(node: self.codeMaskNode, frame: CGRect(origin: CGPoint(), size: codeBackgroundFrame.size))
@@ -1555,7 +1704,7 @@ private class QrContentNode: ASDisplayNode {
         let imageFrame = CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - imageSize.width) / 2.0), y: floor((codeBackgroundFrame.width - imageSize.height) / 2.0)), size: imageSize)
         transition.updateFrame(node: self.codeImageNode, frame: imageFrame)
 
-        let codeTextSize = self.codeTextNode.updateLayout(CGSize(width: codeBackgroundFrame.width - floor(imageFrame.minX * 1.5), height: codeBackgroundFrame.height))
+        let codeTextSize = self.codeTextNode.updateLayout(CGSize(width: codeBackgroundFrame.width - floor(imageFrame.minX * 1.2), height: codeBackgroundFrame.height))
         transition.updateFrame(node: self.codeTextNode, frame: CGRect(origin: CGPoint(x: floor((codeBackgroundFrame.width - codeTextSize.width) / 2.0), y: imageFrame.maxY + floor((codeBackgroundHeight - imageFrame.maxY - codeTextSize.height) / 2.0) - 5.0), size: codeTextSize))
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - avatarSize.width) / 2.0), y: codeBackgroundFrame.minY - floor(avatarSize.height * 0.7)), size: avatarSize))
@@ -1581,4 +1730,529 @@ private class QrContentNode: ASDisplayNode {
             }
         }
     }
+}
+
+private class MessageContentNode: ASDisplayNode, ContentNode {
+    private let context: AccountContext
+    private let messages: [Message]
+    private let isStatic: Bool
+    
+    private var mediaFrame: CGRect?
+    
+    fileprivate let containerNode: ASDisplayNode
+    fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
+    
+    private let backgroundNode: ASDisplayNode
+    private let backgroundImageNode: ASImageNode
+    private let avatarNode: ImageNode
+    private let titleNode: ImmediateTextNode
+    private let dateNode: ImmediateTextNode
+    private let imageNode: TransformImageNode
+    fileprivate var videoNode: UniversalVideoNode?
+    private var videoSnapshotView: UIView?
+    private let textNode: ImmediateTextNode
+    private let badgeBackgroundNode: ASDisplayNode
+    private let badgeTextNode: ImmediateTextNode
+    
+    private let linkBackgroundNode: ASDisplayNode
+    private var linkBackgroundContentNode: ASDisplayNode?
+    private var linkBackgroundDimNode: ASDisplayNode
+    private let linkIconNode: ASImageNode
+    private let linkTextNode: ImmediateTextNode
+    
+    private var currentParams: (PresentationTheme, TelegramWallpaper, Bool, String?)?
+    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    
+    private let videoStatusDisposable = MetaDisposable()
+    private var videoStatus: MediaPlayerStatus?
+    
+    private let _ready = Promise<Bool>()
+    var isReady: Signal<Bool, NoError> {
+        return self._ready.get()
+    }
+    
+    var hasVideo: Bool {
+        if let message = self.messages.first, message.media.contains(where: { media in
+            if let file = media as? TelegramMediaFile, file.isVideo {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    init(context: AccountContext, messages: [Message], isStatic: Bool = false) {
+        self.context = context
+        self.messages = messages
+        self.isStatic = isStatic
+        
+        self.containerNode = ASDisplayNode()
+        
+        self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundImageNode = ASImageNode()
+        
+        self.avatarNode = ImageNode()
+        self.titleNode = ImmediateTextNode()
+        self.dateNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 0
+        self.imageNode = TransformImageNode()
+        
+        self.badgeBackgroundNode = ASDisplayNode()
+        self.badgeBackgroundNode.cornerRadius = 9.0
+        self.badgeBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.5)
+        
+        self.badgeTextNode = ImmediateTextNode()
+        self.badgeTextNode.displaysAsynchronously = false
+        
+        self.linkBackgroundNode = ASDisplayNode()
+        self.linkBackgroundNode.clipsToBounds = true
+        self.linkBackgroundNode.cornerRadius = 16.5
+        
+        self.linkBackgroundDimNode = ASDisplayNode()
+        self.linkBackgroundDimNode.alpha = 0.3
+        self.linkBackgroundDimNode.backgroundColor = .black
+        
+        self.linkIconNode = ASImageNode()
+        self.linkIconNode.displaysAsynchronously = false
+        self.linkIconNode.image = UIImage(bundleImageName: "Share/QrPlaneIcon")
+
+        self.linkTextNode = ImmediateTextNode()
+        self.linkTextNode.displaysAsynchronously = false
+        self.linkTextNode.textAlignment = .center
+        
+        super.init()
+        
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.addSubnode(self.wallpaperBackgroundNode)
+        self.containerNode.addSubnode(self.linkBackgroundNode)
+        
+        self.containerNode.addSubnode(self.backgroundNode)
+        self.backgroundNode.addSubnode(self.backgroundImageNode)
+        self.backgroundNode.addSubnode(self.avatarNode)
+        self.backgroundNode.addSubnode(self.titleNode)
+        self.backgroundNode.addSubnode(self.dateNode)
+        self.backgroundNode.addSubnode(self.textNode)
+        self.backgroundNode.addSubnode(self.imageNode)
+        
+        self.backgroundNode.addSubnode(self.badgeBackgroundNode)
+        self.badgeBackgroundNode.addSubnode(self.badgeTextNode)
+        
+        self.linkBackgroundNode.addSubnode(self.linkBackgroundDimNode)
+        self.linkBackgroundNode.addSubnode(self.linkIconNode)
+        self.linkBackgroundNode.addSubnode(self.linkTextNode)
+      
+        self._ready.set(self.wallpaperBackgroundNode.isReady)
+        
+        if let message = messages.first, let peer = message.peers[message.id.peerId] {
+            self.avatarNode.setSignal(peerAvatarCompleteImage(account: context.account, peer: EnginePeer(peer), size: CGSize(width: 36.0, height: 36.0), font: avatarPlaceholderFont(size: 14.0), fullSize: true))
+        }
+    }
+    
+    deinit {
+        self.videoStatusDisposable.dispose()
+    }
+    
+    func generateImage(completion: @escaping (UIImage?) -> Void) {
+        let size = CGSize(width: 390.0, height: 844.0)
+        self.generateImage(size: size, completion: { image, _ in
+            completion(image)
+        })
+    }
+    
+    func generateImage(size: CGSize, completion: @escaping (UIImage?, CGRect?) -> Void) {
+        guard let (theme, wallpaper, isDarkAppearance, selectedEmoticon) = self.currentParams else {
+            return
+        }
+        
+        let scale: CGFloat = 3.0
+        
+        let copyNode = MessageContentNode(context: self.context, messages: self.messages, isStatic: true)
+        
+        copyNode.videoSnapshotView = self.videoNode?.view.snapshotContentTree()
+        
+        func prepare(view: UIView, scale: CGFloat) {
+            view.contentScaleFactor = scale
+            for subview in view.subviews {
+                prepare(view: subview, scale: scale)
+            }
+        }
+        prepare(view: copyNode.view, scale: scale)
+        
+        copyNode.updateLayout(size: size, topInset: 0.0, bottomInset: 0.0, transition: .immediate)
+        copyNode.update(theme: theme, wallpaper: wallpaper, isDarkAppearance: isDarkAppearance, selectedEmoticon: selectedEmoticon)
+        copyNode.frame = CGRect(x: -1000, y: -1000, width: size.width, height: size.height)
+        
+        self.addSubnode(copyNode)
+
+        let mediaFrame = copyNode.mediaFrame
+        
+        let _ = (copyNode.isReady
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak copyNode] _ in
+            Queue.mainQueue().after(0.1) {
+                let image: UIImage?
+                if #available(iOS 10.0, *) {
+                    let format = UIGraphicsImageRendererFormat()
+                    format.scale = scale
+                    let renderer = UIGraphicsImageRenderer(size: size, format: format)
+                    image = renderer.image { rendererContext in
+                        copyNode?.containerNode.layer.render(in: rendererContext.cgContext)
+                    }
+                } else {
+                    UIGraphicsBeginImageContextWithOptions(size, true, scale)
+                    copyNode?.containerNode.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: size), afterScreenUpdates: true)
+                    image = UIGraphicsGetImageFromCurrentImageContext()
+                    UIGraphicsEndImageContext()
+                }
+                completion(image, mediaFrame)
+                copyNode?.removeFromSupernode()
+            }
+        })
+    }
+        
+    func generateVideo(completion: @escaping(URL) -> Void) {
+        guard let message = self.messages.first, let media = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile else {
+           return
+        }
+        
+        let context = self.context
+        self.generateImage(size: CGSize(width: 475.0, height: 844.0), completion: { image, videoFrame in
+            guard let image = image, let videoFrame = videoFrame else {
+                return
+            }
+            renderVideo(context: context, backgroundImage: image, media: media, videoFrame: videoFrame, completion: { url in
+                if let url = url {
+                    completion(url)
+                }
+            })
+        })
+    }
+    
+    func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
+        self.currentParams = (theme, wallpaper, isDarkAppearance, selectedEmoticon)
+        
+        self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
+        
+        self.linkBackgroundDimNode.alpha = isDarkAppearance ? 0.6 : 0.2
+        
+        if self.linkBackgroundContentNode == nil, let contentNode = self.wallpaperBackgroundNode.makeDimmedNode() {
+            contentNode.frame = CGRect(origin: CGPoint(x: -self.linkBackgroundNode.frame.minX, y: -self.linkBackgroundNode.frame.minY), size: self.wallpaperBackgroundNode.frame.size)
+            self.linkBackgroundContentNode = contentNode
+            self.linkBackgroundNode.insertSubnode(contentNode, at: 0)
+        }
+        
+        if let (size, topInset, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, topInset: topInset, bottomInset: bottomInset, transition: .immediate)
+        }
+    }
+
+    private var initialized = false
+    func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, topInset, bottomInset)
+        
+        guard let (theme, wallpaper, _, _) = self.currentParams else {
+            return
+        }
+        
+        let graphics = PresentationResourcesChat.principalGraphics(theme: theme, wallpaper: wallpaper, bubbleCorners: defaultPresentationData().chatBubbleCorners)
+        self.backgroundImageNode.image = graphics.chatMessageBackgroundIncomingImage
+        
+        let wasInitialized = self.initialized
+        self.initialized = true
+        
+        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(), size: size))
+        self.wallpaperBackgroundNode.updateLayout(size: size, transition: transition)
+        
+        let inset: CGFloat = 24.0
+        let contentInset: CGFloat = 16.0
+        
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+        
+        let messageTheme = theme.chat.message.incoming
+        
+        let title: String
+        if let message = self.messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel {
+            title = EnginePeer(chatPeer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        } else {
+            title = ""
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.medium(17.0), textColor: messageTheme.primaryTextColor)
+        let titleSize = self.titleNode.updateLayout(size)
+        let titleFrame = CGRect(origin: CGPoint(x: 62.0, y: 14.0), size: titleSize)
+        self.titleNode.frame = titleFrame
+        
+        let dateString: String
+        if let message = self.messages.first {
+            dateString = stringForMediumDate(timestamp: message.timestamp, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+        } else {
+            dateString = ""
+        }
+        self.dateNode.attributedText = NSAttributedString(string: dateString, font: Font.regular(14.0), textColor: messageTheme.secondaryTextColor)
+        let dateSize = self.dateNode.updateLayout(size)
+        let dateFrame = CGRect(origin: CGPoint(x: 62.0, y: 35.0), size: dateSize)
+        self.dateNode.frame = dateFrame
+        
+        self.avatarNode.frame = CGRect(x: contentInset, y: 14.0, width: 36.0, height: 36.0)
+                
+        var mediaSize = CGSize()
+        var mediaFrame = CGRect()
+        var mediaDuration: Int32 = 0
+        if let message = self.messages.first {
+            let mediaFitSize = CGSize(width: size.width - inset * 2.0 - 5.0, height: size.width - inset * 2.0)
+            for media in message.media {
+                if let image = media as? TelegramMediaImage, let representation = largestRepresentationForPhoto(image) {
+                    mediaSize = representation.dimensions.cgSize.aspectFitted(mediaFitSize)
+                    mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
+                    
+                    if !wasInitialized {
+                        self.imageNode.setSignal(chatMessagePhoto(postbox: self.context.account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: true, highQuality: true))
+                        let imageLayout = self.imageNode.asyncLayout()
+                        
+                        let arguments = TransformImageArguments(corners: ImageCorners(radius: 0.0), imageSize: mediaSize, boundingSize: mediaSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .black, custom: nil)
+                        let imageApply = imageLayout(arguments)
+                        imageApply()
+                    }
+                    
+                    self.imageNode.frame = mediaFrame
+                    mediaSize.height += 16.0
+                } else if let video = media as? TelegramMediaFile, video.isVideo, let dimensions = video.dimensions?.cgSize {
+                    mediaSize = dimensions.aspectFitted(mediaFitSize)
+                    mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
+                    
+                    mediaDuration = video.duration ?? 0
+                    
+                    if !wasInitialized {
+                        if self.isStatic {
+                            if let videoSnapshotView = self.videoSnapshotView {
+                                self.backgroundNode.view.insertSubview(videoSnapshotView, belowSubview: self.badgeBackgroundNode.view)
+                                videoSnapshotView.frame = mediaFrame
+                            }
+                        } else {
+                            let videoContent = NativeVideoContent(id: .message(message.stableId, video.fileId), fileReference: .message(message: MessageReference(message), media: video), streamVideo: .conservative, loopVideo: true, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: self.isStatic, continuePlayingWithoutSoundOnLostAudioSession: true, placeholderColor: .clear, captureProtected: false)
+                            let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
+                            
+                            self.videoStatusDisposable.set((videoNode.status
+                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                                if let strongSelf = self {
+                                    strongSelf.videoStatus = status
+                                    if let (size, topInset, bottomInset) = strongSelf.validLayout {
+                                        strongSelf.updateLayout(size: size, topInset: topInset, bottomInset: bottomInset, transition: .immediate)
+                                    }
+                                }
+                            }))
+                            
+                            videoNode.canAttachContent = true
+                            videoNode.isUserInteractionEnabled = false
+                            self.backgroundNode.insertSubnode(videoNode, belowSubnode: self.badgeBackgroundNode)
+                            self.videoNode = videoNode
+                        }
+                    }
+                    
+                    self.videoNode?.updateLayout(size: mediaFitSize, transition: .immediate)
+                    self.videoNode?.frame = mediaFrame
+                    
+                    mediaSize.height += 16.0
+                }
+            }
+        }
+        
+        if self.videoNode != nil || self.videoSnapshotView != nil {
+            let playerPosition: Int32
+            let playerDuration: Int32
+            if let status = self.videoStatus {
+                if !status.generationTimestamp.isZero, case .playing = status.status {
+                    playerPosition = Int32(status.timestamp + (CACurrentMediaTime() - status.generationTimestamp))
+                } else {
+                    playerPosition = Int32(status.timestamp)
+                }
+                playerDuration = Int32(status.duration)
+            } else {
+                playerPosition = 0
+                playerDuration = mediaDuration
+            }
+            let durationString = stringForDuration(playerDuration, position: playerPosition)
+            let font = Font.with(size: 11.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
+            self.badgeTextNode.attributedText = NSAttributedString(string: durationString, font: font, textColor: .white)
+            
+            let durationSize = self.badgeTextNode.updateLayout(CGSize(width: 100.0, height: 18.0))
+            let durationBackgroundSize = CGSize(width: durationSize.width + 7.0 * 2.0, height: 18.0)
+            
+            self.badgeBackgroundNode.frame = CGRect(origin: mediaFrame.origin.offsetBy(dx: 6.0, dy: 6.0), size: durationBackgroundSize)
+            self.badgeTextNode.frame = CGRect(origin: CGPoint(x: 7.0, y: floorToScreenPixels((durationBackgroundSize.height - durationSize.height) / 2.0)), size: durationSize)
+            self.badgeBackgroundNode.isHidden = false
+            self.badgeTextNode.isHidden = false
+        } else {
+            self.badgeBackgroundNode.isHidden = true
+            self.badgeTextNode.isHidden = true
+        }
+        
+        if let message = messages.first {
+            let textFont = Font.regular(17.0)
+            let boldFont = Font.bold(17.0)
+            let italicFont = Font.italic(17.0)
+            let boldItalicFont = Font.semiboldItalic(17.0)
+            let fixedFont = Font.monospace(17.0)
+            let blockQuoteFont = textFont
+            
+            var entities: [MessageTextEntity]?
+            for attribute in message.attributes {
+                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                    entities = attribute.entities
+                }
+            }
+            
+            let attributedText: NSAttributedString
+            if let entities = entities {
+                attributedText = stringWithAppliedEntities(message.text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: fixedFont, blockQuoteFont: blockQuoteFont, underlineLinks: false)
+            } else if !message.text.isEmpty {
+                attributedText = NSAttributedString(string: message.text, font: textFont, textColor: messageTheme.primaryTextColor)
+            } else {
+                attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
+            }
+            
+            self.textNode.attributedText = attributedText
+        }
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - inset * 2.0 - contentInset * 2.0, height: size.height))
+        let textFrame = CGRect(origin: CGPoint(x: contentInset, y: 55.0 + mediaSize.height + 4.0), size: textSize)
+        self.textNode.frame = textFrame
+        
+        var contentHeight: CGFloat = 55.0 + 18.0
+        if !mediaSize.height.isZero {
+            contentHeight += mediaSize.height
+        }
+        if !textSize.height.isZero {
+            contentHeight += textSize.height
+        }
+        
+        let backgroundSize = CGSize(width: size.width - inset * 2.0, height: contentHeight)
+        let backgroundFrame = CGRect(origin: CGPoint(x: inset, y: max(topInset, floorToScreenPixels((size.height - topInset - bottomInset - backgroundSize.height) / 2.0))), size: backgroundSize)
+        self.backgroundNode.frame = backgroundFrame
+        self.backgroundImageNode.frame = CGRect(x: -5.0, y: 0.0, width: backgroundSize.width + 5.0, height: backgroundSize.height)
+        
+        self.mediaFrame = mediaFrame.offsetBy(dx: 0.0, dy: backgroundFrame.minY)
+        
+        let link: String
+        if let message = self.messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
+            link = "t.me/\(addressName)/\(message.id.id)"
+        } else {
+            link = ""
+        }
+        
+        self.linkTextNode.attributedText = NSAttributedString(string: link, font: Font.medium(17.0), textColor: .white)
+        let linkSize = self.linkTextNode.updateLayout(size)
+        
+        let linkBackgroundSize = CGSize(width: linkSize.width + 49.0, height: 33.0)
+        let linkBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - linkBackgroundSize.width) / 2.0), y: backgroundFrame.maxY + 10.0), size: linkBackgroundSize)
+        self.linkBackgroundNode.frame = linkBackgroundFrame
+        self.linkBackgroundDimNode.frame = CGRect(origin: CGPoint(), size: linkBackgroundSize)
+        
+        if let linkBackgroundContentNode = self.linkBackgroundContentNode {
+            linkBackgroundContentNode.frame = CGRect(origin: CGPoint(x: -self.linkBackgroundNode.frame.minX, y: -self.linkBackgroundNode.frame.minY), size: self.wallpaperBackgroundNode.frame.size)
+        }
+
+        self.linkIconNode.frame = CGRect(x: 2.0, y: -5.0, width: 42.0, height: 42.0)
+        self.linkTextNode.frame = CGRect(origin: CGPoint(x: 37.0, y: floorToScreenPixels((linkBackgroundSize.height - linkSize.height) / 2.0)), size: linkSize)
+    }
+}
+
+private enum RenderVideoResult {
+    case progress(Float)
+    case completion(URL)
+    case error
+}
+
+private func renderVideo(context: AccountContext, backgroundImage: UIImage, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
+    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: AnyMediaReference.standalone(media: media))
+    |> deliverOnMainQueue).start(next: { value, isImage in
+        guard case let .data(data) = value, data.complete else {
+            return
+        }
+        
+        let asset = AVURLAsset(url: URL(fileURLWithPath: data.path))
+        let composition = AVMutableComposition()
+        
+        guard let compositionTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid), let assetTrack = asset.tracks(withMediaType: .video).first else {
+            completion(nil)
+            return
+        }
+        
+        do {
+            let duration = CMTimeMinimum(CMTimeSubtract(asset.duration, CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(30.0))), CMTime(seconds: 15.0, preferredTimescale: CMTimeScale(30.0)))
+            let timeRange = CMTimeRange(start: .zero, duration: duration)
+            try compositionTrack.insertTimeRange(timeRange, of: assetTrack, at: .zero)
+        } catch {
+            completion(nil)
+            return
+        }
+        
+        let outputSize = CGSize(width: 1080.0, height: 1920.0)
+        
+        let backgroundLayer = CALayer()
+        backgroundLayer.frame = CGRect(origin: .zero, size: outputSize)
+        backgroundLayer.contents = backgroundImage.cgImage
+        
+        let ratio = 1080.0 / 475.0
+        let offset = videoFrame.minY * ratio
+        
+        let videoLayer = CALayer()
+        videoLayer.frame = CGRect(origin: CGPoint(x: 61.0, y: 1920.0 - offset - 960.0), size: CGSize(width: 960.0, height: 960.0))
+        
+        let outputLayer = CALayer()
+        outputLayer.frame = CGRect(origin: .zero, size: outputSize)
+        outputLayer.addSublayer(backgroundLayer)
+        outputLayer.addSublayer(videoLayer)
+        
+        func compositionLayerInstruction(for track: AVCompositionTrack, assetTrack: AVAssetTrack) -> AVMutableVideoCompositionLayerInstruction {
+            let instruction = AVMutableVideoCompositionLayerInstruction(assetTrack: track)
+            let fixTransform = CGAffineTransform(scaleX: outputSize.width / track.naturalSize.width, y: outputSize.height / track.naturalSize.height)
+            instruction.setTransform(fixTransform, at: .zero)
+            return instruction
+        }
+
+        let videoComposition = AVMutableVideoComposition()
+        videoComposition.renderSize = outputSize
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        videoComposition.animationTool = AVVideoCompositionCoreAnimationTool(postProcessingAsVideoLayer: videoLayer, in: outputLayer)
+
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = CMTimeRange(start: .zero, duration: composition.duration)
+        videoComposition.instructions = [instruction]
+        let layerInstruction = compositionLayerInstruction(for: compositionTrack, assetTrack: assetTrack)
+        instruction.layerInstructions = [layerInstruction]
+
+        guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
+            completion(nil)
+            return
+        }
+
+        let videoName = UUID().uuidString
+        let exportURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(videoName).appendingPathExtension("mp4")
+        export.videoComposition = videoComposition
+        export.outputFileType = .mov
+        export.outputURL = exportURL
+        
+        export.exportAsynchronously {
+            Queue.mainQueue().async {
+                switch export.status {
+                case .completed:
+                    completion(exportURL)
+                default:
+                    completion(nil)
+                    break
+                }
+            }
+        }
+    })
 }

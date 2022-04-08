@@ -8,6 +8,7 @@ import Display
 import FastBlur
 import MozjpegBinding
 import Accelerate
+import ManagedFile
 
 private func generateBlurredThumbnail(image: UIImage) -> UIImage? {
     let thumbnailContextSize = CGSize(width: 32.0, height: 32.0)

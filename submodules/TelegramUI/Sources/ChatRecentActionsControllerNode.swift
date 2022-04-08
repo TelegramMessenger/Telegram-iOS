@@ -247,9 +247,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, gallerySource: gallerySource))
             }
             return false
-        }, openPeer: { [weak self] peerId, _, message in
+        }, openPeer: { [weak self] peerId, _, message, peer in
             if let peerId = peerId, peerId != context.account.peerId {
-                self?.openPeer(peerId: peerId, peer: message?.peers[peerId])
+                self?.openPeer(peerId: peerId, peer: peer)
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)

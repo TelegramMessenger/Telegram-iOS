@@ -28,6 +28,7 @@ public final class EngineChatList {
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
+        public let hasUnseenReactions: Bool
         public let hasFailed: Bool
         public let isContact: Bool
 
@@ -40,6 +41,7 @@ public final class EngineChatList {
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
+            hasUnseenReactions: Bool,
             hasFailed: Bool,
             isContact: Bool
         ) {
@@ -51,6 +53,7 @@ public final class EngineChatList {
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
+            self.hasUnseenReactions = hasUnseenReactions
             self.hasFailed = hasFailed
             self.isContact = isContact
         }
@@ -205,7 +208,7 @@ public extension EngineChatList.RelativePosition {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, summaryInfo, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, hasFailed, isContact):
             var draftText: String?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -214,6 +217,23 @@ extension EngineChatList.Item {
                     }
                 }
             }
+            
+            var hasUnseenMentions = false
+            if let info = tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                tag: .unseenPersonalMessage,
+                actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+            )] {
+                hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
+            }
+            
+            var hasUnseenReactions = false
+            if let info = tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                tag: .unseenReaction,
+                actionType: PendingMessageActionType.readReaction
+            )] {
+                hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
+            }
+            
             self.init(
                 index: index,
                 messages: messages.map(EngineMessage.init),
@@ -222,7 +242,8 @@ extension EngineChatList.Item {
                 draftText: draftText,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
-                hasUnseenMentions: (summaryInfo.tagSummaryCount ?? 0) > (summaryInfo.actionsSummaryCount ?? 0),
+                hasUnseenMentions: hasUnseenMentions,
+                hasUnseenReactions: hasUnseenReactions,
                 hasFailed: hasFailed,
                 isContact: isContact
             )

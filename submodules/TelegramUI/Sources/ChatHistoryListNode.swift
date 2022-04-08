@@ -18,6 +18,8 @@ import AccountContext
 import ChatInterfaceState
 import ChatListUI
 import ComponentFlow
+import ReactionSelectionNode
+import ChatPresentationInterfaceState
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -26,8 +28,8 @@ extension ChatReplyThreadMessage {
 }
 
 struct ChatTopVisibleMessageRange: Equatable {
-    var lowerBound: MessageId
-    var upperBound: MessageId
+    var lowerBound: MessageIndex
+    var upperBound: MessageIndex
     var isLast: Bool
 }
 
@@ -451,6 +453,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var canReadHistoryDisposable: Disposable?
 
     private var messageIdsScheduledForMarkAsSeen = Set<MessageId>()
+    private var messageIdsWithReactionsScheduledForMarkAsSeen = Set<MessageId>()
     
     private var chatHistoryLocationValue: ChatHistoryLocationInput? {
         didSet {
@@ -485,6 +488,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let unsupportedMessageProcessingManager = ChatMessageThrottledProcessingManager()
     private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
+    private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
     private var currentLaterPrefetchMessages: [(Message, Media)] = []
@@ -546,6 +550,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public var isScrollAtBottomPositionUpdated: (() -> Void)?
     
     private var interactiveReadActionDisposable: Disposable?
+    private var interactiveReadReactionsDisposable: Disposable?
+    private var displayUnseenReactionAnimationsTimestamps: [MessageId: Double] = [:]
     
     public var contentPositionChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     
@@ -575,23 +581,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let preloadAdPeerDisposable = MetaDisposable()
     
     private var refreshDisplayedItemRangeTimer: SwiftSignalKit.Timer?
-
-    /*var historyScrollingArea: SparseDiscreteScrollingArea? {
-        didSet {
-            oldValue?.navigateToPosition = nil
-            if let historyScrollingArea = self.historyScrollingArea {
-                historyScrollingArea.navigateToPosition = { [weak self] position in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    strongSelf.navigateToAbsolutePosition(position: position)
-                }
-            }
-        }
-    }*/
-    //private var scrollingState: ListView.ScrollingIndicatorState?
-    //private let sparseScrollingContext: SparseMessageScrollingContext?
-    //private let scrollNavigationDisposable = MetaDisposable()
+    
+    private var visibleMessageRange = Atomic<VisibleMessageRange?>(value: nil)
     
     private let clientId: Atomic<Int32>
     
@@ -722,6 +713,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 } else {
                     strongSelf.messageIdsScheduledForMarkAsSeen.formUnion(messageIds)
                 }
+            }
+        }
+        
+        self.unseenReactionsProcessingManager.process = { [weak self] messageIds in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.canReadHistoryValue && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                strongSelf.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+            } else {
+                strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds)
             }
         }
         
@@ -1327,6 +1329,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
                         context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
                     }
+                    
+                    if strongSelf.canReadHistoryValue && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
+                        let messageIds = strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen
+                        
+                        let _ = strongSelf.displayUnseenReactionAnimations(messageIds: Array(messageIds))
+                        
+                        strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
+                        context?.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+                    }
                 }
             }
         })
@@ -1531,6 +1542,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.historyDisposable.dispose()
         self.readHistoryDisposable.dispose()
         self.interactiveReadActionDisposable?.dispose()
+        self.interactiveReadReactionsDisposable?.dispose()
         self.canReadHistoryDisposable?.dispose()
         self.loadedMessagesFromCachedDataDisposable?.dispose()
         self.preloadAdPeerDisposable.dispose()
@@ -1784,6 +1796,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
         var topVisibleMessageRange: ChatTopVisibleMessageRange?
+        
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
             if indexRange.0 > indexRange.1 {
@@ -1797,11 +1810,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             let toLaterRange = (historyView.filteredEntries.count - 1 - (visible.firstIndex - 1), historyView.filteredEntries.count - 1)
             
             var messageIdsWithViewCount: [MessageId] = []
-            var messageIdsWithPossibleReactions: [MessageId] = []
             var messageIdsWithLiveLocation: [MessageId] = []
             var messageIdsWithUnsupportedMedia: [MessageId] = []
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
+            var messageIdsWithUnseenReactions: [MessageId] = []
+            var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1818,6 +1832,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                         var contentRequiredValidation = false
                         var mediaRequiredValidation = false
+                        var hasUnseenReactions = false
                         for attribute in message.attributes {
                             if attribute is ViewCountMessageAttribute {
                                 if message.id.namespace == Namespaces.Message.Cloud {
@@ -1831,13 +1846,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 hasUnconsumedContent = true
                             } else if let _ = attribute as? ContentRequiresValidationMessageAttribute {
                                 contentRequiredValidation = true
+                            } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
+                                hasUnseenReactions = true
                             }
                         }
-                        var hasAction = false
                         for media in message.media {
-                            if let _ = media as? TelegramMediaAction {
-                                hasAction = true
-                            } else if let _ = media as? TelegramMediaUnsupported {
+                            if let _ = media as? TelegramMediaUnsupported {
                                 contentRequiredValidation = true
                             } else if message.flags.contains(.Incoming), let media = media as? TelegramMediaMap, let liveBroadcastingTimeout = media.liveBroadcastingTimeout {
                                 let timestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -1862,14 +1876,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         }
                                     }
                                 }
-                            }
-                        }
-                        if !hasAction {
-                            switch message.id.peerId.namespace {
-                            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
-                                messageIdsWithPossibleReactions.append(message.id)
-                            default:
-                                break
+                                downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
+                            } else if let image = media as? TelegramMediaImage {
+                                if let representation = image.representations.last {
+                                    downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
+                                }
                             }
                         }
                         if contentRequiredValidation {
@@ -1881,22 +1892,36 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if hasUnconsumedMention && !hasUnconsumedContent {
                             messageIdsWithUnseenPersonalMention.append(message.id)
                         }
+                        if hasUnseenReactions {
+                            messageIdsWithUnseenReactions.append(message.id)
+                        }
+                        
                         if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                             isTopReplyThreadMessageShownValue = true
                         }
                         if let topVisibleMessageRangeValue = topVisibleMessageRange {
-                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.id, isLast: i == historyView.filteredEntries.count - 1)
+                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
                         } else {
-                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.id, upperBound: message.id, isLast: i == historyView.filteredEntries.count - 1)
+                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
                         }
                     case let .MessageGroupEntry(_, messages, _):
                         for (message, _, _, _, _) in messages {
                             var hasUnconsumedMention = false
                             var hasUnconsumedContent = false
+                            var hasUnseenReactions = false
                             if message.tags.contains(.unseenPersonalMessage) {
                                 for attribute in message.attributes {
                                     if let attribute = attribute as? ConsumablePersonalMentionMessageAttribute, !attribute.pending {
                                         hasUnconsumedMention = true
+                                    }
+                                }
+                            }
+                            for media in message.media {
+                                if let telegramFile = media as? TelegramMediaFile {
+                                    downloadableResourceIds.append((message.id, telegramFile.resource.id.stringRepresentation))
+                                } else if let image = media as? TelegramMediaImage {
+                                    if let representation = image.representations.last {
+                                        downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
                                     }
                                 }
                             }
@@ -1911,23 +1936,68 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     }
                                 } else if let attribute = attribute as? ConsumableContentMessageAttribute, !attribute.consumed {
                                     hasUnconsumedContent = true
+                                } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
+                                    hasUnseenReactions = true
                                 }
                             }
                             if hasUnconsumedMention && !hasUnconsumedContent {
                                 messageIdsWithUnseenPersonalMention.append(message.id)
                             }
+                            if hasUnseenReactions {
+                                messageIdsWithUnseenReactions.append(message.id)
+                            }
                             if case let .replyThread(replyThreadMessage) = self.chatLocation, replyThreadMessage.effectiveTopId == message.id {
                                 isTopReplyThreadMessageShownValue = true
                             }
                             if let topVisibleMessageRangeValue = topVisibleMessageRange {
-                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.id, isLast: i == historyView.filteredEntries.count - 1)
+                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
                             } else {
-                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.id, upperBound: message.id, isLast: i == historyView.filteredEntries.count - 1)
+                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
                             }
                         }
                     default:
                         break
                     }
+                }
+            }
+            
+            var messageIdsWithPossibleReactions: [MessageId] = []
+            for entry in historyView.filteredEntries {
+                switch entry {
+                case let .MessageEntry(message, _, _, _, _, _):
+                    var hasAction = false
+                    for media in message.media {
+                        if let _ = media as? TelegramMediaAction {
+                            hasAction = true
+                        }
+                    }
+                    if !hasAction {
+                        switch message.id.peerId.namespace {
+                        case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                            messageIdsWithPossibleReactions.append(message.id)
+                        default:
+                            break
+                        }
+                    }
+                case let .MessageGroupEntry(_, messages, _):
+                    for (message, _, _, _, _) in messages {
+                        var hasAction = false
+                        for media in message.media {
+                            if let _ = media as? TelegramMediaAction {
+                                hasAction = true
+                            }
+                        }
+                        if !hasAction {
+                            switch message.id.peerId.namespace {
+                            case Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel:
+                                messageIdsWithPossibleReactions.append(message.id)
+                            default:
+                                break
+                            }
+                        }
+                    }
+                default:
+                    break
                 }
             }
             
@@ -2009,8 +2079,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             if !messageIdsWithUnseenPersonalMention.isEmpty {
                 self.messageMentionProcessingManager.add(messageIdsWithUnseenPersonalMention)
             }
+            if !messageIdsWithUnseenReactions.isEmpty {
+                self.unseenReactionsProcessingManager.add(messageIdsWithUnseenReactions)
+                
+                if self.canReadHistoryValue && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                    let _ = self.displayUnseenReactionAnimations(messageIds: messageIdsWithUnseenReactions)
+                }
+            }
             if !messageIdsWithPossibleReactions.isEmpty {
                 self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions)
+            }
+            if !downloadableResourceIds.isEmpty {
+                let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).start()
             }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages
@@ -2044,6 +2124,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
         self.topVisibleMessageRange.set(topVisibleMessageRange)
+        let _ = self.visibleMessageRange.swap(topVisibleMessageRange.flatMap { range in
+            return VisibleMessageRange(lowerBound: range.lowerBound, upperBound: range.upperBound)
+        })
         
         if let loaded = displayedRange.loadedRange, let firstEntry = historyView.filteredEntries.first, let lastEntry = historyView.filteredEntries.last {
             if loaded.firstIndex < 5 && historyView.originalView.laterId != nil {
@@ -2316,6 +2399,77 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
+                var newIncomingReactions: [MessageId: (value: String, isLarge: Bool)] = [:]
+                if case .peer = strongSelf.chatLocation, let previousHistoryView = strongSelf.historyView {
+                    var updatedIncomingReactions: [MessageId: (value: String, isLarge: Bool)] = [:]
+                    for entry in transition.historyView.filteredEntries {
+                        switch entry {
+                        case let .MessageEntry(message, _, _, _, _, _):
+                            if message.flags.contains(.Incoming) {
+                                continue
+                            }
+                            if let reactions = message.reactionsAttribute {
+                                for recentPeer in reactions.recentPeers {
+                                    if recentPeer.isUnseen {
+                                        updatedIncomingReactions[message.id] = (recentPeer.value, recentPeer.isLarge)
+                                    }
+                                }
+                            }
+                        case let .MessageGroupEntry(_, messages, _):
+                            for message in messages {
+                                if message.0.flags.contains(.Incoming) {
+                                    continue
+                                }
+                                if let reactions = message.0.reactionsAttribute {
+                                    for recentPeer in reactions.recentPeers {
+                                        if recentPeer.isUnseen {
+                                            updatedIncomingReactions[message.0.id] = (recentPeer.value, recentPeer.isLarge)
+                                        }
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    for entry in previousHistoryView.filteredEntries {
+                        switch entry {
+                        case let .MessageEntry(message, _, _, _, _, _):
+                            if let updatedReaction = updatedIncomingReactions[message.id] {
+                                var previousReaction: String?
+                                if let reactions = message.reactionsAttribute {
+                                    for recentPeer in reactions.recentPeers {
+                                        if recentPeer.isUnseen {
+                                            previousReaction = recentPeer.value
+                                        }
+                                    }
+                                }
+                                if previousReaction != updatedReaction.value {
+                                    newIncomingReactions[message.id] = updatedReaction
+                                }
+                            }
+                        case let .MessageGroupEntry(_, messages, _):
+                            for message in messages {
+                                if let updatedReaction = updatedIncomingReactions[message.0.id] {
+                                    var previousReaction: String?
+                                    if let reactions = message.0.reactionsAttribute {
+                                        for recentPeer in reactions.recentPeers {
+                                            if recentPeer.isUnseen {
+                                                previousReaction = recentPeer.value
+                                            }
+                                        }
+                                    }
+                                    if previousReaction != updatedReaction.value {
+                                        newIncomingReactions[message.0.id] = updatedReaction
+                                    }
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                
                 strongSelf.historyView = transition.historyView
                 
                 let loadState: ChatHistoryNodeLoadState
@@ -2360,7 +2514,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     if let visible = visibleRange.visibleRange {
                         let visibleFirstIndex = visible.firstIndex
                         if visibleFirstIndex <= visible.lastIndex {
-                            let (incomingIndex, overallIndex) =  maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
+                            let (incomingIndex, overallIndex) = maxMessageIndexForEntries(transition.historyView, indexRange: (transition.historyView.filteredEntries.count - 1 - visible.lastIndex, transition.historyView.filteredEntries.count - 1 - visibleFirstIndex))
                             
                             let messageIndex: MessageIndex?
                             switch strongSelf.chatLocation {
@@ -2441,15 +2595,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     self?.scrolledToSomeIndex?()
                 }
 
-                if let currentSendAnimationCorrelationId = strongSelf.currentSendAnimationCorrelationId {
-                    var foundItemNode: ChatMessageItemView?
+                if let currentSendAnimationCorrelationIds = strongSelf.currentSendAnimationCorrelationIds {
+                    var foundItemNodes: [Int64: ChatMessageItemView] = [:]
                     strongSelf.forEachItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                             for (message, _) in item.content {
                                 for attribute in message.attributes {
-                                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
-                                        if attribute.correlationId == currentSendAnimationCorrelationId {
-                                            foundItemNode = itemNode
+                                    if let attribute = attribute as? OutgoingMessageInfoAttribute, let correlationId = attribute.correlationId {
+                                        if currentSendAnimationCorrelationIds.contains(correlationId) {
+                                            foundItemNodes[correlationId] = itemNode
                                         }
                                     }
                                 }
@@ -2457,9 +2611,18 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     }
 
-                    if let foundItemNode = foundItemNode {
-                        strongSelf.currentSendAnimationCorrelationId = nil
-                        strongSelf.animationCorrelationMessageFound?(foundItemNode, currentSendAnimationCorrelationId)
+                    if !foundItemNodes.isEmpty {
+                        strongSelf.currentSendAnimationCorrelationIds = nil
+                        strongSelf.animationCorrelationMessagesFound?(foundItemNodes)
+                    }
+                }
+                
+                if !newIncomingReactions.isEmpty {
+                    let messageIds = Array(newIncomingReactions.keys)
+                    
+                    let visibleNewIncomingReactionMessageIds = strongSelf.displayUnseenReactionAnimations(messageIds: messageIds)
+                    if !visibleNewIncomingReactionMessageIds.isEmpty {
+                        strongSelf.unseenReactionsProcessingManager.add(visibleNewIncomingReactionMessageIds)
                     }
                 }
                 
@@ -2509,6 +2672,101 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
+    private func displayUnseenReactionAnimations(messageIds: [MessageId], forceMapping: [MessageId: [ReactionsMessageAttribute.RecentPeer]] = [:]) -> [MessageId] {
+        let timestamp = CACurrentMediaTime()
+        var messageIds = messageIds
+        for i in (0 ..< messageIds.count).reversed() {
+            if let previousTimestamp = self.displayUnseenReactionAnimationsTimestamps[messageIds[i]], previousTimestamp + 1.0 > timestamp {
+                messageIds.remove(at: i)
+            } else {
+                self.displayUnseenReactionAnimationsTimestamps[messageIds[i]] = timestamp
+            }
+        }
+        
+        if messageIds.isEmpty {
+            return []
+        }
+        
+        guard let chatDisplayNode = self.controllerInteraction.chatControllerNode() as? ChatControllerNode else {
+            return []
+        }
+        var visibleNewIncomingReactionMessageIds: [MessageId] = []
+        self.forEachVisibleItemNode { itemNode in
+            guard let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, let reactionsAttribute = item.content.firstMessage.reactionsAttribute, messageIds.contains(item.content.firstMessage.id) else {
+                return
+            }
+            
+            var selectedReaction: (String, EnginePeer?, Bool)?
+            let recentPeers = forceMapping[item.content.firstMessage.id] ?? reactionsAttribute.recentPeers
+            for recentPeer in recentPeers {
+                if recentPeer.isUnseen {
+                    selectedReaction = (recentPeer.value, item.content.firstMessage.peers[recentPeer.peerId].flatMap(EnginePeer.init), recentPeer.isLarge)
+                    break
+                }
+            }
+            
+            guard let (updatedReaction, updateReactionPeer, updatedReactionIsLarge) = selectedReaction else {
+                return
+            }
+            
+            visibleNewIncomingReactionMessageIds.append(item.content.firstMessage.id)
+            
+            if let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                for reaction in availableReactions.reactions {
+                    guard let centerAnimation = reaction.centerAnimation else {
+                        continue
+                    }
+                    guard let aroundAnimation = reaction.aroundAnimation else {
+                        continue
+                    }
+                    
+                    if reaction.value == updatedReaction {
+                        let standaloneReactionAnimation = StandaloneReactionAnimation()
+                        
+                        chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                        
+                        var avatarPeers: [EnginePeer] = []
+                        if item.message.id.peerId.namespace != Namespaces.Peer.CloudUser, let updateReactionPeer = updateReactionPeer {
+                            avatarPeers = [updateReactionPeer]
+                        }
+                        
+                        chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                        standaloneReactionAnimation.frame = chatDisplayNode.bounds
+                        standaloneReactionAnimation.animateReactionSelection(
+                            context: self.context,
+                            theme: item.presentationData.theme.theme,
+                            reaction: ReactionContextItem(
+                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
+                                stillAnimation: reaction.selectAnimation,
+                                listAnimation: centerAnimation,
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation
+                            ),
+                            avatarPeers: avatarPeers,
+                            playHaptic: true,
+                            isLarge: updatedReactionIsLarge,
+                            targetView: targetView,
+                            addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                                guard let strongSelf = self, let chatDisplayNode = strongSelf.controllerInteraction.chatControllerNode() as? ChatControllerNode else {
+                                    return
+                                }
+                                chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                                standaloneReactionAnimation.frame = chatDisplayNode.bounds
+                                chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                            },
+                            completion: { [weak standaloneReactionAnimation] in
+                                standaloneReactionAnimation?.removeFromSupernode()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        return visibleNewIncomingReactionMessageIds
+    }
+    
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
         self.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: 0.0, scrollToTop: false, completion: {})
     }
@@ -2534,6 +2792,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private func updateReadHistoryActions() {
         let canRead = self.canReadHistoryValue && self.isScrollAtBottomPosition
+        
         if canRead != (self.interactiveReadActionDisposable != nil) {
             if let interactiveReadActionDisposable = self.interactiveReadActionDisposable {
                 if !canRead {
@@ -2544,6 +2803,31 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if case let .peer(peerId) = self.chatLocation {
                     if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                         self.interactiveReadActionDisposable = self.context.engine.messages.installInteractiveReadMessagesAction(peerId: peerId)
+                    }
+                }
+            }
+        }
+        
+        if canRead != (self.interactiveReadReactionsDisposable != nil) {
+            if let interactiveReadReactionsDisposable = self.interactiveReadReactionsDisposable {
+                if !canRead {
+                    interactiveReadReactionsDisposable.dispose()
+                    self.interactiveReadReactionsDisposable = nil
+                }
+            } else if self.interactiveReadReactionsDisposable == nil {
+                if case let .peer(peerId) = self.chatLocation {
+                    if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+                        let visibleMessageRange = self.visibleMessageRange
+                        self.interactiveReadReactionsDisposable = context.engine.messages.installInteractiveReadReactionsAction(peerId: peerId, getVisibleRange: {
+                            return visibleMessageRange.with { $0 }
+                        }, didReadReactionsInMessages: { [weak self] idsAndReactions in
+                            Queue.mainQueue().after(0.2, {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let _ = strongSelf.displayUnseenReactionAnimations(messageIds: Array(idsAndReactions.keys), forceMapping: idsAndReactions)
+                            })
+                        })
                     }
                 }
             }
@@ -2777,6 +3061,29 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return resultMessages
     }
     
+    func isMessageVisible(id: MessageId) -> Bool {
+        var found = false
+        self.forEachVisibleItemNode { itemNode in
+            if !found, let itemNode = itemNode as? ListViewItemNode {
+                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                    switch item.content {
+                    case let .message(message, _, _ , _, _):
+                        if message.id == id {
+                            found = true
+                        }
+                    case let .group(messages):
+                        for message in messages {
+                            if message.0.id == id {
+                                found = true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return found
+    }
+    
     private var selectionPanState: (selecting: Bool, initialMessageId: MessageId, toggledMessageIds: [[MessageId]])?
     private var selectionScrollActivationTimer: SwiftSignalKit.Timer?
     private var selectionScrollDisplayLink: ConstantDisplayLinkAnimator?
@@ -2918,12 +3225,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
 
-    private var currentSendAnimationCorrelationId: Int64?
-    func setCurrentSendAnimationCorrelationId(_ value: Int64?) {
-        self.currentSendAnimationCorrelationId = value
+    private var currentSendAnimationCorrelationIds: Set<Int64>?
+    func setCurrentSendAnimationCorrelationIds(_ value: Set<Int64>?) {
+        self.currentSendAnimationCorrelationIds = value
     }
 
-    var animationCorrelationMessageFound: ((ChatMessageItemView, Int64?) -> Void)?
+    var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?
 
     final class SnapshotState {
         fileprivate let snapshotTopInset: CGFloat

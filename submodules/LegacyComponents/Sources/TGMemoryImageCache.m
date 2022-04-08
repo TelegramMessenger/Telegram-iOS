@@ -121,6 +121,28 @@
     return result;
 }
 
+- (void)imageForKey:(NSString *)key attributes:(__autoreleasing NSDictionary **)attributes completion:(void (^)(UIImage *))completion {
+    if (key == nil) {
+        completion(nil);
+        return;
+    }
+    
+    __block id result = nil;
+    [_queue dispatch:^
+    {
+        TGMemoryImageCacheItem *item = _cache[key];
+        if (item != nil)
+        {
+            item.timestamp = CFAbsoluteTimeGetCurrent();
+            
+            if (attributes != NULL)
+                *attributes = item.attributes;
+            
+            completion(item.object);
+        }
+    }];
+}
+
 - (void)setImage:(UIImage *)image forKey:(NSString *)key attributes:(NSDictionary *)attributes
 {
     if (key != nil)

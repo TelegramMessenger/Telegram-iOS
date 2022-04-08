@@ -123,7 +123,7 @@ public func legacyMediaEditor(context: AccountContext, peer: Peer, media: AnyMed
     })
 }
     
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocation: ChatLocation, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: NSAttributedString, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentJpegConversionAlert: @escaping (@escaping (Bool) -> Void) -> Void, presentSchedulePicker: @escaping (Bool, @escaping (Int32) -> Void) -> Void, presentTimerPicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32, ((String) -> UIView?)?, @escaping () -> Void) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, present: @escaping (ViewController, Any?) -> Void) -> TGMenuSheetController {
     let defaultVideoPreset = defaultVideoPresetForContext(context)
     UserDefaults.standard.set(defaultVideoPreset.rawValue as NSNumber, forKey: "TG_preferredVideoPreset_v0")
     
@@ -187,7 +187,6 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         let carouselItem = TGAttachmentCarouselItemView(context: parentController.context, camera: PGCamera.cameraAvailable(), selfPortrait: false, forProfilePhoto: false, assetType: TGMediaAssetAnyType, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: editMediaOptions == nil && allowGrouping, allowSelection: editMediaOptions == nil, allowEditing: true, document: false, selectionLimit: selectionLimit)!
         carouselItemView = carouselItem
         carouselItem.stickersContext = paintStickersContext
-        carouselItem.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
         carouselItem.recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
         var openedCamera = false
         controller.willDismiss = { [weak carouselItem] _ in
@@ -220,10 +219,10 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, chatLocati
         }
         carouselItem.hasSchedule = hasSchedule
         carouselItem.reminder = peer.id == context.account.peerId
-        carouselItem.presentScheduleController = { done in
-            presentSchedulePicker { time in
+        carouselItem.presentScheduleController = { media, done in
+            presentSchedulePicker(media, { time in
                 done?(time)
-            }
+            })
         }
         carouselItem.presentTimerController = { done in
             presentTimerPicker { time in
@@ -474,8 +473,6 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
     let recipientName = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     
     legacyController.enableSizeClassSignal = true
-
-    let suggestionContext = legacySuggestionContext(context: context, peerId: peer.id, chatLocation: chatLocation)
     
     let paintStickersContext = LegacyPaintStickersContext(context: context)
     paintStickersContext.captionPanelView = {
@@ -489,7 +486,7 @@ public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, chatLoca
         })
     }
 
-    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, allowGrouping: allowGrouping, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, suggestionContext: suggestionContext, stickersContext: paintStickersContext, presentScheduleController: { done in
+    let controller = TGClipboardMenu.present(inParentController: emptyController, context: legacyController.context, images: images, allowGrouping: allowGrouping, hasCaption: true, hasTimer: hasTimer, hasSilentPosting: hasSilentPosting, hasSchedule: hasSchedule, reminder: peer.id == context.account.peerId, recipientName: recipientName, stickersContext: paintStickersContext, presentScheduleController: { done in
         presentSchedulePicker { time in
             done?(time)
         }
