@@ -129,6 +129,7 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.contentParentNode = ASDisplayNode()
         self.contentContainerNode = ASDisplayNode()
@@ -391,44 +392,6 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         super.updateRevealOffset(offset: offset, transition: transition)
         
         transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(x: offset, y: self.contentContainerNode.frame.minY), size: self.contentContainerNode.bounds.size))
-        
-        /*if let (item, params, _, _, _) = self.layoutParams {
-            let revealOffset = offset
-            
-            let editingOffset: CGFloat
-            if let editableControlNode = self.editableControlNode {
-                editingOffset = editableControlNode.bounds.size.width
-                var editableControlFrame = editableControlNode.frame
-                editableControlFrame.origin.x = params.leftInset + offset
-                transition.updateFrame(node: editableControlNode, frame: editableControlFrame)
-            } else {
-                editingOffset = 0.0
-            }
-            
-            let leftInset: CGFloat = 86.0 + params.leftInset + editingOffset
-            let rightInset: CGFloat = 13.0 + params.rightInset
-            var infoIconRightInset: CGFloat = rightInset - 1.0
-            
-            var dateRightInset: CGFloat = 46.0 + params.rightInset
-            if item.editing {
-                dateRightInset += 5.0
-                infoIconRightInset -= 36.0
-            }
-            
-            var avatarFrame = self.avatarNode.frame
-            avatarFrame.origin.x = revealOffset + leftInset - 52.0
-            transition.updateFrameAdditive(node: self.avatarNode, frame: avatarFrame)
-            
-            transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
-            
-            transition.updateFrameAdditive(node: self.statusNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
-            
-            transition.updateFrameAdditive(node: self.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + self.bounds.size.width - dateRightInset - self.dateNode.bounds.size.width, y: self.dateNode.frame.minY), size: self.dateNode.bounds.size))
-            
-            transition.updateFrameAdditive(node: self.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 81.0, y: self.typeIconNode.frame.minY), size: self.typeIconNode.bounds.size))
-            
-            transition.updateFrameAdditive(node: self.infoButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + self.bounds.size.width - infoIconRightInset - self.infoButtonNode.bounds.width, y: self.infoButtonNode.frame.minY), size: self.infoButtonNode.bounds.size))
-        }*/
     }
 
     override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
@@ -438,9 +401,11 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
         if let item = self.item {
             item.deleteAction?()
         }
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
         
-        /*if let item = self.layoutParams?.0 {
-            item.interaction.delete(item.messages.map { $0.id })
-        }*/
+        return result
     }
 }
