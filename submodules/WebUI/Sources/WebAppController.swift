@@ -300,7 +300,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
                         
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            Queue.mainQueue().after(1.0, {
+            Queue.mainQueue().after(0.6, {
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
                 transition.updateAlpha(layer: webView.layer, alpha: 1.0)
                 if let placeholderNode = self.placeholderNode {
