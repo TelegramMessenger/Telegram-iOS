@@ -18,6 +18,8 @@ import PhotoResources
 import LegacyComponents
 import UrlHandling
 
+private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
+
 public struct WebAppParameters {
     let peerId: PeerId
     let botId: PeerId
@@ -89,6 +91,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private let present: (ViewController, Any?) -> Void
         private var queryId: Int64?
         
+        private var placeholderDisposable: Disposable?
         private var iconDisposable: Disposable?
         private var keepAliveDisposable: Disposable?
         
@@ -121,45 +124,79 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let placeholderNode = ShimmerEffectNode()
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
-                       
-            let _ = (self.context.engine.messages.getAttachMenuBot(botId: controller.botId, cached: true)
-            |> deliverOnMainQueue).start(next: { [weak self] bot in
+            
+            let placeholder: Signal<(FileMediaReference, Bool)?, NoError>
+            if durgerKingBotIds.contains(controller.botId.id._internalGetInt64Value()) {
+                placeholder = .single(nil)
+                |> delay(0.05, queue: Queue.mainQueue())
+            } else {
+                placeholder = self.context.engine.messages.getAttachMenuBot(botId: controller.botId, cached: true)
+                |> map(Optional.init)
+                |> `catch` { error -> Signal<AttachMenuBot?, NoError> in
+                    return .complete()
+                }
+                |> mapToSignal { bot -> Signal<(FileMediaReference, Bool)?, NoError> in
+                    if let bot = bot, let peerReference = PeerReference(bot.peer) {
+                        var imageFile: TelegramMediaFile?
+                        var isPlaceholder = false
+                        if let file = bot.icons[.placeholder] {
+                            imageFile = file
+                            isPlaceholder = true
+                        } else if let file = bot.icons[.iOSStatic] {
+                            imageFile = file
+                        } else if let file = bot.icons[.default] {
+                            imageFile = file
+                        }
+                        if let imageFile = imageFile {
+                            return .single((.attachBot(peer: peerReference, media: imageFile), isPlaceholder))
+                        } else {
+                            return .complete()
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+            }
+            
+            self.placeholderDisposable = (placeholder
+            |> deliverOnMainQueue).start(next: { [weak self] fileReferenceAndIsPlaceholder in
                 guard let strongSelf = self else {
                     return
                 }
-                var imageFile: TelegramMediaFile?
-                var isPlaceholder = false
-                if let file = bot.icons[.placeholder] {
-                    imageFile = file
+                let fileReference: FileMediaReference?
+                let isPlaceholder: Bool
+                if let (maybeFileReference, maybeIsPlaceholder) = fileReferenceAndIsPlaceholder {
+                    fileReference = maybeFileReference
+                    isPlaceholder = maybeIsPlaceholder
+                } else {
+                    fileReference = nil
                     isPlaceholder = true
-                } else if let file = bot.icons[.iOSStatic] {
-                    imageFile = file
-                } else if let file = bot.icons[.default] {
-                    imageFile = file
                 }
-                if let imageFile = imageFile, let peer = PeerReference(bot.peer) {
-                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: imageFile)).start()
-                    strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: .attachBot(peer: peer, media: imageFile), stickToTop: isPlaceholder)
-                    |> deliverOnMainQueue).start(next: { [weak self] transform in
-                        if let strongSelf = self {
-                            let imageSize: CGSize
-                            if isPlaceholder, let (layout, _) = strongSelf.validLayout {
-                                let minSize = min(layout.size.width, layout.size.height)
-                                imageSize = CGSize(width: minSize, height: minSize * 3.0)
-                            } else {
-                                imageSize = CGSize(width: 75.0, height: 75.0)
-                            }
-                            let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
-                            let drawingContext = transform(arguments)
-                            if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
-                                strongSelf.placeholderIcon = (image, isPlaceholder)
-                                if let (layout, navigationBarHeight) = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                                }
+                
+                if let fileReference = fileReference {
+                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: fileReference).start()
+                }
+                strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
+                |> deliverOnMainQueue).start(next: { [weak self] transform in
+                    if let strongSelf = self {
+                        let imageSize: CGSize
+                        if isPlaceholder, let (layout, _) = strongSelf.validLayout {
+                            let minSize = min(layout.size.width, layout.size.height)
+                            imageSize = CGSize(width: minSize, height: minSize * 2.0)
+                        } else {
+                            imageSize = CGSize(width: 75.0, height: 75.0)
+                        }
+                        let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                        let drawingContext = transform(arguments)
+                        if let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate) {
+                            strongSelf.placeholderIcon = (image, isPlaceholder)
+                            if let (layout, navigationBarHeight) = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                             }
                         }
-                    })
-                }
+                        strongSelf.placeholderNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
+                })
             })
                 
             if let url = controller.url, !controller.fromMenu {
@@ -207,6 +244,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         deinit {
+            self.placeholderDisposable?.dispose()
             self.iconDisposable?.dispose()
             self.keepAliveDisposable?.dispose()
             
