@@ -298,21 +298,36 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             return nil
         }
+        
+        
+        var didTransitionIn = false
+        private func animateTransitionIn() {
+            guard !self.didTransitionIn, let webView = self.webView else {
+                return
+            }
+            self.didTransitionIn = true
+            
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+            transition.updateAlpha(layer: webView.layer, alpha: 1.0)
+            if let placeholderNode = self.placeholderNode {
+                self.placeholderNode = nil
+                transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
+                    placeholderNode?.removeFromSupernode()
+                })
+            }
+            
+            Queue.mainQueue().after(1.0, {
+                webView.handleTap()
+            })
+            
+            if let (layout, navigationBarHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
+        }
                         
         func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
-            Queue.mainQueue().after(1.0, {
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
-                transition.updateAlpha(layer: webView.layer, alpha: 1.0)
-                if let placeholderNode = self.placeholderNode {
-                    self.placeholderNode = nil
-                    transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
-                        placeholderNode?.removeFromSupernode()
-                    })
-                }
-                
-                if let (layout, navigationBarHeight) = self.validLayout {
-                    self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
-                }
+            Queue.mainQueue().after(0.6, {
+                self.animateTransitionIn()
             })
         }
         
@@ -402,6 +417,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             
             switch eventName {
+                case "web_app_ready":
+                    self.animateTransitionIn()
                 case "web_app_data_send":
                     if let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
