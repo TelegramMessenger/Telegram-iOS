@@ -9,7 +9,7 @@ def locate_bazel(base_path):
     if is_apple_silicon():
         arch = 'darwin-arm64'
     else:
-        arch = 'x86_64'
+        arch = 'darwin-x86_64'
     bazel_name = 'bazel-{version}-{arch}'.format(version=versions.bazel_version, arch=arch)
     bazel_path = '{}/build-input/{}'.format(base_path, bazel_name)
 
@@ -21,6 +21,7 @@ def locate_bazel(base_path):
                 version=versions.bazel_version,
                 name=bazel_name
             ),
+            '--create-dirs',
             '--output',
             bazel_path
         ])
