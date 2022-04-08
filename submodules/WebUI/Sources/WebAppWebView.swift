@@ -68,6 +68,8 @@ final class WebAppWebView: WKWebView {
         
         super.init(frame: CGRect(), configuration: configuration)
         
+        self.disablesInteractiveKeyboardGestureRecognizer = true
+        
         self.isOpaque = false
         self.backgroundColor = .clear
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
@@ -130,23 +132,24 @@ final class WebAppWebView: WKWebView {
         self.didTouchOnce = true
     }
     
-    func scrollToActiveElement(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    func scrollToActiveElement(layout: ContainerViewLayout, completion: @escaping (CGPoint) -> Void, transition: ContainedViewLayoutTransition) {
         self.evaluateJavaScript(findActiveElementY, completionHandler: { result, _ in
             if let result = result as? CGFloat {
                 Queue.mainQueue().async {
                     let convertedY = result - self.scrollView.contentOffset.y
-                    let viewportHeight = self.frame.height - (layout.inputHeight ?? 0.0)
-                    if convertedY < 0.0 || convertedY > viewportHeight {
+                    let viewportHeight = self.frame.height - (layout.inputHeight ?? 0.0) + 26.0
+                    if convertedY < 0.0 || (convertedY + 44.0) > viewportHeight {
                         let targetOffset: CGFloat
                         if convertedY < 0.0 {
                             targetOffset = max(0.0, result - 36.0)
                         } else {
                             targetOffset = max(0.0, result + 60.0 - viewportHeight)
                         }
+                        let contentOffset = CGPoint(x: 0.0, y: targetOffset)
+                        completion(contentOffset)
                         transition.animateView({
-                            self.scrollView.contentOffset = CGPoint(x: 0.0, y: targetOffset)
+                            self.scrollView.contentOffset = contentOffset
                         })
-//                        transition.updateBounds(layer: self.scrollView.layer, bounds: CGRect(x: 0.0, y: targetOffset, width: self.scrollView.layer.bounds.width, height: self.scrollView.layer.bounds.height))
                     }
                 }
             }

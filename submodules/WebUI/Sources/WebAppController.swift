@@ -303,14 +303,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
                 
                 if previousLayout != nil && (previousLayout?.inputHeight ?? 0.0).isZero, let inputHeight = layout.inputHeight, inputHeight > 44.0, transition.isAnimated {
-                    webView.scrollToActiveElement(layout: layout, transition: transition)
+                    webView.scrollToActiveElement(layout: layout, completion: { [weak self] contentOffset in
+                        self?.targetContentOffset = contentOffset
+                    }, transition: transition)
                     Queue.mainQueue().after(0.4, {
-                        let contentOffset = webView.scrollView.contentOffset
-                        transition.updateFrame(view: webView, frame: frame)
-                        webView.scrollView.contentOffset = contentOffset
-                        self.targetContentOffset = contentOffset                        
-                        Queue.mainQueue().after(0.1) {
-                            self.targetContentOffset = nil
+                        if let inputHeight = self.validLayout?.0.inputHeight, inputHeight > 44.0 {
+                            transition.updateFrame(view: webView, frame: frame)
+                            Queue.mainQueue().after(0.1) {
+                                self.targetContentOffset = nil
+                            }
                         }
                     })
                 } else {
