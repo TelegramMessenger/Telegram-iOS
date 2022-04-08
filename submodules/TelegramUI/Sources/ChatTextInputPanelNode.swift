@@ -2565,13 +2565,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 return !value
             }
         } else if case let .webView(title, url) = presentationInterfaceState.botMenuButton {
-            var show = false
-            self.interfaceInteraction?.updateShowWebView { value in
-                show = !value
-                return show
-            }
-            if show {
+            let willShow = !(self.presentationInterfaceState?.showWebView ?? false)
+            if willShow {
                 self.interfaceInteraction?.openWebView(title, url, false, true)
+            } else {
+                self.interfaceInteraction?.updateShowWebView { _ in
+                    return false
+                }
             }
         } else {
             self.interfaceInteraction?.updateShowCommands { value in
