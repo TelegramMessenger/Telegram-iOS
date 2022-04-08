@@ -130,7 +130,7 @@ final class WebAppWebView: WKWebView {
         self.sendEvent(name: "viewport_changed", data: "{height:\(frame.height)}")
     }
     
-    private(set) var didTouchOnce = true
+    private(set) var didTouchOnce = false
     @objc func handleTap() {
         self.didTouchOnce = true
     }

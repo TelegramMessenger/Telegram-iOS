@@ -316,6 +316,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             }
             
+            Queue.mainQueue().after(1.0, {
+                webView.handleTap()
+            })
+            
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }

@@ -12270,7 +12270,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private func sendMessages(_ messages: [EnqueueMessage], commit: Bool = false) {
+    private func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -12294,7 +12294,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             self.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
         } else {
-            self.presentScheduleTimePicker(dismissByTapOutside: false, completion: { [weak self] time in
+            self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] time in
                 if let strongSelf = self {
                     strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
                 }
@@ -12319,7 +12319,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var message = item.message
                     if let uniqueId = item.uniqueId {
                         let correlationId: Int64
-                        var addTransition = true
+                        var addTransition = scheduleTime == nil
                         if let groupingKey = message.groupingKey {
                             if let existing = groupedCorrelationIds[groupingKey] {
                                 correlationId = existing
@@ -12396,7 +12396,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     completionImpl?()
                 }, usedCorrelationId)
 
-                strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) })
+                strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) }, media: true)
+                
+                if let _ = scheduleTime {
+                    completion()
+                }
             }
         }))
     }
