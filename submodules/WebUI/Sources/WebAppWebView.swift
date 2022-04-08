@@ -5,7 +5,14 @@ import WebKit
 import SwiftSignalKit
 
 private let findActiveElementY = """
-document.activeElement.getBoundingClientRect().y
+function getOffset(el) {
+    const rect = el.getBoundingClientRect();
+    return {
+        left: rect.left + window.scrollX,
+        top: rect.top + window.scrollY
+    };
+}
+getOffset(document.activeElement).top;
 """
 
 private class WeakGameScriptMessageHandler: NSObject, WKScriptMessageHandler {
@@ -88,10 +95,6 @@ final class WebAppWebView: WKWebView {
                 strongSelf.handleScriptMessage(message)
             }
         }
-        
-//        let tapGestureRecognizer = WebViewTouchGestureRecognizer(target: self, action: #selector(self.handleTap))
-//        tapGestureRecognizer.delegate = self
-//        self.addGestureRecognizer(tapGestureRecognizer)
     }
     
     required init?(coder: NSCoder) {
