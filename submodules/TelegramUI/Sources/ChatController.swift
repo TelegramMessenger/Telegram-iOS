@@ -6499,8 +6499,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> deliverOnMainQueue).start(next: { actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
-                            strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
-                            completion(.default)
+                            if let contextController = contextController {
+                                contextController.dismiss(completion: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                                })
+                            } else {
+                                strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                                completion(.default)
+                            }
                         } else {
                             var isAction = false
                             if messages.count == 1 {
@@ -14901,9 +14910,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     actionSheet?.dismissAnimated()
                 })
             ])])
-            self.chatDisplayNode.dismissInput()
-            self.present(actionSheet, in: .window(.root))
-            completion(.default)
+            
+            if let contextController = contextController {
+                contextController.dismiss(completion: { [weak self] in
+                    self?.present(actionSheet, in: .window(.root))
+                })
+            } else {
+                self.chatDisplayNode.dismissInput()
+                self.present(actionSheet, in: .window(.root))
+                completion(.default)
+            }
         }
     }
     

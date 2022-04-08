@@ -1802,7 +1802,7 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
         self.statusNode.attributedText = NSAttributedString(string: stringForRemainingTime(Int32(max(0.0, self.item.timestamp - Date().timeIntervalSince1970)), strings: presentationData.strings), font: subtextFont, textColor: presentationData.theme.contextMenu.destructiveColor)
         
         let sideInset: CGFloat = 16.0
-        let statusSize = self.statusNode.updateLayout(CGSize(width: size.width - sideInset - 32.0, height: .greatestFiniteMagnitude))
+        let statusSize = self.statusNode.updateLayout(CGSize(width: size.width - sideInset - 32.0 + 4.0, height: .greatestFiniteMagnitude))
         transition.updateFrameAdditive(node: self.statusNode, frame: CGRect(origin: CGPoint(x: self.statusNode.frame.minX, y: self.statusNode.frame.minY), size: statusSize))
     }
     
@@ -1821,7 +1821,7 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))
-        let statusSize = self.statusNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset - textIconSize.width - 2.0, height: .greatestFiniteMagnitude))
+        let statusSize = self.statusNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset - textIconSize.width + 2.0, height: .greatestFiniteMagnitude))
         
         let verticalSpacing: CGFloat = 2.0
         let combinedTextHeight = textSize.height + verticalSpacing + statusSize.height
