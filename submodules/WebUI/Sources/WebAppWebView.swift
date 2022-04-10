@@ -127,7 +127,7 @@ final class WebAppWebView: WKWebView {
     }
         
     func updateMetrics(height: CGFloat, isExpanded: Bool, isStable: Bool, transition: ContainedViewLayoutTransition) {
-        let data = "{height:\(height), is_expanded:\(isExpanded ? "true" : "false"), is_stable_state:\(isStable ? "true" : "false")}"
+        let data = "{height:\(height), is_expanded:\(isExpanded ? "true" : "false"), is_state_stable:\(isStable ? "true" : "false")}"
         self.sendEvent(name: "viewport_changed", data: data)
     }
     
