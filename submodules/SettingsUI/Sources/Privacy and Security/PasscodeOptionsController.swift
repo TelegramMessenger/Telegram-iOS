@@ -365,7 +365,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
 
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
     var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
@@ -435,7 +435,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     actionSheet?.dismissAnimated()
                 })
             ])])
-        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(actionSheet)
     }, changePasscode: {
         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Bool in
             switch transaction.getAccessChallengeData() {
@@ -472,9 +472,22 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 pushControllerImpl?(setupController)
             }
             if fakeExists {
-                presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.PasscodeSettings_ConfirmDeletion, text:  presentationData.strings.PasscodeSettings_AllFakePasscodesWillBeDeleted, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                    showPasscodeSetup()
-                })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: presentationData.strings.PasscodeSettings_AllFakePasscodesWillBeDeleted),
+                        ActionSheetButtonItem(title: presentationData.strings.Common_OK, color: .destructive, action: { [weak actionSheet] in
+                            showPasscodeSetup()
+                            actionSheet?.dismissAnimated()
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                presentControllerImpl?(actionSheet)
             } else {
                 showPasscodeSetup()
             }
@@ -520,7 +533,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     actionSheet?.dismissAnimated()
                 })
             ])])
-        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(actionSheet)
     }, changeTouchId: { value in
         let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
             passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedEnableBiometrics(value))))
@@ -603,9 +616,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     }
 
     let controller = ItemListController(context: context, state: signal)
-    presentControllerImpl = { [weak controller] c, p in
+    presentControllerImpl = { [weak controller] c in
         if let controller = controller {
-            controller.present(c, in: .window(.root), with: p)
+            controller.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     pushControllerImpl = { [weak controller] c in
