@@ -75,6 +75,7 @@ public protocol AttachmentContainable: ViewController {
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
     var isContainerPanning: () -> Bool { get set }
+    var isContainerExpanded: () -> Bool { get set }
     
     func isContainerPanningUpdated(_ panning: Bool)
     
@@ -472,7 +473,15 @@ public class AttachmentController: ViewController {
                         
                         controller.isContainerPanning = { [weak self] in
                             if let strongSelf = self {
-                                return strongSelf.container.isTracking
+                                return strongSelf.container.isPanning
+                            } else {
+                                return false
+                            }
+                        }
+                        
+                        controller.isContainerExpanded = { [weak self] in
+                            if let strongSelf = self {
+                                return strongSelf.container.isExpanded
                             } else {
                                 return false
                             }

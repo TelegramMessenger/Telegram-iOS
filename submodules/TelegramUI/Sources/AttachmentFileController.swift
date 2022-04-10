@@ -169,6 +169,7 @@ private class AttachmentFileControllerImpl: ItemListController, AttachmentContai
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
     
     var delayDisappear = false
     

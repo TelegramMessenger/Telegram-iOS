@@ -126,8 +126,9 @@ final class WebAppWebView: WKWebView {
         })
     }
         
-    func updateFrame(frame: CGRect, transition: ContainedViewLayoutTransition) {
-        self.sendEvent(name: "viewport_changed", data: "{height:\(frame.height)}")
+    func updateMetrics(height: CGFloat, isExpanded: Bool, isStable: Bool, transition: ContainedViewLayoutTransition) {
+        let data = "{height:\(height), is_expanded:\(isExpanded ? "true" : "false"), is_stable_state:\(isStable ? "true" : "false")}"
+        self.sendEvent(name: "viewport_changed", data: data)
     }
     
     private(set) var didTouchOnce = false

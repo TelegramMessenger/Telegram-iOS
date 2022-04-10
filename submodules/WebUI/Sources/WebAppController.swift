@@ -75,7 +75,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
-        
+    public var isContainerExpanded: () -> Bool = { return false }
+    
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -348,6 +349,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        fileprivate func isContainerPanningUpdated(_ isPanning: Bool) {
+            if let (layout, navigationBarHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
+        }
+                
         private var validLayout: (ContainerViewLayout, CGFloat)?
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let previousLayout = self.validLayout?.0
@@ -373,7 +380,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     transition.updateFrame(view: webView, frame: frame)
                 }
                 
-                webView.updateFrame(frame: viewportFrame, transition: transition)
+                if let controller = self.controller {
+                    webView.updateMetrics(height: viewportFrame.height, isExpanded: controller.isContainerExpanded(), isStable: !controller.isContainerPanning(), transition: transition)
+                }
             }
             
             if let placeholderNode = self.placeholderNode {
@@ -663,6 +672,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         self.updateTabBarAlpha(1.0, .immediate)
+    }
+    
+    public func isContainerPanningUpdated(_ isPanning: Bool) {
+        self.controllerNode.isContainerPanningUpdated(isPanning)
     }
         
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
