@@ -1010,6 +1010,7 @@ public class TranslateScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         copyTranslationImpl = { [weak self] text in
+            UIPasteboard.general.string = text
             let content = UndoOverlayContent.copy(text: presentationData.strings.Conversation_TextCopied)
             self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             self?.dismiss(animated: true, completion: nil)
