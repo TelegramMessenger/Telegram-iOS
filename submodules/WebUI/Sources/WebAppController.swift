@@ -119,6 +119,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.handleScriptMessage = { [weak self] message in
                 self?.handleScriptMessage(message)
             }
+            webView.onFirstTouch = { [weak self] in
+                if let strongSelf = self, let delayedScriptMessage = strongSelf.delayedScriptMessage {
+                    strongSelf.delayedScriptMessage = nil
+                    strongSelf.handleScriptMessage(delayedScriptMessage)
+                }
+            }
             self.webView = webView
             
             let placeholderNode = ShimmerEffectNode()
@@ -315,11 +321,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     placeholderNode?.removeFromSupernode()
                 })
             }
-            
-            Queue.mainQueue().after(1.0, {
-                webView.handleTap()
-            })
-            
+                        
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
@@ -406,7 +408,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.loadingProgressPromise.set(.single(CGFloat(webView.estimatedProgress)))
             }
         }
-                
+             
+        private var delayedScriptMessage: WKScriptMessage?
         private func handleScriptMessage(_ message: WKScriptMessage) {
             guard let body = message.body as? [String: Any] else {
                 return
@@ -425,7 +428,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_setup_main_button":
                     if let webView = self.webView, !webView.didTouchOnce {
-                        
+                        self.delayedScriptMessage = message
                     } else if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
                         if var isVisible = json["is_visible"] as? Bool {
                             let text = json["text"] as? String

@@ -10694,10 +10694,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
                     |> deliverOnMainQueue).start(next: { bot in
                         let peer = EnginePeer(bot.peer)
-                        guard let icon = bot.icons[.default] else {
-                            return
-                        }
-                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: icon, completion: {
+                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
                             let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
                             |> deliverOnMainQueue).start(error: { _ in
                                 
