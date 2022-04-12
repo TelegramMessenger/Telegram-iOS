@@ -178,13 +178,13 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
                         reactionInactiveBackground: UIColor(rgb: 0xffffff, alpha: 0.07),
                         reactionInactiveForeground: UIColor(rgb: 0xffffff),
                         reactionActiveBackground: accentColor,
-                        reactionActiveForeground: UIColor(rgb: 0xffffff)
+                        reactionActiveForeground: monochrome ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
                     ),
                     withoutWallpaper: chat.message.incoming.bubble.withoutWallpaper.withUpdated(
                         reactionInactiveBackground: UIColor(rgb: 0xffffff, alpha: 0.07),
                         reactionInactiveForeground: UIColor(rgb: 0xffffff),
                         reactionActiveBackground: accentColor,
-                        reactionActiveForeground: UIColor(rgb: 0xffffff)
+                        reactionActiveForeground: monochrome ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
                     )
                 ),
                 linkTextColor: accentColor,
@@ -250,13 +250,13 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
                     reactionInactiveBackground: UIColor(rgb: 0xffffff, alpha: 0.12),
                     reactionInactiveForeground: UIColor(rgb: 0xffffff),
                     reactionActiveBackground: accentColor,
-                    reactionActiveForeground: UIColor(rgb: 0xffffff)
+                    reactionActiveForeground: monochrome ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
                 ),
                 withoutWallpaper: chat.message.freeform.withoutWallpaper.withUpdated(
                     reactionInactiveBackground: chat.message.incoming.bubble.withoutWallpaper.fill.last,
                     reactionInactiveForeground: UIColor(rgb: 0xffffff),
                     reactionActiveBackground: accentColor,
-                    reactionActiveForeground: UIColor(rgb: 0xffffff)
+                    reactionActiveForeground: monochrome ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
                 )
             ),
             infoLinkTextColor: accentColor,

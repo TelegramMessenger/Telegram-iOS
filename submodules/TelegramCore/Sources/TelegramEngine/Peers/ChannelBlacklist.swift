@@ -105,6 +105,21 @@ func _internal_updateChannelMemberBannedRights(account: Account, peerId: PeerId,
                                     }
                                 }
                                 
+                                if let memberPeer = memberPeer as? TelegramUser, let _ = memberPeer.botInfo {
+                                    if isMember != wasMember {
+                                        if isMember {
+//                                            var updatedBotInfos = updatedData.botInfos
+//                                            if updatedBotInfos.firstIndex(where: { $0.peerId == memberPeer.id }) == nil {
+//                                                updatedBotInfos.append(CachedPeerBotInfo(peerId: memberPeer.id, botInfo: ))
+//                                            }
+//                                            updatedData = updatedData.withUpdatedBotInfos(updatedBotInfos)
+                                        } else {
+                                            let filteredBotInfos = updatedData.botInfos.filter { $0.peerId != memberPeer.id }
+                                            updatedData = updatedData.withUpdatedBotInfos(filteredBotInfos)
+                                        }
+                                    }
+                                }
+                                
                                 return updatedData
                             } else {
                                 return cachedData

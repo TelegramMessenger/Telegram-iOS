@@ -80,6 +80,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     var cancelPanGesture: () -> Void = { }
     var isContainerPanning: () -> Bool = { return false }
+    var isContainerExpanded: () -> Bool = { return false }
     
     init(_ params: ContactSelectionControllerParams) {
         self.context = params.context

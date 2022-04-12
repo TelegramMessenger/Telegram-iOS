@@ -75,7 +75,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void  = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
-        
+    public var isContainerExpanded: () -> Bool = { return false }
+    
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -118,6 +119,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             webView.tintColor = self.presentationData.theme.rootController.tabBar.iconColor
             webView.handleScriptMessage = { [weak self] message in
                 self?.handleScriptMessage(message)
+            }
+            webView.onFirstTouch = { [weak self] in
+                if let strongSelf = self, let delayedScriptMessage = strongSelf.delayedScriptMessage {
+                    strongSelf.delayedScriptMessage = nil
+                    strongSelf.handleScriptMessage(delayedScriptMessage)
+                }
             }
             self.webView = webView
             
@@ -315,11 +322,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     placeholderNode?.removeFromSupernode()
                 })
             }
-            
-            Queue.mainQueue().after(1.0, {
-                webView.handleTap()
-            })
-            
+                        
             if let (layout, navigationBarHeight) = self.validLayout {
                 self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
@@ -346,6 +349,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
+        fileprivate func isContainerPanningUpdated(_ isPanning: Bool) {
+            if let (layout, navigationBarHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            }
+        }
+                
         private var validLayout: (ContainerViewLayout, CGFloat)?
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let previousLayout = self.validLayout?.0
@@ -371,7 +380,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     transition.updateFrame(view: webView, frame: frame)
                 }
                 
-                webView.updateFrame(frame: viewportFrame, transition: transition)
+                if let controller = self.controller {
+                    webView.updateMetrics(height: viewportFrame.height, isExpanded: controller.isContainerExpanded(), isStable: !controller.isContainerPanning(), transition: transition)
+                }
             }
             
             if let placeholderNode = self.placeholderNode {
@@ -406,7 +417,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.loadingProgressPromise.set(.single(CGFloat(webView.estimatedProgress)))
             }
         }
-                
+             
+        private var delayedScriptMessage: WKScriptMessage?
         private func handleScriptMessage(_ message: WKScriptMessage) {
             guard let body = message.body as? [String: Any] else {
                 return
@@ -425,7 +437,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_setup_main_button":
                     if let webView = self.webView, !webView.didTouchOnce {
-                        
+                        self.delayedScriptMessage = message
                     } else if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
                         if var isVisible = json["is_visible"] as? Bool {
                             let text = json["text"] as? String
@@ -660,6 +672,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         self.updateTabBarAlpha(1.0, .immediate)
+    }
+    
+    public func isContainerPanningUpdated(_ isPanning: Bool) {
+        self.controllerNode.isContainerPanningUpdated(isPanning)
     }
         
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

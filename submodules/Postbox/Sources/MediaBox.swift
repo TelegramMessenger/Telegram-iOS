@@ -1388,6 +1388,16 @@ public final class MediaBox {
             return EmptyDisposable
         }
     }
+    
+    public func allFileContextResourceIds() -> Signal<Set<MediaResourceId>, NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                subscriber.putNext(Set(self.fileContexts.map({ $0.key })))
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
 
     public func allFileContexts() -> Signal<[(partial: String, complete: String)], NoError> {
         return Signal { subscriber in

@@ -126,14 +126,13 @@ final class WebAppWebView: WKWebView {
         })
     }
         
-    func updateFrame(frame: CGRect, transition: ContainedViewLayoutTransition) {
-        self.sendEvent(name: "viewport_changed", data: "{height:\(frame.height)}")
+    func updateMetrics(height: CGFloat, isExpanded: Bool, isStable: Bool, transition: ContainedViewLayoutTransition) {
+        let data = "{height:\(height), is_expanded:\(isExpanded ? "true" : "false"), is_state_stable:\(isStable ? "true" : "false")}"
+        self.sendEvent(name: "viewport_changed", data: data)
     }
     
     private(set) var didTouchOnce = false
-    @objc func handleTap() {
-        self.didTouchOnce = true
-    }
+    var onFirstTouch: () -> Void = {}
     
     func scrollToActiveElement(layout: ContainerViewLayout, completion: @escaping (CGPoint) -> Void, transition: ContainedViewLayoutTransition) {
         self.evaluateJavaScript(findActiveElementY, completionHandler: { result, _ in
@@ -157,6 +156,15 @@ final class WebAppWebView: WKWebView {
                 }
             }
         })
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        if result != nil && !self.didTouchOnce {
+            self.didTouchOnce = true
+            self.onFirstTouch()
+        }
+        return result
     }
     
     override var inputAccessoryView: UIView? {

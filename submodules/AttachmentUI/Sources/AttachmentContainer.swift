@@ -64,6 +64,8 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private var panGestureRecognizer: UIPanGestureRecognizer?
     
     var isPanningUpdated: (Bool) -> Void = { _ in }
+    var isExpandedUpdated: (Bool) -> Void = { _ in }
+    var onExpandAnimationCompleted: () -> Void = {}
     
     override init() {
         self.wrappingNode = ASDisplayNode()
@@ -150,6 +152,11 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         return self.panGestureArguments != nil
     }
     
+    private var isAnimating = false
+    var isPanning: Bool {
+        return self.panGestureArguments != nil || self.isAnimating
+    }
+    
     private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         guard let (layout, controllers, coveredByModalTransition) = self.validLayout else {
@@ -159,6 +166,14 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         let isLandscape = layout.orientation == .landscape
         let edgeTopInset = isLandscape ? 0.0 : attachmentDefaultTopInset(layout: layout)
     
+        let completion = {
+            self.isAnimating = false
+            guard self.panGestureArguments == nil else {
+                return
+            }
+            self.isPanningUpdated(false)
+        }
+        
         switch recognizer.state {
             case .began:
                 let point = recognizer.location(in: self.view)
@@ -261,13 +276,6 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             
                 let offset = currentTopInset + panOffset
                 let topInset: CGFloat = edgeTopInset
-
-                let completion = {
-                    guard self.panGestureArguments == nil else {
-                        return
-                    }
-                    self.isPanningUpdated(false)
-                }
             
                 var dismissing = false
                 if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
@@ -285,15 +293,14 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         let distance = topInset - offset
                         let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
-                        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
                         
-                        Queue.mainQueue().after(0.5, completion)
+                        self.isAnimating = true
+                        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition, completion: completion)
                     } else {
                         self.isExpanded = true
                         
-                        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))
-                        
-                        Queue.mainQueue().after(0.35, completion)
+                        self.isAnimating = true
+                        self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut), completion: completion)
                     }
                 } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
                     if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
@@ -302,13 +309,11 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         }
                     }
                                                 
-                    let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
-                    let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                     self.isExpanded = true
                    
-                    self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
-                    
-                    Queue.mainQueue().after(0.5, completion)
+                    let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
+                    self.isAnimating = true
+                    self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity)), completion: completion)
                 } else {
                     if let listNode = listNode {
                         listNode.scroller.setContentOffset(CGPoint(), animated: false)
@@ -319,9 +324,8 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         })
                     }
                     
-                    self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))
-                    
-                    Queue.mainQueue().after(0.35, completion)
+                    self.isAnimating = true
+                    self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut), completion: completion)
                 }
                 
                 if !dismissing {
@@ -334,7 +338,8 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             case .cancelled:
                 self.panGestureArguments = nil
                 
-                self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut))
+                self.isAnimating = true
+                self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: .animated(duration: 0.3, curve: .easeInOut), completion: completion)
             default:
                 break
         }
@@ -362,7 +367,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         self.update(layout: layout, controllers: controllers, coveredByModalTransition: coveredByModalTransition, transition: transition)
     }
                 
-    func update(layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition) {
+    func update(layout: ContainerViewLayout, controllers: [AttachmentContainable], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if self.isDismissed {
             return
         }
@@ -391,7 +396,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         } else {
             topInset = effectiveExpanded ? 0.0 : edgeTopInset
         }
-        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size))
+        transition.updateFrame(node: self.wrappingNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: { _ in
+            completion()
+        })
         
         let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / defaultTopInset)
         self.updateModalProgress?(modalProgress, transition)

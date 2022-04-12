@@ -1017,6 +1017,32 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let searchStatePromise = self.searchStatePromise
         let selectionPromise = self.selectedMessagesPromise
         
+        let previousRecentlySearchedPeerOrder = Atomic<[EnginePeer.Id]>(value: [])
+        let fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
+        |> map { peers -> [RecentlySearchedPeer] in
+            var result: [RecentlySearchedPeer] = []
+            let _ = previousRecentlySearchedPeerOrder.modify { current in
+                var updated: [EnginePeer.Id] = []
+                for id in current {
+                    inner: for peer in peers {
+                        if peer.peer.peerId == id {
+                            updated.append(id)
+                            result.append(peer)
+                            break inner
+                        }
+                    }
+                }
+                for peer in peers.reversed() {
+                    if !updated.contains(peer.peer.peerId) {
+                        updated.insert(peer.peer.peerId, at: 0)
+                        result.insert(peer, at: 0)
+                    }
+                }
+                return updated
+            }
+            return result
+        }
+        
         let downloadItems: Signal<(inProgressItems: [DownloadItem], doneItems: [RenderedRecentDownloadItem]), NoError>
         if key == .downloads {
             var firstTime = true
@@ -1327,8 +1353,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             })
             
-            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get(), searchStatePromise.get(), selectionPromise.get(), resolvedMessage)
-            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData, searchState, selectionState, resolvedMessage -> ([ChatListSearchEntry], Bool)? in
+            return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get(), searchStatePromise.get(), selectionPromise.get(), resolvedMessage, fixedRecentlySearchedPeers)
+            |> map { accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationData, searchState, selectionState, resolvedMessage, recentPeers -> ([ChatListSearchEntry], Bool)? in
                 let isSearching = foundRemotePeers.2 || foundRemoteMessages.1
                 var entries: [ChatListSearchEntry] = []
                 var index = 0
@@ -1429,6 +1455,30 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             entries.append(.recentlySearchedPeer(peer, associatedPeer, foundLocalPeers.unread[peer.id], index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder))
                             
                             index += 1
+                        }
+                    }
+                }
+                
+                if lowercasedQuery.count > 1 {
+                    for peer in recentPeers {
+                        if let peer = peer.peer.chatMainPeer, !existingPeerIds.contains(peer.id) {
+                            let peer = EnginePeer(peer)
+                            
+                            var matches = false
+                            if case let .user(user) = peer {
+                                if let firstName = user.firstName, firstName.lowercased().hasPrefix(lowercasedQuery) {
+                                    matches = true
+                                } else if let lastName = user.lastName, lastName.lowercased().hasPrefix(lowercasedQuery) {
+                                    matches = true
+                                }
+                            } else if peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder).lowercased().hasPrefix(lowercasedQuery) {
+                                matches = true
+                            }
+                            
+                            if matches {
+                                existingPeerIds.insert(peer.id)
+                                entries.append(.localPeer(peer, nil, nil, index, presentationData.theme, presentationData.strings, presentationData.nameSortOrder, presentationData.nameDisplayOrder, localExpandType))
+                            }
                         }
                     }
                 }
@@ -1888,32 +1938,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         }
         |> distinctUntilChanged
-        
-        let previousRecentlySearchedPeerOrder = Atomic<[EnginePeer.Id]>(value: [])
-        let fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
-        |> map { peers -> [RecentlySearchedPeer] in
-            var result: [RecentlySearchedPeer] = []
-            let _ = previousRecentlySearchedPeerOrder.modify { current in
-                var updated: [EnginePeer.Id] = []
-                for id in current {
-                    inner: for peer in peers {
-                        if peer.peer.peerId == id {
-                            updated.append(id)
-                            result.append(peer)
-                            break inner
-                        }
-                    }
-                }
-                for peer in peers.reversed() {
-                    if !updated.contains(peer.peer.peerId) {
-                        updated.insert(peer.peer.peerId, at: 0)
-                        result.insert(peer, at: 0)
-                    }
-                }
-                return updated
-            }
-            return result
-        }
         
         var recentItems = combineLatest(hasRecentPeers, fixedRecentlySearchedPeers, presentationDataPromise.get())
         |> mapToSignal { hasRecentPeers, peers, presentationData -> Signal<[ChatListRecentEntry], NoError> in
