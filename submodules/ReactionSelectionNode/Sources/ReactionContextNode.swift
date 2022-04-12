@@ -110,9 +110,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.contentContainer.addSubnode(self.scrollNode)
         
         self.contentContainerMask = UIImageView()
-        let maskGradientWidth: CGFloat = 10.0
-        self.contentContainerMask.image = generateImage(CGSize(width: maskGradientWidth * 2.0 + 1.0, height: 8.0), rotatedContext: { size, context in
+        self.contentContainerMask.image = generateImage(CGSize(width: 52.0, height: 52.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
+            context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+            context.scaleBy(x: 1.0, y: 1.1)
+            context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
             
             let shadowColor = UIColor.black
 
@@ -122,17 +124,21 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
 
             for i in 0 ... stepCount {
                 let t = CGFloat(i) / CGFloat(stepCount)
-                colors.append(shadowColor.withAlphaComponent(t * t).cgColor)
+                colors.append(shadowColor.withAlphaComponent(t).cgColor)
                 locations.append(t)
             }
 
             let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colors as CFArray, locations: &locations)!
-            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: maskGradientWidth, y: 0.0), options: CGGradientDrawingOptions())
-            context.drawLinearGradient(gradient, start: CGPoint(x: size.width, y: 0.0), end: CGPoint(x: maskGradientWidth + 1.0, y: 0.0), options: CGGradientDrawingOptions())
+            
+            let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            let gradientWidth = 6.0
+            context.drawRadialGradient(gradient, startCenter: center, startRadius: size.width / 2.0, endCenter: center, endRadius: size.width / 2.0 - gradientWidth, options: [])
+            
             context.setFillColor(shadowColor.cgColor)
-            context.fill(CGRect(origin: CGPoint(x: maskGradientWidth, y: 0.0), size: CGSize(width: 1.0, height: size.height)))
-        })?.stretchableImage(withLeftCapWidth: Int(maskGradientWidth), topCapHeight: 0)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: gradientWidth - 1.0, dy: gradientWidth - 1.0))
+        })?.stretchableImage(withLeftCapWidth: Int(52.0 / 2.0), topCapHeight: Int(52.0 / 2.0))
         self.contentContainer.view.mask = self.contentContainerMask
+        //self.contentContainer.view.addSubview(self.contentContainerMask)
         
         super.init()
         

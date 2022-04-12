@@ -352,7 +352,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let accountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
         |> take(1)
-                        
+        
         self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterPromise.get(), self.searchQuery.get(), accountPeer)
         |> mapToSignal { peers, dates, selectedFilter, searchQuery, accountPeer -> Signal<([EnginePeer], [(Date?, Date, String?)], ChatListSearchFilterEntryId?, String?, EnginePeer?), NoError> in
             if searchQuery?.isEmpty ?? true {
