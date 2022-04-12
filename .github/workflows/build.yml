@@ -72,6 +72,7 @@ jobs:
           done
           # fake certificates are self-signed, so we need to manually mark them as trusted (otherwise bazel will not pick them up)
           for f in "$CERTS_PATH"/*.cer; do
+            security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
             sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$MY_KEYCHAIN" "$f"
           done
           security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
