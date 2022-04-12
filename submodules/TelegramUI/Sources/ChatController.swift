@@ -6853,13 +6853,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     media = .keep
                 }
                 
-                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, disableUrlPreview: disableUrlPreview)
-                
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    var state = state
-                    state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
-                    state = state.updatedEditMessageState(nil)
-                    return state
+                let _ = (strongSelf.context.account.postbox.messageAtId(editMessage.messageId)
+                |> deliverOnMainQueue)
+                .start(next: { [weak self] currentMessage in
+                    if let strongSelf = self {
+                        if let currentMessage = currentMessage {
+                            let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
+                            if currentMessage.text != text.string || currentEntities != entities {
+                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, disableUrlPreview: disableUrlPreview)
+                            }
+                        }
+                        
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                            var state = state
+                            state = state.updatedInterfaceState({ $0.withUpdatedEditMessage(nil) })
+                            state = state.updatedEditMessageState(nil)
+                            return state
+                        })
+                    }
                 })
             }
         }, beginMessageSearch: { [weak self] domain, query in

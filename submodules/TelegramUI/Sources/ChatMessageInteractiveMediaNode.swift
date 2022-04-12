@@ -182,8 +182,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
 
             let factor: CGFloat = max(0.0, min(1.0, (scale - 1.0) * 8.0))
 
-            transition.updateAlpha(node: strongSelf.dateAndStatusNode, alpha: 1.0 - factor)
-
             if abs(scale - 1.0) > CGFloat.ulpOfOne {
                 var highQualityImageNode: TransformImageNode?
                 if let current = strongSelf.highQualityImageNode {
@@ -241,6 +239,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 })
             }
 
+            transition.updateAlpha(node: strongSelf.dateAndStatusNode, alpha: 1.0 - factor)
             if let badgeNode = strongSelf.badgeNode {
                 transition.updateAlpha(node: badgeNode, alpha: 1.0 - factor)
             }
@@ -1614,6 +1613,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         }
+        if self.dateAndStatusNode.isHidden != isHidden {
+            if isHidden {
+                self.dateAndStatusNode.isHidden = true
+            } else {
+                self.dateAndStatusNode.isHidden = false
+                self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+        }
     }
     
     func transitionNode() -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
@@ -1633,6 +1640,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             if let statusNode = self?.statusNode {
                 statusNodeHidden = statusNode.isHidden
                 statusNode.isHidden = true
+            }
+            var dateAndStatusNodeHidden: Bool?
+            if let dateAndStatusNode = self?.dateAndStatusNode {
+                dateAndStatusNodeHidden = dateAndStatusNode.isHidden
+                dateAndStatusNode.isHidden = true
             }
             
             let view: UIView?
@@ -1657,6 +1669,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
             if let statusNode = self?.statusNode, let statusNodeHidden = statusNodeHidden {
                 statusNode.isHidden = statusNodeHidden
+            }
+            if let dateAndStatusNode = self?.dateAndStatusNode, let dateAndStatusNodeHidden = dateAndStatusNodeHidden {
+                dateAndStatusNode.isHidden = dateAndStatusNodeHidden
             }
             return (view, nil)
         })
