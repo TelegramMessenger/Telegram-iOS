@@ -6846,9 +6846,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     entitiesAttribute = TextEntitiesMessageAttribute(entities: entities)
                 }
                 
+                var updatingMedia = false
                 let media: RequestEditMessageMedia
                 if let editMediaReference = strongSelf.presentationInterfaceState.editMessageState?.mediaReference {
                     media = .update(editMediaReference)
+                    updatingMedia = true
                 } else {
                     media = .keep
                 }
@@ -6859,7 +6861,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         if let currentMessage = currentMessage {
                             let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
-                            if currentMessage.text != text.string || currentEntities != entities {
+                            if currentMessage.text != text.string || currentEntities != entities || updatingMedia {
                                 strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, disableUrlPreview: disableUrlPreview)
                             }
                         }
@@ -10434,8 +10436,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func editMessageMediaWithMessages(_ messages: [EnqueueMessage]) {
-        if let message = messages.first, case let .message(text, _, maybeMediaReference, _, _, _) = message, let mediaReference = maybeMediaReference {
+        if let message = messages.first, case let .message(text, attributes, maybeMediaReference, _, _, _) = message, let mediaReference = maybeMediaReference {
             self.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                var entities: [MessageTextEntity] = []
+                for attribute in attributes {
+                    if let entitiesAttrbute = attribute as? TextEntitiesMessageAttribute {
+                        entities = entitiesAttrbute.entities
+                    }
+                }
+                let attributedText = chatInputStateStringWithAppliedEntities(text, entities: entities)
+                
                 var state = state
                 if let editMessageState = state.editMessageState, case let .media(options) = editMessageState.content, !options.isEmpty {
                     state = state.updatedEditMessageState(ChatEditInterfaceMessageState(content: editMessageState.content, mediaReference: mediaReference))
@@ -10443,7 +10453,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if !text.isEmpty {
                     state = state.updatedInterfaceState { state in
                         if let editMessage = state.editMessage {
-                            return state.withUpdatedEditMessage(editMessage.withUpdatedInputState(ChatTextInputState(inputText: NSAttributedString(string: text))))
+                            return state.withUpdatedEditMessage(editMessage.withUpdatedInputState(ChatTextInputState(inputText: attributedText)))
                         }
                         return state
                     }

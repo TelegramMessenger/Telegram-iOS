@@ -7503,3 +7503,4 @@ Sorry for the inconvenience.";
 "PeerInfo.DeleteChannelText" = "Are you sure you want to delete the channel **%@** and all of its messages for all subscribers of the channel?";
 
 "Chat.SaveForNotifications" = "Save for Notifications";
+"Gallery.GifSaved" = "GIF Saved";
