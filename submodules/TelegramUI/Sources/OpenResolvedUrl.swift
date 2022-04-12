@@ -558,10 +558,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     let _ = (context.engine.messages.getAttachMenuBot(botId: peerId)
                     |> deliverOnMainQueue).start(next: { bot in
                         let peer = EnginePeer(bot.peer)
-                        guard let icon = bot.icons[.default] else {
-                            return
-                        }
-                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: icon, completion: {
+                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
                             let _ = (context.engine.messages.addBotToAttachMenu(botId: peerId)
                             |> deliverOnMainQueue).start(error: { _ in
                                 presentError(presentationData.strings.WebApp_AddToAttachmentUnavailableError)

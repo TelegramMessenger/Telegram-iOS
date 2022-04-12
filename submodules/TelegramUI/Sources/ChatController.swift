@@ -465,6 +465,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private weak var attachmentController: AttachmentController?
     private weak var currentMenuWebAppController: ViewController?
+    private weak var currentWebAppController: ViewController?
     
     private weak var currentImportMessageTooltip: UndoOverlayController?
 
@@ -3408,6 +3409,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         })
+                        strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }, error: { [weak self] error in
                         if let strongSelf = self {
@@ -3430,6 +3432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }, completion: { [weak self] in
                             self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
                         })
+                        strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }, error: { [weak self] error in
                         if let strongSelf = self {
@@ -6496,8 +6499,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 |> deliverOnMainQueue).start(next: { actions in
                     if let strongSelf = self, !actions.options.isEmpty {
                         if let banAuthor = actions.banAuthor {
-                            strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
-                            completion(.default)
+                            if let contextController = contextController {
+                                contextController.dismiss(completion: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                                })
+                            } else {
+                                strongSelf.presentBanMessageOptions(accountPeerId: strongSelf.context.account.peerId, author: banAuthor, messageIds: messageIds, options: actions.options)
+                                completion(.default)
+                            }
                         } else {
                             var isAction = false
                             if messages.count == 1 {
@@ -10682,10 +10694,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
                     |> deliverOnMainQueue).start(next: { bot in
                         let peer = EnginePeer(bot.peer)
-                        guard let icon = bot.icons[.default] else {
-                            return
-                        }
-                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peerIcon: icon, completion: {
+                        let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
                             let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
                             |> deliverOnMainQueue).start(error: { _ in
                                 
@@ -12270,7 +12279,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    private func sendMessages(_ messages: [EnqueueMessage], commit: Bool = false) {
+    private func sendMessages(_ messages: [EnqueueMessage], media: Bool = false, commit: Bool = false) {
         guard let peerId = self.chatLocation.peerId else {
             return
         }
@@ -12294,7 +12303,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             self.updateChatPresentationInterfaceState(interactive: true, { $0.updatedShowCommands(false) })
         } else {
-            self.presentScheduleTimePicker(dismissByTapOutside: false, completion: { [weak self] time in
+            self.presentScheduleTimePicker(style: media ? .media : .default, dismissByTapOutside: false, completion: { [weak self] time in
                 if let strongSelf = self {
                     strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
                 }
@@ -12319,7 +12328,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var message = item.message
                     if let uniqueId = item.uniqueId {
                         let correlationId: Int64
-                        var addTransition = true
+                        var addTransition = scheduleTime == nil
                         if let groupingKey = message.groupingKey {
                             if let existing = groupedCorrelationIds[groupingKey] {
                                 correlationId = existing
@@ -12396,7 +12405,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     completionImpl?()
                 }, usedCorrelationId)
 
-                strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) })
+                strongSelf.sendMessages(messages.map { $0.withUpdatedReplyToMessageId(replyMessageId) }, media: true)
+                
+                if let _ = scheduleTime {
+                    completion()
+                }
             }
         }))
     }
@@ -14483,6 +14496,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+            if let currentWebAppController = strongSelf.currentWebAppController {
+                strongSelf.currentWebAppController = nil
+                currentWebAppController.dismiss(animated: true, completion: nil)
+            } else if let currentWebAppController = strongSelf.currentMenuWebAppController {
+                strongSelf.currentMenuWebAppController = nil
+                currentWebAppController.dismiss(animated: true, completion: nil)
+            }
+            
             switch navigation {
                 case let .chat(_, subject, peekData):
                     if case .peer(peerId) = strongSelf.chatLocation {
@@ -14885,9 +14907,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     actionSheet?.dismissAnimated()
                 })
             ])])
-            self.chatDisplayNode.dismissInput()
-            self.present(actionSheet, in: .window(.root))
-            completion(.default)
+            
+            if let contextController = contextController {
+                contextController.dismiss(completion: { [weak self] in
+                    self?.present(actionSheet, in: .window(.root))
+                })
+            } else {
+                self.chatDisplayNode.dismissInput()
+                self.present(actionSheet, in: .window(.root))
+                completion(.default)
+            }
         }
     }
     

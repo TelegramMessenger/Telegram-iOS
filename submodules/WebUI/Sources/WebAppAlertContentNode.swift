@@ -14,7 +14,7 @@ import PhotoResources
 private final class WebAppAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     private let peerName: String
-    private let peerIcon: TelegramMediaFile
+    private let peerIcon: TelegramMediaFile?
     
     private let textNode: ASTextNode
     private let appIconNode: ASImageNode
@@ -32,10 +32,17 @@ private final class WebAppAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    init(account: Account, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, peerIcon: TelegramMediaFile, actions: [TextAlertAction]) {
+    init(account: Account, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, peerName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], actions: [TextAlertAction]) {
         self.strings = strings
         self.peerName = peerName
-        self.peerIcon = peerIcon
+        
+        if let icon = icons[.iOSStatic] {
+            self.peerIcon = icon
+        } else if let icon = icons[.default] {
+            self.peerIcon = icon
+        } else {
+            self.peerIcon = nil
+        }
         
         self.textNode = ASTextNode()
         self.textNode.maximumNumberOfLines = 0
@@ -83,17 +90,19 @@ private final class WebAppAlertContentNode: AlertContentNode {
         
         self.updateTheme(theme)
         
-        let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: peerIcon)).start()
-        self.iconDisposable = (svgIconImageFile(account: account, fileReference: .standalone(media: peerIcon))
-        |> deliverOnMainQueue).start(next: { [weak self] transform in
-            if let strongSelf = self {
-                let availableSize = CGSize(width: 48.0, height: 48.0)
-                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
-                let drawingContext = transform(arguments)
-                let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
-                strongSelf.appIconNode.image = generateTintedImage(image: image, color: theme.accentColor, backgroundColor: nil)
-            }
-        })
+        if let peerIcon = self.peerIcon {
+            let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: peerIcon)).start()
+            self.iconDisposable = (svgIconImageFile(account: account, fileReference: .standalone(media: peerIcon))
+            |> deliverOnMainQueue).start(next: { [weak self] transform in
+                if let strongSelf = self {
+                    let availableSize = CGSize(width: 48.0, height: 48.0)
+                    let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
+                    let drawingContext = transform(arguments)
+                    let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
+                    strongSelf.appIconNode.image = generateTintedImage(image: image, color: theme.accentColor, backgroundColor: nil)
+                }
+            })
+        }
     }
     
     deinit {
@@ -230,7 +239,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
     }
 }
 
-public func addWebAppToAttachmentController(context: AccountContext, peerName: String, peerIcon: TelegramMediaFile, completion: @escaping () -> Void) -> AlertController {
+public func addWebAppToAttachmentController(context: AccountContext, peerName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], completion: @escaping () -> Void) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = presentationData.theme
     let strings = presentationData.strings
@@ -245,7 +254,7 @@ public func addWebAppToAttachmentController(context: AccountContext, peerName: S
         completion()
     })]
     
-    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, peerIcon: peerIcon, actions: actions)
+    contentNode = WebAppAlertContentNode(account: context.account, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, peerName: peerName, icons: icons, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in
