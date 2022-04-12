@@ -33,6 +33,8 @@
 #import <MtProtoKit/MTSerialization.h>
 #import <MtProtoKit/MTEncryption.h>
 
+#import <MtProtoKit/MTTimer.h>
+
 #import "MTBuffer.h"
 #import "MTInternalMessageParser.h"
 #import "MTMsgContainerMessage.h"
@@ -125,6 +127,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     bool _isProbing;
     MTMetaDisposable *_probingDisposable;
     NSNumber *_probingStatus;
+    
+    bool _isConnectionThrottled;
+    MTTimer *_unthrottleConnectionTimer;
 }
 
 @end
@@ -625,8 +630,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
             {
                 _willRequestTransactionOnNextQueuePass = false;
                 
-                if ([self isStopped] || [self isPaused])
+                if ([self isStopped] || [self isPaused] || _isConnectionThrottled) {
                     return;
+                }
                 
                 if (_transport == nil)
                     [self resetTransport];
@@ -1940,8 +1946,6 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
             
             id currentTransport = _transport;
             
-            [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
-            
             for (NSInteger i = (NSInteger)_messageServices.count - 1; i >= 0; i--)
             {
                 id<MTMessageService> messageService = _messageServices[(NSUInteger)i];
@@ -1954,8 +1958,28 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 [self handleMissingKey:scheme];
             }
             
-            if (currentTransport == _transport)
-                [self requestSecureTransportReset];
+            if (protocolErrorCode == -429) {
+                _isConnectionThrottled = true;
+                if (_unthrottleConnectionTimer == nil) {
+                    __weak MTProto *weakSelf = self;
+                    _unthrottleConnectionTimer = [[MTTimer alloc] initWithTimeout:5.0 repeat:false completion:^{
+                        __strong MTProto *strongSelf = weakSelf;
+                        if (strongSelf == nil) {
+                            return;
+                        }
+                        
+                        strongSelf->_isConnectionThrottled = false;
+                        strongSelf->_unthrottleConnectionTimer = nil;
+                        [strongSelf requestTransportTransaction];
+                    } queue:[MTProto managerQueue].nativeQueue];
+                }
+            } else {
+                if (currentTransport == _transport) {
+                    [self requestSecureTransportReset];
+                }
+                
+                [self transportTransactionsMayHaveFailed:transport transactionIds:@[transactionId]];
+            }
             
             return;
         }
