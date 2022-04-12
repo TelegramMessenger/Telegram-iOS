@@ -169,7 +169,7 @@ final class InstantPageNavigationBar: ASDisplayNode {
     func updateLayout(size: CGSize, minHeight: CGFloat, maxHeight: CGFloat, topInset: CGFloat, leftInset: CGFloat, rightInset: CGFloat, title: String?, pageProgress: CGFloat, transition: ContainedViewLayoutTransition) {
         let progressHeight: CGFloat
         if !topInset.isZero {
-            progressHeight = size.height - topInset + 11.0
+            progressHeight = size.height - topInset + 11.0 - UIScreenPixel
         } else {
             progressHeight = size.height
         }
