@@ -534,11 +534,11 @@ open class NavigationBar: ASDisplayNode {
                             self.previousItemListenerKey = itemValue.addSetTitleListener { [weak self] _, _ in
                                 if let strongSelf = self, let previousItem = strongSelf.previousItem, case let .item(itemValue) = previousItem {
                                     if let customBackButtonText = strongSelf.customBackButtonText {
-                                        strongSelf.backButtonNode.updateManualText(customBackButtonText)
+                                        strongSelf.backButtonNode.updateManualText(customBackButtonText, isBack: true)
                                     } else if let backBarButtonItem = itemValue.backBarButtonItem {
-                                        strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
+                                        strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "", isBack: true)
                                     } else {
-                                        strongSelf.backButtonNode.updateManualText(itemValue.title ?? "")
+                                        strongSelf.backButtonNode.updateManualText(itemValue.title ?? "", isBack: true)
                                     }
                                     strongSelf.invalidateCalculatedLayout()
                                     strongSelf.requestLayout()
@@ -548,11 +548,11 @@ open class NavigationBar: ASDisplayNode {
                             self.previousItemBackListenerKey = itemValue.addSetBackBarButtonItemListener { [weak self] _, _, _ in
                                 if let strongSelf = self, let previousItem = strongSelf.previousItem, case let .item(itemValue) = previousItem {
                                     if let customBackButtonText = strongSelf.customBackButtonText {
-                                        strongSelf.backButtonNode.updateManualText(customBackButtonText)
+                                        strongSelf.backButtonNode.updateManualText(customBackButtonText, isBack: true)
                                     } else if let backBarButtonItem = itemValue.backBarButtonItem {
-                                        strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "")
+                                        strongSelf.backButtonNode.updateManualText(backBarButtonItem.title ?? "", isBack: true)
                                     } else {
-                                        strongSelf.backButtonNode.updateManualText(itemValue.title ?? "")
+                                        strongSelf.backButtonNode.updateManualText(itemValue.title ?? "", isBack: true)
                                     }
                                     strongSelf.invalidateCalculatedLayout()
                                     strongSelf.requestLayout()
@@ -682,7 +682,7 @@ open class NavigationBar: ASDisplayNode {
                 }
                 
                 if let backTitle = backTitle {
-                    self.backButtonNode.updateManualText(backTitle)
+                    self.backButtonNode.updateManualText(backTitle, isBack: true)
                     if self.backButtonNode.supernode == nil {
                         self.buttonsContainerNode.addSubnode(self.backButtonNode)
                         self.buttonsContainerNode.addSubnode(self.backButtonArrow)
@@ -861,12 +861,15 @@ open class NavigationBar: ASDisplayNode {
         self.titleNode.accessibilityTraits = .header
         
         self.backButtonNode = NavigationButtonNode()
+        self.backButtonNode.hitTestSlop = UIEdgeInsets(top: 0.0, left: -20.0, bottom: 0.0, right: 0.0)
+        
         self.badgeNode = NavigationBarBadgeNode(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
         self.badgeNode.isUserInteractionEnabled = false
         self.badgeNode.isHidden = true
         self.backButtonArrow = ASImageNode()
         self.backButtonArrow.displayWithoutProcessing = true
         self.backButtonArrow.displaysAsynchronously = false
+        self.backButtonArrow.isUserInteractionEnabled = false
         self.leftButtonNode = NavigationButtonNode()
         self.rightButtonNode = NavigationButtonNode()
         self.rightButtonNode.hitTestSlop = UIEdgeInsets(top: -4.0, left: -4.0, bottom: -4.0, right: -10.0)

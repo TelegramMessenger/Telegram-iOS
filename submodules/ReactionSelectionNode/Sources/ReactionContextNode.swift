@@ -702,6 +702,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
+    private let longPressDuration: Double = 1.5
     @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
         switch recognizer.state {
         case .began:
@@ -709,7 +710,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if let itemNode = self.reactionItemNode(at: point) {
                 self.highlightedReaction = itemNode.item.reaction
                 if #available(iOS 13.0, *) {
-                    self.continuousHaptic = try? ContinuousHaptic(duration: 2.5)
+                    self.continuousHaptic = try? ContinuousHaptic(duration: longPressDuration)
                 }
                 
                 if self.hapticFeedback == nil {
@@ -717,11 +718,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 
                 if let (size, insets, anchorRect) = self.validLayout {
-                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 2.5, curve: .linear), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+                    self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: longPressDuration, curve: .linear), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
                 }
                 
                 self.longPressTimer?.invalidate()
-                self.longPressTimer = SwiftSignalKit.Timer(timeout: 2.5, repeat: false, completion: { [weak self] in
+                self.longPressTimer = SwiftSignalKit.Timer(timeout: longPressDuration, repeat: false, completion: { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
