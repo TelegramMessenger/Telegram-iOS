@@ -352,7 +352,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                             window.rootViewController?.present(controller, animated: true)
                                                         }
                                                     case .speak:
-                                                        let _ = speakText(string)
+                                                        let _ = speakText(context: strongSelf.context, text: string)
                                                     case .translate:
                                                         if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
                                                             let controller = TranslateScreen(context: strongSelf.context, text: string, fromLanguage: nil)

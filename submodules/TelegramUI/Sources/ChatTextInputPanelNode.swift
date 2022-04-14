@@ -2367,7 +2367,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        let _ = speakText(text)
+        if let context = self.context {
+            let _ = speakText(context: context, text: text)
+        }
         
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()

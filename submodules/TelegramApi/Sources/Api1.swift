@@ -856,52 +856,62 @@ public extension Api {
 }
 public extension Api {
     enum BotInfo: TypeConstructorDescription {
-        case botInfo(userId: Int64, description: String, commands: [Api.BotCommand], menuButton: Api.BotMenuButton)
+        case botInfo(flags: Int32, userId: Int64?, description: String?, descriptionPhoto: Api.Photo?, commands: [Api.BotCommand]?, menuButton: Api.BotMenuButton?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .botInfo(let userId, let description, let commands, let menuButton):
+                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let commands, let menuButton):
                     if boxed {
-                        buffer.appendInt32(-468280483)
+                        buffer.appendInt32(-863263529)
                     }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeString(description, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(commands.count))
-                    for item in commands {
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(userId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(description!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {descriptionPhoto!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(commands!.count))
+                    for item in commands! {
                         item.serialize(buffer, true)
-                    }
-                    menuButton.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 3) != 0 {menuButton!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .botInfo(let userId, let description, let commands, let menuButton):
-                return ("botInfo", [("userId", String(describing: userId)), ("description", String(describing: description)), ("commands", String(describing: commands)), ("menuButton", String(describing: menuButton))])
+                case .botInfo(let flags, let userId, let description, let descriptionPhoto, let commands, let menuButton):
+                return ("botInfo", [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("description", String(describing: description)), ("descriptionPhoto", String(describing: descriptionPhoto)), ("commands", String(describing: commands)), ("menuButton", String(describing: menuButton))])
     }
     }
     
         public static func parse_botInfo(_ reader: BufferReader) -> BotInfo? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: String?
-            _2 = parseString(reader)
-            var _3: [Api.BotCommand]?
-            if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
-            }
-            var _4: Api.BotMenuButton?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.BotMenuButton
-            }
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt64() }
+            var _3: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: Api.Photo?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.Photo
+            } }
+            var _5: [Api.BotCommand]?
+            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.BotCommand.self)
+            } }
+            var _6: Api.BotMenuButton?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.BotMenuButton
+            } }
             let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.BotInfo.botInfo(userId: _1!, description: _2!, commands: _3!, menuButton: _4!)
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 4) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.BotInfo.botInfo(flags: _1!, userId: _2, description: _3, descriptionPhoto: _4, commands: _5, menuButton: _6)
             }
             else {
                 return nil

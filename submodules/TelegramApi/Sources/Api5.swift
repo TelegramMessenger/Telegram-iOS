@@ -541,6 +541,7 @@ public extension Api {
 public extension Api {
     enum ExportedChatInvite: TypeConstructorDescription {
         case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, title: String?)
+        case chatInvitePublicJoinRequests
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -559,6 +560,12 @@ public extension Api {
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     break
+                case .chatInvitePublicJoinRequests:
+                    if boxed {
+                        buffer.appendInt32(-317687113)
+                    }
+                    
+                    break
     }
     }
     
@@ -566,6 +573,8 @@ public extension Api {
         switch self {
                 case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let title):
                 return ("chatInviteExported", [("flags", String(describing: flags)), ("link", String(describing: link)), ("adminId", String(describing: adminId)), ("date", String(describing: date)), ("startDate", String(describing: startDate)), ("expireDate", String(describing: expireDate)), ("usageLimit", String(describing: usageLimit)), ("usage", String(describing: usage)), ("requested", String(describing: requested)), ("title", String(describing: title))])
+                case .chatInvitePublicJoinRequests:
+                return ("chatInvitePublicJoinRequests", [])
     }
     }
     
@@ -607,6 +616,9 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
+            return Api.ExportedChatInvite.chatInvitePublicJoinRequests
+        }
     
     }
 }
@@ -642,52 +654,6 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ExportedMessageLink.exportedMessageLink(link: _1!, html: _2!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum FeedPosition: TypeConstructorDescription {
-        case feedPosition(date: Int32, peer: Api.Peer, id: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .feedPosition(let date, let peer, let id):
-                    if boxed {
-                        buffer.appendInt32(1348066419)
-                    }
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .feedPosition(let date, let peer, let id):
-                return ("feedPosition", [("date", String(describing: date)), ("peer", String(describing: peer)), ("id", String(describing: id))])
-    }
-    }
-    
-        public static func parse_feedPosition(_ reader: BufferReader) -> FeedPosition? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.FeedPosition.feedPosition(date: _1!, peer: _2!, id: _3!)
             }
             else {
                 return nil

@@ -7503,4 +7503,20 @@ Sorry for the inconvenience.";
 "PeerInfo.DeleteChannelText" = "Are you sure you want to delete the channel **%@** and all of its messages for all subscribers of the channel?";
 
 "Chat.SaveForNotifications" = "Save for Notifications";
+
+"Group.Setup.WhoCanSendMessages.Title" = "WHO CAN SEND MESSAGES?";
+"Group.Setup.WhoCanSendMessages.Everyone" = "Everyone";
+"Group.Setup.WhoCanSendMessages.OnlyMembers" = "Only Members";
+
+"Group.Setup.ApproveNewMembers" = "Approve New Members";
+"Group.Setup.ApproveNewMembersInfo" = "Turn this on if you want users to be able to send messages only after they are approved by an admin.";
+
 "Gallery.GifSaved" = "GIF Saved";
+
+"Group.JoinGroup" = "Join Group";
+"Group.ApplyToJoin" = "Apply to Join Group";
+
+"Group.RequestToJoinSent" = "Request to join sent";
+"Group.RequestToJoinSentDescriptionGroup" = "You will be able to send messages once the admins approve your request.";
+
+"Channel.AdminLog.JoinedViaPublicRequest" = "%1$@ joined via public request, approved by %2$@";

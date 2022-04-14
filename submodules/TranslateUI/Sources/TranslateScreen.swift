@@ -160,7 +160,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 self.isSpeakingTranslatedText = false
                 
                 self.isSpeakingOriginalText = true
-                self.speechHolder = speakText(self.text)
+                self.speechHolder = speakText(context: self.context, text: self.text)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -188,7 +188,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 self.isSpeakingOriginalText = false
                 
                 self.isSpeakingTranslatedText = true
-                self.speechHolder = speakText(translatedText)
+                self.speechHolder = speakText(context: self.context, text: translatedText)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return

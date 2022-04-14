@@ -1275,7 +1275,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_DeletedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1301,7 +1301,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_RevokedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1327,7 +1327,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_EditedInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", updatedInvite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1353,7 +1353,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""))
+                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_JoinedViaInviteLink(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link?.replacingOccurrences(of: "https://", with: "") ?? "")
                 
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
@@ -1478,7 +1478,14 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
                 
-                let rawText: PresentationStrings.FormattedString = self.presentationData.strings.Channel_AdminLog_JoinedViaRequest(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", invite.link.replacingOccurrences(of: "https://", with: ""), approver.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                let rawText: PresentationStrings.FormattedString
+                switch invite {
+                    case let .link(link, _, _, _, _, _, _, _, _, _, _, _):
+                        rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaRequest(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", link.replacingOccurrences(of: "https://", with: ""), approver.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                    case .publicJoinRequest:
+                        rawText = self.presentationData.strings.Channel_AdminLog_JoinedViaPublicRequest(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", approver.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                }
+  
             
                 appendAttributedText(text: rawText, generateEntities: { index in
                     if index == 0, let author = author {
