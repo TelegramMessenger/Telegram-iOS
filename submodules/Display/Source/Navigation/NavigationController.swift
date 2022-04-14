@@ -1274,6 +1274,12 @@ open class NavigationController: UINavigationController, ContainableController, 
         completion()
     }
     
+    public func replaceControllers(controllers: [UIViewController], animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
+        ready?.set(true)
+        self.setViewControllers(controllers, animated: animated)
+        completion()
+    }
+    
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, animationOptions: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
         var controllers = self.viewControllers

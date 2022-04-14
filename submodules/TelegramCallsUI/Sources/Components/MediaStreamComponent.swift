@@ -567,6 +567,8 @@ public final class MediaStreamComponent: CombinedComponent {
         
         private var scheduledDismissUITimer: SwiftSignalKit.Timer?
         
+        let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
+        
         init(call: PresentationGroupCallImpl) {
             self.call = call
             
@@ -639,8 +641,6 @@ public final class MediaStreamComponent: CombinedComponent {
                 }
             })
             
-            //let _ = call.accountContext.engine.calls.getGroupCallStreamCredentials(peerId: call.peerId, revokePreviousCredentials: false).start()
-            
             self.isVisibleInHierarchyDisposable = (call.accountContext.sharedContext.applicationBindings.applicationInForeground
             |> deliverOnMainQueue).start(next: { [weak self] inForeground in
                 guard let strongSelf = self else {
@@ -649,6 +649,16 @@ public final class MediaStreamComponent: CombinedComponent {
                 if strongSelf.isVisibleInHierarchy != inForeground {
                     strongSelf.isVisibleInHierarchy = inForeground
                     strongSelf.updated(transition: .immediate)
+                    
+                    if inForeground {
+                        Queue.mainQueue().after(0.5, {
+                            guard let strongSelf = self, strongSelf.isVisibleInHierarchy else {
+                                return
+                            }
+                            
+                            strongSelf.deactivatePictureInPictureIfVisible.invoke(Void())
+                        })
+                    }
                 }
             })
         }
@@ -705,6 +715,7 @@ public final class MediaStreamComponent: CombinedComponent {
         let toolbar = Child(ToolbarComponent.self)
         
         let activatePictureInPicture = StoredActionSlot(Action<Void>.self)
+        let deactivatePictureInPicture = StoredActionSlot(Void.self)
         let moreButtonTag = GenericComponentViewTag()
         let moreAnimationTag = GenericComponentViewTag()
         
@@ -725,6 +736,16 @@ public final class MediaStreamComponent: CombinedComponent {
             let state = context.state
             let controller = environment.controller
             
+            context.state.deactivatePictureInPictureIfVisible.connect {
+                guard let controller = controller() else {
+                    return
+                }
+                if controller.view.window == nil {
+                    return
+                }
+                deactivatePictureInPicture.invoke(Void())
+            }
+            
             let video = video.update(
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
@@ -733,6 +754,7 @@ public final class MediaStreamComponent: CombinedComponent {
                     isAdmin: context.state.canManageCall,
                     peerTitle: context.state.peerTitle,
                     activatePictureInPicture: activatePictureInPicture,
+                    deactivatePictureInPicture: deactivatePictureInPicture,
                     bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
                         guard let call = call else {
                             completed()
@@ -742,6 +764,9 @@ public final class MediaStreamComponent: CombinedComponent {
                         call.accountContext.sharedContext.mainWindow?.inCallNavigate?()
                         
                         completed()
+                    },
+                    pictureInPictureClosed: { [weak call] in
+                        let _ = call?.leave(terminateIfPossible: false)
                     }
                 ),
                 availableSize: context.availableSize,
@@ -1095,8 +1120,13 @@ public final class MediaStreamComponent: CombinedComponent {
                         state.updateDismissOffset(value: offset.y, interactive: true)
                     case let .ended(velocity):
                         if abs(velocity.y) > 200.0 {
-                            state.updateDismissOffset(value: velocity.y < 0 ? -height : height, interactive: false)
-                            (controller() as? MediaStreamComponentController)?.dismiss(closing: false, manual: true)
+                            activatePictureInPicture.invoke(Action { [weak state] in
+                                guard let state = state, let controller = controller() as? MediaStreamComponentController else {
+                                    return
+                                }
+                                state.updateDismissOffset(value: velocity.y < 0 ? -height : height, interactive: false)
+                                controller.dismiss(closing: false, manual: true)
+                            })
                         } else {
                             state.updateDismissOffset(value: 0.0, interactive: false)
                         }

@@ -122,9 +122,16 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     params.completion(controller)
                 })
             } else {
-                params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
-                    params.completion(controller)
-                })
+                if params.useBackAnimation {
+                    params.navigationController.viewControllers = [controller] + params.navigationController.viewControllers
+                    params.navigationController.replaceControllers(controllers: viewControllers + [controller], animated: params.animated, options: params.options, completion: {
+                        params.completion(controller)
+                    })
+                } else {
+                    params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: {
+                        params.completion(controller)
+                    })
+                }
             }
         }
         if params.activateInput {
