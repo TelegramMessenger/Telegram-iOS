@@ -460,6 +460,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let (layout, navigationBarHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                     }
+                case "web_app_request_theme":
+                    self.sendThemeChangedEvent()
                 case "web_app_expand":
                     self.controller?.requestAttachmentMenuExpansion()
                 case "web_app_close":
@@ -498,7 +500,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
             } else {
                 self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
-            
+            self.sendThemeChangedEvent()
+        }
+        
+        private func sendThemeChangedEvent() {
             let themeParams = generateWebAppThemeParams(presentationData.theme)
             var themeParamsString = "{theme_params: {"
             for (key, value) in themeParams {
