@@ -83,6 +83,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
     private let iconNode: ASImageNode?
     private let animationNode: SimpleAnimationNode?
     
+    private var animationScale: CGFloat = 1.0
     private var animationNodeOffset: CGFloat = 0.0
     private var animationNodeFlip = false
     var alignment: ItemListRevealOptionAlignment?
@@ -102,7 +103,8 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
             self.iconNode = iconNode
             self.animationNode = nil
             
-        case let .animation(animation, _, offset, replaceColors, flip):
+        case let .animation(animation, scale, offset, replaceColors, flip):
+            self.animationScale = scale
             self.iconNode = nil
             var colors: [UInt32: UInt32] = [:]
             if let replaceColors = replaceColors {
@@ -194,7 +196,7 @@ private final class ItemListRevealOptionNode: ASDisplayNode {
         }
         
         if let animationNode = self.animationNode {
-            let imageSize = animationNode.size
+            let imageSize = CGSize(width: animationNode.size.width * self.animationScale, height: animationNode.size.height * self.animationScale)
             let iconOffset: CGFloat = -2.0 + self.animationNodeOffset
             let titleIconSpacing: CGFloat = 11.0
             let iconFrame = CGRect(origin: CGPoint(x: contentRect.minX + floor((baseSize.width - imageSize.width + sideInset) / 2.0), y: contentRect.midY - imageSize.height / 2.0 + iconOffset), size: imageSize)

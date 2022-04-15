@@ -47,23 +47,35 @@ public enum BotMenuButton: PostboxCoding, Hashable {
 
 public final class BotInfo: PostboxCoding, Equatable {
     public let description: String
+    public let photo: TelegramMediaImage?
     public let commands: [BotCommand]
     public let menuButton: BotMenuButton
     
-    public init(description: String, commands: [BotCommand], menuButton: BotMenuButton) {
+    public init(description: String, photo: TelegramMediaImage?, commands: [BotCommand], menuButton: BotMenuButton) {
         self.description = description
+        self.photo = photo
         self.commands = commands
         self.menuButton = menuButton
     }
     
     public init(decoder: PostboxDecoder) {
         self.description = decoder.decodeStringForKey("d", orElse: "")
+        if let photo = decoder.decodeObjectForKey("ph", decoder: { TelegramMediaImage(decoder: $0) }) as? TelegramMediaImage {
+            self.photo = photo
+        } else {
+            self.photo = nil
+        }
         self.commands = decoder.decodeObjectArrayWithDecoderForKey("c")
         self.menuButton = (decoder.decodeObjectForKey("b", decoder: { BotMenuButton(decoder: $0) }) as? BotMenuButton) ?? .commands
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.description, forKey: "d")
+        if let photo = self.photo {
+            encoder.encodeObject(photo, forKey: "ph")
+        } else {
+            encoder.encodeNil(forKey: "ph")
+        }
         encoder.encodeObjectArray(self.commands, forKey: "c")
         encoder.encodeObject(self.menuButton, forKey: "b")
     }

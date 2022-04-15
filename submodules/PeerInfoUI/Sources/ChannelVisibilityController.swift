@@ -455,6 +455,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
             case let .joinToSendEveryone(_, text, selected):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updateJoinToSend(.everyone)
+                    arguments.toggleApproveMembers(false)
                 })
             case let .joinToSendMembers(_, text, selected):
                 return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
@@ -816,13 +817,24 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
                 }
         }
+                        
+        if isGroup {
+            var isDiscussion = false
+            if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
+                isDiscussion = true
+            }
+            
+            if isDiscussion {
+                entries.append(.joinToSendHeader(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Title.uppercased()))
+                entries.append(.joinToSendEveryone(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Everyone, joinToSend == .everyone))
+                entries.append(.joinToSendMembers(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_OnlyMembers, joinToSend == .members))
+            }
                 
-        entries.append(.joinToSendHeader(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Title.uppercased()))
-        entries.append(.joinToSendEveryone(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Everyone, joinToSend == .everyone))
-        entries.append(.joinToSendMembers(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_OnlyMembers, joinToSend == .members))
-        
-        entries.append(.approveMembers(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembers, approveMembers))
-        entries.append(.approveMembersInfo(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembersInfo))
+            if !isDiscussion || joinToSend == .members {
+                entries.append(.approveMembers(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembers, approveMembers))
+                entries.append(.approveMembersInfo(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembersInfo))
+            }
+        }
         
         entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
@@ -1073,6 +1085,12 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     
     let toggleCopyProtectionDisposable = MetaDisposable()
     actionsDisposable.add(toggleCopyProtectionDisposable)
+    
+    let toggleJoinToSendDisposable = MetaDisposable()
+    actionsDisposable.add(toggleJoinToSendDisposable)
+    
+    let toggleRequestToJoinDisposable = MetaDisposable()
+    actionsDisposable.add(toggleRequestToJoinDisposable)
     
     let arguments = ChannelVisibilityControllerArguments(context: context, updateCurrentType: { type in
         updateState { state in
@@ -1358,11 +1376,11 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 }
                 
                 if let updatedJoinToSend = state.joinToSend {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
+                    toggleJoinToSendDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
                 }
                 
                 if let updatedApproveMembers = state.approveMembers {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
+                    toggleRequestToJoinDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
                 }
                 
                 if let updatedAddressNameValue = updatedAddressNameValue {
