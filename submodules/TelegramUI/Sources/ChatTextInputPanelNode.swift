@@ -2813,7 +2813,7 @@ private final class MenuIconNode: ManagedAnimationNode {
                 switch state {
                     case .menu:
                         if animated {
-                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 20, endFrame: 0), duration: self.duration))
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_closemenu"), frames: .range(startFrame: 0, endFrame: 20), duration: self.duration))
                         } else {
                             self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
                         }

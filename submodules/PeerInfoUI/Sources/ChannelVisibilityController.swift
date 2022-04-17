@@ -818,7 +818,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 }
         }
                         
-        if isGroup {
+        if isGroup && selectedType == .publicChannel {
             var isDiscussion = false
             if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
                 isDiscussion = true

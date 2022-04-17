@@ -504,7 +504,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         private func sendThemeChangedEvent() {
-            let themeParams = generateWebAppThemeParams(presentationData.theme)
+            let themeParams = generateWebAppThemeParams(self.presentationData.theme)
             var themeParamsString = "{theme_params: {"
             for (key, value) in themeParams {
                 if let value = value as? Int32 {
