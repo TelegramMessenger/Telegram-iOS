@@ -1229,6 +1229,8 @@
 "PasscodeSettings.FakePasscodeAccountsHelp" = "Configure actions for accounts.";
 "PasscodeSettings.FakePasscodeDelete" = "Delete Fake Passcode";
 "PasscodeSettings.FakePasscodeDeleteHelp" = "If you delete the fake passcode, all actions will be cleared. You can change the passcode if you don't want to delete it.";
+"PasscodeSettings.FakePasscodeDeleteTitle" = "Delete Fake Passcode";
+"PasscodeSettings.FakePasscodeDeleteMessage" = "Are you sure you want to delete this fake passcode?";
 
 "EnterPasscode.EnterTitle" = "Enter your Telegram Passcode";
 "EnterPasscode.ChangeTitle" = "Change Passcode";

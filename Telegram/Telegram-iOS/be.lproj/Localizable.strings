@@ -31,6 +31,9 @@
 "PasscodeSettings.FakePasscodeDelete" = "Выдаліць несапраўдны код блакіроўкі";
 "PasscodeSettings.FakePasscodeDeleteHelp" = "Калі Вы выдаліце несапраўдны код блакіроўкі, усе дзеянні будуць ачышчаны. Вы можаце змяніць код блакіроўкі, калі не хочаце выдаляць яго.";
 
+"PasscodeSettings.FakePasscodeDeleteTitle" = "Выдаліць несапраўдны код блакіроўкі";
+"PasscodeSettings.FakePasscodeDeleteMessage" = "Вы дакладна хочаце выдаліць гэты несапраўдны код блакіроўкі?";
+
 "Settings.Version" = "Telegram для iOS v%1$@ (%2$@)\nPTelegram версія %3$@";
 
 "PasscodeSettings.BadAttempts" = "Няўдалыя спробы ўвода кода блакіроўкі";

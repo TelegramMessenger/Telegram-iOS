@@ -294,6 +294,14 @@ private struct PasscodeOptionsData: Equatable {
         fakePasscodeSettings[index] = settings
         return PasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
     }
+
+    func withDeletedFakePasscodeSettings(index: Int) -> PasscodeOptionsData {
+        var fakePasscodeSettings = self.fakePasscodeSettings
+        var accessChallenge = self.accessChallenge
+        fakePasscodeSettings.remove(at: index)
+        accessChallenge = accessChallenge.removeFakePasscode(at: index)
+        return PasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: presentationSettings, fakePasscodeSettings: fakePasscodeSettings)
+    }
 }
 
 private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int32?) -> String {
@@ -357,7 +365,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
 
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments) -> Void)?
+    var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
     var replaceTopControllerImpl: ((ViewController, Bool) -> Void)?
@@ -427,7 +435,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     actionSheet?.dismissAnimated()
                 })
             ])])
-        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(actionSheet)
     }, changePasscode: {
         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Bool in
             switch transaction.getAccessChallengeData() {
@@ -464,9 +472,22 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 pushControllerImpl?(setupController)
             }
             if fakeExists {
-                presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.PasscodeSettings_ConfirmDeletion, text:  presentationData.strings.PasscodeSettings_AllFakePasscodesWillBeDeleted, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                    showPasscodeSetup()
-                })]), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: [
+                        ActionSheetTextItem(title: presentationData.strings.PasscodeSettings_AllFakePasscodesWillBeDeleted),
+                        ActionSheetButtonItem(title: presentationData.strings.Common_OK, color: .destructive, action: { [weak actionSheet] in
+                            showPasscodeSetup()
+                            actionSheet?.dismissAnimated()
+                        })
+                    ]),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                presentControllerImpl?(actionSheet)
             } else {
                 showPasscodeSetup()
             }
@@ -512,7 +533,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     actionSheet?.dismissAnimated()
                 })
             ])])
-        presentControllerImpl?(actionSheet, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        presentControllerImpl?(actionSheet)
     }, changeTouchId: { value in
         let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
             passcodeOptionsDataPromise?.set(.single(data.withUpdatedPresentationSettings(data.presentationSettings.withUpdatedEnableBiometrics(value))))
@@ -595,9 +616,9 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
     }
 
     let controller = ItemListController(context: context, state: signal)
-    presentControllerImpl = { [weak controller] c, p in
+    presentControllerImpl = { [weak controller] c in
         if let controller = controller {
-            controller.present(c, in: .window(.root), with: p)
+            controller.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     pushControllerImpl = { [weak controller] c in
@@ -704,10 +725,16 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
 }
 
 private func fakePasscodeOptionsController(context: AccountContext, index: Int, passcodeOptionsDataPromise: Promise<PasscodeOptionsData>) -> ViewController {
-    let controller = fakePasscodeOptionsController(context: context, index: index, updatedSettingsName: { index, settings in
-
+    let controller = fakePasscodeOptionsController(context: context, index: index, updatedSettings: { index, settings in
         let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
-            passcodeOptionsDataPromise?.set(.single(data.withUpdatedFakePasscodeSettings(index: index, settings: settings)))
+            let newData = data.withUpdatedFakePasscodeSettings(index: index, settings: settings)
+            passcodeOptionsDataPromise?.set(.single(newData))
+        })
+
+    }, deletedSettings: { index in
+        let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
+            let newData = data.withDeletedFakePasscodeSettings(index: index)
+            passcodeOptionsDataPromise?.set(.single(newData))
         })
     })
     return controller

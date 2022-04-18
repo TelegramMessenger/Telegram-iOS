@@ -250,8 +250,8 @@ private struct FakePasscodeOptionsData: Equatable {
         return FakePasscodeOptionsData(accessChallenge: accessChallenge, presentationSettings: self.settings)
     }
 
-    func withUpdatedSettings(_ presentationSettings: FakePasscodeSettings) -> FakePasscodeOptionsData {
-        return FakePasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: presentationSettings)
+    func withUpdatedSettings(_ settings: FakePasscodeSettings) -> FakePasscodeOptionsData {
+        return FakePasscodeOptionsData(accessChallenge: self.accessChallenge, presentationSettings: settings)
     }
 }
 
@@ -284,20 +284,22 @@ private func fakePasscodeOptionsControllerEntries(presentationData: Presentation
         // .accountsHeader(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsTitle),
         // .accountActions(presentationData.theme, displayName, avatar),
         // .accountsInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeAccountsHelp),
-        // .deletePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDelete),
-        // .deletePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDeleteHelp)
+        .deletePasscode(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDelete),
+        .deletePasscodeInfo(presentationData.theme, presentationData.strings.PasscodeSettings_FakePasscodeDeleteHelp)
     ]
 
     return entries
 }
 
-public func fakePasscodeOptionsController(context: AccountContext, index: Int, updatedSettingsName: @escaping (Int, FakePasscodeSettings) -> Void) -> ViewController {
+public func fakePasscodeOptionsController(context: AccountContext, index: Int, updatedSettings: @escaping (Int, FakePasscodeSettings) -> Void, deletedSettings: @escaping (Int) -> Void) -> ViewController {
     let statePromise = ValuePromise(FakePasscodeOptionsControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: FakePasscodeOptionsControllerState())
     let updateState: ((FakePasscodeOptionsControllerState) -> FakePasscodeOptionsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
 
+    var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var popControllerImpl: (() -> Void)?
 
@@ -331,7 +333,7 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
                     return settings
                 }
                 let newSettings = settings.withUpdatedName(name)
-                updatedSettingsName(index, newSettings)
+                updatedSettings(index, newSettings)
                 return newSettings
             })
         }
@@ -349,6 +351,8 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
                         return PostboxAccessChallengeData.plaintextPassword(value: code, fakeValue: fakes)
                     }
             }
+        }, completed: {
+            popControllerImpl?()
         })
     }, allowLogin: { enabled in
         updateSettings(context: context, index: index, passcodeOptionsDataPromise) { settings in
@@ -392,7 +396,23 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
     }, accountActions: {
         // TODO implement Account Actions screen and open it here
     }, deletePasscode: {
-        // TODO delete fake passcode
+        let actionSheet = ActionSheetController(presentationData: presentationData)
+
+        actionSheet.setItemGroups([
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
+                    popControllerImpl?()
+                    deletedSettings(index)
+                    actionSheet?.dismissAnimated()
+                })
+            ]),
+            ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        presentControllerImpl?(actionSheet)
     })
 
     let accountPeerSignal = context.account.postbox.loadedPeerWithId(context.account.peerId)
@@ -425,6 +445,11 @@ public func fakePasscodeOptionsController(context: AccountContext, index: Int, u
     }
 
     let controller = ItemListController(context: context, state: signal)
+    presentControllerImpl = { [weak controller] c in
+        if let controller = controller {
+            controller.present(c, in: .window(.root))
+        }
+    }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
@@ -471,12 +496,15 @@ public func pushFakePasscodeSetupController(context: AccountContext, pushControl
     })
 }
 
-private func updateSettings(context: AccountContext, index: Int, _ optionsDataPromise: Promise<FakePasscodeOptionsData>, _ f: @escaping (FakePasscodeSettings) -> FakePasscodeSettings) {
+private func updateSettings(context: AccountContext, index: Int, _ optionsDataPromise: Promise<FakePasscodeOptionsData>, _ f: @escaping (FakePasscodeSettings) -> FakePasscodeSettings?) {
     let _ = (optionsDataPromise.get() |> take(1)).start(next: { [weak optionsDataPromise] data in
-        optionsDataPromise?.set(.single(data.withUpdatedSettings(f(data.settings))))
+        let updatedSettings = f(data.settings)
+        if let updatedSettings = updatedSettings {
+            optionsDataPromise?.set(.single(data.withUpdatedSettings(updatedSettings)))
+        }
 
-        let _ = updateFakePasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, index: index, { current in
-            return f(current)
+        let _ = updateFakePasscodeSettingsInteractively(accountManager: context.sharedContext.accountManager, index: index, { _ in
+            return updatedSettings
         }).start()
     })
 }
