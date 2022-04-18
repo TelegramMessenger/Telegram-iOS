@@ -7,6 +7,62 @@ import TelegramUIPreferences
 import TgVoip
 import TgVoipWebrtc
 
+private let debugUseLegacyVersionForReflectors: Bool = {
+    #if DEBUG
+    return true
+    #else
+    return false
+    #endif
+}()
+
+private struct PeerTag: Hashable, CustomStringConvertible {
+    var bytes: [UInt8] = Array<UInt8>(repeating: 0, count: 16)
+    
+    var canonical: PeerTag {
+        var updatedBytes = self.bytes
+        updatedBytes[0] &= ~1
+        return PeerTag(bytes: updatedBytes)
+    }
+    
+    var flipped: PeerTag {
+        var updatedBytes = self.bytes
+        updatedBytes[0] ^= 1
+        return PeerTag(bytes: updatedBytes)
+    }
+    
+    var description: String {
+        var result = ""
+        
+        for byte in bytes {
+            result.append(String(byte, radix: 16))
+        }
+        
+        return result
+    }
+}
+
+private extension PeerTag {
+    init(data: Data) {
+        precondition(data.count >= 16)
+        data.withUnsafeBytes { buffer -> Void in
+            memcpy(&self.bytes, buffer.baseAddress!.assumingMemoryBound(to: UInt8.self), 16)
+        }
+    }
+    
+    var data: Data {
+        var bytes = self.bytes
+        var resultData = Data(repeating: 0, count: 16)
+        resultData.withUnsafeMutableBytes { buffer -> Void in
+            memcpy(buffer.baseAddress!.assumingMemoryBound(to: UInt8.self), &bytes, 16)
+        }
+        return resultData
+    }
+}
+
+private func flippedPeerTag(_ data: Data) -> Data {
+    return PeerTag(data: data).flipped.data
+}
+
 private func callConnectionDescription(_ connection: CallSessionConnection) -> OngoingCallConnectionDescription? {
     switch connection {
     case let .reflector(reflector):
@@ -18,8 +74,17 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 
 private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
-    case .reflector:
-        return []
+    case let .reflector(reflector):
+        var result: [OngoingCallConnectionDescriptionWebrtc] = []
+        if !reflector.ip.isEmpty {
+            if reflector.ip == "91.108.9.38" {
+                result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            }
+        }
+        if !reflector.ipv6.isEmpty {
+            //result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        return result
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
@@ -673,13 +738,15 @@ public final class OngoingCallContext {
     private let tempStatsLogFile: EngineTempBoxFile
     
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
-        var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
-        if includeExperimental {
+        if debugUseLegacyVersionForReflectors {
+            return [(OngoingCallThreadLocalContext.version(), true)]
+        } else {
+            var result: [(version: String, supportsVideo: Bool)] = [(OngoingCallThreadLocalContext.version(), false)]
             result.append(contentsOf: OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: includeReference).map { version -> (version: String, supportsVideo: Bool) in
                 return (version, true)
             })
+            return result
         }
-        return result
     }
 
     public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?) {
@@ -706,7 +773,16 @@ public final class OngoingCallContext {
         |> take(1)
         |> deliverOn(queue)).start(next: { [weak self] _ in
             if let strongSelf = self {
-                if OngoingCallThreadLocalContextWebrtc.versions(withIncludeReference: true).contains(version) {
+                var useModernImplementation = true
+                var version = version
+                if debugUseLegacyVersionForReflectors {
+                    useModernImplementation = true
+                    version = "4.0.1"
+                } else {
+                    useModernImplementation = version != OngoingCallThreadLocalContext.version()
+                }
+                
+                if useModernImplementation {
                     var voipProxyServer: VoipProxyServerWebrtc?
                     if let proxyServer = proxyServer {
                         switch proxyServer.connection {
@@ -729,15 +805,17 @@ public final class OngoingCallContext {
                     }
                     
                     /*#if DEBUG
-                    filteredConnections.removeAll()
-                    filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(
-                        connectionId: 1,
-                        hasStun: true,
-                        hasTurn: true, ip: "178.62.7.192",
-                        port: 1400,
-                        username: "user",
-                        password: "user")
-                    )
+                    for connection in filteredConnections {
+                        if connection.username == "reflector" {
+                            filteredConnections = [OngoingCallConnectionDescriptionWebrtc(
+                                connectionId: 1,
+                                hasStun: false,
+                                hasTurn: true,
+                                ip: "192.168.1.110", port: 1200,
+                                username: "reflector", password: connection.password
+                            )]
+                        }
+                    }
                     #endif*/
                     
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in

@@ -5,6 +5,7 @@
 #import "Instance.h"
 #import "InstanceImpl.h"
 #import "v2/InstanceV2Impl.h"
+#import "v2/InstanceV2ReferenceImpl.h"
 #import "v2_4_0_0/InstanceV2_4_0_0Impl.h"
 #include "StaticThreads.h"
 
@@ -800,14 +801,27 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     return 92;
 }
 
++ (void)ensureRegisteredImplementations {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        tgcalls::Register<tgcalls::InstanceImpl>();
+        tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
+        tgcalls::Register<tgcalls::InstanceV2Impl>();
+        //tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
+    });
+}
+
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
+    [self ensureRegisteredImplementations];
+
     NSMutableArray<NSString *> *list = [[NSMutableArray alloc] init];
-    [list addObject:@"2.7.7"];
-    [list addObject:@"3.0.0"];
-    if (includeReference) {
-        [list addObject:@"4.0.0"];
+    for (const auto &version : tgcalls::Meta::Versions()) {
+        [list addObject:[NSString stringWithUTF8String:version.c_str()]];
     }
-    [list addObject:@"4.0.1"];
+    [list sortUsingComparator:^NSComparisonResult(NSString * _Nonnull lhs, NSString * _Nonnull rhs) {
+        return [lhs compare:rhs];
+    }];
+
     return list;
 }
 
@@ -915,14 +929,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         tgcalls::EncryptionKey encryptionKey(encryptionKeyValue, isOutgoing);
         
-        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            tgcalls::Register<tgcalls::InstanceImpl>();
-            tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
-            tgcalls::Register<tgcalls::InstanceV2Impl>();
-        });
+        [OngoingCallThreadLocalContextWebrtc ensureRegisteredImplementations];
         
+        __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
             .config = config,
             .persistentState = (tgcalls::PersistentState){ derivedStateValue },
