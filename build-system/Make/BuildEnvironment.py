@@ -154,5 +154,6 @@ class BuildEnvironment:
                 exit(1)
 
         self.app_version = versions.app_version
+        self.partisan_version = versions.partisan_version
         self.xcode_version = versions.xcode_version
         self.bazel_version = versions.bazel_version
