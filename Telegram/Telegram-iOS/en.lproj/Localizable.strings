@@ -7520,3 +7520,6 @@ Sorry for the inconvenience.";
 "Group.RequestToJoinSentDescriptionGroup" = "You will be able to send messages once the admins approve your request.";
 
 "Channel.AdminLog.JoinedViaPublicRequest" = "%1$@ joined via public request, approved by %2$@";
+
+"Share.UploadProgress" = "Uploading • %d%";
+"Share.UploadDone" = "Done";

@@ -2764,31 +2764,37 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             shareButtonNode.removeFromSupernode()
         }
         
-        if case .System = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
+        if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
-                animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
-                animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
-                strongSelf.clippingNode.clipsToBounds = true
-                animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
-                    let _ = strongSelf
-                    //strongSelf?.clippingNode.clipsToBounds = false
-                })
+                if useDisplayLinkAnimations {
+                    let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
+                        if let strongSelf = strongSelf {
+                            strongSelf.backgroundNode.frame = frame
+                            strongSelf.clippingNode.position = CGPoint(x: frame.midX, y: frame.midY)
+                            strongSelf.clippingNode.bounds = CGRect(origin:  CGPoint(x: frame.minX, y: frame.minY), size: frame.size)
+                            
+                            strongSelf.backgroundNode.updateLayout(size: frame.size, transition: .immediate)
+                            strongSelf.backgroundWallpaperNode.updateFrame(frame, transition: .immediate)
+                            strongSelf.shadowNode.updateLayout(backgroundFrame: frame, transition: .immediate)
+                        }
+                    })
+                    strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
+                } else {
+                    animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                    animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
+                    strongSelf.clippingNode.clipsToBounds = true
+                    animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
+                        let _ = strongSelf
+                        //strongSelf?.clippingNode.clipsToBounds = false
+                    })
 
-                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
-                animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
-                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
-                strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
+                    strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
+                    animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
+                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: animation.transition)
+                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: animation.transition)
+                }
                 
                 if let _ = strongSelf.backgroundNode.type {
-                    /*var incomingOffset: CGFloat = 0.0
-                    switch type {
-                    case .incoming:
-                        incomingOffset = 5.0
-                    default:
-                        break
-                    }*/
-                    //strongSelf.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-                    //strongSelf.mainContainerNode.targetNodeForActivationProgressContentRect = strongSelf.mainContextSourceNode.contentRect
                     if !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                         if let (rect, size) = strongSelf.absoluteRect {
                             strongSelf.updateAbsoluteRect(rect, within: size)
