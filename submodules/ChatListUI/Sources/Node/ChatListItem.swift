@@ -191,7 +191,7 @@ private let ungroupIcon = ItemListRevealOptionIcon.animation(animation: "anim_un
 private let readIcon = ItemListRevealOptionIcon.animation(animation: "anim_read", scale: 1.0, offset: 0.0, replaceColors: nil, flip: false)
 private let unreadIcon = ItemListRevealOptionIcon.animation(animation: "anim_unread", scale: 1.0, offset: 0.0, replaceColors: [0x2194fa], flip: false)
 private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_archive", scale: 1.0, offset: 2.0, replaceColors: [0xa9a9ad], flip: false)
-private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.486, offset: -9.0, replaceColors: [0xa9a9ad], flip: false)
+private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.642, offset: -9.0, replaceColors: [0xa9a9ad], flip: false)
 private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: 2.0, replaceColors: [0xbdbdc2], flip: false)
 private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: -20.0, replaceColors: [0xbdbdc2], flip: true)
 

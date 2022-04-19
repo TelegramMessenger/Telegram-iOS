@@ -153,13 +153,13 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
 
             switch tagMask {
             case MessageTags.file:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_FileCount(Int32(count)), isActivity: false, key: .files)
             case MessageTags.music:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_MusicCount(Int32(count)), isActivity: false, key: .music)
             case MessageTags.voiceOrInstantVideo:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_VoiceMessageCount(Int32(count)), isActivity: false, key: .voice)
             case MessageTags.webPage:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_LinkCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_LinkCount(Int32(count)), isActivity: false, key: .links)
             default:
                 return nil
             }

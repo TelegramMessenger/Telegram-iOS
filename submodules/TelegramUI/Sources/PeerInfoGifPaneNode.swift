@@ -889,7 +889,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
 
             switch contentType {
             case .gifs:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false, key: .gifs)
             default:
                 return nil
             }
