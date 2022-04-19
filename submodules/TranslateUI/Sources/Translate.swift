@@ -146,7 +146,7 @@ public func canTranslateText(context: AccountContext, text: String, showTranslat
         return (false, nil)
     }
 
-    if #available(iOS 15.0, *) {
+    if #available(iOS 12.0, *) {
         var dontTranslateLanguages: [String] = []
         if let ignoredLanguages = ignoredLanguages {
             dontTranslateLanguages = ignoredLanguages

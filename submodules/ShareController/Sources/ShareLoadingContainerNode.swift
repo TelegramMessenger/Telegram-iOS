@@ -1,11 +1,14 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
+import SwiftSignalKit
 import Display
 import Postbox
 import TelegramPresentationData
 import ActivityIndicator
 import RadialStatusNode
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 public enum ShareLoadingState {
     case preparing
@@ -13,7 +16,11 @@ public enum ShareLoadingState {
     case done
 }
 
-public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode {
+protocol ShareLoadingContainer: ASDisplayNode {
+    var state: ShareLoadingState { get set }
+}
+
+public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContainerNode, ShareLoadingContainer {
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private let theme: PresentationTheme
@@ -78,6 +85,232 @@ public final class ShareLoadingContainerNode: ASDisplayNode, ShareContentContain
         transition.updateFrame(node: self.doneStatusNode, frame: statusFrame)
         
         self.contentOffsetUpdated?(-size.height + 64.0, transition)
+    }
+    
+    public func updateSelectedPeers() {
+    }
+}
+
+public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareContentContainerNode, ShareLoadingContainer {
+    private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
+    private let animationNode: AnimatedStickerNode
+    private let doneAnimationNode: AnimatedStickerNode
+    private let progressTextNode: ImmediateTextNode
+    
+    private let progressBackgroundNode: ASDisplayNode
+    private let progressForegroundNode: ASDisplayNode
+    
+    private let animationStatusDisposable = MetaDisposable()
+        
+    private var progressValue: CGFloat = 0.0
+    
+    private var randomCompletionStart: CGFloat = .random(in: 0.94...0.97)
+    private var completionProgress: Double = 0.0
+    private var isDone: Bool = false
+    
+    private var startTimestamp: Double?
+    
+    public var state: ShareLoadingState = .preparing {
+        didSet {
+            switch self.state {
+                case .preparing:
+                    break
+                case let .progress(value):
+                    let currentTimestamp = CACurrentMediaTime()
+                    if self.startTimestamp == nil {
+                        self.startTimestamp = currentTimestamp
+                    } else if let startTimestamp = self.startTimestamp, currentTimestamp - startTimestamp < 1.0, value > 0.5 && value < 0.9 {
+                        self.randomCompletionStart = 0.8
+                    }
+                
+                    if let (size, isLandscape, bottomInset) = self.validLayout {
+                        self.updateLayout(size: size, isLandscape: isLandscape, bottomInset: bottomInset, transition: .animated(duration: 0.3, curve: .easeInOut))
+                    }
+                case .done:
+                    if let (size, isLandscape, bottomInset) = self.validLayout {
+                        self.updateLayout(size: size, isLandscape: isLandscape, bottomInset: bottomInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    }
+                    self.animationNode.stopAtNearestLoop = true
+                    self.animationNode.completed = { [weak self] _ in
+                        if let strongSelf = self {
+                            strongSelf.animationNode.visibility = false
+                            strongSelf.doneAnimationNode.visibility = true
+                            strongSelf.doneAnimationNode.isHidden = false
+                        }
+                    }
+                    self.animationNode.frameUpdated = { [weak self] index, total in
+                        if let strongSelf = self {
+                            let progress = min(1.0, CGFloat(index) / CGFloat(total))
+                            if abs(progress - strongSelf.completionProgress) >= 0.05 || progress == 1.0 {
+                                strongSelf.completionProgress = 0.5 * progress
+                                
+                                if let (size, isLandscape, bottomInset) = strongSelf.validLayout {
+                                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, bottomInset: bottomInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                }
+                            }
+                        }
+                    }
+                    self.doneAnimationNode.frameUpdated = { [weak self] index, total in
+                        if let strongSelf = self {
+                            let progress =  0.5 + min(1.0, CGFloat(index) / CGFloat(total) * 2.1) * 0.5
+                            if abs(progress - strongSelf.completionProgress) >= 0.05 || progress == 1.0 {
+                                strongSelf.completionProgress = progress
+                                
+                                if progress == 1.0, !strongSelf.isDone {
+                                    strongSelf.isDone = true
+                                    
+                                    if let snapshotView = strongSelf.progressTextNode.view.snapshotContentTree() {
+                                        snapshotView.frame = strongSelf.progressTextNode.frame
+                                        strongSelf.view.addSubview(snapshotView)
+                                        
+                                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                            snapshotView?.removeFromSuperview()
+                                        })
+                                        snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -20.0), duration: 0.25, removeOnCompletion: false, additive: true)
+                                        
+                                        strongSelf.progressTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                        strongSelf.progressTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 20.0), to: CGPoint(), duration: 0.25, additive: true)
+                                    }
+                                }
+                                
+                                if let (size, isLandscape, bottomInset) = strongSelf.validLayout {
+                                    strongSelf.updateLayout(size: size, isLandscape: isLandscape, bottomInset: bottomInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+                                }
+                            }
+                        }
+                    }
+                    self.doneAnimationNode.started = { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.animationNode.isHidden = true
+                    }
+            }
+        }
+    }
+    
+    private var elapsedTime: Double = 0.0
+    public var completionDuration: Double {
+        return self.elapsedTime + 3.0 + 0.15
+    }
+    
+    public init(theme: PresentationTheme, strings: PresentationStrings, forceNativeAppearance: Bool) {
+        self.theme = theme
+        self.strings = strings
+        
+        self.animationNode = AnimatedStickerNode()
+        self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ShareProgress"), width: 256, height: 256, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+        self.animationNode.visibility = true
+        
+        self.doneAnimationNode = AnimatedStickerNode()
+        self.doneAnimationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "ShareDone"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+        self.doneAnimationNode.visibility = false
+        self.doneAnimationNode.isHidden = true
+        
+        self.progressTextNode = ImmediateTextNode()
+        self.progressTextNode.textAlignment = .center
+        
+        self.progressBackgroundNode = ASDisplayNode()
+        self.progressBackgroundNode.backgroundColor = theme.actionSheet.controlAccentColor.withMultipliedAlpha(0.2)
+        self.progressBackgroundNode.cornerRadius = 3.0
+        
+        self.progressForegroundNode = ASDisplayNode()
+        self.progressForegroundNode.backgroundColor = theme.actionSheet.controlAccentColor
+        self.progressForegroundNode.cornerRadius = 3.0
+        
+        super.init()
+        
+        self.addSubnode(self.animationNode)
+        self.addSubnode(self.doneAnimationNode)
+        
+        self.addSubnode(self.progressTextNode)
+        
+        self.addSubnode(self.progressBackgroundNode)
+        self.addSubnode(self.progressForegroundNode)
+        
+        self.animationStatusDisposable.set((self.animationNode.status
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self {
+                strongSelf.elapsedTime = status.duration - status.timestamp
+            }
+        }))
+    }
+    
+    deinit {
+        self.animationStatusDisposable.dispose()
+    }
+    
+    public func activate() {
+    }
+    
+    public func deactivate() {
+    }
+    
+    public func setEnsurePeerVisibleOnLayout(_ peerId: PeerId?) {
+    }
+    
+    public func setContentOffsetUpdated(_ f: ((CGFloat, ContainedViewLayoutTransition) -> Void)?) {
+        self.contentOffsetUpdated = f
+    }
+    
+    private var validLayout: (CGSize, Bool, CGFloat)?
+    public func updateLayout(size: CGSize, isLandscape: Bool, bottomInset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, isLandscape, bottomInset)
+        
+        let nodeHeight: CGFloat = 400.0
+        
+        let inset: CGFloat = 24.0
+        let progressHeight: CGFloat = 6.0
+        let spacing: CGFloat = 16.0
+        
+        var progress: CGFloat
+        switch self.state {
+            case .preparing:
+                progress = 0.0
+            case let .progress(value):
+                progress = CGFloat(value) * self.randomCompletionStart
+            case .done:
+                progress = self.randomCompletionStart + (1.0 - self.randomCompletionStart) * self.completionProgress
+        }
+        self.progressValue = max(self.progressValue, progress)
+        progress = self.progressValue
+        
+        let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
+        self.progressBackgroundNode.frame = progressFrame
+        let progressForegroundFrame = CGRect(x: progressFrame.minX, y: progressFrame.minY, width: floorToScreenPixels(progressFrame.width * progress), height: progressHeight)
+        if !self.progressForegroundNode.frame.width.isZero {
+            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame)
+        } else {
+            self.progressForegroundNode.frame = progressForegroundFrame
+        }
+        
+        let progressText: String
+        if self.isDone {
+            progressText = self.strings.Share_UploadDone
+        } else {
+            progressText = self.strings.Share_UploadProgress(Int(progress * 100.0)).string
+        }
+        
+        self.progressTextNode.attributedText = NSAttributedString(string: progressText, font: Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers]), textColor: self.theme.actionSheet.primaryTextColor)
+        let progressTextSize = self.progressTextNode.updateLayout(size)
+        let progressTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - progressTextSize.width) / 2.0), y: progressFrame.minY - spacing - 9.0 - progressTextSize.height), size: progressTextSize)
+        self.progressTextNode.frame = progressTextFrame
+        
+        let imageSide: CGFloat = 160.0
+        let imageSize = CGSize(width: imageSide, height: imageSide)
+        
+        let animationFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (progressTextFrame.minY - imageSize.height - 20.0)), size: imageSize)
+        self.animationNode.frame = animationFrame
+        self.animationNode.updateLayout(size: imageSize)
+        
+        self.doneAnimationNode.frame = animationFrame
+        self.doneAnimationNode.updateLayout(size: imageSize)
+        
+        self.contentOffsetUpdated?(-size.height + nodeHeight * 0.5, transition)
     }
     
     public func updateSelectedPeers() {
