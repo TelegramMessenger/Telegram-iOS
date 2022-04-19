@@ -426,6 +426,7 @@ public final class NavigationButtonNode: ContextControllerSourceNode {
         node.bold = false
         node.isEnabled = true
         node.node = nil
+        node.hitTestSlop = isBack ? UIEdgeInsets(top: 0.0, left: -20.0, bottom: 0.0, right: 0.0) : UIEdgeInsets()
         
         if 1 < self.nodes.count {
             for i in 1 ..< self.nodes.count {

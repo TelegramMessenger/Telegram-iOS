@@ -52,7 +52,8 @@ final class PeerInfoPaneWrapper {
     }
 }
 
-enum PeerInfoPaneKey {
+enum PeerInfoPaneKey: Int32 {
+    case members
     case media
     case files
     case links
@@ -60,7 +61,6 @@ enum PeerInfoPaneKey {
     case music
     case gifs
     case groupsInCommon
-    case members
 }
 
 final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
@@ -479,8 +479,11 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     }
 
     private let currentPaneStatusPromise = Promise<PeerInfoStatusData?>(nil)
-    var currentPaneStatus: Signal<PeerInfoStatusData?, NoError> {
-        return self.currentPaneStatusPromise.get()
+    private let nextPaneStatusPromise = Promise<PeerInfoStatusData?>(nil)
+    private let paneTransitionPromise = ValuePromise<CGFloat?>(nil)
+    
+    var currentPaneStatus: Signal<(PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), NoError> {
+        return combineLatest(queue: Queue.mainQueue(), self.currentPaneStatusPromise.get(), self.nextPaneStatusPromise.get(), self.paneTransitionPromise.get())
     }
     
     private var currentPanes: [PeerInfoPaneKey: PeerInfoPaneWrapper] = [:]
@@ -549,6 +552,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     strongSelf.currentPaneUpdated?(true)
 
                     strongSelf.currentPaneStatusPromise.set(strongSelf.currentPane?.node.status ?? .single(nil))
+                    strongSelf.nextPaneStatusPromise.set(.single(nil))
+                    strongSelf.paneTransitionPromise.set(nil)
                 }
             } else if strongSelf.pendingSwitchToPaneKey != key {
                 strongSelf.pendingSwitchToPaneKey = key
@@ -624,7 +629,13 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     transitionFraction = max(0.0, transitionFraction)
                 }
                 self.transitionFraction = transitionFraction
+                
+//                let nextKey = availablePanes[updatedIndex]
+//                print(transitionFraction)
+                self.paneTransitionPromise.set(transitionFraction)
+                
                 self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: expansionFraction, presentationData: presentationData, data: data, transition: .immediate)
+                self.currentPaneUpdated?(false)
             }
         case .cancelled, .ended:
             if let (size, sideInset, bottomInset, visibleHeight, expansionFraction, presentationData, data) = self.currentParams, let availablePanes = data?.availablePanes, availablePanes.count > 1, let currentPaneKey = self.currentPaneKey, let currentIndex = availablePanes.firstIndex(of: currentPaneKey) {

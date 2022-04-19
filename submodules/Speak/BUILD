@@ -11,6 +11,7 @@ swift_library(
     ],
     deps = [
         "//submodules/Display:Display",
+        "//submodules/AccountContext:AccountContext",
     ],
     visibility = [
         "//visibility:public",

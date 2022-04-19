@@ -46,7 +46,7 @@ public final class ManagedAnimationState {
             } else if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
                 data = unpackedData
             }
-            guard let instance = LottieInstance(data: data, fitzModifier: .none, cacheKey: item.source.cacheKey) else {
+            guard let instance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: item.replaceColors, cacheKey: item.source.cacheKey) else {
                 return nil
             }
             resolvedInstance = instance
@@ -123,13 +123,15 @@ public enum ManagedAnimationSource: Equatable {
 
 public struct ManagedAnimationItem {
     public let source: ManagedAnimationSource
+    public let replaceColors: [UInt32: UInt32]?
     public var frames: ManagedAnimationFrameRange?
     public var duration: Double?
     public var loop: Bool
     var callbacks: [(Int, () -> Void)]
     
-    public init(source: ManagedAnimationSource, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false, callbacks: [(Int, () -> Void)] = []) {
+    public init(source: ManagedAnimationSource, replaceColors: [UInt32: UInt32]? = nil, frames: ManagedAnimationFrameRange? = nil, duration: Double? = nil, loop: Bool = false, callbacks: [(Int, () -> Void)] = []) {
         self.source = source
+        self.replaceColors = replaceColors
         self.frames = frames
         self.duration = duration
         self.loop = loop
@@ -314,5 +316,37 @@ open class ManagedAnimationNode: ASDisplayNode {
         
         self.imageNode.bounds = self.bounds
         self.imageNode.position = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
+    }
+}
+
+public final class SimpleAnimationNode: ManagedAnimationNode {
+    private let stillItem: ManagedAnimationItem
+    private let animationItem: ManagedAnimationItem
+    
+    public let size: CGSize
+    private let playOnce: Bool
+    public private(set) var didPlay = false
+    
+    public init(animationName: String, replaceColors: [UInt32: UInt32]? = nil, size: CGSize, playOnce: Bool = false) {
+        self.size = size
+        self.playOnce = playOnce
+        self.stillItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors, frames: .range(startFrame: 0, endFrame: 0), duration: 0.01)
+        self.animationItem = ManagedAnimationItem(source: .local(animationName), replaceColors: replaceColors)
+
+        super.init(size: size)
+        
+        self.trackTo(item: self.stillItem)
+    }
+    
+    public func play() {
+        if !self.playOnce || !self.didPlay {
+            self.didPlay = true
+            self.trackTo(item: self.animationItem)
+        }
+    }
+    
+    public func reset() {
+        self.didPlay = false
+        self.trackTo(item: self.stillItem)
     }
 }

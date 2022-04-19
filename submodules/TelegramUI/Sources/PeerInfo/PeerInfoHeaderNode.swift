@@ -2233,11 +2233,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
         
-    var initializedCredibilityIcon = false
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: PeerInfoStatusData?, isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
+    private var initializedCredibilityIcon = false
+    private var currentPanelStatusData: PeerInfoStatusData?
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
         self.avatarListNode.listContainerNode.peer = peer
+        
+        let previousPanelStatusData = self.currentPanelStatusData
+        self.currentPanelStatusData = panelStatusData.0
         
         let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
         self.avatarSize = avatarSize
@@ -2388,13 +2392,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     title = " "
                 }
             }
-//            if self.isSettings {
-                titleString = NSAttributedString(string: title, font: Font.medium(29.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-                smallTitleString = NSAttributedString(string: title, font: Font.semibold(28.0), textColor: .white)
-//            } else {
-//                titleString = NSAttributedString(string: title, font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-//                smallTitleString = titleString
-//            }
+
+            titleString = NSAttributedString(string: title, font: Font.medium(29.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            smallTitleString = NSAttributedString(string: title, font: Font.semibold(28.0), textColor: .white)
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(user.phone ?? "")
                 
@@ -2415,7 +2415,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleString = NSAttributedString(string: statusData.text, font: Font.regular(17.0), textColor: subtitleColor)
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
 
-                if let panelStatusData = panelStatusData {
+                let (maybePanelStatusData, _, _) = panelStatusData
+                if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
                     if panelStatusData.isActivity {
                         subtitleColor = presentationData.theme.list.itemAccentColor
@@ -2453,7 +2454,23 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallSubtitleString, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleString.string
-
+        
+        if let previousPanelStatusData = previousPanelStatusData, let currentPanelStatusData = panelStatusData.0, let previousPanelStatusDataKey = previousPanelStatusData.key, let currentPanelStatusDataKey = currentPanelStatusData.key, previousPanelStatusDataKey != currentPanelStatusDataKey {
+            if let snapshotView = self.panelSubtitleNode.view.snapshotContentTree() {
+                let direction: CGFloat = previousPanelStatusDataKey.rawValue > currentPanelStatusDataKey.rawValue ? 1.0 : -1.0
+                
+                self.panelSubtitleNode.view.superview?.addSubview(snapshotView)
+                snapshotView.frame = self.panelSubtitleNode.frame
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 100.0 * direction, y: 0.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                
+                self.panelSubtitleNode.layer.animatePosition(from: CGPoint(x: 100.0 * direction * -1.0, y: 0.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                self.panelSubtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            }
+        }
+        
         let panelSubtitleNodeLayout = self.panelSubtitleNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: panelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize),
             TitleNodeStateExpanded: MultiScaleTextState(attributedText: panelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize)

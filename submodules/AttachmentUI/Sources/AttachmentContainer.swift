@@ -209,18 +209,18 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 if case let .known(value) = visibleContentOffset, value <= epsilon {
                     if let scrollView = scrollView {
                         scrollView.bounces = false
-                        scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: false)
+                        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: 0.0), animated: false)
                     }
                 } else if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
                     scrollView.bounces = false
-                    scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                    scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                 } else if let scrollView = scrollView {
                     translation = panOffset
                     currentOffset = topInset + translation
                     if self.isExpanded {
                         recognizer.setTranslation(CGPoint(), in: self.view)
                     } else if currentOffset > 0.0 {
-                        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                     }
                 }
                 
@@ -287,7 +287,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         if let listNode = listNode {
                             listNode.scroller.setContentOffset(CGPoint(), animated: false)
                         } else if let scrollView = scrollView {
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                         }
                         
                         let distance = topInset - offset
@@ -318,9 +318,9 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     if let listNode = listNode {
                         listNode.scroller.setContentOffset(CGPoint(), animated: false)
                     } else if let scrollView = scrollView {
-                        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                         Queue.mainQueue().after(0.01, {
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
+                            scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: -scrollView.contentInset.top), animated: false)
                         })
                     }
                     

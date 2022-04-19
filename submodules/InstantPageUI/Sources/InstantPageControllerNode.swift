@@ -349,7 +349,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let maxBarHeight: CGFloat
         if !layout.safeInsets.top.isZero {
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight > 34.0 {
-                maxBarHeight = statusBarHeight + 34.0
+                maxBarHeight = statusBarHeight + 44.0
             } else {
                 maxBarHeight = layout.safeInsets.top + 34.0
             }

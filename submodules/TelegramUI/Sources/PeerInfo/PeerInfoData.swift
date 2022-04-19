@@ -296,6 +296,7 @@ private func peerInfoAvailableMediaPanes(context: AccountContext, peerId: PeerId
 struct PeerInfoStatusData: Equatable {
     var text: String
     var isActivity: Bool
+    var key: PeerInfoPaneKey?
 }
 
 enum PeerInfoMembersData: Equatable {
@@ -498,7 +499,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         if let presence = manager.currentValue {
                             let timestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                             let (text, isActivity) = stringAndActivityForUserPresence(strings: strings, dateTimeFormat: dateTimeFormat, presence: EnginePeer.Presence(presence), relativeTo: Int32(timestamp), expanded: true)
-                            return PeerInfoStatusData(text: text, isActivity: isActivity)
+                            return PeerInfoStatusData(text: text, isActivity: isActivity, key: nil)
                         } else {
                             return nil
                         }
@@ -530,9 +531,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 |> distinctUntilChanged).start(next: { inputData in
                     switch inputData {
                     case .bot:
-                        subscriber.putNext(PeerInfoStatusData(text: strings.Bot_GenericBotStatus, isActivity: false))
+                        subscriber.putNext(PeerInfoStatusData(text: strings.Bot_GenericBotStatus, isActivity: false, key: nil))
                     case .support:
-                        subscriber.putNext(PeerInfoStatusData(text: strings.Bot_GenericSupportStatus, isActivity: false))
+                        subscriber.putNext(PeerInfoStatusData(text: strings.Bot_GenericSupportStatus, isActivity: false, key: nil))
                     default:
                         var presence: TelegramUserPresence?
                         if case let .presence(value) = inputData {
@@ -621,12 +622,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             let status = context.account.viewTracker.peerView(peerId, updateData: false)
             |> map { peerView -> PeerInfoStatusData? in
                 guard let _ = peerView.peers[peerId] as? TelegramChannel else {
-                    return PeerInfoStatusData(text: strings.Channel_Status, isActivity: false)
+                    return PeerInfoStatusData(text: strings.Channel_Status, isActivity: false, key: nil)
                 }
                 if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount, memberCount != 0 {
-                    return PeerInfoStatusData(text: strings.Conversation_StatusSubscribers(memberCount), isActivity: false)
+                    return PeerInfoStatusData(text: strings.Conversation_StatusSubscribers(memberCount), isActivity: false, key: nil)
                 } else {
-                    return PeerInfoStatusData(text: strings.Channel_Status, isActivity: false)
+                    return PeerInfoStatusData(text: strings.Channel_Status, isActivity: false, key: nil)
                 }
             }
             |> distinctUntilChanged
@@ -747,9 +748,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         
                         string.append("\(strings.Conversation_StatusMembers(Int32(memberCount))), ")
                         string.append(strings.Conversation_StatusOnline(Int32(onlineMemberCount)))
-                        return PeerInfoStatusData(text: string, isActivity: false)
+                        return PeerInfoStatusData(text: string, isActivity: false, key: nil)
                     } else if memberCount > 0 {
-                        return PeerInfoStatusData(text: strings.Conversation_StatusMembers(Int32(memberCount)), isActivity: false)
+                        return PeerInfoStatusData(text: strings.Conversation_StatusMembers(Int32(memberCount)), isActivity: false, key: nil)
                     }
                 } else if let group = peerView.peers[groupId] as? TelegramGroup, let cachedGroupData = peerView.cachedData as? CachedGroupData {
                     var onlineCount = 0
@@ -772,13 +773,13 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                         
                         string.append("\(strings.Conversation_StatusMembers(Int32(group.participantCount))), ")
                         string.append(strings.Conversation_StatusOnline(Int32(onlineCount)))
-                        return PeerInfoStatusData(text: string, isActivity: false)
+                        return PeerInfoStatusData(text: string, isActivity: false, key: nil)
                     } else {
-                        return PeerInfoStatusData(text: strings.Conversation_StatusMembers(Int32(group.participantCount)), isActivity: false)
+                        return PeerInfoStatusData(text: strings.Conversation_StatusMembers(Int32(group.participantCount)), isActivity: false, key: nil)
                     }
                 }
                 
-                return PeerInfoStatusData(text: strings.Group_Status, isActivity: false)
+                return PeerInfoStatusData(text: strings.Group_Status, isActivity: false, key: nil)
             }
             |> distinctUntilChanged
             

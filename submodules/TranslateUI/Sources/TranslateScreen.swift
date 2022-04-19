@@ -160,7 +160,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 self.isSpeakingTranslatedText = false
                 
                 self.isSpeakingOriginalText = true
-                self.speechHolder = speakText(self.text)
+                self.speechHolder = speakText(context: self.context, text: self.text)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -188,7 +188,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 self.isSpeakingOriginalText = false
                 
                 self.isSpeakingTranslatedText = true
-                self.speechHolder = speakText(translatedText)
+                self.speechHolder = speakText(context: self.context, text: translatedText)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -240,7 +240,12 @@ private final class TranslateScreenComponent: CombinedComponent {
             let itemSpacing: CGFloat = 16.0
             let itemHeight: CGFloat = 44.0
             
-            let locale = Locale(identifier: environment.strings.baseLanguageCode)
+            var languageCode = environment.strings.baseLanguageCode
+            let rawSuffix = "-raw"
+            if languageCode.hasSuffix(rawSuffix) {
+                languageCode = String(languageCode.dropLast(rawSuffix.count))
+            }
+            let locale = Locale(identifier: languageCode)
             let fromLanguage: String
             if let languageCode = state.fromLanguage {
                 fromLanguage = locale.localizedString(forLanguageCode: languageCode) ?? ""
@@ -984,7 +989,14 @@ public class TranslateScreen: ViewController {
     
     public convenience init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        var toLanguage = toLanguage ?? presentationData.strings.baseLanguageCode
+        
+        var baseLanguageCode = presentationData.strings.baseLanguageCode
+        let rawSuffix = "-raw"
+        if baseLanguageCode.hasSuffix(rawSuffix) {
+            baseLanguageCode = String(baseLanguageCode.dropLast(rawSuffix.count))
+        }
+        
+        var toLanguage = toLanguage ?? baseLanguageCode
         
         if toLanguage == fromLanguage {
             toLanguage = "en"

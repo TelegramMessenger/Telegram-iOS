@@ -30,6 +30,7 @@ public struct WebAppParameters {
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
     let fromMenu: Bool
+    let isSimple: Bool
     
     public init(
         peerId: PeerId,
@@ -40,7 +41,8 @@ public struct WebAppParameters {
         payload: String?,
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
-        fromMenu: Bool
+        fromMenu: Bool,
+        isSimple: Bool
     ) {
         self.peerId = peerId
         self.botId = botId
@@ -51,6 +53,7 @@ public struct WebAppParameters {
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
         self.fromMenu = fromMenu
+        self.isSimple = isSimple
     }
 }
 
@@ -95,6 +98,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         private var placeholderDisposable: Disposable?
         private var iconDisposable: Disposable?
         private var keepAliveDisposable: Disposable?
+        
+        private var didTransitionIn = false
+        private var dismissed = false
+        
+        private var validLayout: (ContainerViewLayout, CGFloat)?
         
         init(context: AccountContext, controller: WebAppController, present: @escaping (ViewController, Any?) -> Void) {
             self.context = context
@@ -306,8 +314,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             return nil
         }
         
-        
-        var didTransitionIn = false
         private func animateTransitionIn() {
             guard !self.didTransitionIn, let webView = self.webView else {
                 return
@@ -355,7 +361,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
                 
-        private var validLayout: (ContainerViewLayout, CGFloat)?
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
             let previousLayout = self.validLayout?.0
             self.validLayout = (layout, navigationBarHeight)
@@ -420,10 +425,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
              
         private var delayedScriptMessage: WKScriptMessage?
         private func handleScriptMessage(_ message: WKScriptMessage) {
+            guard let controller = self.controller else {
+                return
+            }
             guard let body = message.body as? [String: Any] else {
                 return
             }
-            
             guard let eventName = body["eventName"] as? String else {
                 return
             }
@@ -432,7 +439,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_ready":
                     self.animateTransitionIn()
                 case "web_app_data_send":
-                    if let eventData = body["eventData"] as? String {
+                    if controller.isSimple, let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
                     }
                 case "web_app_setup_main_button":
@@ -460,6 +467,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     if let (layout, navigationBarHeight) = self.validLayout {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                     }
+                case "web_app_request_theme":
+                    self.sendThemeChangedEvent()
                 case "web_app_expand":
                     self.controller?.requestAttachmentMenuExpansion()
                 case "web_app_close":
@@ -469,7 +478,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
         
-        private var dismissed = false
         private func handleSendData(data string: String) {
             guard let controller = self.controller, let buttonText = controller.buttonText, !self.dismissed else {
                 return
@@ -498,8 +506,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             } else {
                 self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
-            
-            let themeParams = generateWebAppThemeParams(presentationData.theme)
+            self.sendThemeChangedEvent()
+        }
+        
+        private func sendThemeChangedEvent() {
+            let themeParams = generateWebAppThemeParams(self.presentationData.theme)
             var themeParamsString = "{theme_params: {"
             for (key, value) in themeParams {
                 if let value = value as? Int32 {
@@ -531,6 +542,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let payload: String?
     private let buttonText: String?
     private let fromMenu: Bool
+    private let isSimple: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
     
@@ -551,6 +563,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.payload = params.payload
         self.buttonText = params.buttonText
         self.fromMenu = params.fromMenu
+        self.isSimple = params.isSimple
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
         

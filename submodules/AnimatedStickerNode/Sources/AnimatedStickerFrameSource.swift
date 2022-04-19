@@ -587,7 +587,7 @@ final class AnimatedStickerDirectFrameSource: AnimatedStickerFrameSource {
         self.currentFrame = 0
         let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024) ?? data
         
-        guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: "") else {
+        guard let animation = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: "") else {
             return nil
         }
         self.animation = animation
