@@ -624,7 +624,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     @objc private func moreButtonPressed() {
-        self.moreButtonNode.action?(self.moreButtonNode.contextSourceNode, nil)
+        self.moreButtonNode.buttonPressed()
     }
     
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {

@@ -1339,7 +1339,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     @objc private func rightButtonPressed() {
-        self.moreButtonNode.action?(self.moreButtonNode.contextSourceNode, nil)
+        self.moreButtonNode.buttonPressed()
     }
     
     public func resetForReuse() {
