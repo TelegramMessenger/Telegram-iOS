@@ -81,7 +81,7 @@ public final class CallKitIntegration {
         }
     }
     
-    func dropCall(uuid: UUID) {
+    public func dropCall(uuid: UUID) {
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             (sharedProviderDelegate as? CallKitProviderDelegate)?.dropCall(uuid: uuid)
         }
