@@ -538,6 +538,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let context: AccountContext
     private let peerId: PeerId
     private let botId: PeerId
+    private let botName: String
     private let url: String?
     private let queryId: Int64?
     private let payload: String?
@@ -559,6 +560,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.context = context
         self.peerId = params.peerId
         self.botId = params.botId
+        self.botName = params.botName
         self.url = params.url
         self.queryId = params.queryId
         self.payload = params.payload
@@ -666,8 +668,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     f(.default)
                     
                     if let strongSelf = self {
-                        let _ = context.engine.messages.removeBotFromAttachMenu(botId: strongSelf.botId).start()
-                        strongSelf.dismiss()
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        strongSelf.present(textAlertController(context: context, title: presentationData.strings.WebApp_RemoveConfirmationTitle, text: presentationData.strings.WebApp_RemoveConfirmationText(strongSelf.botName).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: { [weak self] in
+                            if let strongSelf = self {
+                                let _ = context.engine.messages.removeBotFromAttachMenu(botId: strongSelf.botId).start()
+                                strongSelf.dismiss()
+                            }
+                        })], parseMarkdown: true), in: .window(.root))
                     }
                 })))
             }

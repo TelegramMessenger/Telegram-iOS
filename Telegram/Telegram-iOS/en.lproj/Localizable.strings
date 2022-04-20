@@ -7439,6 +7439,9 @@ Sorry for the inconvenience.";
 "WebApp.MessagePreview" = "Message Preview";
 "WebApp.Send" = "Send";
 
+"WebApp.RemoveConfirmationTitle" = "Remove Bot";
+"WebApp.RemoveConfirmationText" = "Remove **%@** from the attachment menu?";
+
 "Notifications.SystemTones" = "SYSTEM TONES";
 "Notifications.TelegramTones" = "TELEGRAM TONES";
 
