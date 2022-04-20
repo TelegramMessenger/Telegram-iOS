@@ -955,6 +955,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         let ItemAbout = 2
         let ItemLocationHeader = 3
         let ItemLocation = 4
+        let ItemAdmins = 5
+        let ItemMembers = 6
+        let ItemMemberRequests = 7
         
         if let location = (data.cachedData as? CachedChannelData)?.peerGeoLocation {
             items[.groupLocation]!.append(PeerInfoScreenHeaderItem(id: ItemLocationHeader, text: presentationData.strings.GroupInfo_Location.uppercased()))
@@ -1010,6 +1013,32 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
                     interaction.requestLayout()
                 }))
+            }
+            
+            if case .broadcast = channel.info {
+                var canEditMembers = false
+                if channel.hasPermission(.banMembers) {
+                    canEditMembers = true
+                }
+                if canEditMembers {
+                    if channel.adminRights != nil || channel.flags.contains(.isCreator) {
+                        let adminCount = cachedData.participantsSummary.adminCount ?? 0
+                        let memberCount = cachedData.participantsSummary.memberCount ?? 0
+                        
+                        items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
+                            interaction.openParticipantsSection(.admins)
+                        }))
+                        items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                            interaction.openParticipantsSection(.members)
+                        }))
+                        
+                        if let count = data.requests?.count, count > 0 {
+                            items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
+                                interaction.openParticipantsSection(.memberRequests)
+                            }))
+                        }
+                    }
+                }
             }
         }
     } else if let group = data.peer as? TelegramGroup {
