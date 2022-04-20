@@ -1019,6 +1019,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let previousRecentlySearchedPeerOrder = Atomic<[EnginePeer.Id]>(value: [])
         let fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
+        |> take(1)
         |> map { peers -> [RecentlySearchedPeer] in
             var result: [RecentlySearchedPeer] = []
             let _ = previousRecentlySearchedPeerOrder.modify { current in
