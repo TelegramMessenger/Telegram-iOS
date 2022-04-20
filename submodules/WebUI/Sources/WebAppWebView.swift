@@ -65,12 +65,13 @@ final class WebAppWebView: WKWebView {
         configuration.userContentController = userController
         
         configuration.allowsInlineMediaPlayback = true
+        configuration.allowsPictureInPictureMediaPlayback = false
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-            configuration.mediaTypesRequiringUserActionForPlayback = []
+            configuration.mediaTypesRequiringUserActionForPlayback = .all
         } else if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-            configuration.requiresUserActionForMediaPlayback = false
+            configuration.requiresUserActionForMediaPlayback = true
         } else {
-            configuration.mediaPlaybackRequiresUserAction = false
+            configuration.mediaPlaybackRequiresUserAction = true
         }
         
         super.init(frame: CGRect(), configuration: configuration)

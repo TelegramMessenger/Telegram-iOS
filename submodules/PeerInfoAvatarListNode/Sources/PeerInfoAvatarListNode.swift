@@ -105,6 +105,48 @@ public enum PeerInfoAvatarListItem: Equatable {
         }
     }
     
+    func isSemanticallyEqual(to: PeerInfoAvatarListItem) -> Bool {
+        if case let .topImage(lhsRepresentations, _, _) = self {
+            if case let .topImage(rhsRepresentations, _, _) = self {
+                if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
+                    let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
+                    return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
+                } else {
+                    return false
+                }
+            } else if case let .image(_, rhsRepresentations, _, _) = self {
+                if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
+                    let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
+                    return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+        } else if case let .image(_, lhsRepresentations, _, _) = self {
+            if case let .topImage(rhsRepresentations, _, _) = self {
+                if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
+                    let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
+                    return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
+                } else {
+                    return false
+                }
+            } else if case let .image(_, rhsRepresentations, _, _) = self {
+                if let lhsRepresentation = largestImageRepresentation(lhsRepresentations.map { $0.representation }),
+                    let rhsRepresentation = largestImageRepresentation(rhsRepresentations.map { $0.representation }) {
+                    return lhsRepresentation.isSemanticallyEqual(to: rhsRepresentation)
+                } else {
+                    return false
+                }
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    
     var representations: [ImageRepresentationWithReference] {
         switch self {
             case .custom:
@@ -344,8 +386,14 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
     }
     
     func setup(item: PeerInfoAvatarListItem, isMain: Bool, progress: Signal<Float?, NoError>? = nil, synchronous: Bool, fullSizeOnly: Bool = false) {
+        let previousItem = self.item
         self.item = item
         self.progress = progress
+        
+        var fullSizeOnly = fullSizeOnly
+        if let previousItem = previousItem, previousItem.isSemanticallyEqual(to: item) && self.didSetReady && isMain {
+            fullSizeOnly = true
+        }
         
         if let progress = progress {
             self.loadingProgress.set((progress
@@ -1142,7 +1190,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         var additiveTransitionOffset: CGFloat = 0.0
         var itemsAdded = false
         if self.currentIndex >= 0 && self.currentIndex < self.items.count {
-            let preloadSpan: Int = 2
+            let preloadSpan: Int = 0
             for i in max(0, self.currentIndex - preloadSpan) ... min(self.currentIndex + preloadSpan, self.items.count - 1) {
                 if self.items[i].representations.isEmpty {
                     continue
