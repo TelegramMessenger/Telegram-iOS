@@ -16,7 +16,7 @@ extension BotMenuButton {
 extension BotInfo {
     convenience init(apiBotInfo: Api.BotInfo) {
         switch apiBotInfo {
-            case let .botInfo(_, _, description, descriptionPhoto, apiCommands, apiMenuButton):
+            case let .botInfo(_, _, description, descriptionPhoto, _, apiCommands, apiMenuButton):
                 let photo: TelegramMediaImage? = descriptionPhoto.flatMap(telegramMediaImageFromApiPhoto)
                 var commands: [BotCommand] = []
                 if let apiCommands = apiCommands {

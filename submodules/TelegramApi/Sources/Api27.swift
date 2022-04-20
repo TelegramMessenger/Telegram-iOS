@@ -6698,6 +6698,22 @@ public extension Api.functions.phone {
                 }
 }
 public extension Api.functions.phone {
+                static func saveCallLog(peer: Api.InputPhoneCall, file: Api.InputFile) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1092913030)
+                    peer.serialize(buffer, true)
+                    file.serialize(buffer, true)
+                    return (FunctionDescription(name: "phone.saveCallLog", parameters: [("peer", String(describing: peer)), ("file", String(describing: file))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.phone {
                 static func saveDefaultGroupCallJoinAs(peer: Api.InputPeer, joinAs: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1465786252)
