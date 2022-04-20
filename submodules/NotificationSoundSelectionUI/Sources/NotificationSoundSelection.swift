@@ -377,6 +377,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     
     let playSoundDisposable = MetaDisposable()
     let soundActionDisposable = MetaDisposable()
+    let fetchedSoundsDisposable = ensureDownloadedNotificationSoundList(postbox: context.account.postbox).start()
     
     let arguments = NotificationSoundSelectionArguments(account: context.account, selectSound: { sound in
         updateState { state in
@@ -422,6 +423,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     let controller = ItemListController(context: context, state: signal |> afterDisposed {
         playSoundDisposable.dispose()
         soundActionDisposable.dispose()
+        fetchedSoundsDisposable.dispose()
     })
     controller.enableInteractiveDismiss = true
     if isModal {

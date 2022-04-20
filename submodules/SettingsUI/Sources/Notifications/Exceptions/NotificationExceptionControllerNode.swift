@@ -694,6 +694,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
     
     private let presentationDataValue = Promise<(PresentationTheme, PresentationStrings)>()
     private var listDisposable: Disposable?
+    private var fetchedSoundsDisposable: Disposable?
     
     private var arguments: NotificationExceptionArguments?
     private let stateValue: Atomic<NotificationExceptionState>
@@ -996,12 +997,15 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             
             self?.enqueueTransition(transition)
         })
+        
+        self.fetchedSoundsDisposable = ensureDownloadedNotificationSoundList(postbox: context.account.postbox).start()
     }
     
     deinit {
         self.listDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.updateNotificationsDisposable.dispose()
+        self.fetchedSoundsDisposable?.dispose()
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
