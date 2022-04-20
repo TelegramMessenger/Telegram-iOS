@@ -1061,7 +1061,7 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         self.progress = progress
         
         if let size = self.validLayout {
-            self.updateLayout(size: size, transition: .animated(duration: 0.2, curve: .easeInOut))
+            self.updateLayout(size: size, transition: .animated(duration: 0.5, curve: .linear))
         }
     }
     
@@ -1075,8 +1075,8 @@ private class StorageUsageClearProgressOverlayNode: ASDisplayNode, ActionSheetGr
         let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
         self.progressBackgroundNode.frame = progressFrame
         let progressForegroundFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: floorToScreenPixels(progressFrame.width * CGFloat(self.progress)), height: progressHeight)
-        if !self.progressForegroundNode.frame.width.isZero {
-            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame)
+        if !self.progressForegroundNode.frame.origin.x.isZero {
+            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame, beginWithCurrentState: true)
         } else {
             self.progressForegroundNode.frame = progressForegroundFrame
         }

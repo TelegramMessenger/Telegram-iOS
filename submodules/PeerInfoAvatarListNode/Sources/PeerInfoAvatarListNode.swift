@@ -1190,7 +1190,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         var additiveTransitionOffset: CGFloat = 0.0
         var itemsAdded = false
         if self.currentIndex >= 0 && self.currentIndex < self.items.count {
-            let preloadSpan: Int = 0
+            let preloadSpan: Int = 2
             for i in max(0, self.currentIndex - preloadSpan) ... min(self.currentIndex + preloadSpan, self.items.count - 1) {
                 if self.items[i].representations.isEmpty {
                     continue
