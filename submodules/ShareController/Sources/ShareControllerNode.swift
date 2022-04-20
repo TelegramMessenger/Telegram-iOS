@@ -654,7 +654,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     delay = contentNode.completionDuration
                     
                     if shouldDelay {
-                        Queue.mainQueue().after(delay - 3.0, {
+                        Queue.mainQueue().after(delay - 1.5, {
                             if strongSelf.hapticFeedback == nil {
                                 strongSelf.hapticFeedback = HapticFeedback()
                             }

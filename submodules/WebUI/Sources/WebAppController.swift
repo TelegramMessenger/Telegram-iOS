@@ -137,6 +137,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView = webView
             
             let placeholderNode = ShimmerEffectNode()
+            placeholderNode.allowsGroupOpacity = true
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
             

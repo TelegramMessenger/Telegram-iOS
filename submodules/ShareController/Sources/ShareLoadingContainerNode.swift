@@ -128,7 +128,7 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
                     }
                 
                     if let (size, isLandscape, bottomInset) = self.validLayout {
-                        self.updateLayout(size: size, isLandscape: isLandscape, bottomInset: bottomInset, transition: .animated(duration: 0.3, curve: .easeInOut))
+                        self.updateLayout(size: size, isLandscape: isLandscape, bottomInset: bottomInset, transition: .animated(duration: 0.5, curve: .linear))
                     }
                 case .done:
                     if let (size, isLandscape, bottomInset) = self.validLayout {
@@ -282,8 +282,8 @@ public final class ShareProlongedLoadingContainerNode: ASDisplayNode, ShareConte
         let progressFrame = CGRect(x: inset, y: size.height - inset - progressHeight, width: size.width - inset * 2.0, height: progressHeight)
         self.progressBackgroundNode.frame = progressFrame
         let progressForegroundFrame = CGRect(x: progressFrame.minX, y: progressFrame.minY, width: floorToScreenPixels(progressFrame.width * progress), height: progressHeight)
-        if !self.progressForegroundNode.frame.width.isZero {
-            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame)
+        if !self.progressForegroundNode.frame.origin.x.isZero {
+            transition.updateFrame(node: self.progressForegroundNode, frame: progressForegroundFrame, beginWithCurrentState: true)
         } else {
             self.progressForegroundNode.frame = progressForegroundFrame
         }
