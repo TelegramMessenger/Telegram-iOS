@@ -144,9 +144,9 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
         }
         |> deliverOn(self.queue)
             
-        #if DEBUG
+        /*#if DEBUG
         let debugDumpDirectory = self.debugDumpDirectory
-        #endif
+        #endif*/
         return signal.start(next: { result in
             guard let result = result else {
                 completion(OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: Double(timestampIdMilliseconds), status: .notReady, oggData: Data()))
@@ -155,11 +155,11 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
-                #if DEBUG
+                /*#if DEBUG
                 let tempFilePath = debugDumpDirectory.path + "/\(timestampMilliseconds).mp4"
                 let _ = try? dataValue.subdata(in: 32 ..< dataValue.count).write(to: URL(fileURLWithPath: tempFilePath))
                 print("Dump stream part: \(tempFilePath)")
-                #endif
+                #endif*/
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
