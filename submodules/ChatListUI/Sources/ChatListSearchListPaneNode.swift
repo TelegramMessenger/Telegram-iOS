@@ -1019,7 +1019,6 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let previousRecentlySearchedPeerOrder = Atomic<[EnginePeer.Id]>(value: [])
         let fixedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
-        |> take(1)
         |> map { peers -> [RecentlySearchedPeer] in
             var result: [RecentlySearchedPeer] = []
             let _ = previousRecentlySearchedPeerOrder.modify { current in
@@ -1188,7 +1187,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             if let query = query {
                 foundLocalPeers = combineLatest(
                     context.engine.contacts.searchLocalPeers(query: query.lowercased()),
-                    context.engine.peers.recentlySearchedPeers()
+                    context.engine.peers.recentlySearchedPeers() |> take(1)
                 )
                 |> mapToSignal { local, allRecentlySearched -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: Int], [EngineRenderedPeer], Set<EnginePeer.Id>), NoError> in
                     let recentlySearched = allRecentlySearched.filter { peer in
