@@ -652,9 +652,19 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 let delay: Double
                 if let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareProlongedLoadingContainerNode {
                     delay = contentNode.completionDuration
+                    
+                    if shouldDelay {
+                        Queue.mainQueue().after(delay - 3.0, {
+                            if strongSelf.hapticFeedback == nil {
+                                strongSelf.hapticFeedback = HapticFeedback()
+                            }
+                            strongSelf.hapticFeedback?.success()
+                        })
+                    }
                 } else {
                     delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
                 }
+                                
                 Queue.mainQueue().after(delay, {
                     self?.animateOut(shared: true, completion: {
                         self?.dismiss?(true)
@@ -701,11 +711,6 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                         contentNode.state = .done
                         if fromForeignApp {
                             if !wasDone {
-                                if strongSelf.hapticFeedback == nil {
-                                    strongSelf.hapticFeedback = HapticFeedback()
-                                }
-                                strongSelf.hapticFeedback?.success()
-                                
                                 wasDone = true
                                 doneImpl(true)
                             }

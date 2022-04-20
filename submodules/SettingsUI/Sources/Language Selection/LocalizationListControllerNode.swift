@@ -453,7 +453,7 @@ final class LocalizationListControllerNode: ViewControllerTracingNode {
             if let localizationListState = localizationListState, !localizationListState.availableOfficialLocalizations.isEmpty {
                 strongSelf.currentListState = localizationListState
                 
-                if #available(iOS 15.0, *) {
+                if #available(iOS 12.0, *) {
                     entries.append(.translateTitle(text: presentationData.strings.Localization_TranslateMessages.uppercased()))
                     entries.append(.translate(text: presentationData.strings.Localization_ShowTranslate, value: showTranslate))
                     if showTranslate {
