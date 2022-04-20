@@ -32,6 +32,8 @@ swift_library(
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
     ],
     visibility = [
         "//visibility:public",

@@ -247,6 +247,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private let notificationAuthorizationDisposable = MetaDisposable()
     
     private var replyFromNotificationsDisposables = DisposableSet()
+    private var watchedCallsDisposables = DisposableSet()
     
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
@@ -1582,13 +1583,34 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
             |> take(1)
             |> deliverOnMainQueue).start(next: { activeAccounts in
+                var processed = false
                 for (_, context, _) in activeAccounts.accounts {
                     if context.account.id == accountId {
                         context.account.stateManager.processIncomingCallUpdate(data: updateData, completion: { _ in
                         })
                         
+                        //callUpdate.callId
+                        let disposable = MetaDisposable()
+                        self.watchedCallsDisposables.add(disposable)
+                        
+                        disposable.set((context.account.callSessionManager.callState(internalId: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId))
+                        |> deliverOnMainQueue).start(next: { state in
+                            switch state.state {
+                            case .terminated:
+                                callKitIntegration.dropCall(uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId))
+                            default:
+                                break
+                            }
+                        }))
+                        
+                        processed = true
+                        
                         break
                     }
+                }
+                
+                if !processed {
+                    callKitIntegration.dropCall(uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId))
                 }
             })
             

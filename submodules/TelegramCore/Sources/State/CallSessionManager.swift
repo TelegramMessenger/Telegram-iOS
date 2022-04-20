@@ -537,9 +537,14 @@ private final class CallSessionManagerContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.contexts.removeValue(forKey: internalId)
-                    strongSelf.contextIdByStableId.removeValue(forKey: stableId)
+                    context.state = .terminated(id: nil, accessHash: nil, reason: .ended(.missed), reportRating: false, sendDebugLogs: false)
+                    strongSelf.contextUpdated(internalId: internalId)
                     strongSelf.ringingStatesUpdated()
+                    if context.isEmpty {
+                        strongSelf.contexts.removeValue(forKey: internalId)
+                    }
+                    
+                    strongSelf.contextIdByStableId.removeValue(forKey: stableId)
                 }
             }))
             self.contextIdByStableId[stableId] = internalId

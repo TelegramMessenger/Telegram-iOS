@@ -44,7 +44,7 @@ public final class QrCodeScreen: ViewController {
                 case let .peer(peer):
                     return "https://t.me/\(peer.addressName ?? "")"
                 case let .invite(invite, _):
-                    return invite.link
+                    return invite.link ?? ""
             }
         }
         

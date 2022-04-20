@@ -125,7 +125,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         
-                    let iconSize = CGSize(width: 96.0, height: 96.0)
+                    let iconSize = CGSize(width: 128.0, height: 128.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     

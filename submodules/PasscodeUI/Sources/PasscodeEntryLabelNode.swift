@@ -11,7 +11,7 @@ enum PasscodeEntryTitleAnimation {
 
 final class PasscodeEntryLabelNode: ASDisplayNode {
     private let wrapperNode: ASDisplayNode
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     
     private var validLayout: CGSize?
     
@@ -19,10 +19,11 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
         self.wrapperNode = ASDisplayNode()
         self.wrapperNode.clipsToBounds = true
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.isLayerBacked = false
         self.textNode.textAlignment = .center
         self.textNode.displaysAsynchronously = false
+        self.textNode.maximumNumberOfLines = 2
         
         super.init()
         
@@ -56,9 +57,9 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
                     snapshotView.frame = self.textNode.frame
                     self.textNode.view.superview?.insertSubview(snapshotView, aboveSubview: self.textNode.view)
                     self.textNode.alpha = 0.0
+                    self.textNode.attributedText = text
                     snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                         snapshotView?.removeFromSuperview()
-                        self.textNode.attributedText = text
                         self.textNode.alpha = 1.0
                         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, completion: { _ in
                             completion()
@@ -81,7 +82,7 @@ final class PasscodeEntryLabelNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
         self.validLayout = size
         
-        let textSize = self.textNode.measure(size)
+        let textSize = self.textNode.updateLayout(size)
         let textFrame = CGRect(x: floor((size.width - textSize.width) / 2.0), y: 0.0, width: textSize.width, height: textSize.height)
         transition.updateFrame(node: self.wrapperNode, frame: textFrame)
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(), size: textSize))

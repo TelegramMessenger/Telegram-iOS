@@ -300,14 +300,14 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
             let titleColor: UIColor
             titleColor = item.presentationData.theme.list.itemInputField.primaryColor
             
-            let alignCentrally = !(item.invite?.link.contains("joinchat") ?? true)
+            let alignCentrally = !(item.invite?.link?.contains("joinchat") ?? true)
             
             let addressFont = Font.regular(!alignCentrally && params.width == 320 ? floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0) : item.presentationData.fontSize.itemListBaseFontSize)
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             let constrainedWidth = alignCentrally ? params.width - leftInset - rightInset - 90.0 : params.width - leftInset - rightInset - 60.0
             
-            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link.replacingOccurrences(of: "https://", with: "") }) ?? "", font: addressFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.invite.flatMap({ $0.link?.replacingOccurrences(of: "https://", with: "") }) ?? "", font: addressFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: constrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let subtitle: String
             let subtitleColor: UIColor

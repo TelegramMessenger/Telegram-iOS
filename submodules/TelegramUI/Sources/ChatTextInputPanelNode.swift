@@ -2367,7 +2367,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        let _ = speakText(text)
+        if let context = self.context {
+            let _ = speakText(context: context, text: text)
+        }
         
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()
@@ -2811,7 +2813,7 @@ private final class MenuIconNode: ManagedAnimationNode {
                 switch state {
                     case .menu:
                         if animated {
-                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 20, endFrame: 0), duration: self.duration))
+                            self.trackTo(item: ManagedAnimationItem(source: .local("anim_closemenu"), frames: .range(startFrame: 0, endFrame: 20), duration: self.duration))
                         } else {
                             self.trackTo(item: ManagedAnimationItem(source: .local("anim_menuclose"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.01))
                         }

@@ -113,6 +113,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     private let chatLocation: ChatLocation?
     private let bannedSendMedia: (Int32, Bool)?
     private let collection: PHAssetCollection?
+    private let saveEditedPhotos: Bool
     
     private let titleView: MediaPickerTitleView
     private let moreButtonNode: MoreButtonNode
@@ -687,7 +688,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             }
             
             let proceed: (Bool) -> Void = { convertToJpeg in
-                guard let signals = TGMediaAssetsController.resultSignals(for: controller.interaction?.selectionState, editingContext: controller.interaction?.editingState, intent: asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, storeAssets: true, convertToJpeg: convertToJpeg, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: true) else {
+                guard let signals = TGMediaAssetsController.resultSignals(for: controller.interaction?.selectionState, editingContext: controller.interaction?.editingState, intent: asFile ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent, currentItem: nil, storeAssets: true, convertToJpeg: convertToJpeg, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: controller.saveEditedPhotos) else {
                     return
                 }
                 controller.completed = true
@@ -1066,7 +1067,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     
     private var isDismissing = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, bannedSendMedia: (Int32, Bool)?, collection: PHAssetCollection? = nil, editingContext: TGMediaEditingContext? = nil, selectionContext: TGMediaSelectionContext? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: EnginePeer?, chatLocation: ChatLocation?, bannedSendMedia: (Int32, Bool)?, collection: PHAssetCollection? = nil, editingContext: TGMediaEditingContext? = nil, selectionContext: TGMediaSelectionContext? = nil, saveEditedPhotos: Bool = false) {
         self.context = context
         
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -1076,6 +1077,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         self.chatLocation = chatLocation
         self.bannedSendMedia = bannedSendMedia
         self.collection = collection
+        self.saveEditedPhotos = saveEditedPhotos
         
         self.titleView = MediaPickerTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Attachment_AllMedia, self.presentationData.strings.Attachment_SelectedMedia(1)], selectedIndex: 0)
         self.titleView.title = collection?.localizedTitle ?? presentationData.strings.Attachment_Gallery
@@ -1339,7 +1341,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
     }
     
     @objc private func rightButtonPressed() {
-        self.moreButtonNode.action?(self.moreButtonNode.contextSourceNode, nil)
+        self.moreButtonNode.buttonPressed()
     }
     
     public func resetForReuse() {

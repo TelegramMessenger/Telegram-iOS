@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import AccountContext
 
 // Incuding at least one Objective-C class in a swift file ensures that it doesn't get stripped by the linker
 private final class LinkHelperClass: NSObject {
@@ -38,10 +39,11 @@ public func supportedSpeakLanguages() -> Set<String> {
     return Set(languages)
 }
 
-public func speakText(_ text: String) -> SpeechSynthesizerHolder? {
+public func speakText(context: AccountContext, text: String) -> SpeechSynthesizerHolder? {
     guard !text.isEmpty else {
         return nil
     }
+    
     let speechSynthesizer = AVSpeechSynthesizer()
     let utterance = AVSpeechUtterance(string: text)
     if #available(iOS 11.0, *), let language = NSLinguisticTagger.dominantLanguage(for: text) {

@@ -18,8 +18,19 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 
 private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
-    case .reflector:
+    case let .reflector(reflector):
+        #if DEBUG
+        var result: [OngoingCallConnectionDescriptionWebrtc] = []
+        if !reflector.ip.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        if !reflector.ipv6.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        return result
+        #else
         return []
+        #endif
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
@@ -685,6 +696,11 @@ public final class OngoingCallContext {
     public init(account: Account, callSessionManager: CallSessionManager, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, derivedState: VoipDerivedState, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
+        
+        #if DEBUG
+        let version = "4.1.2"
+        let allowP2P = false
+        #endif
         
         self.internalId = internalId
         self.account = account

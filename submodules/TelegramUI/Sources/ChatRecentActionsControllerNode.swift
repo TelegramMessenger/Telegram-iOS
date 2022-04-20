@@ -154,16 +154,16 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                     return true
                                 }
                         case let .editExportedInvitation(_, invite), let .revokeExportedInvitation(invite), let .deleteExportedInvitation(invite), let .participantJoinedViaInvite(invite), let .participantJoinByRequest(invite, _):
-                                if !invite.link.hasSuffix("...") {
+                                if let inviteLink = invite.link, !inviteLink.hasSuffix("...") {
                                     if invite.isPermanent {
                                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                         
                                         var items: [ActionSheetItem] = []
-                                        items.append(ActionSheetTextItem(title: invite.link))
+                                        items.append(ActionSheetTextItem(title: inviteLink))
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.InviteLink_ContextRevoke, color: .destructive, action: { [weak actionSheet] in
                                             actionSheet?.dismissAnimated()
                                             if let strongSelf = self {
-                                                let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: invite.link)
+                                                let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: inviteLink)
                                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                                     self?.eventLogContext.reload()
                                                 })
