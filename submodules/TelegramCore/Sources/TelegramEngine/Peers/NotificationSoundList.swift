@@ -139,6 +139,35 @@ func _internal_setCachedNotificationSoundList(transaction: Transaction, notifica
     }
 }
 
+public func ensureDownloadedNotificationSoundList(postbox: Postbox) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
+        var signals: [Signal<Never, NoError>] = []
+        
+        if let notificationSoundList = _internal_cachedNotificationSoundList(transaction: transaction) {
+            var resources: [MediaResource] = []
+            
+            for sound in notificationSoundList.sounds {
+                resources.append(sound.file.resource)
+            }
+            
+            for resource in resources {
+                signals.append(
+                    fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .standalone(resource: resource))
+                    |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
+                )
+            }
+        }
+        
+        return combineLatest(signals)
+        |> ignoreValues
+    }
+    |> switchToLatest
+    |> ignoreValues
+}
+
 private func pollNotificationSoundList(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     return Signal<Never, NoError> { subscriber in
         let signal: Signal<Never, NoError> = _internal_cachedNotificationSoundList(postbox: postbox)

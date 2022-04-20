@@ -1082,6 +1082,12 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             downloadItems = .single(([], []))
         }
         
+        struct SearchedPeersState {
+            var ids: [EnginePeer.Id] = []
+            var query: String?
+        }
+        let previousRecentlySearchedPeersState = Atomic<SearchedPeersState?>(value: nil)
+        
         let foundItems = combineLatest(queue: .mainQueue(), searchQuery, searchOptions, downloadItems)
         |> mapToSignal { [weak self] query, options, downloadItems -> Signal<([ChatListSearchEntry], Bool)?, NoError> in
             if query == nil && options == nil && key == .chats {
@@ -1185,9 +1191,42 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             let accountPeer = context.account.postbox.loadedPeerWithId(context.account.peerId) |> take(1)
             let foundLocalPeers: Signal<(peers: [EngineRenderedPeer], unread: [EnginePeer.Id: (Int32, Bool)], recentlySearchedPeerIds: Set<EnginePeer.Id>), NoError>
             if let query = query {
+                let fixedOrRemovedRecentlySearchedPeers = context.engine.peers.recentlySearchedPeers()
+                |> map { peers -> [RecentlySearchedPeer] in
+                    let allIds = peers.map(\.peer.peerId)
+                    
+                    let updatedState = previousRecentlySearchedPeersState.modify { current in
+                        if var current = current, current.query == query {
+                            current.ids = current.ids.filter { id in
+                                allIds.contains(id)
+                            }
+                            
+                            return current
+                        } else {
+                            var state = SearchedPeersState()
+                            state.ids = allIds
+                            state.query = query
+                            return state
+                        }
+                    }
+                    
+                    var result: [RecentlySearchedPeer] = []
+                    if let updatedState = updatedState {
+                        for id in updatedState.ids {
+                            for peer in peers {
+                                if id == peer.peer.peerId {
+                                    result.append(peer)
+                                }
+                            }
+                        }
+                    }
+                    
+                    return result
+                }
+                
                 foundLocalPeers = combineLatest(
                     context.engine.contacts.searchLocalPeers(query: query.lowercased()),
-                    context.engine.peers.recentlySearchedPeers() |> take(1)
+                    fixedOrRemovedRecentlySearchedPeers
                 )
                 |> mapToSignal { local, allRecentlySearched -> Signal<([EnginePeer.Id: Optional<EnginePeer.NotificationSettings>], [EnginePeer.Id: Int], [EngineRenderedPeer], Set<EnginePeer.Id>), NoError> in
                     let recentlySearched = allRecentlySearched.filter { peer in
@@ -1251,6 +1290,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             } else {
                 foundLocalPeers = .single((peers: [], unread: [:], recentlySearchedPeerIds: Set()))
+                
+                let _ = previousRecentlySearchedPeersState.swap(nil)
             }
             
             let foundRemotePeers: Signal<([FoundPeer], [FoundPeer], Bool), NoError>
