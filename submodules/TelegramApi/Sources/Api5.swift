@@ -541,7 +541,6 @@ public extension Api {
 public extension Api {
     enum ExportedChatInvite: TypeConstructorDescription {
         case chatInviteExported(flags: Int32, link: String, adminId: Int64, date: Int32, startDate: Int32?, expireDate: Int32?, usageLimit: Int32?, usage: Int32?, requested: Int32?, title: String?)
-        case chatInvitePublicJoinRequests
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -560,12 +559,6 @@ public extension Api {
                     if Int(flags) & Int(1 << 7) != 0 {serializeInt32(requested!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 8) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     break
-                case .chatInvitePublicJoinRequests:
-                    if boxed {
-                        buffer.appendInt32(-317687113)
-                    }
-                    
-                    break
     }
     }
     
@@ -573,8 +566,6 @@ public extension Api {
         switch self {
                 case .chatInviteExported(let flags, let link, let adminId, let date, let startDate, let expireDate, let usageLimit, let usage, let requested, let title):
                 return ("chatInviteExported", [("flags", String(describing: flags)), ("link", String(describing: link)), ("adminId", String(describing: adminId)), ("date", String(describing: date)), ("startDate", String(describing: startDate)), ("expireDate", String(describing: expireDate)), ("usageLimit", String(describing: usageLimit)), ("usage", String(describing: usage)), ("requested", String(describing: requested)), ("title", String(describing: title))])
-                case .chatInvitePublicJoinRequests:
-                return ("chatInvitePublicJoinRequests", [])
     }
     }
     
@@ -615,9 +606,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-        public static func parse_chatInvitePublicJoinRequests(_ reader: BufferReader) -> ExportedChatInvite? {
-            return Api.ExportedChatInvite.chatInvitePublicJoinRequests
         }
     
     }
@@ -1374,6 +1362,46 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ImportedContact.importedContact(userId: _1!, clientId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum InlineBotSwitchPM: TypeConstructorDescription {
+        case inlineBotSwitchPM(text: String, startParam: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inlineBotSwitchPM(let text, let startParam):
+                    if boxed {
+                        buffer.appendInt32(1008755359)
+                    }
+                    serializeString(text, buffer: buffer, boxed: false)
+                    serializeString(startParam, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inlineBotSwitchPM(let text, let startParam):
+                return ("inlineBotSwitchPM", [("text", String(describing: text)), ("startParam", String(describing: startParam))])
+    }
+    }
+    
+        public static func parse_inlineBotSwitchPM(_ reader: BufferReader) -> InlineBotSwitchPM? {
+            var _1: String?
+            _1 = parseString(reader)
+            var _2: String?
+            _2 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InlineBotSwitchPM.inlineBotSwitchPM(text: _1!, startParam: _2!)
             }
             else {
                 return nil

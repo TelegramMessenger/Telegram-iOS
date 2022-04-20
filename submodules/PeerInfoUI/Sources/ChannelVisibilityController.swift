@@ -635,7 +635,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
-        let joinToSend: CurrentChannelJoinToSend
+ /*       let joinToSend: CurrentChannelJoinToSend
         if let current = state.joinToSend {
             joinToSend = current
         } else {
@@ -656,7 +656,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 approveMembers = false
             }
         }
-        
+ */
         let forwardingEnabled: Bool
         if let enabled = state.forwardingEnabled {
             forwardingEnabled = enabled
@@ -817,7 +817,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.privateLinkManageInfo(presentationData.theme, presentationData.strings.InviteLink_CreateInfo))
                 }
         }
-                        
+/*
         if isGroup && selectedType == .publicChannel {
             var isDiscussion = false
             if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
@@ -835,7 +835,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 entries.append(.approveMembersInfo(presentationData.theme, presentationData.strings.Group_Setup_ApproveNewMembersInfo))
             }
         }
-        
+*/
         entries.append(.forwardingHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_ForwardingGroupTitle.uppercased() : presentationData.strings.Group_Setup_ForwardingChannelTitle.uppercased()))
         entries.append(.forwardingDisabled(presentationData.theme, presentationData.strings.Group_Setup_ForwardingDisabled, !forwardingEnabled))
         entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
