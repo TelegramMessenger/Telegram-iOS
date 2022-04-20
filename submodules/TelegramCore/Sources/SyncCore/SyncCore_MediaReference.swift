@@ -569,6 +569,7 @@ public enum MediaResourceReference: Equatable {
     case wallpaper(wallpaper: WallpaperReference?, resource: MediaResource)
     case stickerPackThumbnail(stickerPack: StickerPackReference, resource: MediaResource)
     case theme(theme: ThemeReference, resource: MediaResource)
+    case soundList(resource: MediaResource)
     
     public var resource: MediaResource {
         switch self {
@@ -587,6 +588,8 @@ public enum MediaResourceReference: Equatable {
             case let .stickerPackThumbnail(_, resource):
                 return resource
             case let .theme(_, resource):
+                return resource
+            case let .soundList(resource):
                 return resource
         }
     }
@@ -637,6 +640,12 @@ public enum MediaResourceReference: Equatable {
             }
         case let .theme(lhsTheme, lhsResource):
             if case let .theme(rhsTheme, rhsResource) = rhs, lhsTheme == rhsTheme, lhsResource.isEqual(to: rhsResource) {
+                return true
+            } else {
+                return false
+            }
+        case let .soundList(lhsResource):
+            if case let .soundList(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
                 return true
             } else {
                 return false

@@ -152,7 +152,7 @@ public func ensureDownloadedNotificationSoundList(postbox: Postbox) -> Signal<Ne
             
             for resource in resources {
                 signals.append(
-                    fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .standalone(resource: resource))
+                    fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .soundList(resource: resource))
                     |> ignoreValues
                     |> `catch` { _ -> Signal<Never, NoError> in
                         return .complete()
@@ -166,6 +166,30 @@ public func ensureDownloadedNotificationSoundList(postbox: Postbox) -> Signal<Ne
     }
     |> switchToLatest
     |> ignoreValues
+}
+
+func requestNotificationSoundList(network: Network, hash: Int64) -> Signal<NotificationSoundList?, NoError> {
+    return network.request(Api.functions.account.getSavedRingtones(hash: hash))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.account.SavedRingtones?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> NotificationSoundList? in
+        guard let result = result else {
+            return nil
+        }
+        
+        switch result {
+        case let .savedRingtones(hash, ringtones):
+            let notificationSoundList = NotificationSoundList(
+                hash: hash,
+                sounds: ringtones.compactMap(NotificationSoundList.NotificationSound.init(apiDocument:))
+            )
+            return notificationSoundList
+        case .savedRingtonesNotModified:
+            return nil
+        }
+    }
 }
 
 private func pollNotificationSoundList(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
@@ -204,7 +228,7 @@ private func pollNotificationSoundList(postbox: Postbox, network: Network) -> Si
                         
                         for resource in resources {
                             signals.append(
-                                fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .standalone(resource: resource))
+                                fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .soundList(resource: resource))
                                 |> ignoreValues
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()

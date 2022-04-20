@@ -329,7 +329,7 @@ public func playSound(context: AccountContext, notificationSoundList: Notificati
                             deactivateImpl?()
                         })
                         currentPlayer?.play()
-                    } else {
+                    } else if !filePath.isEmpty {
                         if let url = getAppBundle().url(forResource: filePath, withExtension: "m4a") {
                             currentPlayer = AudioPlayerWrapper(url: url, completed: {
                                 deactivateImpl?()
