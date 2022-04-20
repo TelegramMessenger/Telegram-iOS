@@ -2343,7 +2343,7 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
     }
 }
 
-private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false, skipThumbnail: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
        
         let maybeFullSize = account.postbox.mediaBox.resourceData(largestRepresentation.resource, attemptSynchronously: attemptSynchronously)
@@ -2403,9 +2403,19 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
                     }
                 }
                 
-                return thumbnail |> mapToSignal { thumbnailData in
-                    return fullSizeData |> map { value in
-                        return Tuple(thumbnailData, value._0, value._1)
+                if skipThumbnail {
+                    return fullSizeData |> mapToSignal { value -> Signal <Tuple3<Data?, Data?, Bool>, NoError> in
+                        if value._1 {
+                            return .single(Tuple(nil, value._0, value._1))
+                        } else {
+                            return .complete()
+                        }
+                    }
+                } else {
+                    return thumbnail |> mapToSignal { thumbnailData in
+                        return fullSizeData |> map { value in
+                            return Tuple(thumbnailData, value._0, value._1)
+                        }
                     }
                 }
             }
@@ -2418,7 +2428,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
 }
 
 public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], immediateThumbnailData: Data?, autoFetchFullSize: Bool = false, attemptSynchronously: Bool = false, skipThumbnail: Bool = false, skipBlurIfLarge: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = avatarGalleryPhotoDatas(account: account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: autoFetchFullSize, attemptSynchronously: attemptSynchronously)
+    let signal = avatarGalleryPhotoDatas(account: account, representations: representations, immediateThumbnailData: immediateThumbnailData, autoFetchFullSize: autoFetchFullSize, attemptSynchronously: attemptSynchronously, skipThumbnail: skipThumbnail)
     
     return signal
     |> map { value in
