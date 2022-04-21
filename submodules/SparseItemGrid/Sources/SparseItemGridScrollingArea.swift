@@ -481,6 +481,7 @@ private final class RoundedRectangle: Component {
     }
 }
 
+private let shadowInset: CGFloat = 10.0
 private final class ShadowRoundedRectangle: Component {
     let color: UIColor
 
@@ -514,7 +515,6 @@ private final class ShadowRoundedRectangle: Component {
         }
 
         func update(component: ShadowRoundedRectangle, availableSize: CGSize, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let shadowInset: CGFloat = 10.0
             let diameter = min(availableSize.width, availableSize.height)
 
             var updated = false
@@ -540,9 +540,10 @@ private final class ShadowRoundedRectangle: Component {
                 })?.stretchableImage(withLeftCapWidth: Int(diameter + shadowInset * 2.0) / 2, topCapHeight: Int(diameter + shadowInset * 2.0) / 2)
             }
 
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: -shadowInset, y: -shadowInset), size: CGSize(width: availableSize.width + shadowInset * 2.0, height: availableSize.height + shadowInset * 2.0)))
+            let shadowFrame = CGRect(origin: CGPoint(x: -shadowInset, y: -shadowInset), size: CGSize(width: availableSize.width + shadowInset * 2.0, height: availableSize.height + shadowInset * 2.0))
+            transition.setFrame(view: self.backgroundView, frame: shadowFrame)
 
-            return availableSize
+            return shadowFrame.size
         }
     }
 
@@ -817,7 +818,7 @@ final class SparseItemGridScrollingIndicatorComponent: CombinedComponent {
             ))
 
             context.add(rect
-                .position(CGPoint(x: rectFrame.midX, y: rectFrame.midY))
+                .position(CGPoint(x: rectFrame.midX + shadowInset, y: rectFrame.midY + shadowInset))
             )
             
             let offset = CGSize(width: textMonth.size.width + 3.0 + textYear.size.width, height: textMonth.size.height).centered(in: rectFrame)
@@ -926,6 +927,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         }
     }
 
+    private let dateIndicatorContainer: UIView
     private let dateIndicator: ComponentHostView<Empty>
 
     private let lineIndicator: ComponentHostView<Empty>
@@ -978,6 +980,9 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
     private var theme: PresentationTheme?
 
     override public init() {
+        self.dateIndicatorContainer = UIView()
+        self.dateIndicatorContainer.isUserInteractionEnabled = false
+        
         self.dateIndicator = ComponentHostView<Empty>()
         self.lineIndicator = ComponentHostView<Empty>()
 
@@ -989,7 +994,8 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         self.dateIndicator.isUserInteractionEnabled = false
         self.lineIndicator.isUserInteractionEnabled = false
 
-        self.view.addSubview(self.dateIndicator)
+        self.view.addSubview(self.dateIndicatorContainer)
+        self.dateIndicatorContainer.addSubview(self.dateIndicator)
         self.view.addSubview(self.lineIndicator)
 
         let dragGesture = DragGesture(
@@ -1180,11 +1186,14 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
             scrollableHeight: contentHeight - containerSize.height
         )
 
+        self.dateIndicatorContainer.frame = CGRect(origin: CGPoint(x: 0.0, y: dateIndicatorPosition), size: CGSize(width: containerSize.width, height: indicatorSize.height))
+        
         var indicatorFrameTransition = transition
         if animateIndicatorFrame {
             indicatorFrameTransition = .animated(duration: 0.2, curve: .easeInOut)
         }
-        indicatorFrameTransition.updateFrame(view: self.dateIndicator, frame: CGRect(origin: CGPoint(x: containerSize.width - 12.0 - indicatorSize.width, y: dateIndicatorPosition), size: indicatorSize))
+        indicatorFrameTransition.updateFrame(view: self.dateIndicator, frame: CGRect(origin: CGPoint(x: containerSize.width - 12.0 - indicatorSize.width, y: 0.0), size: indicatorSize))
+    
         if isScrolling {
             let transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)
             transition.updateAlpha(layer: self.dateIndicator.layer, alpha: 1.0)
@@ -1318,7 +1327,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
         if self.dateIndicator.alpha <= 0.01 {
             return nil
         }
-        if self.dateIndicator.frame.contains(point) {
+        if self.dateIndicator.frame.offsetBy(dx: self.dateIndicatorContainer.frame.minX, dy: self.dateIndicatorContainer.frame.minY).contains(point) {
             return super.hitTest(point, with: event)
         }
 
