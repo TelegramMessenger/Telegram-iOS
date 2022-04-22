@@ -2502,6 +2502,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         let lowestNodeToInsertBelow = self.lowestNodeToInsertBelow()
         var hadInserts = false
+        var hadChangesToItemNodes = false
         
         let visibleBounds = CGRect(origin: CGPoint(), size: self.visibleSize)
         
@@ -2527,6 +2528,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     
                     self.insertNodeAtIndex(animated: nodeAnimated, animateAlpha: animateAlpha, forceAnimateInsertion: forceAnimateInsertion, previousFrame: updatedPreviousFrame, nodeIndex: index, offsetDirection: offsetDirection, node: node, layout: layout, apply: apply, timestamp: timestamp, listInsets: listInsets, visibleBounds: visibleBounds)
                     hadInserts = true
+                    hadChangesToItemNodes = true
                     if let _ = updatedPreviousFrame {
                         if let itemNode = self.reorderNode?.itemNode, itemNode.supernode == self {
                             self.insertSubnode(node, belowSubnode: itemNode)
@@ -2572,6 +2574,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     var previousLayout: ListViewItemNodeLayout?
                     
                     let referenceNode = referenceNodeObject.syncWith({ $0 })
+                    hadChangesToItemNodes = true
                     
                     for (node, previousFrame) in previousApparentFrames {
                         if node === referenceNode {
@@ -2605,6 +2608,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         if let index = node.index {
                             if let mapped = mapping[index] {
                                 node.index = mapped
+                                hadChangesToItemNodes = true
                             }
                         }
                     }
@@ -2637,6 +2641,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                     
                     self.removeItemNodeAtIndex(index)
+                    hadChangesToItemNodes = true
                 case let .UpdateLayout(index, layout, apply):
                     let node = self.itemNodes[index]
                     
@@ -2747,6 +2752,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if let verticalScrollIndicator = self.verticalScrollIndicator {
                 verticalScrollIndicator.view.superview?.bringSubviewToFront(verticalScrollIndicator.view)
             }
+        }
+        
+        if hadChangesToItemNodes {
+            self.assignHeaderSpaceAffinities()
         }
         
         if self.debugInfo {
@@ -3459,7 +3468,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
 
         let upperDisplayBound = self.headerInsets.top
         let lowerDisplayBound = self.visibleSize.height - self.insets.bottom
-        var visibleHeaderNodes = Set<VisibleHeaderNodeId>()
+        var visibleHeaderNodes: [VisibleHeaderNodeId] = []
         
         let flashing = self.headerItemsAreFlashing()
         
@@ -3483,7 +3492,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 stickLocationDistance = lowerBound - headerFrame.maxY
                 stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
             }
-            visibleHeaderNodes.insert(id)
+            visibleHeaderNodes.append(id)
             
             let initialHeaderNodeAlpha = self.itemHeaderNodesAlpha
             let headerNode: ListViewItemHeaderNode
@@ -3659,7 +3668,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         let currentIds = Set(self.itemHeaderNodes.keys)
-        for id in currentIds.subtracting(visibleHeaderNodes) {
+        for id in currentIds.subtracting(Set(visibleHeaderNodes)) {
             if let headerNode = self.itemHeaderNodes.removeValue(forKey: id) {
                 headerNode.removeFromSupernode()
             }
