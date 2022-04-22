@@ -8,7 +8,7 @@ import TgVoip
 import TgVoipWebrtc
 
 private let debugUseLegacyVersionForReflectors: Bool = {
-    #if DEBUG
+    #if DEBUG && false
     return true
     #else
     return false
@@ -72,28 +72,27 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
     }
 }
 
-private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
+private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection, idMapping: [Int64: UInt8]) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
     case let .reflector(reflector):
-        #if DEBUG
+        guard let id = idMapping[reflector.id] else {
+            return []
+        }
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         if !reflector.ipv6.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         return result
-        #else
-        return []
-        #endif
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ip, port: reflector.port, username: reflector.username, password: reflector.password))
         }
         if !reflector.ipv6.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ipv6, port: reflector.port, username: reflector.username, password: reflector.password))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: reflector.hasStun, hasTurn: reflector.hasTurn, ip: reflector.ipv6, port: reflector.port, username: reflector.username, password: reflector.password))
         }
         return result
     }
@@ -777,9 +776,11 @@ public final class OngoingCallContext {
             if let strongSelf = self {
                 var useModernImplementation = true
                 var version = version
+                var allowP2P = allowP2P
                 if debugUseLegacyVersionForReflectors {
                     useModernImplementation = true
-                    version = "4.0.1"
+                    version = "3.0.0"
+                    allowP2P = false
                 } else {
                     useModernImplementation = version != OngoingCallThreadLocalContext.version()
                 }
@@ -796,6 +797,24 @@ public final class OngoingCallContext {
                     }
                     
                     let unfilteredConnections = [connections.primary] + connections.alternatives
+                    
+                    var reflectorIdList: [Int64] = []
+                    for connection in unfilteredConnections {
+                        switch connection {
+                        case let .reflector(reflector):
+                            reflectorIdList.append(reflector.id)
+                        case .webRtcReflector:
+                            break
+                        }
+                    }
+                    
+                    reflectorIdList.sort()
+                    
+                    var reflectorIdMapping: [Int64: UInt8] = [:]
+                    for i in 0 ..< reflectorIdList.count {
+                        reflectorIdMapping[reflectorIdList[i]] = UInt8(i + 1)
+                    }
+                    
                     var processedConnections: [CallSessionConnection] = []
                     var filteredConnections: [OngoingCallConnectionDescriptionWebrtc] = []
                     for connection in unfilteredConnections {
@@ -803,22 +822,8 @@ public final class OngoingCallContext {
                             continue
                         }
                         processedConnections.append(connection)
-                        filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
+                        filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection, idMapping: reflectorIdMapping))
                     }
-                    
-                    /*#if DEBUG
-                    for connection in filteredConnections {
-                        if connection.username == "reflector" {
-                            filteredConnections = [OngoingCallConnectionDescriptionWebrtc(
-                                connectionId: 1,
-                                hasStun: false,
-                                hasTurn: true,
-                                ip: "192.168.1.110", port: 1200,
-                                username: "reflector", password: connection.password
-                            )]
-                        }
-                    }
-                    #endif*/
                     
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
