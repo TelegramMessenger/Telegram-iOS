@@ -239,7 +239,11 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         titleContentRect.origin.x = min(titleContentRect.origin.x, clearBounds.maxX - proxyPadding - titleContentRect.width)
         
         let titleFrame = titleContentRect
-        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        var titleTransition = transition
+        if self.titleNode.frame.size != titleFrame.size {
+            titleTransition = .immediate
+        }
+        titleTransition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 9.0 - self.proxyNode.bounds.width, y: floor((size.height - self.proxyNode.bounds.height) / 2.0)), size: self.proxyNode.bounds.size)
         self.proxyNode.frame = proxyFrame

@@ -226,6 +226,7 @@ private enum MediaReferenceRevalidationKey: Hashable {
     case themes
     case peerAvatars(peer: PeerReference)
     case attachBot(peer: PeerReference)
+    case notificationSoundList
 }
 
 private final class MediaReferenceRevalidationItemContext {
@@ -556,6 +557,24 @@ final class MediaReferenceRevalidationContext {
             }
         }
     }
+    
+    func notificationSoundList(postbox: Postbox, network: Network, background: Bool) -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> {
+        return self.genericItem(key: .notificationSoundList, background: background, request: { next, error in
+            return (requestNotificationSoundList(network: network, hash: 0)
+            |> map { result -> [TelegramMediaFile] in
+                guard let result = result else {
+                    return []
+                }
+                return result.sounds.map(\.file)
+            }).start(next: next)
+        }) |> mapToSignal { next -> Signal<[TelegramMediaFile], RevalidateMediaReferenceError> in
+            if let next = next as? [TelegramMediaFile] {
+                return .single(next)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
 }
 
 struct RevalidatedMediaResource {
@@ -794,6 +813,16 @@ func revalidateMediaResourceReference(postbox: Postbox, network: Network, revali
             |> mapToSignal { themes -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                 for theme in themes {
                     if let file = theme.file, file.resource.id == resource.id  {
+                        return .single(RevalidatedMediaResource(updatedResource: file.resource, updatedReference: nil))
+                    }
+                }
+                return .fail(.generic)
+            }
+        case let .soundList(resource):
+            return revalidationContext.notificationSoundList(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation)
+            |> mapToSignal { files -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
+                for file in files {
+                    if file.resource.id == resource.id  {
                         return .single(RevalidatedMediaResource(updatedResource: file.resource, updatedReference: nil))
                     }
                 }

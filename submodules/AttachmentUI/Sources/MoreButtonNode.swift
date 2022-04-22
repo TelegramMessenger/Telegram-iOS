@@ -111,13 +111,13 @@ public final class MoreButtonNode: ASDisplayNode {
         }
     }
     
-    @objc private func buttonPressed() {
+    @objc public func buttonPressed() {
         self.action?(self.contextSourceNode, nil)
         if case .more = self.iconNode.iconState {
             self.iconNode.play()
         }
     }
-    
+        
     override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let animationSize = CGSize(width: 30.0, height: 30.0)
         let inset: CGFloat = 0.0

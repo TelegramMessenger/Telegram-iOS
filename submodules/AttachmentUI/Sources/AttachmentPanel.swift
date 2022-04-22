@@ -396,6 +396,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.textAlignment = .center
+        self.textNode.displaysAsynchronously = false
         
         self.statusNode = SemanticStatusNode(backgroundNodeColor: .clear, foregroundNodeColor: .white)
         

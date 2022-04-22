@@ -273,7 +273,7 @@ private extension CGSize {
 
 private func convertLottieImage(data: Data) -> UIImage? {
     let decompressedData = TGGUnzipData(data, 512 * 1024) ?? data
-    guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, cacheKey: "") else {
+    guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
         return nil
     }
     let size = animation.dimensions.fitted(CGSize(width: 200.0, height: 200.0))
@@ -1110,7 +1110,8 @@ private final class NotificationServiceHandler {
                                             fetchResource = downloadNotificationSound.resource as? TelegramMultipartFetchableResource
 
                                             if let resource = fetchResource {
-                                                if let _ = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource) {
+                                                if let path = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                    fetchNotificationSoundSignal = .single(data)
                                                 } else {
                                                     let intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int(Int32.max), MediaBoxFetchPriority.maximum)])
                                                     fetchNotificationSoundSignal = Signal { subscriber in
@@ -1172,7 +1173,7 @@ private final class NotificationServiceHandler {
                                             if let notificationSoundData = notificationSoundData {
                                                 Logger.shared.log("NotificationService \(episode)", "Did fetch notificationSoundData")
                                                 
-                                                if let (_, filePath, fileName) = downloadNotificationSound {
+                                                if let (_, filePath, _) = downloadNotificationSound {
                                                     let _ = try? notificationSoundData.write(to: URL(fileURLWithPath: filePath))
                                                 }
                                             }

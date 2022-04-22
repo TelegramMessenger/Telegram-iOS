@@ -457,7 +457,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     
                     if contentNode is ShareSearchContainerNode {
                         self.setActionNodesHidden(true, inputField: true, actions: true)
-                    } else if !(contentNode is ShareLoadingContainerNode) {
+                    } else if !(contentNode is ShareLoadingContainer) {
                         self.setActionNodesHidden(false, inputField: !self.controllerInteraction!.selectedPeers.isEmpty || self.presetText != nil, actions: true)
                     }
                 } else {
@@ -649,7 +649,22 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             let timestamp = CACurrentMediaTime()
             let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
                 let minDelay: Double = shouldDelay ? 0.9 : 0.6
-                let delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
+                let delay: Double
+                if let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareProlongedLoadingContainerNode {
+                    delay = contentNode.completionDuration
+                    
+                    if shouldDelay {
+                        Queue.mainQueue().after(delay - 1.5, {
+                            if strongSelf.hapticFeedback == nil {
+                                strongSelf.hapticFeedback = HapticFeedback()
+                            }
+                            strongSelf.hapticFeedback?.success()
+                        })
+                    }
+                } else {
+                    delay = max(minDelay, (timestamp + minDelay) - CACurrentMediaTime())
+                }
+                                
                 Queue.mainQueue().after(delay, {
                     self?.animateOut(shared: true, completion: {
                         self?.dismiss?(true)
@@ -658,7 +673,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 })
             }
             if self.fromForeignApp {
-                self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true), fastOut: true)
             } else {
                 self.animateOut(shared: true, completion: {
                 })
@@ -683,7 +698,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     return
                 }
                 
-                guard let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                guard let contentNode = strongSelf.contentNode as? ShareLoadingContainer else {
                     return
                 }
                 
@@ -696,11 +711,6 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                         contentNode.state = .done
                         if fromForeignApp {
                             if !wasDone {
-                                if strongSelf.hapticFeedback == nil {
-                                    strongSelf.hapticFeedback = HapticFeedback()
-                                }
-                                strongSelf.hapticFeedback?.success()
-                                
                                 wasDone = true
                                 doneImpl(true)
                             }
@@ -988,7 +998,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
-        self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+        self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true), fastOut: true)
         let timestamp = CACurrentMediaTime()
         self.shareDisposable.set(signal.start(completed: { [weak self] in
             let minDelay = 0.6
@@ -1041,14 +1051,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
             self.shareDisposable.set((signal
             |> deliverOnMainQueue).start(next: { [weak self] status in
-                guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainer else {
                     return
                 }
                 if let status = status {
                     contentNode.state = .progress(status)
                 }
             }, completed: { [weak self] in
-                guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainerNode else {
+                guard let strongSelf = self, let contentNode = strongSelf.contentNode as? ShareLoadingContainer else {
                     return
                 }
                 contentNode.state = .done

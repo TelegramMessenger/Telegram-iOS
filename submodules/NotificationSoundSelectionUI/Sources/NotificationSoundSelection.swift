@@ -262,7 +262,7 @@ private final class AudioPlayerWrapper: NSObject, AVAudioPlayerDelegate {
         
         super.init()
         
-        self.player = try? AVAudioPlayer(contentsOf: url, fileTypeHint: "m4a")
+        self.player = try? AVAudioPlayer(contentsOf: url, fileTypeHint: "mp3")
         self.player?.delegate = self
     }
     
@@ -304,7 +304,7 @@ public func fileNameForNotificationSound(account: Account, notificationSoundList
         }
         for sound in notificationSoundList.sounds {
             if sound.file.fileId.id == fileId {
-                if let path = account.postbox.mediaBox.completedResourcePath(sound.file.resource, pathExtension: "mp3") {
+                if let path = account.postbox.mediaBox.completedResourcePath(sound.file.resource, pathExtension: nil) {
                     return path
                 }
             }
@@ -329,7 +329,7 @@ public func playSound(context: AccountContext, notificationSoundList: Notificati
                             deactivateImpl?()
                         })
                         currentPlayer?.play()
-                    } else {
+                    } else if !filePath.isEmpty {
                         if let url = getAppBundle().url(forResource: filePath, withExtension: "m4a") {
                             currentPlayer = AudioPlayerWrapper(url: url, completed: {
                                 deactivateImpl?()
@@ -377,6 +377,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     
     let playSoundDisposable = MetaDisposable()
     let soundActionDisposable = MetaDisposable()
+    let fetchedSoundsDisposable = ensureDownloadedNotificationSoundList(postbox: context.account.postbox).start()
     
     let arguments = NotificationSoundSelectionArguments(account: context.account, selectSound: { sound in
         updateState { state in
@@ -422,6 +423,7 @@ public func notificationSoundSelectionController(context: AccountContext, update
     let controller = ItemListController(context: context, state: signal |> afterDisposed {
         playSoundDisposable.dispose()
         soundActionDisposable.dispose()
+        fetchedSoundsDisposable.dispose()
     })
     controller.enableInteractiveDismiss = true
     if isModal {

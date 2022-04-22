@@ -139,6 +139,59 @@ func _internal_setCachedNotificationSoundList(transaction: Transaction, notifica
     }
 }
 
+public func ensureDownloadedNotificationSoundList(postbox: Postbox) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Signal<Never, NoError> in
+        var signals: [Signal<Never, NoError>] = []
+        
+        if let notificationSoundList = _internal_cachedNotificationSoundList(transaction: transaction) {
+            var resources: [MediaResource] = []
+            
+            for sound in notificationSoundList.sounds {
+                resources.append(sound.file.resource)
+            }
+            
+            for resource in resources {
+                signals.append(
+                    fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .soundList(resource: resource))
+                    |> ignoreValues
+                    |> `catch` { _ -> Signal<Never, NoError> in
+                        return .complete()
+                    }
+                )
+            }
+        }
+        
+        return combineLatest(signals)
+        |> ignoreValues
+    }
+    |> switchToLatest
+    |> ignoreValues
+}
+
+func requestNotificationSoundList(network: Network, hash: Int64) -> Signal<NotificationSoundList?, NoError> {
+    return network.request(Api.functions.account.getSavedRingtones(hash: hash))
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Api.account.SavedRingtones?, NoError> in
+        return .single(nil)
+    }
+    |> map { result -> NotificationSoundList? in
+        guard let result = result else {
+            return nil
+        }
+        
+        switch result {
+        case let .savedRingtones(hash, ringtones):
+            let notificationSoundList = NotificationSoundList(
+                hash: hash,
+                sounds: ringtones.compactMap(NotificationSoundList.NotificationSound.init(apiDocument:))
+            )
+            return notificationSoundList
+        case .savedRingtonesNotModified:
+            return nil
+        }
+    }
+}
+
 private func pollNotificationSoundList(postbox: Postbox, network: Network) -> Signal<Never, NoError> {
     return Signal<Never, NoError> { subscriber in
         let signal: Signal<Never, NoError> = _internal_cachedNotificationSoundList(postbox: postbox)
@@ -175,7 +228,7 @@ private func pollNotificationSoundList(postbox: Postbox, network: Network) -> Si
                         
                         for resource in resources {
                             signals.append(
-                                fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .standalone(resource: resource))
+                                fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .soundList(resource: resource))
                                 |> ignoreValues
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()

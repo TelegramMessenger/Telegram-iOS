@@ -75,16 +75,18 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
     case let .reflector(reflector):
+        #if DEBUG
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
-            if reflector.ip == "91.108.9.38" {
-                result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
-            }
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         if !reflector.ipv6.isEmpty {
-            //result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         return result
+        #else
+        return []
+        #endif
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
@@ -1005,9 +1007,17 @@ public final class OngoingCallContext {
                 
                 if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
                     debugLogValue.set(.single(dataString))
-                    if sendDebugLogs {
-                        let _ = TelegramEngine(account: self.account).calls.saveCallDebugLog(callId: callId, log: dataString).start()
-                    }
+                    let engine = TelegramEngine(account: self.account)
+                    let _ = engine.calls.saveCallDebugLog(callId: callId, log: dataString).start(next: { result in
+                        switch result {
+                        case .sendFullLog:
+                            if !logPath.isEmpty {
+                                let _ = engine.calls.saveCompleteCallDebugLog(callId: callId, logPath: logPath).start()
+                            }
+                        case .done:
+                            break
+                        }
+                    })
                 }
             }
             let derivedState = context.nativeGetDerivedState()

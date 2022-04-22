@@ -807,21 +807,23 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         tgcalls::Register<tgcalls::InstanceImpl>();
         tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
         tgcalls::Register<tgcalls::InstanceV2Impl>();
-        //tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
+        tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
     });
 }
 
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference {
     [self ensureRegisteredImplementations];
-
+    
     NSMutableArray<NSString *> *list = [[NSMutableArray alloc] init];
+    
     for (const auto &version : tgcalls::Meta::Versions()) {
         [list addObject:[NSString stringWithUTF8String:version.c_str()]];
     }
+    
     [list sortUsingComparator:^NSComparisonResult(NSString * _Nonnull lhs, NSString * _Nonnull rhs) {
         return [lhs compare:rhs];
     }];
-
+    
     return list;
 }
 
@@ -933,6 +935,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
         __weak OngoingCallThreadLocalContextWebrtc *weakSelf = self;
         _tgVoip = tgcalls::Meta::Create([version UTF8String], (tgcalls::Descriptor){
+            .version = [version UTF8String],
             .config = config,
             .persistentState = (tgcalls::PersistentState){ derivedStateValue },
             .endpoints = endpoints,

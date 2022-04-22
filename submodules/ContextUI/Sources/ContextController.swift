@@ -880,7 +880,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             if let validLayout = self.validLayout {
                 self.updateLayout(
                     layout: validLayout,
-                    transition: .animated(duration: 0.25, curve: .easeInOut),
+                    transition: .animated(duration: 0.35, curve: .easeInOut),
                     previousActionsContainerNode: nil
                 )
             }

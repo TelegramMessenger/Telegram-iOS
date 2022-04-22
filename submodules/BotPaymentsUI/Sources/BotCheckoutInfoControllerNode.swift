@@ -529,6 +529,8 @@ final class BotCheckoutInfoControllerNode: ViewControllerTracingNode, UIScrollVi
                 if let focusItem = focusItem as? BotPaymentFieldItemNode {
                     focusItem.activateInput()
                 }
+                
+                self.scrollViewDidScroll(self.scrollNode.view)
             }
         } else if let previousLayout = previousLayout {
             var previousInsets = previousLayout.0.insets(options: [.input])

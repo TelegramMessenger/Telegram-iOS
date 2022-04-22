@@ -25,8 +25,12 @@ public extension TelegramEngine {
             return _internal_rateCall(account: self.account, callId: callId, starsCount: starsCount, comment: comment, userInitiated: userInitiated)
         }
 
-        public func saveCallDebugLog(callId: CallId, log: String) -> Signal<Void, NoError> {
+        public func saveCallDebugLog(callId: CallId, log: String) -> Signal<SaveCallDebugLogResult, NoError> {
             return _internal_saveCallDebugLog(network: self.account.network, callId: callId, log: log)
+        }
+        
+        public func saveCompleteCallDebugLog(callId: CallId, logPath: String) -> Signal<Never, NoError> {
+            return _internal_saveCompleteCallDebugLog(account: self.account, callId: callId, logPath: logPath)
         }
 
         public func getCurrentGroupCall(callId: Int64, accessHash: Int64, peerId: PeerId? = nil) -> Signal<GroupCallSummary?, GetCurrentGroupCallError> {

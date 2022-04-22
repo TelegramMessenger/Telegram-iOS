@@ -32,7 +32,11 @@ extension UIKeyModifierFlags: Hashable {
 extension KeyShortcut {
     var uiKeyCommand: UIKeyCommand {
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *), !self.title.isEmpty {
-            return UIKeyCommand(input: self.input, modifierFlags: self.modifiers, action: #selector(KeyShortcutsController.handleKeyCommand(_:)), discoverabilityTitle: self.title)
+            let command = UIKeyCommand(input: self.input, modifierFlags: self.modifiers, action: #selector(KeyShortcutsController.handleKeyCommand(_:)), discoverabilityTitle: self.title)
+            if #available(iOS 15.0, *), ["\t", UIKeyCommand.inputUpArrow].contains(command.input) {
+                command.wantsPriorityOverSystemBehavior = true
+            }
+            return command
         } else {
             return UIKeyCommand(input: self.input, modifierFlags: self.modifiers, action: #selector(KeyShortcutsController.handleKeyCommand(_:)))
         }
