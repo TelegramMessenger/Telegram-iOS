@@ -11,7 +11,7 @@
 
 #pragma once
 
-#define AS_TLS_AVAILABLE 0
+#define AS_TLS_AVAILABLE 1
 
 #ifndef AS_ENABLE_TEXTNODE
   #define AS_ENABLE_TEXTNODE 1 // Enable old TextNode by default

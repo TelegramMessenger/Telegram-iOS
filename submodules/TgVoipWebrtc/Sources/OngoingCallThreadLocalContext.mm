@@ -41,10 +41,10 @@
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
-- (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
+- (instancetype _Nonnull)initWithReflectorId:(uint8_t)reflectorId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
     self = [super init];
     if (self != nil) {
-        _connectionId = connectionId;
+        _reflectorId = reflectorId;
         _hasStun = hasStun;
         _hasTurn = hasTurn;
         _ip = ip;
@@ -882,6 +882,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         for (OngoingCallConnectionDescriptionWebrtc *connection in connections) {
             if (connection.hasStun) {
                 parsedRtcServers.push_back((tgcalls::RtcServer){
+                    .id = 0,
                     .host = connection.ip.UTF8String,
                     .port = (uint16_t)connection.port,
                     .login = "",
@@ -891,6 +892,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
             }
             if (connection.hasTurn) {
                 parsedRtcServers.push_back((tgcalls::RtcServer){
+                    .id = connection.reflectorId,
                     .host = connection.ip.UTF8String,
                     .port = (uint16_t)connection.port,
                     .login = connection.username.UTF8String,
