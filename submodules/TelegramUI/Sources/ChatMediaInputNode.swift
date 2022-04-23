@@ -164,7 +164,7 @@ func preparedChatMediaInputGridEntryTransition(account: Account, view: ItemColle
     return ChatMediaInputGridTransition(deletions: deletions, insertions: insertions, updates: updates, updateFirstIndexInSectionOffset: firstIndexInSectionOffset, stationaryItems: stationaryItems, scrollToItem: scrollToItem, updateOpaqueState: opaqueState, animated: animated)
 }
 
-func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
+func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, temporaryPackOrder: [ItemCollectionId]? = nil, trendingIsDismissed: Bool = false, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, theme: PresentationTheme, strings: PresentationStrings, hasPremium: Bool = false, hasGifs: Bool = true, hasSettings: Bool = true, expanded: Bool = false, reorderable: Bool = false) -> [ChatMediaInputPanelEntry] {
     var entries: [ChatMediaInputPanelEntry] = []
     if hasGifs {
         entries.append(.recentGifs(theme, strings, expanded))
@@ -202,8 +202,12 @@ func chatMediaInputPanelEntries(view: ItemCollectionsView, savedStickers: Ordere
     } else if case let .available(peer, false) = canInstallPeerSpecificPack {
         entries.append(.peerSpecific(theme: theme, peer: peer, expanded: expanded))
     }
-    var index = 0
     
+    if hasPremium {
+        entries.append(.premium(theme, strings, expanded))
+    }
+    
+    var index = 0
     var sortedPacks: [(ItemCollectionId, StickerPackCollectionInfo, StickerPackItem?)] = []
     for (id, info, item) in view.collectionInfos {
         if let info = info as? StickerPackCollectionInfo, let item = item as? StickerPackItem {
@@ -256,7 +260,7 @@ func chatMediaInputPanelGifModeEntries(theme: PresentationTheme, strings: Presen
     return entries
 }
 
-func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme) -> [ChatMediaInputGridEntry] {
+func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: OrderedItemListView?, recentStickers: OrderedItemListView?, peerSpecificPack: PeerSpecificPackData?, canInstallPeerSpecificPack: CanInstallPeerSpecificPack, trendingPacks: [FeaturedStickerPackItem], installedPacks: Set<ItemCollectionId>, premiumStickers: [ItemCollectionItem]? = nil, trendingIsDismissed: Bool = false, hasSearch: Bool = true, hasAccessories: Bool = true, strings: PresentationStrings, theme: PresentationTheme, hasPremium: Bool) -> [ChatMediaInputGridEntry] {
     var entries: [ChatMediaInputGridEntry] = []
     
     if hasSearch && view.lower == nil {
@@ -279,7 +283,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                     savedStickerIds.insert(item.file.fileId.id)
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -3, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
                 }
             }
         }
@@ -302,7 +306,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
                     if !savedStickerIds.contains(mediaId.id) {
                         let index = ItemCollectionItemIndex(index: Int32(i), id: mediaId.id)
                         let stickerItem = StickerPackItem(index: index, file: file, indexKeys: [])
-                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme))
+                        entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -2, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: nil, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
                         addedCount += 1
                     }
                 }
@@ -319,13 +323,24 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         }
         
         if let peerSpecificPack = peerSpecificPack {
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            
             for i in 0 ..< peerSpecificPack.items.count {
-                let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
-                
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
                     let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
                     let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
-                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, maybeManageable: hasAccessories, theme: theme))
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: canManagePeerSpecificPack, maybeManageable: hasAccessories, theme: theme, isLocked: stickerItem.file.isPremiumSticker && !hasPremium))
+                }
+            }
+        }
+        
+        if let premiumStickers = premiumStickers {
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_PremiumStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            for i in 0 ..< premiumStickers.count {
+                if let item = premiumStickers[i] as? StickerPackItem {
+                    let index = ItemCollectionItemIndex(index: Int32(i), id: item.file.fileId.id)
+                    let stickerItem = StickerPackItem(index: index, file: item.file, indexKeys: [])
+                    entries.append(.sticker(index: ItemCollectionViewEntryIndex(collectionIndex: -1, collectionId: packInfo.id, itemIndex: index), stickerItem: stickerItem, stickerPackInfo: packInfo, canManagePeerSpecificPack: false, maybeManageable: hasAccessories, theme: theme, isLocked: false))
                 }
             }
         }
@@ -333,7 +348,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
     
     for entry in view.entries {
         if let item = entry.item as? StickerPackItem {
-            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, maybeManageable: hasAccessories, theme: theme))
+            entries.append(.sticker(index: entry.index, stickerItem: item, stickerPackInfo: stickerPackInfos[entry.index.collectionId], canManagePeerSpecificPack: false, maybeManageable: hasAccessories, theme: theme, isLocked: item.file.isPremiumSticker && !hasPremium))
         }
     }
     
@@ -779,6 +794,10 @@ final class ChatMediaInputNode: ChatInputNode {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
                     strongSelf.currentStickerPacksCollectionPosition = .navigate(index: nil, collectionId: collectionId)
                     strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
+                } else if collectionId.namespace == ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue {
+                    strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
+                    strongSelf.currentStickerPacksCollectionPosition = .navigate(index: nil, collectionId: collectionId)
+                    strongSelf.itemCollectionsViewPosition.set(.single(.navigate(index: nil, collectionId: collectionId)))
                 } else {
                     strongSelf.setCurrentPane(.stickers, transition: .animated(duration: 0.25, curve: .spring))
                     for (id, _, _) in currentView.collectionInfos {
@@ -1108,10 +1127,12 @@ final class ChatMediaInputNode: ChatInputNode {
             return animatedEmojiStickers
         }
         
+        let accountPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers)
-        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, accountPeer)
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, accountPeer -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -1140,9 +1161,24 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
-            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, expanded: panelExpanded, reorderable: true)
+            var hasPremium = false
+            var premiumStickers: [ItemCollectionItem]?
+            if case let .user(user) = accountPeer, user.flags.contains(.isPremium) {
+                hasPremium = true
+                
+                for entry in view.entries {
+                    if let item = entry.item as? StickerPackItem, item.file.isPremiumSticker {
+                        if premiumStickers == nil {
+                            premiumStickers = []
+                        }
+                        premiumStickers?.append(item)
+                    }
+                }
+            }
+            
+            let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, hasPremium: premiumStickers != nil, expanded: panelExpanded, reorderable: true)
             let gifPaneEntries = chatMediaInputPanelGifModeEntries(theme: theme, strings: strings, reactions: reactions, animatedEmojiStickers: animatedEmojiStickers, expanded: panelExpanded)
-            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme)
+            var gridEntries = chatMediaInputGridEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, trendingPacks: trendingPacks, installedPacks: installedPacks, premiumStickers: premiumStickers, trendingIsDismissed: trendingIsDismissed, strings: strings, theme: theme, hasPremium: hasPremium)
             
             if view.higher == nil {
                 var hasTopSeparator = true
@@ -1587,7 +1623,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, item: item, menu: menuItems))
                                 } else {
                                     return nil
                                 }
@@ -1707,7 +1743,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, item: .pack(item), menu: menuItems))
                                     } else {
                                         return nil
                                     }

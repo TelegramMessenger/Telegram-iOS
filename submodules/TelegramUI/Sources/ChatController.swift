@@ -2006,7 +2006,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return $0.updatedInputMode(f)
             })
         }, openMessageShareMenu: { [weak self] id in
-            if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let _ = messages.first {
+            if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first {
+                let chatPresentationInterfaceState = strongSelf.presentationInterfaceState
+                var warnAboutPrivate = false
+                if case .peer = chatPresentationInterfaceState.chatLocation, let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                    if channel.addressName == nil {
+                        warnAboutPrivate = true
+                    }
+                }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
                 shareController.openShareAsImage = { [weak self] messages in
                     if let strongSelf = self {
@@ -2020,7 +2027,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 shareController.actionCompleted = { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(text: strongSelf.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        let content: UndoOverlayContent
+                        if warnAboutPrivate {
+                            content = .linkCopied(text: strongSelf.presentationData.strings.Conversation_PrivateMessageLinkCopiedLong)
+                        } else {
+                            content = .linkCopied(text: strongSelf.presentationData.strings.Conversation_LinkCopied)
+                        }
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     }
                 }
                 shareController.completed = { [weak self] peerIds in
@@ -5202,6 +5215,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
+        }
+        
+        self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
+            }
         }
 
         self.chatDisplayNode.historyNode.addContentOffset = { [weak self] offset, itemNode in

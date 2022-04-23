@@ -2027,8 +2027,22 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 guard let strongSelf = self else {
                     return
                 }
+                
+                var existingOutputs = Set<String>()
+                var filteredOutputs: [AudioSessionOutput] = []
+                for output in state.0 {
+                    if case let .port(port) = output {
+                        if !existingOutputs.contains(port.name) {
+                            existingOutputs.insert(port.name)
+                            filteredOutputs.append(output)
+                        }
+                    } else {
+                        filteredOutputs.append(output)
+                    }
+                }
+                
                 let wasEmpty = strongSelf.audioOutputState == nil
-                strongSelf.audioOutputState = state
+                strongSelf.audioOutputState = (filteredOutputs, state.1)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                 }

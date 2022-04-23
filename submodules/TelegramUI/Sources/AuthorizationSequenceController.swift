@@ -364,11 +364,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             if let strongSelf = self, let controller = controller {
                                 controller.inProgress = false
                                 
+                                var resetCode = false
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
+                                        resetCode = true
                                         text = strongSelf.presentationData.strings.Login_CodeFloodError
                                     case .invalidCode:
+                                        resetCode = true
                                         text = strongSelf.presentationData.strings.Login_InvalidCodeError
                                     case .generic:
                                         text = strongSelf.presentationData.strings.Login_UnknownError
@@ -378,6 +381,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         let _ = (strongSelf.account.postbox.transaction { transaction -> Void in
                                             transaction.setState(UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty))
                                         }).start()
+                                }
+                                
+                                if resetCode {
+                                    controller.resetCode()
                                 }
                                 
                                 controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))

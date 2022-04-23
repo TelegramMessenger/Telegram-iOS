@@ -558,6 +558,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public private(set) var loadState: ChatHistoryNodeLoadState?
     private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     
+    public private(set) var hasPlentyOfMessages: Bool = false
+    public var hasPlentyOfMessagesUpdated: ((Bool) -> Void)?
+    
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -2518,6 +2521,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     strongSelf.loadState = loadState
                     strongSelf.loadStateUpdated?(loadState, animated || transition.animateIn || animateIn)
+                }
+                
+                var hasPlentyOfMessages = false
+                if let historyView = strongSelf.historyView {
+                    if historyView.originalView.holeEarlier || historyView.originalView.holeLater {
+                        hasPlentyOfMessages = true
+                    } else if !historyView.originalView.holeEarlier && !historyView.originalView.holeLater {
+                        if historyView.filteredEntries.count >= 10 {
+                            hasPlentyOfMessages = true
+                        }
+                    }
+                }
+                
+                if strongSelf.hasPlentyOfMessages != hasPlentyOfMessages {
+                    strongSelf.hasPlentyOfMessages = hasPlentyOfMessages
+                    strongSelf.hasPlentyOfMessagesUpdated?(hasPlentyOfMessages)
                 }
                 
                 if let _ = visibleRange.loadedRange {

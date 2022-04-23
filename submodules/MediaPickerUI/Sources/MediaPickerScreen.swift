@@ -20,6 +20,7 @@ import WebSearchUI
 import SparseItemGrid
 import UndoUI
 import PresentationDataUtils
+import MoreButtonNode
 
 final class MediaPickerInteraction {
     let openMedia: (PHFetchResult<PHAsset>, Int, UIImage?) -> Void

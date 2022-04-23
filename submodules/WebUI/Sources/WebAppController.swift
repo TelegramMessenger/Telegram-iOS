@@ -17,6 +17,7 @@ import ShimmerEffect
 import PhotoResources
 import LegacyComponents
 import UrlHandling
+import MoreButtonNode
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 

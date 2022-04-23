@@ -581,10 +581,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         if let strongSelf = self {
                             strongSelf.scrubbingBeginTimestamp = nil
                             let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue
-                            strongSelf.scrubbingTimestampValue = nil
-                            strongSelf._scrubbingTimestamp.set(.single(nil))
-                            Queue.mainQueue().after(0.01, {
+                            Queue.mainQueue().after(0.05, {
+                                strongSelf._scrubbingTimestamp.set(.single(nil))
                                 strongSelf._scrubbingPosition.set(.single(nil))
+                                strongSelf.scrubbingTimestampValue = nil
                             })
                             if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
                                 if let statusValue = strongSelf.statusValue {

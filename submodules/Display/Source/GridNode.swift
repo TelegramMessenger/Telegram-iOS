@@ -508,6 +508,10 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                     
                     for item in self.items {
                         var itemSize = defaultItemSize
+                        if let _ = item.customItemSize {
+                            let side = (contentSize.width / 3.0) - 1.0
+                            itemSize = CGSize(width: side, height: side)
+                        }
                         
                         let section = item.section
                         var keepSection = true
@@ -539,7 +543,11 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         if let (height, fillWidth) = item.fillsRowWithHeight {
                             if fillWidth {
-                                nextItemOrigin.x = 0.0
+                                if nextItemOrigin.x > 0.0 {
+                                    nextItemOrigin.x = 0.0
+                                    nextItemOrigin.y += itemSize.height + lineSpacing
+                                    contentSize.height += itemSize.height + lineSpacing
+                                }
                                 itemSize.width = gridLayout.size.width
                             }
                             itemSize.height = height

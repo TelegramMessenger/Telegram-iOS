@@ -15,6 +15,7 @@ enum ChatMediaInputMetaSectionItemType: Equatable {
     case stickersMode
     case savedGifs
     case trendingGifs
+    case premium
     case gifEmoji(String, TelegramMediaFile?)
 }
 
@@ -171,6 +172,8 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
             self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0)
         case .recentStickers:
             self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0)
+        case .premium:
+            self.currentCollectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0)
         default:
             break
         }
@@ -204,6 +207,9 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
                 case .trendingGifs:
                     self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingGifsIcon(theme)
                     title = strings.Stickers_Trending
+                case .premium:
+                    self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelPremiumIcon(theme)
+                    title = strings.Stickers_PremiumStickers
                 case let .gifEmoji(emoji, file):
                     switch emoji {
                         case "😡":

@@ -864,13 +864,15 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         }
 
         self.pinchSourceNode.activate = { [weak self] sourceNode in
-            guard let _ = self else {
+            guard let strongSelf = self, let (_, _, _, isExpanded) = strongSelf.arguments, isExpanded else {
                 return
             }
             let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
                 return UIScreen.main.bounds
             })
             context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
+            
+            strongSelf.listContainerNode.bottomShadowNode.alpha = 0.0
         }
 
         self.pinchSourceNode.animatedOut = { [weak self] in
@@ -1614,6 +1616,8 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         self.textNodeContainer = ASDisplayNode()
         self.measureTextNode = ImmediateTextNode()
         self.measureTextNode.maximumNumberOfLines = 0
+        self.measureTextNode.isUserInteractionEnabled = false
+        self.measureTextNode.lineSpacing = 0.1
         self.topSeparator = ASDisplayNode()
         
         self.clearIconNode = ASImageNode()
@@ -1710,9 +1714,10 @@ final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderT
         if measureText.hasSuffix("\n") || measureText.isEmpty {
            measureText += "|"
         }
-        let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .black)
+        let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .gray)
         self.measureTextNode.attributedText = attributedMeasureText
         let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
+        self.measureTextNode.frame = CGRect(origin: CGPoint(), size: measureTextSize)
         self.currentMeasuredHeight = measureTextSize.height
         
         let height = measureTextSize.height + 22.0
@@ -2153,8 +2158,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             strongSelf.navigationButtonContainer.layer.animateAlpha(from: 0.0, to: strongSelf.navigationButtonContainer.alpha, duration: 0.25)
             strongSelf.avatarListNode.listContainerNode.topShadowNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.topShadowNode.alpha, duration: 0.25)
+            
+            strongSelf.avatarListNode.listContainerNode.bottomShadowNode.alpha = 1.0
             strongSelf.avatarListNode.listContainerNode.bottomShadowNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.bottomShadowNode.alpha, duration: 0.25)
             strongSelf.avatarListNode.listContainerNode.controlsContainerNode.layer.animateAlpha(from: 0.0, to: strongSelf.avatarListNode.listContainerNode.controlsContainerNode.alpha, duration: 0.25)
+            
+            strongSelf.titleNode.layer.animateAlpha(from: 0.0, to: strongSelf.titleNode.alpha, duration: 0.25)
+            strongSelf.subtitleNode.layer.animateAlpha(from: 0.0, to: strongSelf.subtitleNode.alpha, duration: 0.25)
 
             strongSelf.animateOverlaysFadeIn?()
         }

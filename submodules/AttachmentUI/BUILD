@@ -32,6 +32,7 @@ swift_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/MediaResources:MediaResources",
         "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/Components/AnimatedStickerComponent:AnimatedStickerComponent",
     ],
     visibility = [

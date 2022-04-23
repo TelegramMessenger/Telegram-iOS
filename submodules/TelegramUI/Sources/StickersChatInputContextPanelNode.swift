@@ -176,7 +176,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, item: .pack(item), menu: menuItems))
                             } else {
                                 return nil
                             }

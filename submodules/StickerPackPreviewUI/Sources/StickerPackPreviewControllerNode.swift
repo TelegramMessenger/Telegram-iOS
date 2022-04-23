@@ -26,7 +26,7 @@ private struct StickerPackPreviewGridEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, interaction: StickerPackPreviewInteraction, theme: PresentationTheme) -> StickerPackPreviewGridItem {
-        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isEmpty: false)
+        return StickerPackPreviewGridItem(account: account, stickerItem: self.stickerItem, interaction: interaction, theme: theme, isPremium: false, isLocked: false, isEmpty: false)
     }
 }
 
@@ -200,11 +200,17 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
         self.contentGridNode.view.addGestureRecognizer(PeekControllerGestureRecognizer(contentAtPoint: { [weak self] point -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>? in
             if let strongSelf = self {
                 if let itemNode = strongSelf.contentGridNode.itemNodeAtPoint(point) as? StickerPackPreviewGridItemNode, let item = itemNode.stickerPackItem {
-                    return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                        return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                    let accountPeerId = strongSelf.context.account.peerId
+                    return strongSelf.context.account.postbox.transaction { transaction -> (Bool, Bool) in
+                        let isStarred = getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                        var hasPremium = false
+                        if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.flags.contains(.isPremium) {
+                            hasPremium = true
+                        }
+                        return (isStarred, hasPremium)
                     }
                     |> deliverOnMainQueue
-                    |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                    |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
                         if let strongSelf = self {
                             var menuItems: [ContextMenuItem] = []
                             if let stickerPack = strongSelf.stickerPack, case let .result(info, _, _) = stickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
@@ -232,7 +238,7 @@ final class StickerPackPreviewControllerNode: ViewControllerTracingNode, UIScrol
                                     }
                                 })))
                             }
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems))
                         } else {
                             return nil
                         }

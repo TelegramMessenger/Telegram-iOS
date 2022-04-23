@@ -149,7 +149,15 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
             self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_GreetingText, font: messageFont, textColor: serviceColor.primaryText)
         }
         
-        let stickerSize = CGSize(width: 160.0, height: 160.0)
+        let stickerSize: CGSize
+        let inset: CGFloat
+        if size.width == 320.0 {
+            stickerSize = CGSize(width: 106.0, height: 106.0)
+            inset = 8.0
+        } else  {
+            stickerSize = CGSize(width: 160.0, height: 160.0)
+            inset = 15.0
+        }
         if let item = self.stickerItem {
             self.stickerNode.updateLayout(item: item, size: stickerSize, isVisible: true, synchronousLoads: true)
         } else if !self.didSetupSticker {
@@ -203,11 +211,11 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
             }))
         }
         
-        let insets = UIEdgeInsets(top: 15.0, left: 15.0, bottom: 15.0, right: 15.0)
+        let insets = UIEdgeInsets(top: inset, left: inset, bottom: inset, right: inset)
         let titleSpacing: CGFloat = 5.0
         let stickerSpacing: CGFloat = 5.0
         
-        var contentWidth: CGFloat = 210.0
+        var contentWidth: CGFloat = 220.0
         var contentHeight: CGFloat = 0.0
                 
         let titleSize = self.titleNode.updateLayout(CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude))

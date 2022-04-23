@@ -620,10 +620,13 @@
 {
     if (![self usePhotoBehavior])
     {
-        if (afterReload)
+        if (afterReload) {
+            _cachedThumbnails = nil;
             [_scrubberView reloadData];
-        else
+        }
+        else {
             [self setScrubbingPanelHidden:false animated:true];
+        }
     }
 }
 
@@ -1618,37 +1621,36 @@
     TGMediaEditingContext *editingContext = self.item.editingContext;
     id<TGMediaEditableItem> editableItem = self.editableMediaItem;
     
-//    SSignal *thumbnailsSignal = nil;
-//    if ([self.item.asset isKindOfClass:[TGMediaAsset class]] && ![self itemIsLivePhoto])
-//        thumbnailsSignal = [TGMediaAssetImageSignals videoThumbnailsForAsset:self.item.asset size:size timestamps:timestamps];
-//    else if (avAsset != nil)
-//        thumbnailsSignal = [avAsset mapToSignal:^SSignal *(AVAsset *avAsset) {
-//            return [TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps];
-//        }];
-
     __strong TGMediaPickerGalleryVideoItemView *weakSelf = self;
     SSignal *thumbnailsSignal = nil;
-    if (_cachedThumbnails != nil) {
+    if (isSummaryThumbnails && _cachedThumbnails != nil) {
         thumbnailsSignal = [SSignal single:_cachedThumbnails];
     } else if ([self.item.asset isKindOfClass:[TGMediaAsset class]] && ![self itemIsLivePhoto]) {
-        thumbnailsSignal = [[self _placeholderThumbnails:timestamps] then:[[TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item.asset size:size timestamps:timestamps] onNext:^(NSArray *images) {
+        thumbnailsSignal = [[TGMediaAssetImageSignals videoThumbnailsForAsset:(TGMediaAsset *)self.item.asset size:size timestamps:timestamps] onNext:^(NSArray *images) {
             __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
             
-            if (strongSelf->_cachedThumbnails == nil)
+            if (isSummaryThumbnails && strongSelf->_cachedThumbnails == nil)
                 strongSelf->_cachedThumbnails = images;
-        }]];
+        }];
+        if (isSummaryThumbnails) {
+            thumbnailsSignal = [[self _placeholderThumbnails:timestamps] then:thumbnailsSignal];
+        }
     } else if ([self.item.asset isKindOfClass:[TGCameraCapturedVideo class]]) {
         thumbnailsSignal = [[((TGCameraCapturedVideo *)self.item.asset).avAsset takeLast] mapToSignal:^SSignal *(AVAsset *avAsset) {
-            return [[self _placeholderThumbnails:timestamps] then:[[TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps] onNext:^(NSArray *images) {
+            SSignal *thumbnailsSignal = [[TGMediaAssetImageSignals videoThumbnailsForAVAsset:avAsset size:size timestamps:timestamps] onNext:^(NSArray *images) {
                 __strong TGMediaPickerGalleryVideoItemView *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
-                if (strongSelf->_cachedThumbnails == nil)
+                if (isSummaryThumbnails && strongSelf->_cachedThumbnails == nil)
                     strongSelf->_cachedThumbnails = images;
-            }]];
+            }];
+            if (isSummaryThumbnails) {
+                thumbnailsSignal = [[self _placeholderThumbnails:timestamps] then:thumbnailsSignal];
+            }
+            return thumbnailsSignal;
         }];
     }
     
@@ -1682,7 +1684,7 @@
         [images enumerateObjectsUsingBlock:^(UIImage *image, NSUInteger index, __unused BOOL *stop)
         {
             if (index < timestamps.count)
-                [strongSelf->_scrubberView setThumbnailImage:image forTimestamp:[timestamps[index] doubleValue] index:index isSummaryThubmnail:isSummaryThumbnails];
+                [strongSelf->_scrubberView setThumbnailImage:image forTimestamp:[timestamps[index] doubleValue] index:index isSummaryThubmnail:isSummaryThumbnails last:index == (images.count - 1)];
         }];
     } completed:^
     {

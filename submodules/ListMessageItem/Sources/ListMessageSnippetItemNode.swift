@@ -623,7 +623,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 9.0), size: titleNodeLayout.size))
                     let _ = titleNodeApply()
                     
-                    let descriptionFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset, y: strongSelf.titleNode.frame.maxY + 1.0), size: descriptionNodeLayout.size)
+                    let descriptionFrame = CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: strongSelf.titleNode.frame.maxY + 1.0), size: descriptionNodeLayout.size)
                     transition.updateFrame(node: strongSelf.descriptionNode, frame: descriptionFrame)
                     let _ = descriptionNodeApply()
                     

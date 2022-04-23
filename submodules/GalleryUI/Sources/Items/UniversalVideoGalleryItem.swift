@@ -1445,8 +1445,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 Queue.mainQueue().async {
                     item.playbackCompleted()
                     if let strongSelf = self, !isAnimated {
-                        videoNode?.seek(0.0)
+                        if let snapshotView = videoNode?.view.snapshotView(afterScreenUpdates: false) {
+                            videoNode?.view.addSubview(snapshotView)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
                         
+                        videoNode?.seek(0.0)
+                                                
                         if strongSelf.actionAtEnd == .stop && strongSelf.isCentral == true {
                             strongSelf.isPlayingPromise.set(false)
                             strongSelf.updateControlsVisibility(true)

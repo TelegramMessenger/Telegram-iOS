@@ -7526,3 +7526,10 @@ Sorry for the inconvenience.";
 
 "Share.UploadProgress" = "Uploading • %d%";
 "Share.UploadDone" = "Done";
+
+"StickerPack.Share" = "Share Stickers";
+"StickerPack.CopyLink" = "Copy Link";
+"StickerPack.PremiumStickers_1" = "+%@ PREMIUM STICKER";
+"StickerPack.PremiumStickers_any" = "+%@ PREMIUM STICKERS";
+
+"Stickers.PremiumStickers" = "Premium Stickers";

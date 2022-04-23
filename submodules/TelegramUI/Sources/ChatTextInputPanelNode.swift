@@ -1437,19 +1437,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             audioRecordingDotNode.frame = CGRect(origin: CGPoint(x: leftInset + 2.0 - UIScreenPixel, y: audioRecordingTimeNode.frame.midY - 20), size: CGSize(width: 40.0, height: 40))
             if animateDotAppearing {
                 audioRecordingDotNode.layer.animateScale(from: 0.3, to: 1, duration: 0.15, delay: 0, removeOnCompletion: false)
-                if audioRecordingDotNode.layer.animation(forKey: "recording") == nil {
-                    audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 0), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
-                        if finished {
-                            let animation = CAKeyframeAnimation(keyPath: "opacity")
-                            animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
-                            animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
-                            animation.duration = 0.5
-                            animation.autoreverses = true
-                            animation.repeatCount = Float.infinity
-                            
-                            audioRecordingDotNode?.layer.add(animation, forKey: "recording")
-                        }
-                    })
+                audioRecordingTimeNode.started = { [weak audioRecordingDotNode] in
+                    if let audioRecordingDotNode = audioRecordingDotNode, audioRecordingDotNode.layer.animation(forKey: "recording") == nil {
+                        audioRecordingDotNode.layer.animateAlpha(from: CGFloat(audioRecordingDotNode.layer.presentation()?.opacity ?? 0), to: 1, duration: 0.15, delay: 0, completion: { [weak audioRecordingDotNode] finished in
+                            if finished {
+                                let animation = CAKeyframeAnimation(keyPath: "opacity")
+                                animation.values = [1.0 as NSNumber, 1.0 as NSNumber, 0.0 as NSNumber]
+                                animation.keyTimes = [0.0 as NSNumber, 0.4546 as NSNumber, 0.9091 as NSNumber, 1 as NSNumber]
+                                animation.duration = 0.5
+                                animation.autoreverses = true
+                                animation.repeatCount = Float.infinity
+                                
+                                audioRecordingDotNode?.layer.add(animation, forKey: "recording")
+                            }
+                        })
+                    }
                 }
                 self.attachmentButton.layer.animateAlpha(from: CGFloat(self.attachmentButton.layer.presentation()?.opacity ?? 1), to: 0, duration: 0.15, delay: 0, removeOnCompletion: false)
                 self.attachmentButton.layer.animateScale(from: 1, to: 0.3, duration: 0.15, delay: 0, removeOnCompletion: false)
