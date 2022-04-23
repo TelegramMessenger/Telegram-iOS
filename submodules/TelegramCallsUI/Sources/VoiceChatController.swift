@@ -1346,6 +1346,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                     text = presentationData.strings.Channel_TooMuchBots
                                                 case .bot:
                                                     text = presentationData.strings.Login_UnknownError
+                                                case .kicked:
+                                                    text = presentationData.strings.Channel_AddUserKickedError
                                             }
                                             strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         }, completed: {

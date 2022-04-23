@@ -778,16 +778,20 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func updateState(_ f: (ChatListNodeState) -> ChatListNodeState) {
+    func updateState(onlyCurrent: Bool = true, _ f: (ChatListNodeState) -> ChatListNodeState) {
         self.currentItemNode.updateState(f)
         let updatedState = self.currentItemNode.currentState
         for (id, itemNode) in self.itemNodes {
             if id != self.selectedId {
-                itemNode.listNode.updateState { state in
-                    var state = state
-                    state.editing = updatedState.editing
-                    state.selectedPeerIds = updatedState.selectedPeerIds
-                    return state
+                if onlyCurrent {
+                    itemNode.listNode.updateState { state in
+                        var state = state
+                        state.editing = updatedState.editing
+                        state.selectedPeerIds = updatedState.selectedPeerIds
+                        return state
+                    }
+                } else {
+                    itemNode.listNode.updateState(f)
                 }
             }
         }

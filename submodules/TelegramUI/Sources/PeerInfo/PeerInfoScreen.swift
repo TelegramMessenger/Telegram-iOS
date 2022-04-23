@@ -8541,14 +8541,58 @@ func presentAddMembers(context: AccountContext, updatedPresentationData: (initia
             }
         }
         
-        let addMember: (ContactListPeer) -> Signal<Void, NoError> = { memberPeer -> Signal<Void, NoError> in
+        let addMember: (ContactListPeer) -> Signal<Void, NoError> = { [weak contactsController] memberPeer -> Signal<Void, NoError> in
             if case let .peer(selectedPeer, _, _) = memberPeer {
                 let memberId = selectedPeer.id
                 if groupPeer.id.namespace == Namespaces.Peer.CloudChannel {
                     return context.peerChannelMemberCategoriesContextsManager.addMember(engine: context.engine, peerId: groupPeer.id, memberId: memberId)
                     |> map { _ -> Void in
                     }
-                    |> `catch` { _ -> Signal<Void, NoError> in
+                    |> `catch` { error -> Signal<Void, NoError> in
+                        let text: String
+                        switch error {
+                            case .limitExceeded:
+                                text = presentationData.strings.Channel_ErrorAddTooMuch
+                            case .tooMuchJoined:
+                                text = presentationData.strings.Invite_ChannelsTooMuch
+                            case .generic:
+                                text = presentationData.strings.Login_UnknownError
+                            case .restricted:
+                                text = presentationData.strings.Channel_ErrorAddBlocked
+                            case .notMutualContact:
+                                if let peer = groupPeer as? TelegramChannel, case .broadcast = peer.info {
+                                    text = presentationData.strings.Channel_AddUserLeftError
+                                } else {
+                                    text = presentationData.strings.GroupInfo_AddUserLeftError
+                                }
+                            case let .bot(memberId):
+                                guard let peer = groupPeer as? TelegramChannel else {
+                                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    contactsController?.dismiss()
+                                    return .complete()
+                                }
+                                
+                                if peer.hasPermission(.addAdmins) {
+                                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_AddBotErrorHaveRights, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Channel_AddBotAsAdmin, action: {
+                                        contactsController?.dismiss()
+                                        
+                                        parentController?.push(channelAdminController(context: context, updatedPresentationData: updatedPresentationData, peerId: groupPeer.id, adminId: memberId, initialParticipant: nil, updated: { _ in
+                                        }, upgradedToSupergroup: { _, f in f () }, transferedOwnership: { _ in }))
+                                    })]), in: .window(.root))
+                                } else {
+                                    parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_AddBotErrorHaveRights, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                }
+                                
+                                contactsController?.dismiss()
+                                return .complete()
+                            case .botDoesntSupportGroups:
+                                text = presentationData.strings.Channel_BotDoesntSupportGroups
+                            case .tooMuchBots:
+                                text = presentationData.strings.Channel_TooMuchBots
+                            case .kicked:
+                                text = presentationData.strings.Channel_AddUserKickedError
+                        }
+                        parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                         return .complete()
                     }
                 } else {
@@ -8702,6 +8746,8 @@ func presentAddMembers(context: AccountContext, updatedPresentationData: (initia
                         parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     } else if case .tooMuchJoined = error  {
                         parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    } else if peers.count == 1, case .kicked = error {
+                        parentController?.present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Channel_AddUserKickedError, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                     
                     contactsController?.dismiss()
