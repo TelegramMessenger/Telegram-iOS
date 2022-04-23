@@ -390,11 +390,12 @@ private final class StickerPackContainer: ASDisplayNode {
     }
     
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
-        guard let controller = self.controller else {
+        guard let controller = self.controller, let (info, _, _) = self.currentStickerPack else {
             return
         }
         let strings = self.presentationData.strings
-        let link = "https://t.me/addstickers/\("test")"
+
+        let link = "https://t.me/addstickers/\(info.shortName)"
            
         var items: [ContextMenuItem] = []
         items.append(.action(ContextMenuActionItem(text: strings.StickerPack_Share, icon: { theme in
@@ -429,7 +430,7 @@ private final class StickerPackContainer: ASDisplayNode {
     }
     
     @objc func buttonPressed() {
-        guard let (info, items, installed) = currentStickerPack else {
+        guard let (info, items, installed) = self.currentStickerPack else {
             self.requestDismiss()
             return
         }
@@ -1095,6 +1096,26 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         self.isDismissed = true
         self.animateOut(completion: { [weak self] in
             self?.dismissed()
+        })
+        
+        self.dismissAllTooltips()
+    }
+    
+    private func dismissAllTooltips() {
+        guard let controller = self.controller else {
+            return
+        }
+
+        controller.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController, !controller.keepOnParentDismissal {
+                controller.dismissWithCommitAction()
+            }
+        })
+        controller.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController, !controller.keepOnParentDismissal {
+                controller.dismissWithCommitAction()
+            }
+            return true
         })
     }
     
