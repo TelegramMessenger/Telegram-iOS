@@ -681,24 +681,26 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             return
         }
         
+        let canEdit = canEditPeerInfo(context: self.context, peer: peer)
+
         let previousItem = self.item
         var item = item
         self.item = item
-                
+                        
         let overrideImage: AvatarNodeImageOverride?
-        if canEditPeerInfo(context: self.context, peer: peer), peer.profileImageRepresentations.isEmpty {
-            overrideImage = .editAvatarIcon
+        if canEdit, peer.profileImageRepresentations.isEmpty {
+            overrideImage = .editAvatarIcon(forceNone: true)
         } else if let previousItem = previousItem, item == nil {
             if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
                 self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
             }
-            overrideImage = AvatarNodeImageOverride.none
+            overrideImage = canEdit ? .editAvatarIcon(forceNone: true) : AvatarNodeImageOverride.none
             item = nil
-        } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.stringRepresentation) {
-            overrideImage = AvatarNodeImageOverride.none
+        } else if let representation = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(representation.resource.id.stringRepresentation) {
+            overrideImage = canEdit ? .editAvatarIcon(forceNone: true) : AvatarNodeImageOverride.none
             item = nil
         } else {
-            overrideImage = nil
+            overrideImage = item == nil && canEdit ? .editAvatarIcon(forceNone: true) : nil
         }
         self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
         self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))

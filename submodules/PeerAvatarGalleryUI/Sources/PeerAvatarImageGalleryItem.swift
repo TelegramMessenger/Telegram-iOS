@@ -312,27 +312,45 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
         guard let videoNode = self.videoNode, self.isCentral else {
             return
         }
-        if let _ = self.videoStartTimestamp {
+        if let videoStartTimestamp = self.videoStartTimestamp {
             videoNode.isHidden = true
             self.playbackStatusDisposable.set((videoNode.status
-                |> map { status -> Bool in
-                    if let status = status, case .playing = status.status {
-                        return true
-                    } else {
-                        return false
+            |> castError(Bool.self)
+            |> mapToSignal { status -> Signal<Bool, Bool> in
+                if let status = status, case .playing = status.status {
+                    if videoStartTimestamp > 0.0 && videoStartTimestamp > status.duration - 1.0 {
+                        return .fail(true)
                     }
+                    return .single(true)
+                } else {
+                    return .single(false)
                 }
-                |> filter { playing in
-                    return playing
-                }
-                |> take(1)
-                |> deliverOnMainQueue).start(completed: { [weak self] in
-                    if let strongSelf = self {
+            }
+            |> filter { playing in
+                return playing
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(error: { [weak self] _ in
+                if let strongSelf = self {
+                    if let _ = strongSelf.videoNode {
+                        videoNode.seek(0.0)
                         Queue.mainQueue().after(0.1) {
+                            strongSelf.videoNode?.layer.allowsGroupOpacity = true
+                            strongSelf.videoNode?.alpha = 0.0
                             strongSelf.videoNode?.isHidden = false
+                            
+                            strongSelf.videoNode?.alpha = 1.0
+                            strongSelf.videoNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, delay: 0.01)
                         }
                     }
-                }))
+                }
+            }, completed: { [weak self] in
+                if let strongSelf = self {
+                    Queue.mainQueue().after(0.1) {
+                        strongSelf.videoNode?.isHidden = false
+                    }
+                }
+            }))
         } else {
             self.playbackStatusDisposable.set(nil)
             videoNode.isHidden = false

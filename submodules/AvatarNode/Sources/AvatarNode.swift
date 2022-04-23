@@ -117,7 +117,7 @@ public enum AvatarNodeImageOverride: Equatable {
     case savedMessagesIcon
     case repliesIcon
     case archivedChatsIcon(hiddenByDefault: Bool)
-    case editAvatarIcon
+    case editAvatarIcon(forceNone: Bool)
     case deletedIcon
     case phoneIcon
 }
@@ -322,8 +322,8 @@ public final class AvatarNode: ASDisplayNode {
                 case let .archivedChatsIcon(hiddenByDefault):
                     representation = nil
                     icon = .archivedChatsIcon(hiddenByDefault: hiddenByDefault)
-                case .editAvatarIcon:
-                    representation = peer?.smallProfileImage
+                case let .editAvatarIcon(forceNone):
+                    representation = forceNone ? nil : peer?.smallProfileImage
                     icon = .editAvatarIcon
                 case .deletedIcon:
                     representation = nil

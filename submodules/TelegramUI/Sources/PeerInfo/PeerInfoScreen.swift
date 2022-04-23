@@ -5323,11 +5323,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
     
     private func editingOpenPublicLinkSetup() {
-        self.controller?.push(channelVisibilityController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, mode: .generic, upgradedToSupergroup: { _, f in f() }))
+        var upgradedToSupergroupImpl: (() -> Void)?
+        let controller = channelVisibilityController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, mode: .generic, upgradedToSupergroup: { _, f in
+            upgradedToSupergroupImpl?()
+            f()
+        })
+        self.controller?.push(controller)
+        
+        upgradedToSupergroupImpl = { [weak controller] in
+            if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
+            }
+        }
     }
     
     private func editingOpenInviteLinksSetup() {
-        
         self.controller?.push(inviteLinkListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: self.peerId, admin: nil))
     }
     
@@ -5481,13 +5491,38 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         switch action {
         case .promote:
             if case let .channelMember(channelMember) = member {
-                self.controller?.push(channelAdminController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, adminId: member.id, initialParticipant: channelMember.participant, updated: { _ in
-                }, upgradedToSupergroup: { _, f in f() }, transferedOwnership: { _ in }))
+                var upgradedToSupergroupImpl: (() -> Void)?
+                let controller = channelAdminController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, adminId: member.id, initialParticipant: channelMember.participant, updated: { _ in
+                }, upgradedToSupergroup: { _, f in
+                    upgradedToSupergroupImpl?()
+                    f()
+                }, transferedOwnership: { _ in })
+                
+                self.controller?.push(controller)
+                
+                upgradedToSupergroupImpl = { [weak controller] in
+                    if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                        rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
+                    }
+                }
             }
         case .restrict:
             if case let .channelMember(channelMember) = member {
-                self.controller?.push(channelBannedMemberController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, memberId: member.id, initialParticipant: channelMember.participant, updated: { _ in
-                }, upgradedToSupergroup: { _, f in f() }))
+                var upgradedToSupergroupImpl: (() -> Void)?
+                
+                let controller = channelBannedMemberController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, memberId: member.id, initialParticipant: channelMember.participant, updated: { _ in
+                }, upgradedToSupergroup: { _, f in
+                    upgradedToSupergroupImpl?()
+                    f()
+                })
+                
+                self.controller?.push(controller)
+                
+                upgradedToSupergroupImpl = { [weak controller] in
+                    if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                        rebuildControllerStackAfterSupergroupUpgrade(controller: controller, navigationController: navigationController)
+                    }
+                }
             }
         case .remove:
             data.members?.membersContext.removeMember(memberId: member.id)
@@ -5711,25 +5746,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
     }
     
-    private func deleteAvatar(_ item: PeerInfoAvatarListItem, remove: Bool = true) {
-        if self.data?.peer?.id == self.context.account.peerId {
-            if case let .image(reference, _, _, _) = item {
-                if let reference = reference {
-                    if remove {
-                        let _ = self.context.engine.accountData.removeAccountPhoto(reference: reference).start()
-                    }
-                    let dismiss = self.headerNode.avatarListNode.listContainerNode.deleteItem(item)
-                    if dismiss {
-                        if self.headerNode.isAvatarExpanded {
-                            self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
-                            self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
-                        }
-                        if let (layout, navigationHeight) = self.validLayout {
-                            self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
-                        }
-                    }
-                }
+    private func deleteProfilePhoto(_ item: PeerInfoAvatarListItem) {
+        let dismiss = self.headerNode.avatarListNode.listContainerNode.deleteItem(item)
+        if dismiss {
+            if self.headerNode.isAvatarExpanded {
+                self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
+                self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+            }
+            if let (layout, navigationHeight) = self.validLayout {
+                self.scrollNode.view.setContentOffset(CGPoint(), animated: false)
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
         }
     }
@@ -6006,7 +6032,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 let proceed = {
                     if let item = item {
-                        strongSelf.deleteAvatar(item, remove: false)
+                        strongSelf.deleteProfilePhoto(item)
                     }
                     
                     let _ = strongSelf.currentAvatarMixin.swap(nil)
