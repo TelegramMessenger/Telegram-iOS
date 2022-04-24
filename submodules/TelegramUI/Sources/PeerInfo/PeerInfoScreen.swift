@@ -460,7 +460,7 @@ private final class PeerInfoInteraction {
     let performMemberAction: (PeerInfoMember, PeerInfoMemberAction) -> Void
     let openPeerInfoContextMenu: (PeerInfoContextSubject, ASDisplayNode) -> Void
     let performBioLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
-    let requestLayout: () -> Void
+    let requestLayout: (Bool) -> Void
     let openEncryptionKey: () -> Void
     let openSettings: (PeerInfoSettingsSection) -> Void
     let switchToAccount: (AccountRecordId) -> Void
@@ -502,7 +502,7 @@ private final class PeerInfoInteraction {
         performMemberAction: @escaping (PeerInfoMember, PeerInfoMemberAction) -> Void,
         openPeerInfoContextMenu: @escaping (PeerInfoContextSubject, ASDisplayNode) -> Void,
         performBioLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void,
-        requestLayout: @escaping () -> Void,
+        requestLayout: @escaping (Bool) -> Void,
         openEncryptionKey: @escaping () -> Void,
         openSettings: @escaping (PeerInfoSettingsSection) -> Void,
         switchToAccount: @escaping (AccountRecordId) -> Void,
@@ -864,7 +864,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.phone(formattedPhone), sourceNode)
             }, requestLayout: {
-                interaction.requestLayout()
+                interaction.requestLayout(false)
             }))
         }
         if let username = user.username {
@@ -875,21 +875,21 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }, iconAction: {
                 interaction.openQrCode()
             }, requestLayout: {
-                interaction.requestLayout()
+                interaction.requestLayout(false)
             }))
         }
         if let cachedData = data.cachedData as? CachedUserData {
             if user.isFake {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_FakeBotWarning : presentationData.strings.UserInfo_FakeUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
-                    interaction.requestLayout()
+                    interaction.requestLayout(false)
                 }))
             } else if user.isScam {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: user.botInfo != nil ? presentationData.strings.UserInfo_ScamBotWarning : presentationData.strings.UserInfo_ScamUserWarning, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: user.botInfo != nil ? enabledPrivateBioEntities : []), action: nil, requestLayout: {
-                    interaction.requestLayout()
+                    interaction.requestLayout(false)
                 }))
             } else if let about = cachedData.about, !about.isEmpty {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: user.botInfo == nil ? presentationData.strings.Profile_About : presentationData.strings.Profile_BotInfo, text: about, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
-                    interaction.requestLayout()
+                    interaction.requestLayout(false)
                 }))
             }
         }
@@ -982,7 +982,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }, iconAction: {
                 interaction.openQrCode()
             }, requestLayout: {
-                interaction.requestLayout()
+                interaction.requestLayout(false)
             }))
         }
         if let cachedData = data.cachedData as? CachedChannelData {
@@ -1011,7 +1011,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     enabledEntities = enabledPrivateBioEntities
                 }
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemAbout, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
-                    interaction.requestLayout()
+                    interaction.requestLayout(true)
                 }))
             }
             
@@ -1056,7 +1056,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             if let aboutText = aboutText {
                 items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 0, label: presentationData.strings.Channel_Info_Description, text: aboutText, textColor: .primary, textBehavior: .multiLine(maxLines: 100, enabledEntities: enabledPrivateBioEntities), action: nil, longTapAction: bioContextAction, linkItemAction: bioLinkAction, requestLayout: {
-                    interaction.requestLayout()
+                    interaction.requestLayout(true)
                 }))
             }
         }
@@ -1776,8 +1776,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             performBioLinkAction: { [weak self] action, item in
                 self?.performBioLinkAction(action: action, item: item)
             },
-            requestLayout: { [weak self] in
-                self?.requestLayout()
+            requestLayout: { [weak self] animated in
+                self?.requestLayout(animated: animated)
             },
             openEncryptionKey: { [weak self] in
                 self?.openEncryptionKey()
@@ -2571,12 +2571,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             navigationBar.layer.animateAlpha(from: 0.0, to: navigationBar.alpha, duration: 0.25)
         }
         
-        self.headerNode.requestUpdateLayout = { [weak self] in
+        self.headerNode.requestUpdateLayout = { [weak self] animated in
             guard let strongSelf = self else {
                 return
             }
             if let (layout, navigationHeight) = strongSelf.validLayout {
-                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
+                strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: animated ? .animated(duration: 0.35, curve: .slide) : .immediate, additive: false)
             }
         }
         
@@ -5630,8 +5630,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context.sharedContext.handleTextLinkAction(context: self.context, peerId: peer.id, navigateDisposable: self.resolveUrlDisposable, controller: controller, action: action, itemLink: item)
     }
     
-    private func requestLayout() {
-        self.headerNode.requestUpdateLayout?()
+    private func requestLayout(animated: Bool = false) {
+        self.headerNode.requestUpdateLayout?(animated)
     }
     
     private func openDeletePeer() {
@@ -7763,18 +7763,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                     if let signal = peerAvatarImage(account: primary.0, peerReference: PeerReference(primary.1._asPeer()), authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
                         return signal
                         |> map { imageVersions -> (UIImage, UIImage)? in
-                            let image = imageVersions?.0
-                            if let image = image, let selectedImage = generateImage(size, rotatedContext: { size, context in
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-                                context.scaleBy(x: 1.0, y: -1.0)
-                                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-                                context.draw(image.cgImage!, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-                                context.setLineWidth(1.0)
-                                context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
-                                context.strokeEllipse(in: CGRect(x: 1.5, y: 1.5, width: 28.0, height: 28.0))
-                            }) {
-                                return (image.withRenderingMode(.alwaysOriginal), selectedImage.withRenderingMode(.alwaysOriginal))
+                            if let image = imageVersions?.0 {
+                                return (image.withRenderingMode(.alwaysOriginal), image.withRenderingMode(.alwaysOriginal))
                             } else {
                                 return nil
                             }
@@ -7792,22 +7782,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                                 
                                 drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
                             })?.withRenderingMode(.alwaysOriginal)
-                            
-                            let selectedImage = generateImage(size, rotatedContext: { size, context in
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
-                                context.scaleBy(x: 1.0, y: -1.0)
-                                context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
-                                if let cgImage = image?.cgImage {
-                                    context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
-                                }
-                                context.setLineWidth(1.0)
-                                context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
-                                context.strokeEllipse(in: CGRect(x: 1.5, y: 1.5, width: 28.0, height: 28.0))
-                            })?.withRenderingMode(.alwaysOriginal)
-                            
-                            if let image = image, let selectedImage = selectedImage {
-                                subscriber.putNext((image, selectedImage))
+                            if let image = image {
+                                subscriber.putNext((image, image))
                             } else {
                                 subscriber.putNext(nil)
                             }
@@ -7884,6 +7860,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
                     strongSelf.tabBarItem.image = image
                     strongSelf.tabBarItem.selectedImage = selectedImage
                     strongSelf.tabBarItem.animationName = isAvatar ? nil : "TabSettings"
+                    strongSelf.tabBarItem.ringSelection = isAvatar
                     strongSelf.tabBarItem.badgeValue = badgeValue
                 }
             })

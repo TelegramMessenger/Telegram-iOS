@@ -2010,7 +2010,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var requestAvatarExpansion: ((Bool, [AvatarGalleryEntry], AvatarGalleryEntry?, (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?) -> Void)?
     var requestOpenAvatarForEditing: ((Bool) -> Void)?
     var cancelUpload: (() -> Void)?
-    var requestUpdateLayout: (() -> Void)?
+    var requestUpdateLayout: ((Bool) -> Void)?
     var animateOverlaysFadeIn: (() -> Void)?
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
@@ -2100,7 +2100,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         super.init()
         
         requestUpdateLayoutImpl = { [weak self] in
-            self?.requestUpdateLayout?()
+            self?.requestUpdateLayout?(false)
         }
         
         
