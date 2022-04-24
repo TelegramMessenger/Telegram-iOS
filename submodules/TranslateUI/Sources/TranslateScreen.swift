@@ -727,7 +727,7 @@ public class TranslateScreen: ViewController {
                     return self?.controller
                 }
             )
-            let contentSize = self.hostView.update(
+            var contentSize = self.hostView.update(
                 transition: transition,
                 component: self.component,
                 environment: {
@@ -736,6 +736,7 @@ public class TranslateScreen: ViewController {
                 forceUpdate: true,
                 containerSize: CGSize(width: clipFrame.size.width, height: 10000.0)
             )
+            contentSize.height = max(layout.size.height - navigationHeight, contentSize.height)
             transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
             
             self.scrollView.contentSize = contentSize

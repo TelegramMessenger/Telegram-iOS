@@ -2947,34 +2947,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = speakText(context: strongSelf.context, text: text.string)
             case .translate:
                 strongSelf.chatDisplayNode.dismissInput()
+                let f = {
+                    let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { sharedData in
+                        let translationSettings: TranslationSettings
+                        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                            translationSettings = current
+                        } else {
+                            translationSettings = TranslationSettings.defaultSettings
+                        }
+                        
+                        var showTranslateIfTopical = false
+                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
+                            showTranslateIfTopical = true
+                        }
+                        
+                        let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                        
+                        let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
+                        controller.pushController = { [weak self] c in
+                            self?.effectiveNavigationController?._keepModalDismissProgress = true
+                            self?.push(c)
+                        }
+                        controller.presentController = { [weak self] c in
+                            self?.present(c, in: .window(.root))
+                        }
+                        strongSelf.present(controller, in: .window(.root))
+                    })
+                }
+                if let currentContextController = strongSelf.currentContextController {
+                    currentContextController.dismiss(completion: {
+                        f()
+                    })
+                } else {
+                    f()
+                }
                 
-                let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { sharedData in
-                    let translationSettings: TranslationSettings
-                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
-                        translationSettings = current
-                    } else {
-                        translationSettings = TranslationSettings.defaultSettings
-                    }
-                    
-                    var showTranslateIfTopical = false
-                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
-                        showTranslateIfTopical = true
-                    }
-                    
-                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
-                    
-                    let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
-                    controller.pushController = { [weak self] c in
-                        self?.effectiveNavigationController?._keepModalDismissProgress = true
-                        self?.push(c)
-                    }
-                    controller.presentController = { [weak self] c in
-                        self?.present(c, in: .window(.root))
-                    }
-                    strongSelf.present(controller, in: .window(.root))
-                })
             }
         }, displayImportedMessageTooltip: { [weak self] _ in
             guard let strongSelf = self else {
