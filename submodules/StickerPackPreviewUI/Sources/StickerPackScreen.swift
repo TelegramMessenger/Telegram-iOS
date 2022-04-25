@@ -389,6 +389,44 @@ private final class StickerPackContainer: ASDisplayNode {
         }, activateBySingleTap: true))
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        
+        self.titleBackgroundnode.updateColor(color: self.presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+        self.actionAreaBackgroundNode.updateColor(color: self.presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
+        self.actionAreaSeparatorNode.backgroundColor = self.presentationData.theme.rootController.tabBar.separatorColor
+        self.titleSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        
+        self.cancelButtonNode.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.moreButtonNode.theme = self.presentationData.theme
+        
+        if let currentContents = self.currentContents {
+            let buttonColor: UIColor
+            switch currentContents {
+                case .fetching:
+                    buttonColor = self.presentationData.theme.list.itemDisabledTextColor
+                case .none:
+                    buttonColor = self.presentationData.theme.list.itemAccentColor
+                case let .result(_, _, installed):
+                    buttonColor = installed ? self.presentationData.theme.list.itemDestructiveColor : self.presentationData.theme.list.itemAccentColor
+            }
+            self.buttonNode.setTitle(self.buttonNode.attributedTitle(for: .normal)?.string ?? "", with: Font.semibold(17.0), with: buttonColor, for: .normal)
+        }
+                
+        if !self.currentEntries.isEmpty {
+            let transaction = StickerPackPreviewGridTransaction(previousList: self.currentEntries, list: self.currentEntries, account: self.context.account, interaction: self.interaction, theme: self.presentationData.theme, strings: self.presentationData.strings, scrollToItem: nil)
+            self.enqueueTransaction(transaction)
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.semibold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        if let (layout, _, _, _) = self.validLayout {
+            let _ = self.titleNode.updateLayout(CGSize(width: layout.size.width - 12.0 * 2.0, height: .greatestFiniteMagnitude))
+            self.updateLayout(layout: layout, transition: .immediate)
+        }
+    }
+    
     @objc private func morePressed(node: ContextReferenceContentNode, gesture: ContextGesture?) {
         guard let controller = self.controller, let (info, _, _) = self.currentStickerPack else {
             return
@@ -456,7 +494,9 @@ private final class StickerPackContainer: ASDisplayNode {
         })
     }
     
+    private var currentContents: LoadedStickerPack?
     private func updateStickerPackContents(_ contents: LoadedStickerPack, hasPremium: Bool) {
+        self.currentContents = contents
         self.didReceiveStickerPackResult = true
         
         var entries: [StickerPackPreviewGridEntry] = []
@@ -468,7 +508,7 @@ private final class StickerPackContainer: ASDisplayNode {
         switch contents {
         case .fetching:
             entries = []
-            self.buttonNode.setTitle(self.presentationData.strings.Channel_NotificationLoading.uppercased(), with: Font.semibold(17.0), with: self.presentationData.theme.list.itemDisabledTextColor, for: .normal)
+            self.buttonNode.setTitle(self.presentationData.strings.Channel_NotificationLoading, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemDisabledTextColor, for: .normal)
             self.buttonNode.setBackgroundImage(nil, for: [])
             
             for _ in 0 ..< 16 {
@@ -498,7 +538,7 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         case .none:
             entries = []
-            self.buttonNode.setTitle(self.presentationData.strings.Common_Close.uppercased(), with: Font.semibold(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
+            self.buttonNode.setTitle(self.presentationData.strings.Common_Close, with: Font.semibold(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
             self.buttonNode.setBackgroundImage(nil, for: [])
             
             for _ in 0 ..< 16 {
@@ -858,10 +898,10 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         return self._ready
     }
     
-    init(context: AccountContext, controller: StickerPackScreenImpl?, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
+    init(context: AccountContext, controller: StickerPackScreenImpl, stickerPacks: [StickerPackReference], initialSelectedStickerPackIndex: Int, modalProgressUpdated: @escaping (CGFloat, ContainedViewLayoutTransition) -> Void, dismissed: @escaping () -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?) {
         self.context = context
         self.controller = controller
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = controller.presentationData
         self.stickerPacks = stickerPacks
         self.selectedStickerPackIndex = initialSelectedStickerPackIndex
         self.modalProgressUpdated = modalProgressUpdated
@@ -887,6 +927,12 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
         
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTapGesture(_:))))
         self.containerContainingNode.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+    }
+    
+    func updatePresentationData(_ presentationData: PresentationData) {
+        for (_, container) in self.containers {
+            container.updatePresentationData(presentationData)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -1153,6 +1199,9 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
 
 public final class StickerPackScreenImpl: ViewController {
     private let context: AccountContext
+    fileprivate var presentationData: PresentationData
+    private var presentationDataDisposable: Disposable?
+    
     private let stickerPacks: [StickerPackReference]
     private let initialSelectedStickerPackIndex: Int
     private weak var parentNavigationController: NavigationController?
@@ -1171,8 +1220,9 @@ public final class StickerPackScreenImpl: ViewController {
     
     private var alreadyDidAppear: Bool = false
     
-    public init(context: AccountContext, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
         self.context = context
+        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.stickerPacks = stickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
         self.parentNavigationController = parentNavigationController
@@ -1181,10 +1231,22 @@ public final class StickerPackScreenImpl: ViewController {
         super.init(navigationBarPresentationData: nil)
         
         self.statusBar.statusBarStyle = .Ignore
+        
+        self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self, strongSelf.isNodeLoaded {
+                strongSelf.presentationData = presentationData
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {
