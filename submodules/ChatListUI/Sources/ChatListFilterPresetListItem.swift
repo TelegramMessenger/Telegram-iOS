@@ -275,7 +275,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                                 }
                             }
                             strongSelf.editableControlNode = editableControlNode
-                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.titleNode)
+                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.containerNode)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0

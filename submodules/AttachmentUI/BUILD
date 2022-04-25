@@ -27,6 +27,12 @@ swift_library(
         "//submodules/AttachmentTextInputPanelNode:AttachmentTextInputPanelNode",
         "//submodules/ChatSendMessageActionUI:ChatSendMessageActionUI",
         "//submodules/ChatTextLinkEditUI:ChatTextLinkEditUI",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/MediaResources:MediaResources",
+        "//submodules/SemanticStatusNode:SemanticStatusNode",
+        "//submodules/Components/AnimatedStickerComponent:AnimatedStickerComponent",
     ],
     visibility = [
         "//visibility:public",

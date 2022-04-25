@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import TelegramStringFormatting
 import UIKitRuntimeUtils
+import MediaResources
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -17,7 +18,55 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(String)
+    case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case standalone
+    
+    public static func ==(lhs: AttachmentButtonType, rhs: AttachmentButtonType) -> Bool {
+        switch lhs {
+            case .gallery:
+                if case .gallery = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .file:
+                if case .file = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .location:
+                if case .location = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .contact:
+                if case .contact = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .poll:
+                if case .poll = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .app(lhsPeer, lhsTitle, lhsIcons):
+                if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                    return true
+                } else {
+                    return false
+                }
+            case .standalone:
+                if case .standalone = rhs {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
 }
 
 public protocol AttachmentContainable: ViewController {
@@ -25,6 +74,10 @@ public protocol AttachmentContainable: ViewController {
     var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void { get set }
     var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void { get set }
     var cancelPanGesture: () -> Void { get set }
+    var isContainerPanning: () -> Bool { get set }
+    var isContainerExpanded: () -> Bool { get set }
+    
+    func isContainerPanningUpdated(_ panning: Bool)
     
     func resetForReuse()
     func prepareForReuse()
@@ -33,6 +86,10 @@ public protocol AttachmentContainable: ViewController {
 }
 
 public extension AttachmentContainable {
+    func isContainerPanningUpdated(_ panning: Bool) {
+        
+    }
+    
     func resetForReuse() {
         
     }
@@ -54,6 +111,11 @@ public enum AttachmentMediaPickerSendMode {
 public protocol AttachmentMediaPickerContext {
     var selectionCount: Signal<Int, NoError> { get }
     var caption: Signal<NSAttributedString?, NoError> { get }
+    
+    var loadingProgress: Signal<CGFloat?, NoError> { get }
+    var mainButtonState: Signal<AttachmentMainButtonState?, NoError> { get }
+    
+    func mainButtonAction()
     
     func setCaption(_ caption: NSAttributedString)
     func send(silently: Bool, mode: AttachmentMediaPickerSendMode)
@@ -98,6 +160,11 @@ public class AttachmentController: ViewController {
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation
     private let buttons: [AttachmentButtonType]
+    private let initialButton: AttachmentButtonType
+    private let fromMenu: Bool
+    
+    public var willDismiss: () -> Void = {}
+    public var didDismiss: () -> Void = {}
     
     public var mediaPickerContext: AttachmentMediaPickerContext? {
         get {
@@ -130,6 +197,9 @@ public class AttachmentController: ViewController {
         private let captionDisposable = MetaDisposable()
         private let mediaSelectionCountDisposable = MetaDisposable()
         
+        private let loadingProgressDisposable = MetaDisposable()
+        private let mainButtonStateDisposable = MetaDisposable()
+        
         private var selectionCount: Int = 0
         
         fileprivate var mediaPickerContext: AttachmentMediaPickerContext? {
@@ -147,9 +217,37 @@ public class AttachmentController: ViewController {
                             strongSelf.updateSelectionCount(count)
                         }
                     }))
+                    self.loadingProgressDisposable.set((mediaPickerContext.loadingProgress
+                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                        if let strongSelf = self {
+                            strongSelf.panel.updateLoadingProgress(progress)
+                            if let layout = strongSelf.validLayout {
+                                strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                            }
+                        }
+                    }))
+                    self.mainButtonStateDisposable.set((mediaPickerContext.mainButtonState
+                    |> deliverOnMainQueue).start(next: { [weak self] mainButtonState in
+                        if let strongSelf = self {
+                            let _ = (strongSelf.panel.animatingTransitionPromise.get()
+                            |> filter { value in
+                                return !value
+                            }
+                            |> take(1)).start(next: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.panel.updateMainButtonState(mainButtonState)
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.4, curve: .spring))
+                                    }
+                                }
+                            })
+                        }
+                    }))
                 } else {
                     self.updateSelectionCount(0)
                     self.mediaSelectionCountDisposable.set(nil)
+                    self.loadingProgressDisposable.set(nil)
+                    self.mainButtonStateDisposable.set(nil)
                 }
             }
         }
@@ -172,7 +270,9 @@ public class AttachmentController: ViewController {
             self.container = AttachmentContainer()
             self.container.canHaveKeyboardFocus = true
             self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, updatedPresentationData: controller.updatedPresentationData)
-                        
+            self.panel.fromMenu = controller.fromMenu
+            self.panel.isStandalone = controller.isStandalone
+            
             super.init()
             
             self.addSubnode(self.dim)
@@ -206,9 +306,15 @@ public class AttachmentController: ViewController {
                 }
             }
             
-            self.panel.selectionChanged = { [weak self] type, ascending in
+            self.container.isPanningUpdated = { [weak self] value in
+                if let strongSelf = self, let currentController = strongSelf.currentControllers.last, !value {
+                    currentController.isContainerPanningUpdated(value)
+                }
+            }
+            
+            self.panel.selectionChanged = { [weak self] type in
                 if let strongSelf = self {
-                    return strongSelf.switchToController(type, ascending)
+                    return strongSelf.switchToController(type)
                 } else {
                     return false
                 }
@@ -239,6 +345,12 @@ public class AttachmentController: ViewController {
                 }
             }
             
+            self.panel.mainButtonPressed = { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.mediaPickerContext?.mainButtonAction()
+                }
+            }
+            
             self.panel.requestLayout = { [weak self] in
                 if let strongSelf = self, let layout = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
@@ -263,12 +375,33 @@ public class AttachmentController: ViewController {
             self.mediaSelectionCountDisposable.dispose()
         }
         
+        private var inputContainerHeight: CGFloat?
+        private var inputContainerNode: ASDisplayNode?
         override func didLoad() {
             super.didLoad()
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
-            let _ = self.switchToController(.gallery, false)
+            if let controller = self.controller {
+                let _ = self.switchToController(controller.initialButton)
+                if case let .app(bot, _, _) = controller.initialButton {
+                    if let index = controller.buttons.firstIndex(where: {
+                        if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }) {
+                        self.panel.updateSelectedIndex(index)
+                    }
+                }
+            }
+            
+            if let (inputContainerHeight, inputContainerNode, _) = self.controller?.getInputContainerNode() {
+                self.inputContainerHeight = inputContainerHeight
+                self.inputContainerNode = inputContainerNode
+                self.addSubnode(inputContainerNode)
+            }
         }
         
         private func updateSelectionCount(_ count: Int) {
@@ -279,6 +412,9 @@ public class AttachmentController: ViewController {
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard !self.isDismissing else {
+                return
+            }
             if case .ended = recognizer.state {
                 if let controller = self.currentControllers.last {
                     controller.requestDismiss(completion: { [weak self] in
@@ -290,8 +426,11 @@ public class AttachmentController: ViewController {
             }
         }
         
-        func switchToController(_ type: AttachmentButtonType, _ ascending: Bool) -> Bool {
+        func switchToController(_ type: AttachmentButtonType, animated: Bool = true) -> Bool {
             guard self.currentType != type else {
+                if self.animating {
+                    return false
+                }
                 if let controller = self.currentControllers.last {
                     controller.scrollToTopWithTabBar?()
                     controller.requestAttachmentMenuExpansion()
@@ -307,7 +446,9 @@ public class AttachmentController: ViewController {
                         controller._presentedInModal = true
                         controller.navigation_setPresenting(strongSelf.controller)
                         controller.requestAttachmentMenuExpansion = { [weak self] in
-                            self?.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                            if let strongSelf = self, !strongSelf.container.isTracking {
+                                strongSelf.container.update(isExpanded: true, transition: .animated(duration: 0.4, curve: .spring))
+                            }
                         }
                         controller.updateNavigationStack = { [weak self] f in
                             if let strongSelf = self {
@@ -329,16 +470,33 @@ public class AttachmentController: ViewController {
                                 strongSelf.container.cancelPanGesture()
                             }
                         }
+                        
+                        controller.isContainerPanning = { [weak self] in
+                            if let strongSelf = self {
+                                return strongSelf.container.isPanning
+                            } else {
+                                return false
+                            }
+                        }
+                        
+                        controller.isContainerExpanded = { [weak self] in
+                            if let strongSelf = self {
+                                return strongSelf.container.isExpanded
+                            } else {
+                                return false
+                            }
+                        }
+                        
                         let previousController = strongSelf.currentControllers.last
                         strongSelf.currentControllers = [controller]
                         
-                        if previousType != nil {
+                        if previousType != nil && animated {
                             strongSelf.animateSwitchTransition(controller, previousController: previousController)
                         }
                         
                         if let layout = strongSelf.validLayout {
                             strongSelf.switchingController = true
-                            strongSelf.containerLayoutUpdated(layout, transition: .animated(duration: 0.3, curve: .spring))
+                            strongSelf.containerLayoutUpdated(layout, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
                             strongSelf.switchingController = false
                         }
                     }
@@ -355,8 +513,6 @@ public class AttachmentController: ViewController {
             
             snapshotView.frame = self.container.container.frame
             self.container.clipNode.view.addSubview(snapshotView)
-            
-            self.animating = true
             
             let _ = (controller.ready.get()
             |> filter {
@@ -383,13 +539,10 @@ public class AttachmentController: ViewController {
                             strongSelf.container.clipNode.layer.animateSpring(from: NSValue(cgPoint: targetPosition), to: NSValue(cgPoint: initialPosition), keyPath: "position", duration: 0.4, delay: 0.0, initialVelocity: 0.0, damping: 70.0, removeOnCompletion: false, completion: { [weak self] finished in
                                 if finished {
                                     self?.container.clipNode.layer.removeAllAnimations()
-                                    self?.animating = false
                                 }
                             })
                         }
                     })
-                } else {
-                    strongSelf.animating = false
                 }
                 
                 snapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.23, removeOnCompletion: false, completion: { [weak snapshotView] _ in
@@ -427,6 +580,9 @@ public class AttachmentController: ViewController {
         }
         
         func animateOut(completion: @escaping () -> Void = {}) {
+            guard let controller = self.controller else {
+                return
+            }
             self.isDismissing = true
             
             guard let layout = self.validLayout else {
@@ -436,9 +592,9 @@ public class AttachmentController: ViewController {
             self.animating = true
             if case .regular = layout.metrics.widthClass {
                 self.layer.allowsGroupOpacity = true
-                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
-                    let _ = self.container.dismiss(transition: .immediate, completion: completion)
-                    self.animating = false
+                self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
+                    let _ = self?.container.dismiss(transition: .immediate, completion: completion)
+                    self?.animating = false
                 })
             } else {
                 let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
@@ -450,6 +606,11 @@ public class AttachmentController: ViewController {
                 alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
                 
                 self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
+                
+                if controller.fromMenu && self.hasButton, let (_, _, getTransition) = controller.getInputContainerNode(), let inputTransition = getTransition() {
+                    self.panel.animateTransitionOut(inputTransition: inputTransition, dismissed: true, transition: positionTransition)
+                    self.containerLayoutUpdated(layout, transition: positionTransition)
+                }
             }
         }
         
@@ -471,14 +632,26 @@ public class AttachmentController: ViewController {
         
         private var isUpdatingContainer = false
         private var switchingController = false
+        
+        private var hasButton = false
+        
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
             self.validLayout = layout
             
+            guard let controller = self.controller else {
+                return
+            }
+            
             transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
-                          
+                     
+            let fromMenu = controller.fromMenu
+            
             var containerLayout = layout
             let containerRect: CGRect
+            var isCompact = true
             if case .regular = layout.metrics.widthClass {
+                isCompact = false
+                
                 let availableHeight = layout.size.height - (layout.inputHeight ?? 0.0) - 60.0
                 
                 let size = CGSize(width: 390.0, height: min(620.0, availableHeight))
@@ -487,17 +660,28 @@ public class AttachmentController: ViewController {
                 let masterWidth = min(max(320.0, floor(layout.size.width / 3.0)), floor(layout.size.width / 2.0))
                 let position: CGPoint = CGPoint(x: masterWidth - 174.0, y: layout.size.height - size.height - insets.bottom - 40.0)
                 
-                containerRect = CGRect(origin: position, size: size)
+                if controller.isStandalone {
+                    var containerY = floorToScreenPixels((layout.size.height - size.height) / 2.0)
+                    if let inputHeight = layout.inputHeight, inputHeight > 88.0 {
+                        containerY = layout.size.height - inputHeight - size.height - 80.0
+                    }
+                    containerRect = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: containerY), size: size)
+                } else {
+                    containerRect = CGRect(origin: position, size: size)
+                }
                 containerLayout.size = containerRect.size
                 containerLayout.intrinsicInsets.bottom = 12.0
                 containerLayout.inputHeight = nil
                 
-                if self.wrapperNode.view.mask == nil {
+                if controller.isStandalone {
+                    self.wrapperNode.cornerRadius = 10.0
+                } else if self.wrapperNode.view.mask == nil {
                     let maskView = UIImageView()
                     maskView.image = generateMaskImage()
                     maskView.contentMode = .scaleToFill
                     self.wrapperNode.view.mask = maskView
                 }
+                
                 if let maskView = self.wrapperNode.view.mask {
                     transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(), size: size))
                 }
@@ -507,7 +691,17 @@ public class AttachmentController: ViewController {
                     self.shadowNode.image = generateShadowImage()
                 }
             } else {
-                containerRect = CGRect(origin: CGPoint(), size: layout.size)
+                let containerHeight: CGFloat
+                if fromMenu {
+                    if let inputContainerHeight = self.inputContainerHeight {
+                        containerHeight = layout.size.height - inputContainerHeight
+                    } else {
+                        containerHeight = layout.size.height
+                    }
+                } else {
+                    containerHeight = layout.size.height
+                }
+                containerRect = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: containerHeight))
                 
                 self.wrapperNode.cornerRadius = 0.0
                 self.shadowNode.alpha = 0.0
@@ -515,14 +709,63 @@ public class AttachmentController: ViewController {
                 self.wrapperNode.view.mask = nil
             }
             
-            
+            var containerInsets = containerLayout.intrinsicInsets
+            var hasPanel = false
+            let previousHasButton = self.hasButton
+            let hasButton = self.panel.isButtonVisible && !self.isDismissing
+            self.hasButton = hasButton
+            if let controller = self.controller, controller.buttons.count > 1 {
+                hasPanel = true
+            }
+                            
             let isEffecitvelyCollapsedUpdated = (self.selectionCount > 0) != (self.panel.isSelecting)
-            let panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, transition: transition)
+            var panelHeight = self.panel.update(layout: containerLayout, buttons: self.controller?.buttons ?? [], isSelecting: self.selectionCount > 0, elevateProgress: !hasPanel && !hasButton, transition: transition)
+            if fromMenu && !hasButton, let inputContainerHeight = self.inputContainerHeight {
+               panelHeight = inputContainerHeight
+            }
+            if hasPanel || hasButton || (fromMenu && isCompact) {
+                containerInsets.bottom = panelHeight
+            }
+            
+            var transitioning = false
+            if fromMenu && previousHasButton != hasButton, let (_, _, getTransition) = controller.getInputContainerNode(), let inputTransition = getTransition() {
+                if hasButton {
+                    self.panel.animateTransitionIn(inputTransition: inputTransition, transition: transition)
+                } else {
+                    self.panel.animateTransitionOut(inputTransition: inputTransition, dismissed: false, transition: transition)
+                }
+                transitioning = true
+            }
+                        
             var panelTransition = transition
             if isEffecitvelyCollapsedUpdated {
                 panelTransition = .animated(duration: 0.25, curve: .easeInOut)
             }
-            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: containerRect.height - panelHeight), size: CGSize(width: containerRect.width, height: panelHeight)))
+            var panelY = containerRect.height - panelHeight
+            if fromMenu && isCompact {
+                panelY = layout.size.height - panelHeight
+            } else if !hasPanel && !hasButton {
+                panelY = containerRect.height
+            }
+            
+            if fromMenu && isCompact {
+                if hasButton {
+                    self.panel.isHidden = false
+                    self.inputContainerNode?.isHidden = true
+                } else if !transitioning {
+                    if !self.panel.animatingTransition {
+                        self.panel.isHidden = true
+                        self.inputContainerNode?.isHidden = false
+                    }
+                }
+            }
+            
+            panelTransition.updateFrame(node: self.panel, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: containerRect.width, height: panelHeight)), completion: { [weak self] finished in
+                if transitioning && finished, isCompact {
+                    self?.panel.isHidden = !hasButton
+                    self?.inputContainerNode?.isHidden = hasButton
+                }
+            })
             
             var shadowFrame = containerRect.insetBy(dx: -60.0, dy: -60.0)
             shadowFrame.size.height -= 12.0
@@ -542,15 +785,18 @@ public class AttachmentController: ViewController {
                 let controllers = self.currentControllers
                 containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: containerRect.size))
                 
-                var containerInsets = containerLayout.intrinsicInsets
-                containerInsets.bottom = panelHeight
                 let containerLayout = containerLayout.withUpdatedIntrinsicInsets(containerInsets)
                 
                 self.container.update(layout: containerLayout, controllers: controllers, coveredByModalTransition: 0.0, transition: self.switchingController ? .immediate : transition)
                                     
                 if self.container.supernode == nil, !controllers.isEmpty && self.container.isReady {
                     self.wrapperNode.addSubnode(self.container)
-                    self.container.addSubnode(self.panel)
+                    
+                    if fromMenu, let _ = controller.getInputContainerNode() {
+                        self.addSubnode(self.panel)
+                    } else {
+                        self.container.addSubnode(self.panel)
+                    }
                     
                     self.animateIn()
                 }
@@ -564,11 +810,15 @@ public class AttachmentController: ViewController {
         completion(nil, nil)
     }
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType]) {
+    public var getInputContainerNode: () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
         self.buttons = buttons
+        self.initialButton = initialButton
+        self.fromMenu = fromMenu
         
         super.init(navigationBarPresentationData: nil)
         
@@ -583,8 +833,16 @@ public class AttachmentController: ViewController {
         }
     }
     
+    deinit {
+        print()
+    }
+    
     public required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    fileprivate var isStandalone: Bool {
+        return self.buttons.contains(.standalone)
     }
     
     private var node: Node {
@@ -596,15 +854,30 @@ public class AttachmentController: ViewController {
         self.displayNodeDidLoad()
     }
     
+    private var dismissedFlag = false
+    public func _dismiss() {
+        super.dismiss(animated: false, completion: {})
+    }
+    
+    public var ensureUnfocused = true
+    
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
-        self.view.endEditing(true)
+        if self.ensureUnfocused {
+            self.view.endEditing(true)
+        }
         if flag {
-            self.node.animateOut(completion: {
-                super.dismiss(animated: false, completion: {})
-                completion?()
-            })
+            if !self.dismissedFlag {
+                self.dismissedFlag = true
+                self.willDismiss()
+                self.node.animateOut(completion: { [weak self] in
+                    self?.didDismiss()
+                    self?._dismiss()
+                    completion?()
+                })
+            }
         } else {
-            super.dismiss(animated: false, completion: {})
+            self.didDismiss()
+            self._dismiss()
             completion?()
         }
     }
@@ -613,9 +886,75 @@ public class AttachmentController: ViewController {
         return false
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
-
+        
+        self.validLayout = layout
         self.node.containerLayoutUpdated(layout, transition: transition)
+    }
+    
+    public final class InputPanelTransition {
+        let inputNode: ASDisplayNode
+        let accessoryPanelNode: ASDisplayNode?
+        let menuButtonNode: ASDisplayNode
+        let menuButtonBackgroundNode: ASDisplayNode
+        let menuIconNode: ASDisplayNode
+        let menuTextNode: ASDisplayNode
+        let prepareForDismiss: () -> Void
+
+        public init(
+            inputNode: ASDisplayNode,
+            accessoryPanelNode: ASDisplayNode?,
+            menuButtonNode: ASDisplayNode,
+            menuButtonBackgroundNode: ASDisplayNode,
+            menuIconNode: ASDisplayNode,
+            menuTextNode: ASDisplayNode,
+            prepareForDismiss: @escaping () -> Void
+        ) {
+            self.inputNode = inputNode
+            self.accessoryPanelNode = accessoryPanelNode
+            self.menuButtonNode = menuButtonNode
+            self.menuButtonBackgroundNode = menuButtonBackgroundNode
+            self.menuIconNode = menuIconNode
+            self.menuTextNode = menuTextNode
+            self.prepareForDismiss = prepareForDismiss
+        }
+    }
+    
+    public static func preloadAttachBotIcons(context: AccountContext) -> DisposableSet {
+        let disposableSet = DisposableSet()
+        let _ = (context.engine.messages.attachMenuBots()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { bots in
+            for bot in bots {
+                for (name, file) in bot.icons {
+                    if [.iOSAnimated, .placeholder].contains(name), let peer = PeerReference(bot.peer) {
+                        if case .placeholder = name {
+                            let path = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
+                            if !FileManager.default.fileExists(atPath: path) {
+                                let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
+                                    let accountResource = context.account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
+                                    
+                                    let fetchedFullSize = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                    let fetchedFullSizeDisposable = fetchedFullSize.start()
+                                    let fullSizeDisposable = accountResource.start()
+                                    
+                                    return ActionDisposable {
+                                        fetchedFullSizeDisposable.dispose()
+                                        fullSizeDisposable.dispose()
+                                    }
+                                }
+                                disposableSet.add(accountFullSizeData.start())
+                            }
+                        } else {
+                            disposableSet.add(freeMediaFileInteractiveFetched(account: context.account, fileReference: .attachBot(peer: peer, media: file)).start())
+                        }
+                    }
+                }
+            }
+        })
+        return disposableSet
     }
 }

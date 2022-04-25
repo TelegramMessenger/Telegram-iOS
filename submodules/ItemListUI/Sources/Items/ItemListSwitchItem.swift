@@ -439,10 +439,14 @@ public class ItemListSwitchItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+        self.layer.allowsGroupOpacity = true
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4, completion: { [weak self] _ in
+            self?.layer.allowsGroupOpacity = false
+        })
     }
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.allowsGroupOpacity = true
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     

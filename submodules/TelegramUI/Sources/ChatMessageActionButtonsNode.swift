@@ -94,7 +94,13 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
             switch button.action {
                 case .text:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingMessageIconImage : graphics.chatBubbleActionButtonOutgoingMessageIconImage
-                case .url, .urlAuth:
+                case let .url(value):
+                    if value.lowercased().contains("?startgroup=") {
+                        iconImage = incoming ? graphics.chatBubbleActionButtonIncomingAddToChatIconImage : graphics.chatBubbleActionButtonOutgoingAddToChatIconImage
+                    } else {
+                        iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
+                    }
+                case .urlAuth:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingLinkIconImage : graphics.chatBubbleActionButtonOutgoingLinkIconImage
                 case .requestPhone:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPhoneIconImage : graphics.chatBubbleActionButtonOutgoingPhoneIconImage
@@ -106,6 +112,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingPaymentIconImage : graphics.chatBubbleActionButtonOutgoingPaymentIconImage
                 case .openUserProfile:
                     iconImage = incoming ? graphics.chatBubbleActionButtonIncomingProfileIconImage : graphics.chatBubbleActionButtonOutgoingProfileIconImage
+                case .openWebView:
+                    iconImage = incoming ? graphics.chatBubbleActionButtonIncomingWebAppIconImage : graphics.chatBubbleActionButtonOutgoingWebAppIconImage
                 default:
                     iconImage = nil
             }

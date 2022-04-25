@@ -531,7 +531,7 @@ private func patternWallpaperImageInternal(fullSizeData: Data?, fullSizeComplete
                         var image: UIImage?
                         if let fullSizeData = fullSizeData {
                             if mode == .screen {
-                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale))
+                                image = renderPreparedImage(fullSizeData, CGSize(width: size.width * context.scale, height: size.height * context.scale), .black, 1.0)
                             } else {
                                 image = UIImage(data: fullSizeData)
                             }

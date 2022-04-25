@@ -14,7 +14,7 @@ import PhoneNumberFormat
 import CoreTelephony
 import MessageUI
 
-final class ChangePhoneNumberController: ViewController, MFMailComposeViewControllerDelegate {
+public final class ChangePhoneNumberController: ViewController, MFMailComposeViewControllerDelegate {
     private var controllerNode: ChangePhoneNumberControllerNode {
         return self.displayNode as! ChangePhoneNumberControllerNode
     }
@@ -41,7 +41,7 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
     
     private var presentationData: PresentationData
     
-    init(context: AccountContext) {
+    public init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -98,19 +98,19 @@ final class ChangePhoneNumberController: ViewController, MFMailComposeViewContro
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.controllerNode.activateInput()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.controllerNode.activateInput()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)

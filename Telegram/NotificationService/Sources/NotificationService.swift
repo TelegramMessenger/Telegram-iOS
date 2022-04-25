@@ -273,7 +273,7 @@ private extension CGSize {
 
 private func convertLottieImage(data: Data) -> UIImage? {
     let decompressedData = TGGUnzipData(data, 512 * 1024) ?? data
-    guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, cacheKey: "") else {
+    guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
         return nil
     }
     let size = animation.dimensions.fitted(CGSize(width: 200.0, height: 200.0))
@@ -662,6 +662,7 @@ private final class NotificationServiceHandler {
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
             var recordId: AccountRecordId?
             var isCurrentAccount: Bool = false
+            var customSoundPath: String?
 
             if let keyId = notificationPayloadKeyId(data: payloadData) {
                 outer: for listRecord in records.records {
@@ -680,6 +681,8 @@ private final class NotificationServiceHandler {
             }
 
             let inAppNotificationSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+            
+            customSoundPath = inAppNotificationSettings.customSound
             
             let voiceCallSettings: VoiceCallSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.voiceCallSettings]?.get(VoiceCallSettings.self) {
@@ -719,9 +722,15 @@ private final class NotificationServiceHandler {
                     return
                 }
                 strongSelf.stateManager = stateManager
+                
+                let settings = stateManager.postbox.transaction { transaction -> NotificationSoundList? in
+                    return _internal_cachedNotificationSoundList(transaction: transaction)
+                }
 
-                strongSelf.notificationKeyDisposable.set((existingMasterNotificationsKey(postbox: stateManager.postbox)
-                |> deliverOn(strongSelf.queue)).start(next: { notificationsKey in
+                strongSelf.notificationKeyDisposable.set((combineLatest(queue: strongSelf.queue,
+                    existingMasterNotificationsKey(postbox: stateManager.postbox),
+                    settings
+                ) |> deliverOn(strongSelf.queue)).start(next: { notificationsKey, notificationSoundList in
                     guard let strongSelf = self else {
                         let content = NotificationContent(isLockedMessage: nil)
                         updateCurrentContent(content)
@@ -762,6 +771,7 @@ private final class NotificationServiceHandler {
                     var peerId: PeerId?
                     var messageId: MessageId.Id?
                     var mediaAttachment: Media?
+                    var downloadNotificationSound: (file: TelegramMediaFile, path: String, fileName: String)?
 
                     var interactionAuthorId: PeerId?
 
@@ -922,7 +932,30 @@ private final class NotificationServiceHandler {
                                 content.threadId = threadId
                             }
 
-                            if let sound = aps["sound"] as? String {
+                            if let ringtoneString = aps["ringtone"] as? String, let fileId = Int64(ringtoneString) {
+                                content.sound = "0.m4a"
+                                if let notificationSoundList = notificationSoundList {
+                                    for sound in notificationSoundList.sounds {
+                                        if sound.file.fileId.id == fileId {
+                                            let containerSoundsPath = appGroupUrl.path + "/Library/Sounds"
+                                            let soundFileName = "\(fileId).mp3"
+                                            let soundFilePath = containerSoundsPath + "/\(soundFileName)"
+                                            
+                                            if !FileManager.default.fileExists(atPath: soundFilePath) {
+                                                let _ = try? FileManager.default.createDirectory(atPath: containerSoundsPath, withIntermediateDirectories: true, attributes: nil)
+                                                if let filePath = stateManager.postbox.mediaBox.completedResourcePath(id: sound.file.resource.id, pathExtension: nil) {
+                                                    let _ = try? FileManager.default.copyItem(atPath: filePath, toPath: soundFilePath)
+                                                } else {
+                                                    downloadNotificationSound = (sound.file, soundFilePath, soundFileName)
+                                                }
+                                            }
+                                            
+                                            content.sound = soundFileName
+                                            break
+                                        }
+                                    }
+                                }
+                            } else if let sound = aps["sound"] as? String {
                                 content.sound = sound
                             }
 
@@ -1007,7 +1040,6 @@ private final class NotificationServiceHandler {
 
                                     queue.async {
                                         guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
-                                            
                                             let content = NotificationContent(isLockedMessage: isLockedMessage)
                                             updateCurrentContent(content)
                                             completed()
@@ -1071,17 +1103,80 @@ private final class NotificationServiceHandler {
                                                 }
                                             }
                                         }
+                                        
+                                        var fetchNotificationSoundSignal: Signal<Data?, NoError> = .single(nil)
+                                        if let (downloadNotificationSound, _, _) = downloadNotificationSound {
+                                            var fetchResource: TelegramMultipartFetchableResource?
+                                            fetchResource = downloadNotificationSound.resource as? TelegramMultipartFetchableResource
+
+                                            if let resource = fetchResource {
+                                                if let path = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                                    fetchNotificationSoundSignal = .single(data)
+                                                } else {
+                                                    let intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int(Int32.max), MediaBoxFetchPriority.maximum)])
+                                                    fetchNotificationSoundSignal = Signal { subscriber in
+                                                        let collectedData = Atomic<Data>(value: Data())
+                                                        return standaloneMultipartFetch(
+                                                            postbox: stateManager.postbox,
+                                                            network: stateManager.network,
+                                                            resource: resource,
+                                                            datacenterId: resource.datacenterId,
+                                                            size: nil,
+                                                            intervals: intervals,
+                                                            parameters: MediaResourceFetchParameters(
+                                                                tag: nil,
+                                                                info: resourceFetchInfo(resource: resource),
+                                                                isRandomAccessAllowed: true
+                                                            ),
+                                                            encryptionKey: nil,
+                                                            decryptedSize: nil,
+                                                            continueInBackground: false,
+                                                            useMainConnection: true
+                                                        ).start(next: { result in
+                                                            switch result {
+                                                            case let .dataPart(_, data, _, _):
+                                                                let _ = collectedData.modify { current in
+                                                                    var current = current
+                                                                    current.append(data)
+                                                                    return current
+                                                                }
+                                                            default:
+                                                                break
+                                                            }
+                                                        }, error: { _ in
+                                                            subscriber.putNext(nil)
+                                                            subscriber.putCompletion()
+                                                        }, completed: {
+                                                            subscriber.putNext(collectedData.with({ $0 }))
+                                                            subscriber.putCompletion()
+                                                        })
+                                                    }
+                                                }
+                                            }
+                                        }
 
                                         Logger.shared.log("NotificationService \(episode)", "Will fetch media")
-                                        let _ = (fetchMediaSignal
-                                        |> timeout(10.0, queue: queue, alternate: .single(nil))
-                                        |> deliverOn(queue)).start(next: { mediaData in
+                                        let _ = (combineLatest(queue: queue,
+                                            fetchMediaSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil)),
+                                            fetchNotificationSoundSignal
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil))
+                                        )
+                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData in
                                             guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
                                                 completed()
                                                 return
                                             }
 
                                             Logger.shared.log("NotificationService \(episode)", "Did fetch media \(mediaData == nil ? "Non-empty" : "Empty")")
+                                            
+                                            if let notificationSoundData = notificationSoundData {
+                                                Logger.shared.log("NotificationService \(episode)", "Did fetch notificationSoundData")
+                                                
+                                                if let (_, filePath, _) = downloadNotificationSound {
+                                                    let _ = try? notificationSoundData.write(to: URL(fileURLWithPath: filePath))
+                                                }
+                                            }
 
                                             Logger.shared.log("NotificationService \(episode)", "Will get unread count")
                                             let _ = (getCurrentRenderedTotalUnreadCount(

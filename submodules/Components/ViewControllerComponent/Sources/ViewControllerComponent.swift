@@ -21,6 +21,15 @@ public extension Transition.Animation.Curve {
             self = .spring
         }
     }
+    
+    var containedViewLayoutTransitionCurve: ContainedViewLayoutTransitionCurve {
+        switch self {
+            case .easeInOut:
+                return .easeInOut
+            case .spring:
+                return .spring
+        }
+    }
 }
 
 public extension Transition {
@@ -30,6 +39,15 @@ public extension Transition {
             self.init(animation: .none)
         case let .animated(duration, curve):
             self.init(animation: .curve(duration: duration, curve: Transition.Animation.Curve(curve)))
+        }
+    }
+    
+    var containedViewLayoutTransition: ContainedViewLayoutTransition {
+        switch self.animation {
+            case .none:
+                return .immediate
+            case let .curve(duration, curve):
+                return .animated(duration: duration, curve: curve.containedViewLayoutTransitionCurve)
         }
     }
 }
@@ -101,17 +119,19 @@ open class ViewControllerComponentContainer: ViewController {
         private weak var controller: ViewControllerComponentContainer?
         
         private let component: AnyComponent<ViewControllerComponentContainer.Environment>
+        private let theme: PresentationTheme?
         public let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
         private var currentIsVisible: Bool = false
         private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
         
-        init(context: AccountContext, controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>) {
+        init(context: AccountContext, controller: ViewControllerComponentContainer, component: AnyComponent<ViewControllerComponentContainer.Environment>, theme: PresentationTheme?) {
             self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
             
             self.controller = controller
             
             self.component = component
+            self.theme = theme
             self.hostView = ComponentHostView()
             
             super.init()
@@ -125,9 +145,9 @@ open class ViewControllerComponentContainer: ViewController {
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationHeight,
-                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.intrinsicInsets.left + layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.intrinsicInsets.right + layout.safeInsets.right),
+                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
                 isVisible: self.currentIsVisible,
-                theme: self.presentationData.theme,
+                theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,
                 controller: { [weak self] in
                     return self?.controller
@@ -162,11 +182,13 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     private let context: AccountContext
+    private let theme: PresentationTheme?
     private let component: AnyComponent<ViewControllerComponentContainer.Environment>
     
-    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
+    public init<C: Component>(context: AccountContext, component: C, navigationBarAppearance: NavigationBarAppearance, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
+        self.theme = theme
         
         let navigationBarPresentationData: NavigationBarPresentationData?
         switch navigationBarAppearance {
@@ -185,7 +207,7 @@ open class ViewControllerComponentContainer: ViewController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, controller: self, component: self.component)
+        self.displayNode = Node(context: self.context, controller: self, component: self.component, theme: self.theme)
         
         self.displayNodeDidLoad()
     }

@@ -305,15 +305,15 @@ private func extractAdditionalData(view: MessageHistoryView, chatLocation: ChatL
                     cachedDataMessages[message.id] = message
                 }
             case let .totalUnreadState(totalUnreadState):
-                switch chatLocation {
-                    case let .peer(peerId):
-                        if let combinedReadStates = view.fixedReadStates {
-                            if case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId] {
-                                readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, notificationSettings: notificationSettings)
-                            }
-                        }
-                    case .replyThread:
-                        break
+            switch chatLocation {
+            case let .peer(peerId):
+                if let combinedReadStates = view.fixedReadStates {
+                    if case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId] {
+                        readStateData[peerId] = ChatHistoryCombinedInitialReadStateData(unreadCount: readState.count, totalState: totalUnreadState, notificationSettings: notificationSettings)
+                    }
+                }
+            case .replyThread, .feed:
+                break
                 }
             default:
                 break
@@ -383,7 +383,7 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
         let preloadSignal = preloadedChatHistoryViewForLocation(
             input,
             context: context,
-            chatLocation: .replyThread(replyThreadMessage),
+            chatLocation: .replyThread(message: replyThreadMessage),
             subject: nil,
             chatLocationContextHolder: chatLocationContextHolder,
             fixedCombinedReadStates: nil,

@@ -251,20 +251,56 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 break
         }
         
+        var addedAttributes: [(NSRange, ChatTextFontAttributes)] = []
+        func addFont(ranges: [NSRange], fontAttributes: ChatTextFontAttributes) {
+            for range in ranges {
+                var font: UIFont?
+                if fontAttributes == [.bold, .italic] {
+                    font = boldItalicFont
+                } else if fontAttributes == [.bold] {
+                    font = boldFont
+                    addedAttributes.append((range, fontAttributes))
+                } else if fontAttributes == [.italic] {
+                    font = italicFont
+                    addedAttributes.append((range, fontAttributes))
+                }
+                if let font = font {
+                    string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
+                }
+            }
+        }
+        
         for (range, fontAttributes) in fontAttributes {
-            var font: UIFont?
-            if fontAttributes.contains(.blockQuote) {
-                font = blockQuoteFont
-            } else if fontAttributes == [.bold, .italic] {
-                font = boldItalicFont
-            } else if fontAttributes == [.bold] {
-                font = boldFont
-            } else if fontAttributes == [.italic] {
-                font = italicFont
+            var ranges = [range]
+            var fontAttributes = fontAttributes
+            if fontAttributes != [.bold, .italic] {
+                for (existingRange, existingAttributes) in addedAttributes {
+                    if let intersection = existingRange.intersection(range) {
+                        if intersection.length == range.length {
+                            if existingAttributes == .bold || existingAttributes == .italic {
+                                fontAttributes.insert(existingAttributes)
+                            }
+                        } else {
+                            var fontAttributes = fontAttributes
+                            if existingAttributes == .bold || existingAttributes == .italic {
+                                fontAttributes.insert(existingAttributes)
+                            }
+                            addFont(ranges: [intersection], fontAttributes: fontAttributes)
+                            
+                            ranges = []
+                            if range.upperBound > existingRange.lowerBound {
+                                ranges.append(NSRange(location: range.lowerBound, length: existingRange.lowerBound - range.lowerBound))
+                            }
+                            if range.upperBound > existingRange.upperBound {
+                                ranges.append(NSRange(location: existingRange.upperBound, length: range.upperBound - existingRange.upperBound))
+                            }
+                        }
+                        break
+                    }
+                }
             }
-            if let font = font {
-                string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
-            }
+            
+            addFont(ranges: ranges, fontAttributes: fontAttributes)
         }
     }
     return string

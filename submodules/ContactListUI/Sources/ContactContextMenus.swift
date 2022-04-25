@@ -19,7 +19,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
         
         items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_SendMessage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             if let contactsController = contactsController, let navigationController = contactsController.navigationController as? NavigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), peekData: nil))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), peekData: nil))
             }
             f(.default)
         })))
@@ -56,7 +56,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                 |> deliverOnMainQueue).start(next: { currentPeerId in
                     if let currentPeerId = currentPeerId {
                         if let contactsController = contactsController, let navigationController = (contactsController.navigationController as? NavigationController) {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId), peekData: nil))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: currentPeerId), peekData: nil))
                         }
                     } else {
                         var createSignal = context.engine.peers.createSecretChat(peerId: peerId)
@@ -91,7 +91,7 @@ func contactContextMenuItems(context: AccountContext, peerId: EnginePeer.Id, con
                         createSecretChatDisposable.set((createSignal
                         |> deliverOnMainQueue).start(next: { peerId in
                             if let navigationController = (contactsController?.navigationController as? NavigationController) {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), peekData: nil))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), peekData: nil))
                             }
                         }, error: { error in
                             if let contactsController = contactsController {

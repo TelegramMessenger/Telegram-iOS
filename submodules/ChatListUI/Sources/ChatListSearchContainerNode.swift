@@ -171,7 +171,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             openUserGeneratedUrl(context: context, peerId: nil, url: url, concealed: false, present: { c in
                 present(c, nil)
             }, openResolved: { [weak self] resolved in
-                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peerId, navigation in
                     
                 }, sendFile: nil,
                 sendSticker: nil,
@@ -352,7 +352,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let accountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
         |> take(1)
-                        
+        
         self.suggestedFiltersDisposable.set((combineLatest(suggestedPeers, self.suggestedDates.get(), self.selectedFilterPromise.get(), self.searchQuery.get(), accountPeer)
         |> mapToSignal { peers, dates, selectedFilter, searchQuery, accountPeer -> Signal<([EnginePeer], [(Date?, Date, String?)], ChatListSearchFilterEntryId?, String?, EnginePeer?), NoError> in
             if searchQuery?.isEmpty ?? true {
@@ -1009,7 +1009,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private func mediaMessageContextAction(_ message: EngineMessage, node: ASDisplayNode?, rect: CGRect?, gesture anyRecognizer: UIGestureRecognizer?) {
         let gesture: ContextGesture? = anyRecognizer as? ContextGesture
-        let _ = (chatMediaListPreviewControllerData(context: self.context, chatLocation: .peer(message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), message: message._asMessage(), standalone: true, reverseMessageGalleryOrder: false, navigationController: self.navigationController)
+        let _ = (chatMediaListPreviewControllerData(context: self.context, chatLocation: .peer(id: message.id.peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), message: message._asMessage(), standalone: true, reverseMessageGalleryOrder: false, navigationController: self.navigationController)
             |> deliverOnMainQueue).start(next: { [weak self] previewData in
                 guard let strongSelf = self else {
                     gesture?.cancel()
@@ -1351,7 +1351,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         })
                         |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
-                                let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                                let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
                                 controller.purposefulAction = { [weak self] in
                                     self?.cancel?()
                                 }

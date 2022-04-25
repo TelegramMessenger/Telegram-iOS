@@ -14,16 +14,30 @@ final class MediaStreamVideoComponent: Component {
     let isAdmin: Bool
     let peerTitle: String
     let activatePictureInPicture: ActionSlot<Action<Void>>
+    let deactivatePictureInPicture: ActionSlot<Void>
     let bringBackControllerForPictureInPictureDeactivation: (@escaping () -> Void) -> Void
+    let pictureInPictureClosed: () -> Void
     
-    init(call: PresentationGroupCallImpl, hasVideo: Bool, isVisible: Bool, isAdmin: Bool, peerTitle: String, activatePictureInPicture: ActionSlot<Action<Void>>, bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void) {
+    init(
+        call: PresentationGroupCallImpl,
+        hasVideo: Bool,
+        isVisible: Bool,
+        isAdmin: Bool,
+        peerTitle: String,
+        activatePictureInPicture: ActionSlot<Action<Void>>,
+        deactivatePictureInPicture: ActionSlot<Void>,
+        bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void,
+        pictureInPictureClosed: @escaping () -> Void
+    ) {
         self.call = call
         self.hasVideo = hasVideo
         self.isVisible = isVisible
         self.isAdmin = isAdmin
         self.peerTitle = peerTitle
         self.activatePictureInPicture = activatePictureInPicture
+        self.deactivatePictureInPicture = deactivatePictureInPicture
         self.bringBackControllerForPictureInPictureDeactivation = bringBackControllerForPictureInPictureDeactivation
+        self.pictureInPictureClosed = pictureInPictureClosed
     }
     
     public static func ==(lhs: MediaStreamVideoComponent, rhs: MediaStreamVideoComponent) -> Bool {
@@ -72,6 +86,8 @@ final class MediaStreamVideoComponent: Component {
         private var component: MediaStreamVideoComponent?
         private var hadVideo: Bool = false
         
+        private var requestedExpansion: Bool = false
+        
         private var noSignalTimer: Timer?
         private var noSignalTimeout: Bool = false
         
@@ -101,7 +117,10 @@ final class MediaStreamVideoComponent: Component {
         }
         
         func expandFromPictureInPicture() {
-            self.pictureInPictureController?.stopPictureInPicture()
+            if let pictureInPictureController = self.pictureInPictureController, pictureInPictureController.isPictureInPictureActive {
+                self.requestedExpansion = true
+                self.pictureInPictureController?.stopPictureInPicture()
+            }
         }
         
         func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
@@ -290,6 +309,14 @@ final class MediaStreamVideoComponent: Component {
                 completion(Void())
             }
             
+            component.deactivatePictureInPicture.connect { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.expandFromPictureInPicture()
+            }
+            
             return availableSize
         }
         
@@ -306,6 +333,14 @@ final class MediaStreamVideoComponent: Component {
         
         func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
             self.state?.updated(transition: .immediate)
+        }
+        
+        func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+            if self.requestedExpansion {
+                self.requestedExpansion = false
+            } else {
+                self.component?.pictureInPictureClosed()
+            }
         }
         
         func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {

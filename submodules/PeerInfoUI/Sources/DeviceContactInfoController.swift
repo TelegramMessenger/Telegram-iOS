@@ -1240,7 +1240,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
     }
     openChatImpl = { [weak controller] peerId in
         if let navigationController = (controller?.navigationController as? NavigationController) {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
         }
     }
     replaceControllerImpl = { [weak controller] value in

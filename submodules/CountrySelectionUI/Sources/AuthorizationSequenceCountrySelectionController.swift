@@ -331,7 +331,9 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.navigationContentNode?.activate()
+        Queue.mainQueue().justDispatch {
+            self.navigationContentNode?.activate()
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

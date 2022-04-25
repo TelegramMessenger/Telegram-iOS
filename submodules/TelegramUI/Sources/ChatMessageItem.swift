@@ -297,7 +297,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var effectiveAuthor: Peer?
         let displayAuthorInfo: Bool
         
-        let messagePeerId: PeerId = chatLocation.peerId
+        let messagePeerId: PeerId = chatLocation.peerId ?? content.firstMessage.id.peerId
         
         do {
             let peerId = messagePeerId

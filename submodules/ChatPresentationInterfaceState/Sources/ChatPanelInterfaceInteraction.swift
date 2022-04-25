@@ -142,6 +142,9 @@ public final class ChatPanelInterfaceInteraction {
     public let openSendAsPeer: (ASDisplayNode, ContextGesture?) -> Void
     public let presentChatRequestAdminInfo: () -> Void
     public let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
+    public let openWebView: (String, String, Bool, Bool) -> Void
+    public let updateShowWebView: ((Bool) -> Bool) -> Void
+    public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
     
     public init(
@@ -233,6 +236,9 @@ public final class ChatPanelInterfaceInteraction {
         openSendAsPeer: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         presentChatRequestAdminInfo: @escaping () -> Void,
         displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void,
+        openWebView: @escaping (String, String, Bool, Bool) -> Void,
+        updateShowWebView: @escaping ((Bool) -> Bool) -> Void,
+        chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.setupReplyMessage = setupReplyMessage
@@ -323,6 +329,9 @@ public final class ChatPanelInterfaceInteraction {
         self.openSendAsPeer = openSendAsPeer
         self.presentChatRequestAdminInfo = presentChatRequestAdminInfo
         self.displayCopyProtectionTip = displayCopyProtectionTip
+        self.openWebView = openWebView
+        self.updateShowWebView = updateShowWebView
+        self.chatController = chatController
         self.statuses = statuses
     }
     
@@ -420,6 +429,10 @@ public final class ChatPanelInterfaceInteraction {
         }, openSendAsPeer:  { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, openWebView: { _, _, _, _ in
+        }, updateShowWebView: { _ in
+        }, chatController: {
+            return nil
         }, statuses: nil)
     }
 }

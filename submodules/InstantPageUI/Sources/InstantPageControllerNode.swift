@@ -16,7 +16,7 @@ import OpenInExternalAppUI
 import LocationUI
 import UndoUI
 import ContextUI
-import Translate
+import TranslateUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private weak var controller: InstantPageController?
@@ -68,6 +68,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
+    private var previousContentOffset: CGPoint?
     private var isDeceleratingBecauseOfDragging = false
     
     private let hiddenMediaDisposable = MetaDisposable()
@@ -348,7 +349,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let maxBarHeight: CGFloat
         if !layout.safeInsets.top.isZero {
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight > 34.0 {
-                maxBarHeight = statusBarHeight + 34.0
+                maxBarHeight = statusBarHeight + 44.0
             } else {
                 maxBarHeight = layout.safeInsets.top + 34.0
             }
@@ -392,6 +393,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             self.scrollNode.view.contentOffset = contentOffset
             if didSetScrollOffset {
+                self.previousContentOffset = contentOffset
                 self.updateNavigationBar()
                 if self.currentLayout != nil {
                     self.setupScrollOffsetOnLayout = false
@@ -707,6 +709,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
+        self.updateNavigationBar()
+        self.previousContentOffset = self.scrollNode.view.contentOffset
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -727,6 +731,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let bounds = self.scrollNode.view.bounds
+        let contentOffset = self.scrollNode.view.contentOffset
         
         let maxBarHeight: CGFloat
         let minBarHeight: CGFloat
@@ -742,14 +747,55 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             minBarHeight = 20.0
         }
         
-        let transition: ContainedViewLayoutTransition = .immediate
+        var pageProgress: CGFloat = 0.0
+        if !self.scrollNode.view.contentSize.height.isZero {
+            let value = (contentOffset.y + self.scrollNode.view.contentInset.top) / (self.scrollNode.view.contentSize.height - bounds.size.height + self.scrollNode.view.contentInset.top)
+            pageProgress = max(0.0, min(1.0, value))
+        }
+        
+        let delta: CGFloat
+        if self.setupScrollOffsetOnLayout {
+            delta = 0.0
+        } else if let previousContentOffset = self.previousContentOffset {
+            delta = contentOffset.y - previousContentOffset.y
+        } else {
+            delta = 0.0
+        }
+        self.previousContentOffset = contentOffset
+        
+        var transition: ContainedViewLayoutTransition = .immediate
         var navigationBarFrame = self.navigationBar.frame
         navigationBarFrame.size.width = bounds.size.width
         if navigationBarFrame.size.height.isZero {
             navigationBarFrame.size.height = maxBarHeight
         }
         
-        navigationBarFrame.size.height = maxBarHeight
+        if case .regular = containerLayout.metrics.widthClass {
+            navigationBarFrame.size.height = maxBarHeight
+        } else {
+            if forceState {
+                transition = .animated(duration: 0.3, curve: .spring)
+                
+                let transitionFactor = (navigationBarFrame.size.height - minBarHeight) / (maxBarHeight - minBarHeight)
+                
+                if contentOffset.y <= -self.scrollNode.view.contentInset.top || transitionFactor > 0.4 {
+                    navigationBarFrame.size.height = maxBarHeight
+                } else {
+                    navigationBarFrame.size.height = minBarHeight
+                }
+            } else {
+                if contentOffset.y <= -self.scrollNode.view.contentInset.top {
+                    navigationBarFrame.size.height = maxBarHeight
+                } else {
+                    navigationBarFrame.size.height -= delta
+                }
+                navigationBarFrame.size.height = max(minBarHeight, min(maxBarHeight, navigationBarFrame.size.height))
+            }
+            
+            if self.setupScrollOffsetOnLayout {
+                navigationBarFrame.size.height = maxBarHeight
+            }
+        }
         
         let transitionFactor = (navigationBarFrame.size.height - minBarHeight) / (maxBarHeight - minBarHeight)
         
@@ -768,7 +814,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
-        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: 0.0, transition: transition)
+        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: pageProgress, transition: transition)
         
         transition.animateView {
             self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: containerLayout.intrinsicInsets.bottom, right: 0.0)
@@ -1046,10 +1092,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })]
                 
-                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, ignoredLanguages: translationSettings.ignoredLanguages)
+                let (canTranslate, language) = canTranslateText(context: context, text: text, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: false, ignoredLanguages: translationSettings.ignoredLanguages)
                 if canTranslate {
-                    actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: {
-                        translateText(context: context, text: text, fromLang: language)
+                    actions.append(ContextMenuAction(content: .text(title: strings.Conversation_ContextMenuTranslate, accessibilityLabel: strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+                        let controller = TranslateScreen(context: context, text: text, fromLanguage: language)
+                        self?.present(controller, nil)
                     }))
                 }
                 
@@ -1237,15 +1284,19 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     default:
                         strongSelf.loadProgress.set(1.0)
-                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, navigation in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peerId, navigation in
                             switch navigation {
                                 case let .chat(_, subject, peekData):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, peekData: peekData))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: subject, peekData: peekData))
                                     }
                                 case let .withBotStartPayload(botStart):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: botStart, keepStack: .always))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: botStart, keepStack: .always))
+                                    }
+                                case let .withAttachBot(attachBotStart):
+                                    if let navigationController = strongSelf.getNavigationController() {
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), attachBotStart: attachBotStart))
                                     }
                                 case .info:
                                     let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)

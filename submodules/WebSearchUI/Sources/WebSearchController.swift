@@ -593,6 +593,14 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
         }
     }
         
+    public var loadingProgress: Signal<CGFloat?, NoError> {
+        return .single(nil)
+    }
+    
+    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
+        return .single(nil)
+    }
+
     init(interaction: WebSearchControllerInteraction) {
         self.interaction = interaction
     }
@@ -607,5 +615,9 @@ public class WebSearchPickerContext: AttachmentMediaPickerContext {
     
     public func schedule() {
         self.interaction?.schedule()
+    }
+    
+    public func mainButtonAction() {
+        
     }
 }

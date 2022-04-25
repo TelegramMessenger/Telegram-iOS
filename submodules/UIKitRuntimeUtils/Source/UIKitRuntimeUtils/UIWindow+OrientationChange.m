@@ -45,7 +45,7 @@ static bool _isDeviceRotating = false;
                     }
                     CGSize windowSize = CGSizeZero;
                     CGFloat windowRotation = 0.0;
-                    bool landscape = false;
+                    __unused bool landscape = false;
                     switch (orientation) {
                         case UIInterfaceOrientationPortrait:
                             windowSize = screenSize;

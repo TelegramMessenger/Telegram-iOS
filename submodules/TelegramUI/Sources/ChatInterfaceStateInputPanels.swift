@@ -152,7 +152,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 isMember = true
             case .left:
                 if case .replyThread = chatPresentationInterfaceState.chatLocation {
-                    isMember = true
+                    if !channel.flags.contains(.joinToSend) {
+                        isMember = true
+                    }
                 }
             }
                         

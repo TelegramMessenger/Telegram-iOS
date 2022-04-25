@@ -13,8 +13,8 @@ public final class AlertControllerContext {
     }
 }
 
-public func textAlertController(alertContext: AlertControllerContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissOnOutsideTap: Bool = true) -> AlertController {
-    let controller = standardTextAlertController(theme: alertContext.theme, title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset, dismissOnOutsideTap: dismissOnOutsideTap)
+public func textAlertController(alertContext: AlertControllerContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, parseMarkdown: Bool = false, dismissOnOutsideTap: Bool = true) -> AlertController {
+    let controller = standardTextAlertController(theme: alertContext.theme, title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset, parseMarkdown: parseMarkdown, dismissOnOutsideTap: dismissOnOutsideTap)
     let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
         controller?.theme = theme
     })

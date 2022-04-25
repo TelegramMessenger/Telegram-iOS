@@ -521,49 +521,51 @@ public final class ChatMessageTransitionNode: ASDisplayNode {
                 }
             case let .mediaInput(mediaInput):
                 if let snapshotView = mediaInput.extractSnapshot() {
-                    if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                        itemNode.cancelInsertionAnimations()
-
-                        self.contextSourceNode.isExtractedToContextPreview = true
-                        self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
-
-                        self.containerNode.addSubnode(self.contextSourceNode.contentNode)
-
-                        let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
-                        let sourceBackgroundAbsoluteRect = snapshotView.frame
-                        let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
-
-                        let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNode.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNode.verticalAnimationCurve))
-
+                    Queue.mainQueue().justDispatch {
                         if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                            itemNode.animateContentFromMediaInput(snapshotView: snapshotView, transition: combinedTransition)
-                        }
+                            itemNode.cancelInsertionAnimations()
 
-                        self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
+                            self.contextSourceNode.isExtractedToContextPreview = true
+                            self.contextSourceNode.isExtractedToContextPreviewUpdated?(true)
 
-                        snapshotView.center = targetAbsoluteRect.center.offsetBy(dx: -self.containerNode.frame.minX, dy: -self.containerNode.frame.minY)
-                        self.containerNode.view.addSubview(snapshotView)
+                            self.containerNode.addSubnode(self.contextSourceNode.contentNode)
 
-                        self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
+                            let targetAbsoluteRect = self.contextSourceNode.view.convert(self.contextSourceNode.contentRect, to: self.view)
+                            let sourceBackgroundAbsoluteRect = snapshotView.frame
+                            let sourceAbsoluteRect = CGRect(origin: CGPoint(x: sourceBackgroundAbsoluteRect.midX - self.contextSourceNode.contentRect.size.width / 2.0, y: sourceBackgroundAbsoluteRect.midY - self.contextSourceNode.contentRect.size.height / 2.0), size: self.contextSourceNode.contentRect.size)
 
-                        self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
-                        self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
-                            guard let strongSelf = self else {
-                                return
+                            let combinedTransition = CombinedTransition(horizontal: .animated(duration: horizontalDuration, curve: ChatMessageTransitionNode.horizontalAnimationCurve), vertical: .animated(duration: verticalDuration, curve: ChatMessageTransitionNode.verticalAnimationCurve))
+
+                            if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
+                                itemNode.animateContentFromMediaInput(snapshotView: snapshotView, transition: combinedTransition)
                             }
-                            strongSelf.endAnimation()
-                        })
 
-                        combinedTransition.horizontal.animateTransformScale(node: self.contextSourceNode.contentNode, from: CGPoint(x: sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width, y: sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height))
+                            self.containerNode.frame = targetAbsoluteRect.offsetBy(dx: -self.contextSourceNode.contentRect.minX, dy: -self.contextSourceNode.contentRect.minY)
 
-                        combinedTransition.horizontal.updateTransformScale(layer: snapshotView.layer, scale: CGPoint(x: 1.0 / (sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width), y: 1.0 / (sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height)))
+                            snapshotView.center = targetAbsoluteRect.center.offsetBy(dx: -self.containerNode.frame.minX, dy: -self.containerNode.frame.minY)
+                            self.containerNode.view.addSubview(snapshotView)
 
-                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                            snapshotView?.removeFromSuperview()
-                        })
+                            self.contextSourceNode.updateAbsoluteRect?(self.containerNode.frame, UIScreen.main.bounds.size)
 
-                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), ChatMessageTransitionNode.horizontalAnimationCurve, horizontalDuration)
-                        self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), ChatMessageTransitionNode.verticalAnimationCurve, verticalDuration)
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: sourceAbsoluteRect.midY - targetAbsoluteRect.midY), to: CGPoint(), duration: horizontalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.horizontalAnimationCurve.mediaTimingFunction, additive: true, force: true)
+                            self.containerNode.layer.animatePosition(from: CGPoint(x: sourceAbsoluteRect.midX - targetAbsoluteRect.midX, y: 0.0), to: CGPoint(), duration: verticalDuration, delay: delay, mediaTimingFunction: ChatMessageTransitionNode.verticalAnimationCurve.mediaTimingFunction, additive: true, force: true, completion: { [weak self] _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.endAnimation()
+                            })
+
+                            combinedTransition.horizontal.animateTransformScale(node: self.contextSourceNode.contentNode, from: CGPoint(x: sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width, y: sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height))
+
+                            combinedTransition.horizontal.updateTransformScale(layer: snapshotView.layer, scale: CGPoint(x: 1.0 / (sourceBackgroundAbsoluteRect.width / targetAbsoluteRect.width), y: 1.0 / (sourceBackgroundAbsoluteRect.height / targetAbsoluteRect.height)))
+
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+
+                            self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: sourceAbsoluteRect.minX - targetAbsoluteRect.minX, y: 0.0), ChatMessageTransitionNode.horizontalAnimationCurve, horizontalDuration)
+                            self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), ChatMessageTransitionNode.verticalAnimationCurve, verticalDuration)
+                        }
                     }
                 } else {
                     self.endAnimation()

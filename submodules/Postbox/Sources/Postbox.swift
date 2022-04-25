@@ -1093,7 +1093,7 @@ public final class Transaction {
         assert(!self.disposed)
         self.postbox?.deviceContactImportInfoTable.enumerateDeviceContactImportInfoItems(f)
     }
-    
+        
     public func getChatListNamespaceEntries(groupId: PeerGroupId, namespace: MessageId.Namespace, summaryTag: MessageTags?) -> [ChatListNamespaceEntry] {
         assert(!self.disposed)
         guard let postbox = self.postbox else {
@@ -2549,10 +2549,10 @@ final class PostboxImpl {
         switch chatLocation {
         case let .peer(peerId):
             return .single((.peer(peerId), false))
-        case let .external(_, _, input):
+        case .thread(_, _, let data), .feed(_, let data):
             return Signal { subscriber in
                 var isHoleFill = false
-                return (input
+                return (data
                 |> map { value -> (ResolvedChatLocationInput, Bool) in
                     let wasHoleFill = isHoleFill
                     isHoleFill = true
@@ -2812,12 +2812,21 @@ final class PostboxImpl {
         
         let initialData: InitialMessageHistoryData
         switch peerIds {
-            case let .single(peerId):
-                initialData = self.initialMessageHistoryData(peerId: peerId, threadId: nil)
-            case let .associated(peerId, _):
-                initialData = self.initialMessageHistoryData(peerId: peerId, threadId: nil)
-            case let .external(input):
-                initialData = self.initialMessageHistoryData(peerId: input.peerId, threadId: input.threadId)
+        case let .single(peerId):
+            initialData = self.initialMessageHistoryData(peerId: peerId, threadId: nil)
+        case let .associated(peerId, _):
+            initialData = self.initialMessageHistoryData(peerId: peerId, threadId: nil)
+        case let .external(input):
+            switch input.content {
+            case let .thread(peerId, id, _):
+                initialData = self.initialMessageHistoryData(peerId: peerId, threadId: id)
+            case .messages:
+                initialData = InitialMessageHistoryData(
+                    peer: nil,
+                    storedInterfaceState: nil,
+                    associatedMessages: [:]
+                )
+            }
         }
         
         subscriber.putNext((MessageHistoryView(mutableView), initialUpdateType, initialData))

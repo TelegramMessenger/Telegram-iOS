@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import MergeLists
@@ -432,8 +433,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             result.append(.HeaderEntry)
         }
         
-        if !view.hasLater, case let .peers(_, _, additionalCategories,
-            _) = mode {
+        if !view.hasLater, case let .peers(_, _, additionalCategories, _) = mode {
             var index = 0
             for category in additionalCategories.reversed(){
                 result.append(.AdditionalCategory(index: index, id: category.id, title: category.title, image: category.icon, appearance: category.appearance, selected: state.selectedAdditionalCategoryIds.contains(category.id), presentationData: state.presentationData))

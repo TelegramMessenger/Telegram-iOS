@@ -103,7 +103,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
         
         return { item, params, neighbors in
             let leftInset: CGFloat = 32.0 + params.leftInset
-            let topInset: CGFloat = 92.0
+            let topInset: CGFloat = 124.0
             
             let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
@@ -125,7 +125,7 @@ class InviteLinkHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                                         
-                    let iconSize = CGSize(width: 96.0, height: 96.0)
+                    let iconSize = CGSize(width: 128.0, height: 128.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                     

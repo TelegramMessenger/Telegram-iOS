@@ -848,6 +848,11 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        if self._keepModalDismissProgress {
+            modalStyleOverlayTransitionFactor = 0.0
+            self._keepModalDismissProgress = false
+        }
+        
         topModalDismissProgress = max(topModalDismissProgress, modalStyleOverlayTransitionFactor)
         
         switch layout.metrics.widthClass {
@@ -1269,6 +1274,12 @@ open class NavigationController: UINavigationController, ContainableController, 
         completion()
     }
     
+    public func replaceControllers(controllers: [UIViewController], animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
+        ready?.set(true)
+        self.setViewControllers(controllers, animated: animated)
+        completion()
+    }
+    
     public func replaceAllButRootController(_ controller: ViewController, animated: Bool, animationOptions: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
         var controllers = self.viewControllers
@@ -1358,6 +1369,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self._viewControllersPromise.set(self.viewControllers)
     }
     
+    public var _keepModalDismissProgress = false
     public func presentOverlay(controller: ViewController, inGlobal: Bool = false, blockInteraction: Bool = false) {
         let container = NavigationOverlayContainer(controller: controller, blocksInteractionUntilReady: blockInteraction, controllerRemoved: { [weak self] controller in
             guard let strongSelf = self else {
@@ -1385,6 +1397,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
             }
+
             strongSelf.updateContainersNonReentrant(transition: .immediate)
         }, statusBarUpdated: { [weak self] transition in
             guard let strongSelf = self else {

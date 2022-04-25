@@ -18,8 +18,19 @@ private func callConnectionDescription(_ connection: CallSessionConnection) -> O
 
 private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnection) -> [OngoingCallConnectionDescriptionWebrtc] {
     switch connection {
-    case .reflector:
+    case let .reflector(reflector):
+        #if DEBUG
+        var result: [OngoingCallConnectionDescriptionWebrtc] = []
+        if !reflector.ip.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        if !reflector.ipv6.isEmpty {
+            result.append(OngoingCallConnectionDescriptionWebrtc(connectionId: reflector.id, hasStun: false, hasTurn: true, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+        }
+        return result
+        #else
         return []
+        #endif
     case let .webRtcReflector(reflector):
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
@@ -686,6 +697,11 @@ public final class OngoingCallContext {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
+        #if DEBUG
+        let version = "4.1.2"
+        let allowP2P = false
+        #endif
+        
         self.internalId = internalId
         self.account = account
         self.callSessionManager = callSessionManager
@@ -727,6 +743,18 @@ public final class OngoingCallContext {
                         processedConnections.append(connection)
                         filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection))
                     }
+                    
+                    /*#if DEBUG
+                    filteredConnections.removeAll()
+                    filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(
+                        connectionId: 1,
+                        hasStun: true,
+                        hasTurn: true, ip: "178.62.7.192",
+                        port: 1400,
+                        username: "user",
+                        password: "user")
+                    )
+                    #endif*/
                     
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)
@@ -915,9 +943,17 @@ public final class OngoingCallContext {
                 
                 if let callId = callId, !statsLogPath.isEmpty, let data = try? Data(contentsOf: URL(fileURLWithPath: statsLogPath)), let dataString = String(data: data, encoding: .utf8) {
                     debugLogValue.set(.single(dataString))
-                    if sendDebugLogs {
-                        let _ = TelegramEngine(account: self.account).calls.saveCallDebugLog(callId: callId, log: dataString).start()
-                    }
+                    let engine = TelegramEngine(account: self.account)
+                    let _ = engine.calls.saveCallDebugLog(callId: callId, log: dataString).start(next: { result in
+                        switch result {
+                        case .sendFullLog:
+                            if !logPath.isEmpty {
+                                let _ = engine.calls.saveCompleteCallDebugLog(callId: callId, logPath: logPath).start()
+                            }
+                        case .done:
+                            break
+                        }
+                    })
                 }
             }
             let derivedState = context.nativeGetDerivedState()
