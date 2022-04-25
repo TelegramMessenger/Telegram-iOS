@@ -132,7 +132,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
-        self.imageNode.contentMode = .scaleAspectFit
+        self.imageNode.contentMode = .center
         
         self.textNodeContainer = ASDisplayNode()
         self.textNodeContainer.isUserInteractionEnabled = false
@@ -180,7 +180,7 @@ final class ChatMediaInputMetaSectionItemNode: ListViewItemNode {
     }
     
     func updateTheme(account: Account, theme: PresentationTheme, strings: PresentationStrings, expanded: Bool) {
-        let imageSize = CGSize(width: 26.0 * 1.6, height: 26.0 * 1.6)
+        let imageSize = CGSize(width: 44.0, height: 42.0)
         self.imageNode.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0), y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
         
         self.textNodeContainer.frame = CGRect(origin: CGPoint(x: floor((expandedBoundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((expandedBoundingSize.height - imageSize.height) / 2.0) + 1.0), size: imageSize)

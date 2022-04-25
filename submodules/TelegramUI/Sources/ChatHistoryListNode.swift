@@ -2764,8 +2764,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         standaloneReactionAnimation.animateReactionSelection(
                             context: self.context,
                             theme: item.presentationData.theme.theme,
-                            reaction: ReactionContextItem(
-                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                            reaction: ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
                                 listAnimation: centerAnimation,
