@@ -248,37 +248,30 @@ public struct MessageHistoryViewOrderStatistics: OptionSet {
 }
 
 public final class MessageHistoryViewExternalInput: Equatable {
-    public let peerId: PeerId
-    public let threadId: Int64
+    public enum Content: Equatable {
+        case messages(indices: [MessageIndex], holes: [MessageId.Namespace: IndexSet], userId: Int64?)
+        case thread(peerId: PeerId, id: Int64, holes: [MessageId.Namespace: IndexSet])
+    }
+    
+    public let content: Content
     public let maxReadIncomingMessageId: MessageId?
     public let maxReadOutgoingMessageId: MessageId?
-    public let holes: [MessageId.Namespace: IndexSet]
     
     public init(
-        peerId: PeerId,
-        threadId: Int64,
+        content: Content,
         maxReadIncomingMessageId: MessageId?,
-        maxReadOutgoingMessageId: MessageId?,
-        holes: [MessageId.Namespace: IndexSet]
+        maxReadOutgoingMessageId: MessageId?
     ) {
-        self.peerId = peerId
-        self.threadId = threadId
+        self.content = content
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
         self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
-        self.holes = holes
     }
     
     public static func ==(lhs: MessageHistoryViewExternalInput, rhs: MessageHistoryViewExternalInput) -> Bool {
         if lhs === rhs {
             return true
         }
-        if lhs.peerId != rhs.peerId {
-            return false
-        }
-        if lhs.threadId != rhs.threadId {
-            return false
-        }
-        if lhs.holes != rhs.holes {
+        if lhs.content != rhs.content {
             return false
         }
         if lhs.maxReadIncomingMessageId != rhs.maxReadIncomingMessageId {
@@ -332,6 +325,8 @@ final class MutableMessageHistoryView {
     
     fileprivate var isAddedToChatList: Bool
     
+    private var userId: Int64?
+    
     init(
         postbox: PostboxImpl,
         orderStatistics: MessageHistoryViewOrderStatistics,
@@ -370,7 +365,13 @@ final class MutableMessageHistoryView {
         case let .single(peerId):
             self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil
         case let .external(input):
-            self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: input.peerId) != nil
+            switch input.content {
+            case let .thread(peerId, _, _):
+                self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil
+            case let .messages(_, _, userId):
+                self.isAddedToChatList = false
+                self.userId = userId
+            }
         }
         
         self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, appendMessagesFromTheSameGroup: appendMessagesFromTheSameGroup, namespaces: namespaces, statistics: self.orderStatistics, ignoreMessagesInTimestampRange: self.ignoreMessagesInTimestampRange, halfLimit: count + 1, locations: peerIds)
@@ -441,16 +442,19 @@ final class MutableMessageHistoryView {
         var holePeerIdsSet = Set<PeerId>()
         
         if !transaction.chatListOperations.isEmpty {
-            let mainPeerId: PeerId
             switch peerIds {
             case let .associated(peerId, _):
-                mainPeerId = peerId
+                self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil
             case let .single(peerId):
-                mainPeerId = peerId
+                self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil
             case let .external(input):
-                mainPeerId = input.peerId
+                switch input.content {
+                case let .thread(peerId, _, _):
+                    self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: peerId) != nil
+                case .messages:
+                    self.isAddedToChatList = false
+                }
             }
-            self.isAddedToChatList = postbox.chatListTable.getPeerChatListIndex(peerId: mainPeerId) != nil
         }
         
         switch self.peerIds {
@@ -476,27 +480,43 @@ final class MutableMessageHistoryView {
                 }
             }
         case let .external(input):
-            if let value = transaction.currentOperationsByPeerId[input.peerId] {
-                operations.append(value)
+            switch input.content {
+            case let .thread(peerId, _, _):
+                if let value = transaction.currentOperationsByPeerId[peerId] {
+                    operations.append(value)
+                }
+            case .messages:
+                //TODO:implement
+                break
             }
         }
         
         var hasChanges = false
         
         let unwrappedTag: MessageTags = self.tag ?? []
-        let threadId: Int64?
+        let externalThreadId: Int64?
+        let isExternal: Bool
         switch self.peerIds {
         case .single, .associated:
-            threadId = nil
+            externalThreadId = nil
+            isExternal = false
         case let .external(input):
-            threadId = input.threadId
+            isExternal = true
+            switch input.content {
+            case let .thread(_, id, _):
+                externalThreadId = id
+            case .messages:
+                externalThreadId = nil
+                //TODO:implement
+                break
+            }
         }
         
         switch self.state {
         case let .loading(loadingState):
             for (key, holeOperations) in transaction.currentPeerHoleOperations {
                 var matchesSpace = false
-                if threadId == nil {
+                if !isExternal {
                     switch key.space {
                     case .everywhere:
                         matchesSpace = unwrappedTag.isEmpty
@@ -557,7 +577,7 @@ final class MutableMessageHistoryView {
                         
                         var matches = false
                         if matchesTag {
-                            if threadId == nil || message.threadId == threadId {
+                            if !isExternal || message.threadId == externalThreadId {
                                 if self.namespaces.contains(message.id.namespace) {
                                     matches = true
                                     if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
@@ -608,7 +628,7 @@ final class MutableMessageHistoryView {
             }
             for (key, holeOperations) in transaction.currentPeerHoleOperations {
                 var matchesSpace = false
-                if threadId == nil {
+                if !isExternal {
                     switch key.space {
                     case .everywhere:
                         matchesSpace = unwrappedTag.isEmpty
@@ -880,14 +900,14 @@ final class MutableMessageHistoryView {
         }
     }
     
-    func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection, Int)? {
+    func firstHole() -> (MessageHistoryViewHole, MessageHistoryViewRelativeHoleDirection, Int, Int64?)? {
         switch self.sampledState {
         case let .loading(loadingSample):
             switch loadingSample {
             case .ready:
                 return nil
             case let .loadHole(peerId, namespace, _, threadId, id):
-                return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, threadId: threadId)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)), self.fillCount * 2)
+                return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, threadId: threadId)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)), self.fillCount * 2, self.userId)
             }
         case let .loaded(loadedSample):
             if let hole = loadedSample.hole {
@@ -897,7 +917,7 @@ final class MutableMessageHistoryView {
                 } else {
                     direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))
                 }
-                return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace, threadId: hole.threadId)), direction, self.fillCount * 2)
+                return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace, threadId: hole.threadId)), direction, self.fillCount * 2, self.userId)
             } else {
                 return nil
             }

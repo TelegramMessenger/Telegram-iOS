@@ -10,6 +10,7 @@ public final class MultilineTextComponent: Component {
     public var truncationType: CTLineTruncationType
     public var maximumNumberOfLines: Int
     public var lineSpacing: CGFloat
+    public var cutout: TextNodeCutout?
     public var insets: UIEdgeInsets
     public var textShadowColor: UIColor?
     public var textStroke: (UIColor, CGFloat)?
@@ -21,6 +22,7 @@ public final class MultilineTextComponent: Component {
         truncationType: CTLineTruncationType = .end,
         maximumNumberOfLines: Int = 1,
         lineSpacing: CGFloat = 0.0,
+        cutout: TextNodeCutout? = nil,
         insets: UIEdgeInsets = UIEdgeInsets(),
         textShadowColor: UIColor? = nil,
         textStroke: (UIColor, CGFloat)? = nil
@@ -31,6 +33,7 @@ public final class MultilineTextComponent: Component {
         self.truncationType = truncationType
         self.maximumNumberOfLines = maximumNumberOfLines
         self.lineSpacing = lineSpacing
+        self.cutout = cutout
         self.insets = insets
         self.textShadowColor = textShadowColor
         self.textStroke = textStroke
@@ -53,6 +56,9 @@ public final class MultilineTextComponent: Component {
             return false
         }
         if lhs.lineSpacing != rhs.lineSpacing {
+            return false
+        }
+        if lhs.cutout != rhs.cutout {
             return false
         }
         if lhs.insets != rhs.insets {
@@ -93,7 +99,7 @@ public final class MultilineTextComponent: Component {
                 alignment: component.horizontalAlignment,
                 verticalAlignment: component.verticalAlignment,
                 lineSpacing: component.lineSpacing,
-                cutout: nil,
+                cutout: component.cutout,
                 insets: component.insets,
                 textShadowColor: component.textShadowColor,
                 textStroke: component.textStroke,

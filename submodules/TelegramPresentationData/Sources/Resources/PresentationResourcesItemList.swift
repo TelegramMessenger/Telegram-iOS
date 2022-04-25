@@ -269,4 +269,10 @@ public struct PresentationResourcesItemList {
             })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 25)
         })
     }
+    
+    public static func uploadToneIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.uploadToneIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Settings/UploadTone"), color: theme.list.itemAccentColor)
+        })
+    }
 }

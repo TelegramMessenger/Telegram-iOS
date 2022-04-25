@@ -344,3 +344,23 @@ public final class CachedPreparedPatternWallpaperRepresentation: CachedMediaReso
         }
     }
 }
+
+
+public final class CachedPreparedSvgRepresentation: CachedMediaResourceRepresentation {
+    public let keepDuration: CachedMediaRepresentationKeepDuration = .general
+    
+    public var uniqueId: String {
+        return "prepared-svg"
+    }
+    
+    public init() {
+    }
+    
+    public func isEqual(to: CachedMediaResourceRepresentation) -> Bool {
+        if to is CachedPreparedSvgRepresentation {
+            return true
+        } else {
+            return false
+        }
+    }
+}

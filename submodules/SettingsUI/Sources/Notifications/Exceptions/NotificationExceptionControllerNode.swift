@@ -287,7 +287,7 @@ public enum NotificationExceptionMode : Equatable {
     }
 }
 
-private func notificationsExceptionEntries(presentationData: PresentationData, state: NotificationExceptionState, query: String? = nil, foundPeers: [RenderedPeer] = []) -> [NotificationExceptionEntry] {
+private func notificationsExceptionEntries(presentationData: PresentationData, notificationSoundList: NotificationSoundList?, state: NotificationExceptionState, query: String? = nil, foundPeers: [RenderedPeer] = []) -> [NotificationExceptionEntry] {
     var entries: [NotificationExceptionEntry] = []
     
     if !state.isSearchMode {
@@ -358,11 +358,13 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
             }
             if !muted {
                 switch value.settings.messageSound {
-                    case .default:
-                        break
-                    default:
-                        let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: value.settings.messageSound)
-                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).string : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).string)")
+                case .default:
+                    break
+                default:
+                    if !title.isEmpty {
+                        title.append(", ")
+                    }
+                    title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
                 }
                 switch value.settings.displayPreviews {
                     case .default:
@@ -692,6 +694,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
     
     private let presentationDataValue = Promise<(PresentationTheme, PresentationStrings)>()
     private var listDisposable: Disposable?
+    private var fetchedSoundsDisposable: Disposable?
     
     private var arguments: NotificationExceptionArguments?
     private let stateValue: Atomic<NotificationExceptionState>
@@ -975,8 +978,8 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         
         let previousEntriesHolder = Atomic<([NotificationExceptionEntry], PresentationTheme, PresentationStrings)?>(value: nil)
         
-        self.listDisposable = (combineLatest(context.sharedContext.presentationData, statePromise.get(), preferences) |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs) in
-            let entries = notificationsExceptionEntries(presentationData: presentationData, state: state)
+        self.listDisposable = (combineLatest(context.sharedContext.presentationData, statePromise.get(), preferences, context.engine.peers.notificationSoundList()) |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, prefs, notificationSoundList in
+            let entries = notificationsExceptionEntries(presentationData: presentationData, notificationSoundList: notificationSoundList, state: state)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
 
             updateCanStartEditing(state.mode.peerIds.isEmpty ? nil : state.editing)
@@ -994,12 +997,15 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             
             self?.enqueueTransition(transition)
         })
+        
+        self.fetchedSoundsDisposable = ensureDownloadedNotificationSoundList(postbox: context.account.postbox).start()
     }
     
     deinit {
         self.listDisposable?.dispose()
         self.navigationActionDisposable.dispose()
         self.updateNotificationsDisposable.dispose()
+        self.fetchedSoundsDisposable?.dispose()
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -1233,16 +1239,16 @@ private final class NotificationExceptionsSearchContainerNode: SearchDisplayCont
         |> distinctUntilChanged
         
         let searchSignal = stateQuery
-        |> mapToSignal { query -> Signal<(PresentationData, (NotificationExceptionState, String?), PreferencesView, [RenderedPeer]), NoError> in
+        |> mapToSignal { query -> Signal<(PresentationData, NotificationSoundList?, (NotificationExceptionState, String?), PreferencesView, [RenderedPeer]), NoError> in
             var contactsSignal: Signal<[RenderedPeer], NoError> = .single([])
             if let query = query {
                 contactsSignal = context.account.postbox.searchPeers(query: query)
             }
-            return combineLatest(context.sharedContext.presentationData, stateAndPeers, preferences, contactsSignal)
+            return combineLatest(context.sharedContext.presentationData, context.engine.peers.notificationSoundList(), stateAndPeers, preferences, contactsSignal)
         }
         self.searchDisposable.set((searchSignal
-        |> deliverOnMainQueue).start(next: { [weak self] (presentationData, state, prefs, foundPeers) in
-            let entries = notificationsExceptionEntries(presentationData: presentationData, state: state.0, query: state.1, foundPeers: foundPeers)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, notificationSoundList, state, prefs, foundPeers in
+            let entries = notificationsExceptionEntries(presentationData: presentationData, notificationSoundList: notificationSoundList, state: state.0, query: state.1, foundPeers: foundPeers)
             let previousEntriesAndPresentationData = previousEntriesHolder.swap((entries, presentationData.theme, presentationData.strings))
             
             let transition = preparedNotificationExceptionsSearchContainerTransition(presentationData: ItemListPresentationData(presentationData), from: previousEntriesAndPresentationData?.0 ?? [], to: entries, arguments: arguments, isSearching: state.1 != nil && !state.1!.isEmpty, forceUpdate: previousEntriesAndPresentationData?.1 !== presentationData.theme || previousEntriesAndPresentationData?.2 !== presentationData.strings)

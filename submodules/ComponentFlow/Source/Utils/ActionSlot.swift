@@ -12,10 +12,14 @@ public final class Action<Arguments> {
     }
 }
 
-public final class ActionSlot<Arguments> {
+public final class ActionSlot<Arguments>: Equatable {
     private var target: ((Arguments) -> Void)?
     
     init() {
+    }
+    
+    public static func ==(lhs: ActionSlot<Arguments>, rhs: ActionSlot<Arguments>) -> Bool {
+        return lhs === rhs
     }
     
     public func connect(_ target: @escaping (Arguments) -> Void) {

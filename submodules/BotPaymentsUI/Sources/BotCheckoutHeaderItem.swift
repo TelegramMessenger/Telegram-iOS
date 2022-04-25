@@ -160,7 +160,7 @@ class BotCheckoutHeaderItemNode: ListViewItemNode {
             var imageApply: (() -> Void)?
             var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             if let photo = item.invoice.photo, let dimensions = photo.dimensions {
-                let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.cgSize.aspectFilled(imageSize), boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
+                let arguments = TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: dimensions.cgSize.aspectFilled(imageSize), boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: item.theme.list.mediaPlaceholderColor)
                 imageApply = makeImageLayout(arguments)
                 maxTextWidth = max(1.0, maxTextWidth - imageSize.width - imageTextSpacing)
                 if imageUpdated {

@@ -41,6 +41,7 @@
 - (SSignal *)selectionChangedSignal;
 
 - (void)enumerateSelectedItems:(void (^)(id<TGMediaSelectableItem>))enumerationBlock;
+- (void)enumerateDeselectedItems:(void (^)(id<TGMediaSelectableItem>))enumerationBlock;
 
 - (NSOrderedSet *)selectedItemsIdentifiers;
 - (NSArray *)selectedItems;

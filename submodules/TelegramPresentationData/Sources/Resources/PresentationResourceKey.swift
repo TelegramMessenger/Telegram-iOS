@@ -263,6 +263,18 @@ public enum PresentationResourceKey: Int32 {
     case chatFreeCommentButtonIcon
     case chatFreeNavigateButtonIcon
     case chatFreeShareButtonIcon
+    
+    case chatKeyboardActionButtonMessageIcon
+    case chatKeyboardActionButtonLinkIcon
+    case chatKeyboardActionButtonShareIcon
+    case chatKeyboardActionButtonPhoneIcon
+    case chatKeyboardActionButtonLocationIcon
+    case chatKeyboardActionButtonPaymentIcon
+    case chatKeyboardActionButtonProfileIcon
+    case chatKeyboardActionButtonAddToChatIcon
+    case chatKeyboardActionButtonWebAppIcon
+    
+    case uploadToneIcon
 }
 
 public enum PresentationResourceParameterKey: Hashable {

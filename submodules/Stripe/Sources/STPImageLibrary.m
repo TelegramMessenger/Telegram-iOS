@@ -48,6 +48,10 @@
     return [self brandImageForCardBrand:STPCardBrandUnknown];
 }
 
++ (UIImage *)otherCardCardImage {
+    return [self brandImageForCardBrand:STPCardBrandUnknown];
+}
+
 + (UIImage *)brandImageForCardBrand:(STPCardBrand)brand {
     return [self brandImageForCardBrand:brand template:NO];
 }
@@ -140,6 +144,9 @@
             break;
             case STPCardBrandVisa:
             imageName = shouldUseTemplate ? @"stp_card_visa_template" : @"stp_card_visa";
+            case STPCardBrandOther:
+            shouldUseTemplate = YES;
+            imageName = @"stp_card_placeholder_template";
             break;
     }
     UIImage *image = [self safeImageNamed:imageName

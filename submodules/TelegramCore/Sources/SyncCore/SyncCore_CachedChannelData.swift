@@ -17,6 +17,7 @@ public struct CachedChannelFlags: OptionSet {
     public static let preHistoryEnabled = CachedChannelFlags(rawValue: 1 << 3)
     public static let canViewStats = CachedChannelFlags(rawValue: 1 << 4)
     public static let canChangePeerGeoLocation = CachedChannelFlags(rawValue: 1 << 5)
+    public static let canDeleteHistory = CachedChannelFlags(rawValue: 1 << 6)
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {

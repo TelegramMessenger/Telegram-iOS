@@ -152,7 +152,10 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         pushControllerImpl?(storageUsageController(context: context))
         dismissImpl?()
     }, changePhoneNumber: {
-        pushControllerImpl?(ChangePhoneNumberIntroController(context: context, phoneNumber: phoneNumber))
+        let introController = PrivacyIntroController(context: context, mode: .changePhoneNumber(phoneNumber), proceedAction: {
+            replaceTopControllerImpl?(ChangePhoneNumberController(context: context))
+        })
+        pushControllerImpl?(introController)
         dismissImpl?()
     }, contactSupport: { [weak navigationController] in
         let supportPeer = Promise<PeerId?>()
@@ -178,7 +181,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 controller?.dismiss()
                 dismissImpl?()
                 
-                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {}, contentContext: nil)
@@ -196,7 +199,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 |> deliverOnMainQueue).start(next: { peerId in
                     if let peerId = peerId, let navigationController = navigationController {
                         dismissImpl?()
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
                     }
                 }))
             })

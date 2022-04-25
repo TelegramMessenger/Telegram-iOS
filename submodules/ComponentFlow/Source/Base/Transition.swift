@@ -153,6 +153,17 @@ public struct Transition {
         return result
     }
     
+    public func withAnimationIfAnimated(_ animation: Animation) -> Transition {
+        switch self.animation {
+        case .none:
+            return self
+        default:
+            var result = self
+            result.animation = animation
+            return result
+        }
+    }
+    
     public static var immediate: Transition = Transition(animation: .none)
     
     public static func easeInOut(duration: Double) -> Transition {

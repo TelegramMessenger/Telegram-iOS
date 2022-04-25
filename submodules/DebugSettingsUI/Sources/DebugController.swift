@@ -14,6 +14,7 @@ import OverlayStatusController
 import AccountContext
 import AppBundle
 import ZipArchive
+import WebKit
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -74,6 +75,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetHoles(PresentationTheme)
     case reindexUnread(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
+    case resetWebViewCache(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
@@ -103,7 +105,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .snow:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .snow:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -160,30 +162,32 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 20
         case .resetBiometricsData:
             return 21
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 22
-        case .photoPreview:
+        case .optimizeDatabase:
             return 23
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 24
+        case .knockoutWallpaper:
+            return 25
         case .experimentalCompatibility:
             return 26
         case .enableDebugDataDisplay:
             return 27
         case .acceleratedStickers:
-            return 29
+            return 28
         case .experimentalBackground:
-            return 30
+            return 29
         case .snow:
-            return 31
+            return 30
         case .playerEmbedding:
-            return 32
+            return 31
         case .playlistPlayback:
-            return 33
+            return 32
         case .voiceConference:
-            return 34
+            return 33
         case let .preferredVideoCodec(index, _, _, _):
-            return 35 + index
+            return 34 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -214,7 +218,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     } else {
                         UIPasteboard.general.setData(data, forPasteboardType: dataType)
                     }
-                    context.sharedContext.openResolvedUrl(.importStickers, context: context, urlContext: .generic, navigationController: arguments.getNavigationController(), openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { c, a in arguments.presentController(c, a as? ViewControllerPresentationArguments) }, dismissInput: {}, contentContext: nil)
+                    context.sharedContext.openResolvedUrl(.importStickers, context: context, urlContext: .generic, navigationController: arguments.getNavigationController(), forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { c, a in arguments.presentController(c, a as? ViewControllerPresentationArguments) }, dismissInput: {}, contentContext: nil)
                 }
             })
         case .sendLogs:
@@ -777,6 +781,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
+        case .resetWebViewCache:
+            return ItemListActionItem(presentationData: presentationData, title: "Clear Web View Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
+            })
         case .optimizeDatabase:
             return ItemListActionItem(presentationData: presentationData, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -968,6 +976,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.resetHoles(presentationData.theme))
     if isMainApp {
         entries.append(.reindexUnread(presentationData.theme))
+        entries.append(.resetWebViewCache(presentationData.theme))
     }
     entries.append(.optimizeDatabase(presentationData.theme))
     if isMainApp {

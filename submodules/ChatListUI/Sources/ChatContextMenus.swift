@@ -49,10 +49,13 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
 
-    return context.account.postbox.transaction { transaction -> (PeerGroupId, ChatListIndex)? in
-        transaction.getPeerChatListIndex(peerId)
-    }
-    |> mapToSignal { groupAndIndex -> Signal<[ContextMenuItem], NoError> in
+    return combineLatest(
+        context.account.postbox.transaction { transaction -> (PeerGroupId, ChatListIndex)? in
+            transaction.getPeerChatListIndex(peerId)
+        },
+        context.engine.peers.recentlySearchedPeers() |> take(1)
+    )
+    |> mapToSignal { groupAndIndex, recentlySearchedPeers -> Signal<[ContextMenuItem], NoError> in
         let location: TogglePeerChatPinnedLocation
         var chatListFilter: ChatListFilter?
         if case let .chatList(filter) = source, let chatFilter = filter {
@@ -100,7 +103,15 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         })))
                         items.append(.separator)
                     case .search:
-                        break
+                        if recentlySearchedPeers.contains(where: { $0.peer.peerId == peerId }) {
+                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                                let _ = (context.engine.peers.removeRecentlySearchedPeer(peerId: peerId)
+                                |> deliverOnMainQueue).start(completed: {
+                                    f(.default)
+                                })
+                            })))
+                            items.append(.separator)
+                        }
                     }
                 }
 
@@ -374,7 +385,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                     }
                                 }, completed: {
                                     if let navigationController = (chatListController?.navigationController as? NavigationController) {
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
                                     }
                                 }))
                                 f(.default)

@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 public enum PeerMessagesMediaPlaylistId: Equatable, SharedMediaPlaylistId {
     case peer(PeerId)
     case recentActions(PeerId)
+    case feed(Int32)
     case custom
     
     public func isEqual(to: SharedMediaPlaylistId) -> Bool {
@@ -34,6 +35,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
                     return .peer(peerId)
                 case let .replyThread(replyThreaMessage):
                     return .peer(replyThreaMessage.messageId.peerId)
+                case let .feed(id):
+                    return .feed(id)
                 }
             case let .singleMessage(id):
                 return .peer(id.peerId)

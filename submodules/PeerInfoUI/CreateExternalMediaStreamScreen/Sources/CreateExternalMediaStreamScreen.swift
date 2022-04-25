@@ -19,11 +19,13 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
     
     let context: AccountContext
     let peerId: EnginePeer.Id
+    let mode: CreateExternalMediaStreamScreen.Mode
     let credentialsPromise: Promise<GroupCallStreamCredentials>?
     
-    init(context: AccountContext, peerId: EnginePeer.Id, credentialsPromise: Promise<GroupCallStreamCredentials>?) {
+    init(context: AccountContext, peerId: EnginePeer.Id, mode: CreateExternalMediaStreamScreen.Mode, credentialsPromise: Promise<GroupCallStreamCredentials>?) {
         self.context = context
         self.peerId = peerId
+        self.mode = mode
         self.credentialsPromise = credentialsPromise
     }
     
@@ -32,6 +34,9 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             return false
         }
         if lhs.peerId != rhs.peerId {
+            return false
+        }
+        if lhs.mode != rhs.mode {
             return false
         }
         if lhs.credentialsPromise !== rhs.credentialsPromise {
@@ -180,6 +185,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             let state = context.state
+            let mode = context.component.mode
             let controller = environment.controller
             
             let bottomInset: CGFloat
@@ -197,8 +203,9 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             
             let animation = animation.update(
                 component: AnimatedStickerComponent(
+                    account: state.context.account,
                     animation: AnimatedStickerComponent.Animation(
-                        name: "CreateStream",
+                        source: .bundle(name: "CreateStream"),
                         loop: true
                     ),
                     size: CGSize(width: 138.0, height: 138.0)
@@ -218,20 +225,22 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 transition: context.transition
             )
             
-            let bottomText = bottomText.update(
-                component: MultilineTextComponent(
-                    text: NSAttributedString(string: environment.strings.CreateExternalStream_StartStreamingInfo, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor, paragraphAlignment: .center),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 0,
-                    lineSpacing: 0.1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
-                transition: context.transition
-            )
+            let bottomText = Condition(mode == .create) {
+                bottomText.update(
+                    component: MultilineTextComponent(
+                        text: NSAttributedString(string: environment.strings.CreateExternalStream_StartStreamingInfo, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor, paragraphAlignment: .center),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 0,
+                        lineSpacing: 0.1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                    transition: context.transition
+                )
+            }
             
             let button = button.update(
                 component: SolidRoundedButtonComponent(
-                    title: environment.strings.CreateExternalStream_StartStreaming,
+                    title: mode == .create ? environment.strings.CreateExternalStream_StartStreaming : environment.strings.Common_Close,
                     theme: SolidRoundedButtonComponent.Theme(theme: environment.theme),
                     font: .bold,
                     fontSize: 17.0,
@@ -243,9 +252,14 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                             return
                         }
                         
-                        state.createAndJoinGroupCall(baseController: controller, completion: { [weak controller] in
-                            controller?.dismiss()
-                        })
+                        switch mode {
+                        case .create:
+                            state.createAndJoinGroupCall(baseController: controller, completion: { [weak controller] in
+                                controller?.dismiss()
+                            })
+                        case .view:
+                            controller.dismiss()
+                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
@@ -396,9 +410,11 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             
             let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: context.availableSize.height - bottomInset - button.size.height), size: button.size)
             
-            context.add(bottomText
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.minY - 14.0 - bottomText.size.height / 2.0))
-            )
+            if let bottomText = bottomText {
+                context.add(bottomText
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.minY - 14.0 - bottomText.size.height / 2.0))
+                )
+            }
             
             context.add(button
                 .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
@@ -410,19 +426,31 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
 }
 
 public final class CreateExternalMediaStreamScreen: ViewControllerComponentContainer {
+    public enum Mode {
+        case create
+        case view
+    }
+    
     private let context: AccountContext
     private let peerId: EnginePeer.Id
+    private let mode: Mode
     
-    public init(context: AccountContext, peerId: EnginePeer.Id, credentialsPromise: Promise<GroupCallStreamCredentials>?) {
+    public init(context: AccountContext, peerId: EnginePeer.Id, credentialsPromise: Promise<GroupCallStreamCredentials>?, mode: Mode) {
         self.context = context
         self.peerId = peerId
+        self.mode = mode
         
-        super.init(context: context, component: CreateExternalMediaStreamScreenComponent(context: context, peerId: peerId, credentialsPromise: credentialsPromise), navigationBarAppearance: .transparent)
+        super.init(context: context, component: CreateExternalMediaStreamScreenComponent(context: context, peerId: peerId, mode: mode, credentialsPromise: credentialsPromise), navigationBarAppearance: .transparent, theme: defaultDarkPresentationTheme)
         
         self.navigationPresentation = .modal
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.title = presentationData.strings.CreateExternalStream_Title
+        switch mode {
+        case .create:
+            self.title = presentationData.strings.CreateExternalStream_Title
+        case .view:
+            self.title = presentationData.strings.CreateExternalStream_StreamKeyTitle
+        }
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         

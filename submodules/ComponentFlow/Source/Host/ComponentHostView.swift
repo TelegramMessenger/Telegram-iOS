@@ -32,8 +32,8 @@ public final class ComponentHostView<EnvironmentType: Equatable>: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, containerSize: CGSize) -> CGSize {
-        let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: false, containerSize: containerSize)
+    public func update(transition: Transition, component: AnyComponent<EnvironmentType>, @EnvironmentBuilder environment: () -> Environment<EnvironmentType>, forceUpdate: Bool = false, containerSize: CGSize) -> CGSize {
+        let size = self._update(transition: transition, component: component, maybeEnvironment: environment, updateEnvironment: true, forceUpdate: forceUpdate, containerSize: containerSize)
         self.currentSize = size
         return size
     }

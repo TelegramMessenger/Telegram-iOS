@@ -432,15 +432,15 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     let actionsDisposable = DisposableSet()
 
     let initialState: InviteLinkEditControllerState
-    if let invite = invite {
-        var usageLimit = invite.usageLimit
-        if let limit = usageLimit, let count = invite.count, count > 0 {
+    if let invite = invite, case let .link(_, title, _, requestApproval, _, _, _, _, expireDate, usageLimit, count, _) = invite {
+        var usageLimit = usageLimit
+        if let limit = usageLimit, let count = count, count > 0 {
             usageLimit = limit - count
         }
         
         let timeLimit: InviteLinkTimeLimit
         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-        if let expireDate = invite.expireDate {
+        if let expireDate = expireDate {
             if currentTime >= expireDate {
                 timeLimit = .day
             } else {
@@ -450,7 +450,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             timeLimit = .unlimited
         }
         
-        initialState = InviteLinkEditControllerState(title: invite.title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: invite.requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
     } else {
         initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingTimeLimit: false, pickingUsageLimit: false)
     }
@@ -472,7 +472,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
     }, dismissInput: {
        dismissInputImpl?()
     }, revoke: {
-        guard let invite = invite else {
+        guard let inviteLink = invite?.link else {
             return
         }
         let _ = (context.account.postbox.loadedPeerWithId(peerId)
@@ -495,7 +495,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                         dismissAction()
                         dismissImpl?()
                         
-                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link)
+                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink)
                         |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                         |> deliverOnMainQueue).start(next: { invite in
                             switch invite {
@@ -578,13 +578,13 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 })
-            } else if let initialInvite = invite {
-                if initialInvite.expireDate == expireDate && initialInvite.usageLimit == usageLimit && initialInvite.requestApproval == requestNeeded {
+            } else if let initialInvite = invite, case let .link(link, _, _, initialRequestApproval, _, _, _, _, initialExpireDate, initialUsageLimit, _, _) = initialInvite {
+                if initialExpireDate == expireDate && initialUsageLimit == usageLimit && initialRequestApproval == requestNeeded {
                     completion?(initialInvite)
                     dismissImpl?()
                     return
                 }
-                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: initialInvite.link, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
+                let _ = (context.engine.peers.editPeerExportedInvitation(peerId: peerId, link: link, title: title, expireDate: expireDate, usageLimit: requestNeeded ? 0 : usageLimit, requestNeeded: requestNeeded)
                 |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
                 |> deliverOnMainQueue).start(next: { invite in
                     completion?(invite)

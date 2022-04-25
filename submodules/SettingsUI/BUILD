@@ -93,7 +93,7 @@ swift_library(
         "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
         "//submodules/WebPBinding:WebPBinding",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
-        "//submodules/Translate:Translate",
+        "//submodules/TranslateUI:TranslateUI",
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",

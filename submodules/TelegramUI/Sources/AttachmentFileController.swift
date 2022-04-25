@@ -131,7 +131,7 @@ private enum AttachmentFileEntry: ItemListNodeEntry {
                 let dateTimeFormat = arguments.context.sharedContext.currentPresentationData.with({$0}).dateTimeFormat
                 let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: .color(0)), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0, auxiliaryRadius: 0, mergeBubbleCorners: false))
             
-                return ListMessageItem(presentationData: chatPresentationData, context: arguments.context, chatLocation: .peer(PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, displayFileInfo: false, displayBackground: true, style: .blocks)
+                return ListMessageItem(presentationData: chatPresentationData, context: arguments.context, chatLocation: .peer(id: PeerId(0)), interaction: interaction, message: message, selection: .none, displayHeader: false, displayFileInfo: false, displayBackground: true, style: .blocks)
         }
     }
 }
@@ -168,6 +168,8 @@ private class AttachmentFileControllerImpl: ItemListController, AttachmentContai
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
     
     var delayDisappear = false
     

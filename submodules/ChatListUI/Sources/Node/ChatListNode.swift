@@ -979,23 +979,30 @@ public final class ChatListNode: ListView {
                             guard !filter.contains(.excludeSecretChats) || peer.peerId.namespace != Namespaces.Peer.SecretChat else { return false }
                             guard !filter.contains(.onlyPrivateChats) || peer.peerId.namespace == Namespaces.Peer.CloudUser else { return false }
 
-                            if filter.contains(.onlyGroups) {
-                                var isGroup: Bool = false
-                                if case let .channel(peer) = peer.chatMainPeer, case .group = peer.info {
-                                    isGroup = true
-                                } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
-                                    isGroup = true
-                                }
-                                if !isGroup {
-                                    return false
-                                }
-                            }
-                            
-                            if filter.contains(.onlyChannels) {
-                                if case let .channel(peer) = peer.chatMainPeer, case .broadcast = peer.info {
-                                    return true
+                            if filter.contains(.onlyGroupsAndChannels) {
+                                if case .channel = peer.chatMainPeer {
+                                } else if case .legacyGroup = peer.chatMainPeer {
                                 } else {
                                     return false
+                                }
+                            } else {
+                                if filter.contains(.onlyGroups) {
+                                    var isGroup: Bool = false
+                                    if case let .channel(peer) = peer.chatMainPeer, case .group = peer.info {
+                                        isGroup = true
+                                    } else if peer.peerId.namespace == Namespaces.Peer.CloudGroup {
+                                        isGroup = true
+                                    }
+                                    if !isGroup {
+                                        return false
+                                    }
+                                }
+                                
+                                if filter.contains(.onlyChannels) {
+                                    if case let .channel(peer) = peer.chatMainPeer, case .broadcast = peer.info {
+                                    } else {
+                                        return false
+                                    }
                                 }
                             }
                             
@@ -1007,6 +1014,28 @@ public final class ChatListNode: ListView {
                             if filter.contains(.onlyWriteable) && filter.contains(.excludeDisabled) {
                                 if let peer = peer.peers[peer.peerId] {
                                     if !canSendMessagesToPeer(peer._asPeer()) {
+                                        return false
+                                    }
+                                } else {
+                                    return false
+                                }
+                            }
+                        
+                            if filter.contains(.onlyManageable) && filter.contains(.excludeDisabled) {
+                                if let peer = peer.peers[peer.peerId] {
+                                    var canManage = false
+                                    if case let .legacyGroup(peer) = peer {
+                                        switch peer.role {
+                                            case .creator, .admin:
+                                                canManage = true
+                                            default:
+                                                break
+                                        }
+                                    }
+                                    
+                                    if canManage {
+                                    } else if case let .channel(peer) = peer, case .group = peer.info, peer.hasPermission(.inviteMembers) {
+                                    } else {
                                         return false
                                     }
                                 } else {
@@ -1938,7 +1967,7 @@ public final class ChatListNode: ListView {
             }
             switch chatListView.filteredEntries[entryCount - i - 1] {
                 case let .PeerEntry(index, _, _, _, _, _, peer, _, _, _, _, _, _, _, _, _, _):
-                    if interaction.highlightedChatLocation?.location == ChatLocation.peer(peer.peerId) {
+                    if interaction.highlightedChatLocation?.location == ChatLocation.peer(id: peer.peerId) {
                         current = (index, peer.peer!, entryCount - i - 1)
                         break outer
                     }

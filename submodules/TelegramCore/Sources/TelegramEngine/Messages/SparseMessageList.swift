@@ -188,7 +188,7 @@ public final class SparseMessageList {
             #else*/
             count = 200
             //#endif
-            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
+            self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: peerId), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
             |> deliverOn(self.queue)).start(next: { [weak self] view, updateType, _ in
                 guard let strongSelf = self else {
                     return

@@ -252,7 +252,6 @@ swift_library(
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/Components/ReactionListContextMenuContent:ReactionListContextMenuContent",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
-        "//submodules/Translate:Translate",
         "//submodules/TabBarUI:TabBarUI",
         "//submodules/SoftwareVideo:SoftwareVideo",
         "//submodules/ManagedFile:ManagedFile",
@@ -266,6 +265,8 @@ swift_library(
         "//submodules/MediaPickerUI:MediaPickerUI",
         "//submodules/ChatMessageBackground:ChatMessageBackground",
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
+        "//submodules/TranslateUI:TranslateUI",
+        "//submodules/BrowserUI:BrowserUI",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

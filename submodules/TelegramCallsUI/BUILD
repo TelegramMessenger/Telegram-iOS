@@ -101,6 +101,9 @@ swift_library(
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/UndoPanelComponent:UndoPanelComponent",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
     ],
     visibility = [
         "//visibility:public",

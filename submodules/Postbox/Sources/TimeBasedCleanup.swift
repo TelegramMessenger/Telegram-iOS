@@ -13,6 +13,58 @@ private struct ScanFilesResult {
     var totalSize: UInt64 = 0
 }
 
+private func printOpenFiles() {
+    var flags: Int32 = 0
+    var fd: Int32 = 0
+    var buf = Data(count: Int(MAXPATHLEN) + 1)
+    
+    while fd < FD_SETSIZE {
+        errno = 0;
+        flags = fcntl(fd, F_GETFD, 0);
+        if flags == -1 && errno != 0 {
+            if errno != EBADF {
+                return
+            } else {
+                continue
+            }
+        }
+        
+        buf.withUnsafeMutableBytes { buffer -> Void in
+            let _ = fcntl(fd, F_GETPATH, buffer.baseAddress!)
+            let string = String(cString: buffer.baseAddress!.assumingMemoryBound(to: CChar.self))
+            print(string)
+        }
+        
+        fd += 1
+    }
+}
+
+/*
+ +(void) lsof
+ {
+     int flags;
+     int fd;
+     char buf[MAXPATHLEN+1] ;
+     int n = 1 ;
+
+     for (fd = 0; fd < (int) FD_SETSIZE; fd++) {
+         errno = 0;
+         flags = fcntl(fd, F_GETFD, 0);
+         if (flags == -1 && errno) {
+             if (errno != EBADF) {
+                 return ;
+             }
+             else
+                 continue;
+         }
+         fcntl(fd , F_GETPATH, buf ) ;
+         NSLog( @"File Descriptor %d number %d in use for: %s",fd,n , buf ) ;
+         ++n ;
+     }
+ }
+ 
+ */
+
 private func scanFiles(at path: String, olderThan minTimestamp: Int32, inodes: inout [InodeInfo]) -> ScanFilesResult {
     var result = ScanFilesResult()
     
@@ -208,8 +260,12 @@ private final class TimeBasedCleanupImpl {
                     mapFiles(paths: paths, inodes: &inodes, removeSize: totalLimitSize - bytesLimit)
                 }
                 
+                #if DEBUG
+                //printOpenFiles()
+                #endif
+                
                 if removedShortLivedCount != 0 || removedGeneralCount != 0 || removedGeneralLimitCount != 0 {
-                    print("[TimeBasedCleanup] \(CFAbsoluteTimeGetCurrent() - startTime) s removed \(removedShortLivedCount) short-lived files, \(removedGeneralCount) general files, \(removedGeneralLimitCount) limit files")
+                    postboxLog("[TimeBasedCleanup] \(CFAbsoluteTimeGetCurrent() - startTime) s removed \(removedShortLivedCount) short-lived files, \(removedGeneralCount) general files, \(removedGeneralLimitCount) limit files")
                 }
                 subscriber.putCompletion()
             }

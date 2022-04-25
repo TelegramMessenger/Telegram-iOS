@@ -376,7 +376,10 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                                         urlString = "http://" + urlString
                                         parsedUrl = URL(string: urlString)
                                     }
-                                    let host: String? = concealed ? urlString : parsedUrl?.host
+                                    var host: String? = concealed ? urlString : parsedUrl?.host
+                                    if host == nil {
+                                        host = urlString
+                                    }
                                     if let url = parsedUrl, let host = host {
                                         primaryUrl = urlString
                                         if url.path.hasPrefix("/addstickers/") {

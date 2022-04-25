@@ -243,13 +243,13 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
 
 private func filteredGlobalSound(_ sound: PeerMessageSound) -> PeerMessageSound {
     if case .default = sound {
-        return .bundledModern(id: 0)
+        return defaultCloudPeerNotificationSound
     } else {
         return sound
     }
 }
 
-private func notificationsPeerCategoryEntries(category: NotificationsPeerCategory, globalSettings: GlobalNotificationSettingsSet, state: NotificationExceptionState, presentationData: PresentationData) -> [NotificationsPeerCategoryEntry] {
+private func notificationsPeerCategoryEntries(category: NotificationsPeerCategory, globalSettings: GlobalNotificationSettingsSet, state: NotificationExceptionState, presentationData: PresentationData, notificationSoundList: NotificationSoundList?) -> [NotificationsPeerCategoryEntry] {
     var entries: [NotificationsPeerCategoryEntry] = []
     
     let notificationSettings: MessageNotificationSettings
@@ -268,7 +268,7 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
     if notificationSettings.enabled || !notificationExceptions.isEmpty {
         entries.append(.optionsHeader(presentationData.theme, presentationData.strings.Notifications_Options.uppercased()))
         entries.append(.previews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, notificationSettings.displayPreviews))
-        entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(notificationSettings.sound)), filteredGlobalSound(notificationSettings.sound)))
+        entries.append(.sound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: filteredGlobalSound(notificationSettings.sound)), filteredGlobalSound(notificationSettings.sound)))
     }
     
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptions.uppercased()))
@@ -335,11 +335,13 @@ private func notificationsPeerCategoryEntries(category: NotificationsPeerCategor
             }
             if !muted {
                 switch value.settings.messageSound {
-                    case .default:
-                        break
-                    default:
-                        let soundName = localizedPeerNotificationSoundString(strings: presentationData.strings, sound: value.settings.messageSound)
-                        title += (title.isEmpty ? presentationData.strings.Notification_Exceptions_Sound(soundName).string : ", \(presentationData.strings.Notification_Exceptions_Sound(soundName).string)")
+                case .default:
+                    break
+                default:
+                    if !title.isEmpty {
+                        title.append(", ")
+                    }
+                    title.append(presentationData.strings.Notification_Exceptions_SoundCustom)
                 }
                 switch value.settings.displayPreviews {
                     case .default:
@@ -687,8 +689,8 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
     let sharedData = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     let preferences = context.account.postbox.preferencesView(keys: [PreferencesKeys.globalNotifications])
     
-    let signal = combineLatest(context.sharedContext.presentationData, sharedData, preferences, statePromise.get())
-    |> map { presentationData, sharedData, view, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(context.sharedContext.presentationData, context.engine.peers.notificationSoundList(), sharedData, preferences, statePromise.get())
+    |> map { presentationData, notificationSoundList, sharedData, view, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let viewSettings: GlobalNotificationSettingsSet
         if let settings = view.values[PreferencesKeys.globalNotifications]?.get(GlobalNotificationSettings.self) {
             viewSettings = settings.effective
@@ -696,7 +698,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             viewSettings = GlobalNotificationSettingsSet.defaultSettings
         }
         
-        let entries = notificationsPeerCategoryEntries(category: category, globalSettings: viewSettings, state: state, presentationData: presentationData)
+        let entries = notificationsPeerCategoryEntries(category: category, globalSettings: viewSettings, state: state, presentationData: presentationData, notificationSoundList: notificationSoundList)
         
         var index = 0
         var scrollToItem: ListViewScrollToItem?

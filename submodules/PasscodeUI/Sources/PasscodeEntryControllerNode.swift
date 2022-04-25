@@ -78,6 +78,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.cancelButtonNode = HighlightableButtonNode()
         self.deleteButtonNode = HighlightableButtonNode()
+        self.deleteButtonNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: -16.0, bottom: -10.0, right: -16.0)
         self.biometricButtonNode = HighlightableButtonNode()
         self.effectView = UIVisualEffectView(effect: nil)
             
@@ -400,6 +401,9 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
             
             Queue.mainQueue().after(1.5, {
                 self.titleNode.setAttributedText(NSAttributedString(string: self.strings.EnterPasscode_EnterPasscode, font: titleFont, textColor: .white), animation: .crossFade)
+                if let validLayout = self.validLayout {
+                    self.containerLayoutUpdated(validLayout, navigationBarHeight: 0.0, transition: .animated(duration: 0.5, curve: .easeInOut))
+                }
             })
             
             completion()
@@ -470,6 +474,8 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         if layout.size.width == 320.0 || (isLandscape && keyboardHidden) {
             self.iconNode.alpha = 0.0
+        } else {
+            self.iconNode.alpha = 1.0
         }
                 
         let passcodeLayout = PasscodeLayout(layout: layout, modalPresentation: self.modalPresentation)

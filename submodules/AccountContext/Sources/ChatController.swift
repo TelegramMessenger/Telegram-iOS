@@ -143,11 +143,22 @@ public struct ChatControllerInitialBotStart {
     }
 }
 
+public struct ChatControllerInitialAttachBotStart {
+    public let botId: PeerId
+    public let payload: String?
+    
+    public init(botId: PeerId, payload: String?) {
+        self.botId = botId
+        self.payload = payload
+    }
+}
+
 public enum ChatControllerInteractionNavigateToPeer {
     case `default`
     case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?, peekData: ChatPeekTimeout?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)
+    case withAttachBot(ChatControllerInitialAttachBotStart)
 }
 
 public struct ChatInterfaceForwardOptionsState: Codable, Equatable {

@@ -450,7 +450,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         contextActionImpl?(messageId, node, gesture)
     })
     
-    let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
+    let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
     |> map { messageHistoryView, _, _ -> MessageHistoryView? in
         return messageHistoryView
     }
@@ -518,7 +518,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak controller] c, _ in
             c.dismiss(completion: {
                 if let navigationController = controller?.navigationController as? NavigationController {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                 }
             })
         })))

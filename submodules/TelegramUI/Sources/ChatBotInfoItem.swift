@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import TextFormat
 import UrlEscaping
+import PhotoResources
+import AccountContext
 
 private let messageFont = Font.regular(17.0)
 private let messageBoldFont = Font.semibold(17.0)
@@ -18,14 +20,18 @@ private let messageFixedFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFo
 final class ChatBotInfoItem: ListViewItem {
     fileprivate let title: String
     fileprivate let text: String
+    fileprivate let photo: TelegramMediaImage?
     fileprivate let controllerInteraction: ChatControllerInteraction
     fileprivate let presentationData: ChatPresentationData
+    fileprivate let context: AccountContext
     
-    init(title: String, text: String, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData) {
+    init(title: String, text: String, photo: TelegramMediaImage?, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData, context: AccountContext) {
         self.title = title
         self.text = text
+        self.photo = photo
         self.controllerInteraction = controllerInteraction
         self.presentationData = presentationData
+        self.context = context
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -76,9 +82,12 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     
     let offsetContainer: ASDisplayNode
     let backgroundNode: ASImageNode
+    let imageNode: TransformImageNode
     let titleNode: TextNode
     let textNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    
+    private let fetchDisposable = MetaDisposable()
     
     var currentTextAndEntities: (String, [MessageTextEntity])?
     
@@ -92,6 +101,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
+        self.imageNode = TransformImageNode()
         self.textNode = TextNode()
         self.titleNode = TextNode()
         
@@ -101,9 +111,14 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         
         self.addSubnode(self.offsetContainer)
         self.offsetContainer.addSubnode(self.backgroundNode)
+        self.offsetContainer.addSubnode(self.imageNode)
         self.offsetContainer.addSubnode(self.titleNode)
         self.offsetContainer.addSubnode(self.textNode)
         self.wantsTrailingItemSpaceUpdates = true
+    }
+    
+    deinit {
+        self.fetchDisposable.dispose()
     }
     
     override func didLoad() {
@@ -134,10 +149,14 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+        let makeImageLayout = self.imageNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let currentTextAndEntities = self.currentTextAndEntities
         let currentTheme = self.theme
+        
+        let currentItem = self.item
+        
         return { [weak self] item, params in
             self?.item = item
             
@@ -145,7 +164,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             if currentTheme != item.presentationData.theme {
                 updatedBackgroundImage = PresentationResourcesChat.chatInfoItemBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             }
-            
+                        
             var updatedTextAndEntities: (String, [MessageTextEntity])
             if let (text, entities) = currentTextAndEntities {
                 if text == item.text {
@@ -171,11 +190,40 @@ final class ChatBotInfoItemNode: ListViewItemNode {
             let textSpacing: CGFloat = 1.0
             let textSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width), height: (titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing) + textLayout.size.height))
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textSize.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textSize.width + horizontalContentInset * 2.0, height: textSize.height + verticalContentInset * 2.0))
-            let titleFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset), size: titleLayout.size)
-            let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + verticalContentInset + titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing)), size: textLayout.size)
+            var mediaUpdated = false
+            if let media = item.photo {
+                if let currentMedia = currentItem?.photo {
+                    mediaUpdated = !media.isSemanticallyEqual(to: currentMedia)
+                } else {
+                    mediaUpdated = true
+                }
+            }
             
-            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: textLayout.size.height  + verticalItemInset * 2.0 + verticalContentInset * 2.0 + titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing) - 3.0), insets: UIEdgeInsets())
+            var updatedImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+
+            var imageSize = CGSize()
+            var imageDimensions = CGSize()
+            var imageApply: (() -> Void)?
+            let imageInset: CGFloat = 1.0 + UIScreenPixel
+            if let image = item.photo, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
+                imageDimensions = dimensions.cgSize.aspectFitted(CGSize(width: textSize.width + horizontalContentInset * 2.0 - imageInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+                imageSize = imageDimensions
+                imageSize.height += 4.0
+                
+                let arguments = TransformImageArguments(corners: ImageCorners(topLeft: .Corner(17.0), topRight: .Corner(17.0), bottomLeft: .Corner(0.0), bottomRight: .Corner(0.0)), imageSize: dimensions.cgSize.aspectFilled(imageDimensions), boundingSize: imageDimensions, intrinsicInsets: UIEdgeInsets(), emptyColor: item.presentationData.theme.theme.list.mediaPlaceholderColor)
+                imageApply = makeImageLayout(arguments)
+                
+                if mediaUpdated {
+                    updatedImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .standalone(media: image), synchronousLoad: true, highQuality: false)
+                }
+            }
+            
+            let backgroundFrame = CGRect(origin: CGPoint(x: floor((params.width - textSize.width - horizontalContentInset * 2.0) / 2.0), y: verticalItemInset + 4.0), size: CGSize(width: textSize.width + horizontalContentInset * 2.0, height: imageSize.height + textSize.height + verticalContentInset * 2.0))
+            let titleFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + imageSize.height + verticalContentInset), size: titleLayout.size)
+            let textFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + horizontalContentInset, y: backgroundFrame.origin.y + imageSize.height + verticalContentInset + titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing)), size: textLayout.size)
+            let imageFrame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + imageInset, y: backgroundFrame.origin.y + imageInset), size: imageDimensions)
+            
+            let itemLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: imageSize.height + textLayout.size.height + verticalItemInset * 2.0 + verticalContentInset * 2.0 + titleLayout.size.height + (titleLayout.size.width.isZero ? 0.0 : textSpacing) - 3.0), insets: UIEdgeInsets())
             return (itemLayout, { _ in
                 if let strongSelf = self {
                     strongSelf.theme = item.presentationData.theme
@@ -186,6 +234,22 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                     
                     strongSelf.controllerInteraction = item.controllerInteraction
                     strongSelf.currentTextAndEntities = updatedTextAndEntities
+                    
+                    
+                    if let imageApply = imageApply {
+                        let _ = imageApply()
+                        if let updatedImageSignal = updatedImageSignal {
+                            strongSelf.imageNode.setSignal(updatedImageSignal)
+                            if let image = item.photo {
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                            }
+                        }
+                        strongSelf.imageNode.isHidden = false
+                    } else {
+                        strongSelf.imageNode.isHidden = true
+                    }
+                    strongSelf.imageNode.frame = imageFrame
+                    
                     let _ = titleApply()
                     let _ = textApply()
                     strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)

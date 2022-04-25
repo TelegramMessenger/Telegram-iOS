@@ -2,24 +2,29 @@ import Foundation
 import UIKit
 
 public final class Circle: Component {
-    public let color: UIColor
+    public let fillColor: UIColor
+    public let strokeColor: UIColor
+    public let strokeWidth: CGFloat
     public let size: CGSize
-    public let width: CGFloat
     
-    public init(color: UIColor, size: CGSize, width: CGFloat) {
-        self.color = color
+    public init(fillColor: UIColor = .clear, strokeColor: UIColor = .clear, strokeWidth: CGFloat = 0.0, size: CGSize) {
+        self.fillColor = fillColor
+        self.strokeColor = strokeColor
+        self.strokeWidth = strokeWidth
         self.size = size
-        self.width = width
     }
 
     public static func ==(lhs: Circle, rhs: Circle) -> Bool {
-        if !lhs.color.isEqual(rhs.color) {
+        if !lhs.fillColor.isEqual(rhs.fillColor) {
+            return false
+        }
+        if !lhs.strokeColor.isEqual(rhs.strokeColor) {
+            return false
+        }
+        if lhs.strokeWidth != rhs.strokeWidth {
             return false
         }
         if lhs.size != rhs.size {
-            return false
-        }
-        if lhs.width != rhs.width {
             return false
         }
         return true
@@ -38,9 +43,13 @@ public final class Circle: Component {
                 
                 UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
                 if let context = UIGraphicsGetCurrentContext() {
-                    context.setStrokeColor(component.color.cgColor)
-                    context.setLineWidth(component.width)
-                    context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: component.width / 2.0, dy: component.width / 2.0))
+                    context.setFillColor(component.fillColor.cgColor)
+                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                    if component.strokeWidth > 0.0 {
+                        context.setStrokeColor(component.strokeColor.cgColor)
+                        context.setLineWidth(component.strokeWidth)
+                        context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: component.strokeWidth / 2.0, dy: component.strokeWidth / 2.0))
+                    }
                 }
                 self.image = UIGraphicsGetImageFromCurrentImageContext()
                 UIGraphicsEndImageContext()

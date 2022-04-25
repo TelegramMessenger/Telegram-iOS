@@ -20,7 +20,7 @@ public struct NotificationSoundSettings {
     }
 }
 
-public func notificationMuteSettingsController(presentationData: PresentationData, notificationSettings: MessageNotificationSettings, soundSettings: NotificationSoundSettings?, openSoundSettings: @escaping () -> Void, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
+public func notificationMuteSettingsController(presentationData: PresentationData, notificationSoundList: NotificationSoundList?, notificationSettings: MessageNotificationSettings, soundSettings: NotificationSoundSettings?, openSoundSettings: @escaping () -> Void, updateSettings: @escaping (Int32?) -> Void) -> ViewController {
     let controller = ActionSheetController(presentationData: presentationData)
     let dismissAction: () -> Void = { [weak controller] in
         controller?.dismissAnimated()
@@ -81,7 +81,7 @@ public func notificationMuteSettingsController(presentationData: PresentationDat
         items.append(item)
     }
     if let soundSettings = soundSettings {
-        items.append(ActionSheetButtonItem(title: soundSettings.value.flatMap({ presentationData.strings.Notification_Exceptions_Sound(localizedPeerNotificationSoundString(strings: presentationData.strings, sound: $0)).string }) ?? presentationData.strings.GroupInfo_SetSound, action: {
+        items.append(ActionSheetButtonItem(title: soundSettings.value.flatMap({ presentationData.strings.Notification_Exceptions_Sound(localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: $0)).string }) ?? presentationData.strings.GroupInfo_SetSound, action: {
             dismissAction()
             openSoundSettings()
         }))

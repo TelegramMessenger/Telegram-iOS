@@ -537,7 +537,14 @@ private final class CallSessionManagerContext {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.drop(internalId: internalId, reason: .disconnect, debugLog: .single(nil))
+                    context.state = .terminated(id: nil, accessHash: nil, reason: .ended(.missed), reportRating: false, sendDebugLogs: false)
+                    strongSelf.contextUpdated(internalId: internalId)
+                    strongSelf.ringingStatesUpdated()
+                    if context.isEmpty {
+                        strongSelf.contexts.removeValue(forKey: internalId)
+                    }
+                    
+                    strongSelf.contextIdByStableId.removeValue(forKey: stableId)
                 }
             }))
             self.contextIdByStableId[stableId] = internalId
@@ -620,7 +627,7 @@ private final class CallSessionManagerContext {
                     if let strongSelf = self {
                         if let context = strongSelf.contexts[internalId] {
                             context.state = .terminated(id: id, accessHash: accessHash,  reason: .ended(.hungUp), reportRating: reportRating, sendDebugLogs: sendDebugLogs)
-                            if sendDebugLogs {
+                            /*if sendDebugLogs {
                                 let network = strongSelf.network
                                 let _ = (debugLog
                                 |> timeout(5.0, queue: strongSelf.queue, alternate: .single(nil))
@@ -629,7 +636,7 @@ private final class CallSessionManagerContext {
                                         let _ = _internal_saveCallDebugLog(network: network, callId: CallId(id: id, accessHash: accessHash), log: debugLog).start()
                                     }
                                 })
-                            }
+                            }*/
                             strongSelf.contextUpdated(internalId: internalId)
                             if context.isEmpty {
                                 strongSelf.contexts.removeValue(forKey: internalId)

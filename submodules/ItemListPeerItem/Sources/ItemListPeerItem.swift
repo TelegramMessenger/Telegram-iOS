@@ -439,7 +439,6 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     }
 }
 
-private let avatarFont = avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0))
 private let badgeFont = Font.regular(15.0)
 
 public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNode {
@@ -503,7 +502,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         self.containerNode = ContextControllerSourceNode()
         
-        self.avatarNode = AvatarNode(font: avatarFont)
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0)))
         //self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
         self.titleNode = TextNode()
@@ -763,6 +762,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             let verticalInset: CGFloat
             let verticalOffset: CGFloat
             let avatarSize: CGFloat
+            let avatarFontSize: CGFloat
             switch item.height {
             case .generic:
                 if case .none = item.text {
@@ -773,6 +773,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 verticalOffset = 0.0
                 avatarSize = 31.0
                 leftInset = 59.0 + params.leftInset
+                avatarFontSize = floor(31.0 * 16.0 / 37.0)
             case .peerList:
                 if case .none = item.text {
                     verticalInset = 14.0
@@ -782,6 +783,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 verticalOffset = 0.0
                 avatarSize = 40.0
                 leftInset = 65.0 + params.leftInset
+                avatarFontSize = floor(40.0 * 16.0 / 37.0)
             }
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
@@ -886,6 +888,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
+                    
+                    strongSelf.avatarNode.font = avatarPlaceholderFont(size: avatarFontSize)
                     
                     strongSelf.accessibilityLabel = titleAttributedString?.string
                     var combinedValueString = ""

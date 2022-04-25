@@ -47,7 +47,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         
         if let peer = peer {
-            self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
+            self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
         } else {
             self.chatController = nil
         }

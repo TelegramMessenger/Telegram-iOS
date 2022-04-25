@@ -122,6 +122,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.subtitleNode = ImmediateTextNode()
         self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.displaysAsynchronously = false
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false

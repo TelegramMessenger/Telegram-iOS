@@ -9,6 +9,7 @@ public enum JoinChannelError {
     case generic
     case tooMuchJoined
     case tooMuchUsers
+    case inviteRequestSent
 }
 
 func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
@@ -30,6 +31,8 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
                         return .tooMuchJoined
                     case "USERS_TOO_MUCH":
                         return .tooMuchUsers
+                    case "INVITE_REQUEST_SENT":
+                        return .inviteRequestSent
                     default:
                         return .generic
                 }

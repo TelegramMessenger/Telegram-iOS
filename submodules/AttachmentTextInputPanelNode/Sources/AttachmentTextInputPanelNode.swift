@@ -248,7 +248,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.isAttachment = isAttachment
         
         var hasSpoilers = true
-        if presentationInterfaceState.chatLocation.peerId.namespace == Namespaces.Peer.SecretChat {
+        if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
             hasSpoilers = false
         }
         self.inputMenu = TextInputMenu(hasSpoilers: hasSpoilers)
@@ -1143,7 +1143,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             text = current.inputText.attributedSubstring(from: NSMakeRange(current.selectionRange.lowerBound, current.selectionRange.count)).string
             return (current, inputMode)
         }
-        speakText(text)
+        let _ = speakText(context: self.context, text: text)
         
         if #available(iOS 13.0, *) {
             UIMenuController.shared.hideMenu()
