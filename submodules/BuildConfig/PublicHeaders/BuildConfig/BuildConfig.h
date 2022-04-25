@@ -27,5 +27,7 @@
 + (void)decryptApplicationSecret:(NSData * _Nonnull)secret publicKey:(NSData * _Nonnull)publicKey baseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^ _Nonnull)(NSData * _Nullable, bool))completion;
 
 + (bool) isNonDevAccount;
++ (bool)iCloudEnabled;
++ (bool)siriEnabled;
 
 @end

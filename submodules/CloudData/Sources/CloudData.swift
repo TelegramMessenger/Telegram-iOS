@@ -16,7 +16,7 @@ private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
         #if targetEnvironment(simulator)
         return EmptyDisposable
         #else
-        if BuildConfig.isNonDevAccount() {
+        if !BuildConfig.iCloudEnabled() {
             return EmptyDisposable
         }
         let container = CKContainer.default()
