@@ -8,10 +8,11 @@ NGDEPS = [
     "//Nicegram/NGStrings:NGStrings",
     "//Nicegram/NGTranslate:NGTranslate",
     "//Nicegram/NGLab:NGLab",
-    "//Nicegram/EsimModule/SubscriptionAnalytics:SubscriptionAnalytics",
+    "//Nicegram/SubscriptionAnalytics:SubscriptionAnalytics",
     "//Nicegram/NGAppCache:NGAppCache",
     "//Nicegram/NGSubscription:NGSubscription",
     "//Nicegram/NGEnv:NGEnv",
+    "//Nicegram/NGButton:NGButton"
 ]
 
 load(
@@ -266,7 +267,6 @@ swift_library(
         "//submodules/QrCodeUI:QrCodeUI",
         "//submodules/Components/ReactionListContextMenuContent:ReactionListContextMenuContent",
         "//submodules/Components/ReactionImageComponent:ReactionImageComponent",
-        "//submodules/Translate:Translate",
         "//submodules/TabBarUI:TabBarUI",
         "//submodules/SoftwareVideo:SoftwareVideo",
         "//submodules/ManagedFile:ManagedFile",
@@ -281,6 +281,7 @@ swift_library(
         "//submodules/MediaPickerUI:MediaPickerUI",
         "//submodules/ChatMessageBackground:ChatMessageBackground",
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
+        "//submodules/TranslateUI:TranslateUI",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

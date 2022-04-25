@@ -21,6 +21,15 @@ public extension Transition.Animation.Curve {
             self = .spring
         }
     }
+    
+    var containedViewLayoutTransitionCurve: ContainedViewLayoutTransitionCurve {
+        switch self {
+            case .easeInOut:
+                return .easeInOut
+            case .spring:
+                return .spring
+        }
+    }
 }
 
 public extension Transition {
@@ -30,6 +39,15 @@ public extension Transition {
             self.init(animation: .none)
         case let .animated(duration, curve):
             self.init(animation: .curve(duration: duration, curve: Transition.Animation.Curve(curve)))
+        }
+    }
+    
+    var containedViewLayoutTransition: ContainedViewLayoutTransition {
+        switch self.animation {
+            case .none:
+                return .immediate
+            case let .curve(duration, curve):
+                return .animated(duration: duration, curve: curve.containedViewLayoutTransitionCurve)
         }
     }
 }
@@ -125,7 +143,7 @@ open class ViewControllerComponentContainer: ViewController {
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: navigationHeight,
-                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.intrinsicInsets.left + layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.intrinsicInsets.right + layout.safeInsets.right),
+                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
                 isVisible: self.currentIsVisible,
                 theme: self.presentationData.theme,
                 strings: self.presentationData.strings,

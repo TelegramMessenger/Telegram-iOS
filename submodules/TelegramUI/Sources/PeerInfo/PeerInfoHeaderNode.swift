@@ -2376,8 +2376,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 title = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
             }
             title = title.replacingOccurrences(of: "\u{1160}", with: "").replacingOccurrences(of: "\u{3164}", with: "")
+            // MARK: Nicegram Hide phone
             if title.isEmpty {
-                if let peer = peer as? TelegramUser, let phone = peer.phone {
+                if let peer = peer as? TelegramUser, let phone = peer.phone, !NGSettings.hidePhoneSettings {
                     title = formatPhoneNumber(phone)
                 } else if let addressName = peer.addressName {
                     title = "@\(addressName)"

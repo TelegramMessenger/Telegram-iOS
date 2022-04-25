@@ -25,13 +25,13 @@ import AdUI
 import TelegramNotices
 import ReactionListContextMenuContent
 import TelegramUIPreferences
-import Translate
 // MARK: Nicegram Imports
 import NGUI
 import NGStrings
 import NGTranslate
 import PeerInfoUI
 //
+import TranslateUI
 import DebugSettingsUI
 import ChatPresentationInterfaceState
 import Pasteboard
@@ -1147,7 +1147,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 
             } else {
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     interfaceInteraction.forwardMessages(selectAll ? messages : [message])
                     f(.dismissWithoutContent)

@@ -318,9 +318,11 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                 case "WhiteFilled":
                                     name = "⍺ White"
                                 case "New1":
-                                    name = item.strings.Appearance_AppIconNew1
+                                    name = "Nicegram"
                                 case "New2":
-                                    name = item.strings.Appearance_AppIconNew2
+                                    name = "Nicegram Light"
+                                case "New3":
+                                    name = "Nicegram Dark"
                                 default:
                                     break
                             }

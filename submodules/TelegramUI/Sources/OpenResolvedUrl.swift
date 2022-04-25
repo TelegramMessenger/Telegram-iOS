@@ -492,7 +492,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }
                 }
                 let controller = ImportStickerPackController(context: context, stickerPack: stickerPack, parentNavigationController: navigationController)
-                present(controller, nil)
+                Queue.mainQueue().after(0.3) {
+                    present(controller, nil)
+                }
             }
     }
 }

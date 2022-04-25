@@ -641,9 +641,9 @@ public final class MediaStreamComponent: CombinedComponent {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "more", component: AnyComponent(Button(
                     content: AnyComponent(ZStack([
                         AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
-                            color: .white,
-                            size: CGSize(width: 22.0, height: 22.0),
-                            width: 1.5
+                            strokeColor: .white,
+                            strokeWidth: 1.5,
+                            size: CGSize(width: 22.0, height: 22.0)
                         ))),
                         AnyComponentWithIdentity(id: "a", component: AnyComponent(LottieAnimationComponent(
                             animation: LottieAnimationComponent.Animation(

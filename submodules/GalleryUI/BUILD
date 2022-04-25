@@ -41,7 +41,7 @@ swift_library(
         "//submodules/Speak:Speak",
         "//submodules/UndoUI:UndoUI",
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
-        "//submodules/Translate:Translate",
+        "//submodules/TranslateUI:TranslateUI",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

@@ -10,7 +10,7 @@ import ItemListUI
 import PresentationDataUtils
 import TelegramStringFormatting
 import AccountContext
-import Translate
+import TranslateUI
 
 private final class TranslationSettingsControllerArguments {
     let context: AccountContext
@@ -112,11 +112,25 @@ public func translationSettingsController(context: AccountContext) -> ViewContro
         }).start()
     })
     
-
     let enLocale = Locale(identifier: "en")
     var languages: [(String, String, String)] = []
-    for code in supportedTranslationLanguages {
+    var addedLanguages = Set<String>()
+    for code in popularTranslationLanguages {
         if let title = enLocale.localizedString(forLanguageCode: code) {
+            let languageLocale = Locale(identifier: code)
+            let subtitle = languageLocale.localizedString(forLanguageCode: code) ?? title
+            let value = (code, title.capitalized, subtitle.capitalized)
+            if code == interfaceLanguageCode {
+                languages.insert(value, at: 0)
+            } else {
+                languages.append(value)
+            }
+            addedLanguages.insert(code)
+        }
+    }
+
+    for code in supportedTranslationLanguages {
+        if !addedLanguages.contains(code), let title = enLocale.localizedString(forLanguageCode: code) {
             let languageLocale = Locale(identifier: code)
             let subtitle = languageLocale.localizedString(forLanguageCode: code) ?? title
             let value = (code, title.capitalized, subtitle.capitalized)

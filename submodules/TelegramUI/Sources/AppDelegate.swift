@@ -701,13 +701,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             if #available(iOS 10.3, *) {
                 var icons = [
                     PresentationAppIcon(name: "BlueIcon", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
-                    // PresentationAppIcon(name: "New2", imageName: "New2"),
-                    // PresentationAppIcon(name: "New1", imageName: "New1"),
                     PresentationAppIcon(name: "BlackIcon", imageName: "BlackIcon"),
                     // PresentationAppIcon(name: "BlueClassicIcon", imageName: "BlueClassicIcon"),
                     // PresentationAppIcon(name: "BlackClassicIcon", imageName: "BlackClassicIcon"),
                     PresentationAppIcon(name: "BlueFilledIcon", imageName: "BlueFilledIcon"),
-                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon")
+                    PresentationAppIcon(name: "BlackFilledIcon", imageName: "BlackFilledIcon"),
+                    PresentationAppIcon(name: "New1", imageName: "New1"),
+                    PresentationAppIcon(name: "New2", imageName: "New2"),
+                    PresentationAppIcon(name: "New3", imageName: "New3")
                 ]
                 if buildConfig.isInternalBuild {
                     icons.append(PresentationAppIcon(name: "WhiteFilledIcon", imageName: "WhiteFilledIcon"))
