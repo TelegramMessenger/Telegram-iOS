@@ -217,7 +217,7 @@ private extension AvailableReactions.Reaction {
             let aroundAnimationFile = aroundAnimation.flatMap(telegramMediaFileFromApiDocument)
             let centerAnimationFile = centerIcon.flatMap(telegramMediaFileFromApiDocument)
             let isEnabled = (flags & (1 << 0)) == 0
-            let isPremium = (flags & (1 << 2)) == 0
+            let isPremium = (flags & (1 << 2)) != 0
             self.init(
                 isEnabled: isEnabled,
                 isPremium: isPremium,
