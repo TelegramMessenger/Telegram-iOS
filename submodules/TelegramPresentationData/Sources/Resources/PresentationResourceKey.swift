@@ -164,6 +164,7 @@ public enum PresentationResourceKey: Int32 {
     case chatInputMediaPanelGridDismissImage
     case chatInputMediaPanelTrendingGifsIcon
     case chatInputMediaPanelStickersModeIcon
+    case chatInputMediaPanelPremiumIcon
     
     case chatInputButtonPanelButtonImage
     case chatInputButtonPanelButtonHighlightedImage

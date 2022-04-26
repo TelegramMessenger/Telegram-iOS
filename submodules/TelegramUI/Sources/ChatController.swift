@@ -1044,15 +1044,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case .all:
                                 break
                             }
-                            actions.reactionItems.append(ReactionContextItem(
-                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                            actions.reactionItems.append(.reaction(ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
                                 listAnimation: centerAnimation,
                                 largeListAnimation: reaction.activateAnimation,
                                 applicationAnimation: aroundAnimation,
                                 largeApplicationAnimation: reaction.effectAnimation
-                            ))
+                            )))
                         }
                     }
                     
@@ -1062,24 +1062,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.currentContextController = controller
                     
                     controller.reactionSelected = { [weak controller] value, isLarge in
-                        guard let strongSelf = self, let message = messages.first else {
+                        guard let strongSelf = self, let message = messages.first, let reaction = value.reaction else {
                             return
                         }
                         
-                        var updatedReaction: String? = value.reaction.rawValue
+                        var updatedReaction: String? = reaction.rawValue
                         var isFirst = true
                         for attribute in topMessage.attributes {
                             if let attribute = attribute as? ReactionsMessageAttribute {
-                                for reaction in attribute.reactions {
-                                    if reaction.value == value.reaction.rawValue {
-                                        if reaction.isSelected {
+                                for existingReaction in attribute.reactions {
+                                    if existingReaction.value == reaction.rawValue {
+                                        if existingReaction.isSelected {
                                             updatedReaction = nil
                                         }
                                         isFirst = false
                                     }
                                 }
                             } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                                if let current = attribute.value, current == value.reaction.rawValue {
+                                if let current = attribute.value, current == reaction.rawValue {
                                     updatedReaction = nil
                                 }
                             }
@@ -1302,8 +1302,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         standaloneReactionAnimation.animateReactionSelection(
                                             context: strongSelf.context,
                                             theme: strongSelf.presentationData.theme,
-                                            reaction: ReactionContextItem(
-                                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                            reaction: ReactionItem(
+                                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                 appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
                                                 listAnimation: centerAnimation,
@@ -2006,7 +2006,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return $0.updatedInputMode(f)
             })
         }, openMessageShareMenu: { [weak self] id in
-            if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let _ = messages.first {
+            if let strongSelf = self, let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(id), let message = messages.first {
+                let chatPresentationInterfaceState = strongSelf.presentationInterfaceState
+                var warnAboutPrivate = false
+                if case .peer = chatPresentationInterfaceState.chatLocation, let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                    if channel.addressName == nil {
+                        warnAboutPrivate = true
+                    }
+                }
                 let shareController = ShareController(context: strongSelf.context, subject: .messages(messages), updatedPresentationData: strongSelf.updatedPresentationData, shareAsLink: true)
                 shareController.openShareAsImage = { [weak self] messages in
                     if let strongSelf = self {
@@ -2020,7 +2027,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 shareController.actionCompleted = { [weak self] in
                     if let strongSelf = self {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .linkCopied(text: strongSelf.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        let content: UndoOverlayContent
+                        if warnAboutPrivate {
+                            content = .linkCopied(text: strongSelf.presentationData.strings.Conversation_PrivateMessageLinkCopiedLong)
+                        } else {
+                            content = .linkCopied(text: strongSelf.presentationData.strings.Conversation_LinkCopied)
+                        }
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                     }
                 }
                 shareController.completed = { [weak self] peerIds in
@@ -2934,34 +2947,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = speakText(context: strongSelf.context, text: text.string)
             case .translate:
                 strongSelf.chatDisplayNode.dismissInput()
+                let f = {
+                    let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { sharedData in
+                        let translationSettings: TranslationSettings
+                        if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                            translationSettings = current
+                        } else {
+                            translationSettings = TranslationSettings.defaultSettings
+                        }
+                        
+                        var showTranslateIfTopical = false
+                        if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
+                            showTranslateIfTopical = true
+                        }
+                        
+                        let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                        
+                        let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
+                        controller.pushController = { [weak self] c in
+                            self?.effectiveNavigationController?._keepModalDismissProgress = true
+                            self?.push(c)
+                        }
+                        controller.presentController = { [weak self] c in
+                            self?.present(c, in: .window(.root))
+                        }
+                        strongSelf.present(controller, in: .window(.root))
+                    })
+                }
+                if let currentContextController = strongSelf.currentContextController {
+                    currentContextController.dismiss(completion: {
+                        f()
+                    })
+                } else {
+                    f()
+                }
                 
-                let _ = (context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { sharedData in
-                    let translationSettings: TranslationSettings
-                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
-                        translationSettings = current
-                    } else {
-                        translationSettings = TranslationSettings.defaultSettings
-                    }
-                    
-                    var showTranslateIfTopical = false
-                    if let peer = strongSelf.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramChannel, !(peer.addressName ?? "").isEmpty {
-                        showTranslateIfTopical = true
-                    }
-                    
-                    let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
-                    
-                    let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
-                    controller.pushController = { [weak self] c in
-                        self?.effectiveNavigationController?._keepModalDismissProgress = true
-                        self?.push(c)
-                    }
-                    controller.presentController = { [weak self] c in
-                        self?.present(c, in: .window(.root))
-                    }
-                    strongSelf.present(controller, in: .window(.root))
-                })
             }
         }, displayImportedMessageTooltip: { [weak self] _ in
             guard let strongSelf = self else {
@@ -5203,6 +5225,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
+        
+        self.chatDisplayNode.historyNode.hasPlentyOfMessagesUpdated = { [weak self] hasPlentyOfMessages in
+            if let strongSelf = self {
+                strongSelf.updateChatPresentationInterfaceState(interactive: false, { $0.updatedHasPlentyOfMessages(hasPlentyOfMessages) })
+            }
+        }
 
         self.chatDisplayNode.historyNode.addContentOffset = { [weak self] offset, itemNode in
             guard let strongSelf = self else {
@@ -6203,8 +6231,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     standaloneReactionAnimation.animateReactionSelection(
                                                         context: strongSelf.context,
                                                         theme: strongSelf.presentationData.theme,
-                                                        reaction: ReactionContextItem(
-                                                            reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                                        reaction: ReactionItem(
+                                                            reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                             appearAnimation: reaction.appearAnimation,
                                                             stillAnimation: reaction.selectAnimation,
                                                             listAnimation: centerAnimation,

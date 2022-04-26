@@ -1346,6 +1346,8 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                     text = presentationData.strings.Channel_TooMuchBots
                                                 case .bot:
                                                     text = presentationData.strings.Login_UnknownError
+                                                case .kicked:
+                                                    text = presentationData.strings.Channel_AddUserKickedError
                                             }
                                             strongSelf.controller?.present(textAlertController(context: strongSelf.context, forceTheme: strongSelf.darkTheme, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         }, completed: {
@@ -2027,8 +2029,22 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 guard let strongSelf = self else {
                     return
                 }
+                
+                var existingOutputs = Set<String>()
+                var filteredOutputs: [AudioSessionOutput] = []
+                for output in state.0 {
+                    if case let .port(port) = output {
+                        if !existingOutputs.contains(port.name) {
+                            existingOutputs.insert(port.name)
+                            filteredOutputs.append(output)
+                        }
+                    } else {
+                        filteredOutputs.append(output)
+                    }
+                }
+                
                 let wasEmpty = strongSelf.audioOutputState == nil
-                strongSelf.audioOutputState = state
+                strongSelf.audioOutputState = (filteredOutputs, state.1)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.containerLayoutUpdated(layout, navigationHeight: navigationHeight, transition: .immediate)
                 }

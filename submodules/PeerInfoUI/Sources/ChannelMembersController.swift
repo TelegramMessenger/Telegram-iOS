@@ -479,6 +479,8 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
                             text = presentationData.strings.Channel_BotDoesntSupportGroups
                         case .tooMuchBots:
                             text = presentationData.strings.Channel_TooMuchBots
+                        case .kicked:
+                            text = presentationData.strings.Channel_AddUserKickedError
                     }
                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                     contactsController?.dismiss()

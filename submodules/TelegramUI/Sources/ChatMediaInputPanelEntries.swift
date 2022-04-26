@@ -13,7 +13,8 @@ enum ChatMediaInputPanelAuxiliaryNamespace: Int32 {
     case recentStickers = 4
     case peerSpecific = 5
     case trending = 6
-    case settings = 7
+    case premium = 7
+    case settings = 8
 }
 
 enum ChatMediaInputPanelEntryStableId: Hashable {
@@ -27,6 +28,7 @@ enum ChatMediaInputPanelEntryStableId: Hashable {
     case stickersMode
     case savedGifs
     case trendingGifs
+    case premium
     case gifEmotion(String)
 }
 
@@ -37,6 +39,7 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
     case trending(Bool, PresentationTheme, PresentationStrings, Bool)
     case settings(PresentationTheme, PresentationStrings, Bool)
     case peerSpecific(theme: PresentationTheme, peer: Peer, expanded: Bool)
+    case premium(PresentationTheme, PresentationStrings, Bool)
     case stickerPack(index: Int, info: StickerPackCollectionInfo, topItem: StickerPackItem?, theme: PresentationTheme, expanded: Bool, reorderable: Bool)
     
     case stickersMode(PresentationTheme, PresentationStrings, Bool)
@@ -58,6 +61,8 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
             return .settings
         case .peerSpecific:
             return .peerSpecific
+        case .premium:
+            return .premium
         case let .stickerPack(_, info, _, _, _, _):
             return .stickerPack(info.id.id)
         case .stickersMode:
@@ -105,6 +110,12 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
                 }
             case let .peerSpecific(lhsTheme, lhsPeer, lhsExpanded):
                 if case let .peerSpecific(rhsTheme, rhsPeer, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsPeer.isEqual(rhsPeer), lhsExpanded == rhsExpanded {
+                    return true
+                } else {
+                    return false
+                }
+            case let .premium(lhsTheme, lhsStrings, lhsExpanded):
+                if case let .premium(rhsTheme, rhsStrings, rhsExpanded) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsExpanded == rhsExpanded {
                     return true
                 } else {
                     return false
@@ -179,6 +190,15 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
             case .peerSpecific:
                 switch rhs {
                     case .recentGifs, .savedStickers, recentPacks, .peerSpecific:
+                        return false
+                    case let .trending(elevated, _, _, _) where elevated:
+                        return false
+                    default:
+                        return true
+                }
+            case .premium:
+                switch rhs {
+                    case .recentGifs, .savedStickers, recentPacks, .peerSpecific, .premium:
                         return false
                     case let .trending(elevated, _, _, _) where elevated:
                         return false
@@ -284,6 +304,11 @@ enum ChatMediaInputPanelEntry: Comparable, Identifiable {
             case let .peerSpecific(theme, peer, expanded):
                 let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0)
                 return ChatMediaInputPeerSpecificItem(context: context, inputNodeInteraction: inputNodeInteraction, collectionId: collectionId, peer: peer, theme: theme, expanded: expanded, selected: {
+                    inputNodeInteraction.navigateToCollectionId(collectionId)
+                })
+            case let .premium(theme, strings, expanded):
+                return ChatMediaInputMetaSectionItem(account: context.account, inputNodeInteraction: inputNodeInteraction, type: .premium, theme: theme, strings: strings, expanded: expanded, selected: {
+                    let collectionId = ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0)
                     inputNodeInteraction.navigateToCollectionId(collectionId)
                 })
             case let .stickerPack(index, info, topItem, theme, expanded, reorderable):

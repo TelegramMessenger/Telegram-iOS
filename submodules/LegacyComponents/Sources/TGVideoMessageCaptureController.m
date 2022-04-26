@@ -259,7 +259,7 @@ typedef enum
     if (bottomOffset > 44.0) {
         bottomOffset = 0.0f;
     }
-    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame) + bottomOffset): CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
+    CGRect wrapperFrame = TGIsPad() ? CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMaxY(_controlsFrame) + bottomOffset) : CGRectMake(0.0f, 0.0f, self.view.frame.size.width, CGRectGetMinY(_controlsFrame));
     
     _wrapperView = [[UIView alloc] initWithFrame:wrapperFrame];
     _wrapperView.clipsToBounds = true;
@@ -301,7 +301,8 @@ typedef enum
     }
     
     CGFloat minSide = MIN(_wrapperView.frame.size.width, _wrapperView.frame.size.height);
-    CGFloat diameter = minSide == 320.0 ? 216.0 : MIN(404.0, minSide - 24.0f);
+    bool isSE = _wrapperView.frame.size.width == 320.0 || _wrapperView.frame.size.height == 320.0;
+    CGFloat diameter = isSE ? 216.0 : MIN(404.0, minSide - 24.0f);
     CGFloat shadowSize = 21.0f;
     
     CGFloat circleWrapperViewLength = diameter + shadowSize * 2.0;
@@ -605,7 +606,12 @@ typedef enum
             if (self.view.frame.size.height > self.view.frame.size.width && fabs(_wrapperView.frame.size.height - self.view.frame.size.height) < 50.0f)
                 targetPosition.y = _wrapperView.frame.size.height / 3.0f - 20.0f;
             
-            targetPosition.y = MAX(_circleWrapperView.bounds.size.height / 2.0f + 40.0f, targetPosition.y);
+            CGFloat minY = _circleWrapperView.bounds.size.height / 2.0f + 40.0f;
+            if (fabs(_wrapperView.frame.size.height - self.view.frame.size.height) > 50.0 && _wrapperView.frame.size.width == 320.0) {
+                minY = _circleWrapperView.bounds.size.height / 2.0f + 4.0;
+            }
+            
+            targetPosition.y = MAX(minY, targetPosition.y);
             break;
     }
 #pragma clang diagnostic pop

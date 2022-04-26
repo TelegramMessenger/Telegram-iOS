@@ -437,6 +437,7 @@ private struct NotificationContent: CustomStringConvertible {
     var category: String?
     var userInfo: [AnyHashable: Any] = [:]
     var attachments: [UNNotificationAttachment] = []
+    var silent = false
 
     var senderPerson: INPerson?
     var senderImage: INImage?
@@ -469,13 +470,18 @@ private struct NotificationContent: CustomStringConvertible {
 
             self.senderImage = image
 
+            var displayName: String = peer.debugDisplayTitle
+            if self.silent {
+                displayName = "\(displayName) 🔕"
+            }
+            
             var personNameComponents = PersonNameComponents()
-            personNameComponents.nickname = peer.debugDisplayTitle
-
+            personNameComponents.nickname = displayName
+            
             self.senderPerson = INPerson(
                 personHandle: INPersonHandle(value: "\(peer.id.toInt64())", type: .unknown),
                 nameComponents: personNameComponents,
-                displayName: peer.debugDisplayTitle,
+                displayName: displayName,
                 image: image,
                 contactIdentifier: nil,
                 customIdentifier: "\(peer.id.toInt64())",
@@ -489,7 +495,11 @@ private struct NotificationContent: CustomStringConvertible {
         var content = UNMutableNotificationContent()
 
         if let title = self.title {
-            content.title = title
+            if self.silent {
+                content.title = "\(title) 🔕"
+            } else {
+                content.title = title
+            }
         }
         if let subtitle = self.subtitle {
             content.subtitle = subtitle
@@ -912,9 +922,7 @@ private final class NotificationServiceHandler {
 
                             if let silentString = payloadJson["silent"] as? String {
                                 if let silentValue = Int(silentString), silentValue != 0 {
-                                    if let title = content.title {
-                                        content.title = "\(title) 🔕"
-                                    }
+                                    content.silent = true
                                 }
                             }
                             if var attachmentDataString = payloadJson["attachb64"] as? String {

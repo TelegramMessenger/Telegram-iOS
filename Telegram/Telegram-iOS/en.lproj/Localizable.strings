@@ -7526,3 +7526,13 @@ Sorry for the inconvenience.";
 
 "Share.UploadProgress" = "Uploading • %d%";
 "Share.UploadDone" = "Done";
+
+"StickerPack.Share" = "Share Stickers";
+"StickerPack.CopyLink" = "Copy Link";
+"StickerPack.PremiumStickers_1" = "+%@ PREMIUM STICKER";
+"StickerPack.PremiumStickers_any" = "+%@ PREMIUM STICKERS";
+
+"Stickers.PremiumStickers" = "Premium Stickers";
+
+"Channel.AddUserKickedError" = "Sorry, you can't add this user because they are on the list of Removed Users and you can't unban them.";
+"Channel.AddAdminKickedError" = "Sorry, you can't add this user as an admin because they are in the Removed Users list and you can't unban them.";

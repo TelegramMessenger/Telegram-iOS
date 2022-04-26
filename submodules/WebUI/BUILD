@@ -24,6 +24,7 @@ swift_library(
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/UrlHandling:UrlHandling",
+        "//submodules/MoreButtonNode:MoreButtonNode",
     ],
     visibility = [
         "//visibility:public",

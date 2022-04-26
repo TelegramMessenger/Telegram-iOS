@@ -818,12 +818,12 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 }
         }
                         
-        if isGroup && selectedType == .publicChannel {
-            var isDiscussion = false
-            if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
-                isDiscussion = true
-            }
-            
+        var isDiscussion = false
+        if let cachedData = view.cachedData as? CachedChannelData, case .known = cachedData.linkedDiscussionPeerId {
+            isDiscussion = true
+        }
+        
+        if isGroup && (selectedType == .publicChannel || isDiscussion) {
             if isDiscussion {
                 entries.append(.joinToSendHeader(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Title.uppercased()))
                 entries.append(.joinToSendEveryone(presentationData.theme, presentationData.strings.Group_Setup_WhoCanSendMessages_Everyone, joinToSend == .everyone))

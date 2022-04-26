@@ -1175,6 +1175,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
     let captureProtected: Bool
     var strings: PresentationStrings
     let useListItems: Bool
+    let roundListThumbnails: Bool
     let listItemInteraction: ListMessageItemInteraction
     let chatControllerInteraction: ChatControllerInteraction
     var chatPresentationData: ChatPresentationData
@@ -1191,10 +1192,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
 
     private var shimmerImages: [CGFloat: UIImage] = [:]
 
-    init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
+    init(context: AccountContext, chatLocation: ChatLocation, useListItems: Bool, roundListThumbnails: Bool, listItemInteraction: ListMessageItemInteraction, chatControllerInteraction: ChatControllerInteraction, directMediaImageCache: DirectMediaImageCache, captureProtected: Bool) {
         self.context = context
         self.chatLocation = chatLocation
         self.useListItems = useListItems
+        self.roundListThumbnails = roundListThumbnails
         self.listItemInteraction = listItemInteraction
         self.chatControllerInteraction = chatControllerInteraction
         self.directMediaImageCache = directMediaImageCache
@@ -1294,7 +1296,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 fillRoundedRect(rect: CGRect(origin: CGPoint(x: titleOrigin.x, y: titleOrigin.y - lineHeight / 2.0), size: CGSize(width: 160.0, height: lineHeight)), radius: lineHeight / 2.0)
                 fillRoundedRect(rect: CGRect(origin: CGPoint(x: dateOrigin.x, y: dateOrigin.y - lineHeight / 2.0), size: CGSize(width: 220.0, height: lineHeight)), radius: lineHeight / 2.0)
 
-                fillRoundedRect(rect: fileItemNode.extensionIconNode.frame, radius: 6.0)
+                if self.roundListThumbnails {
+                    context.fillEllipse(in: fileItemNode.extensionIconNode.frame)
+                } else {
+                    fillRoundedRect(rect: fileItemNode.extensionIconNode.frame, radius: 6.0)
+                }
 
                 UIGraphicsPopContext()
             })!.stretchableImage(withLeftCapWidth: 299, topCapHeight: 0)
@@ -1665,6 +1671,12 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.directMediaImageCache = DirectMediaImageCache(account: context.account)
 
         let useListItems: Bool
+        let roundListThumbnails: Bool
+        if case .voiceAndVideoMessages = contentType {
+            roundListThumbnails = true
+        } else {
+            roundListThumbnails = false
+        }
         switch contentType {
         case .files, .voiceAndVideoMessages, .music:
             useListItems = true
@@ -1700,6 +1712,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             context: context,
             chatLocation: .peer(id: peerId),
             useListItems: useListItems,
+            roundListThumbnails: roundListThumbnails,
             listItemInteraction: listItemInteraction,
             chatControllerInteraction: chatControllerInteraction,
             directMediaImageCache: self.directMediaImageCache,

@@ -478,6 +478,19 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return false
     }
     
+    public var isPremiumSticker: Bool {
+        if let _ = self.videoThumbnails.first(where: { thumbnail in
+            if let resource = thumbnail.resource as? CloudDocumentSizeMediaResource, resource.sizeSpec == "f" {
+                return true
+            } else {
+                return false
+            }
+        }) {
+            return true
+        }
+        return false
+    }
+    
     public var isVideoSticker: Bool {
         if self.mimeType == "video/webm" {
             var hasSticker = false

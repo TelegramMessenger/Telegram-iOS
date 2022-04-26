@@ -892,7 +892,9 @@ public class TextNode: ASDisplayNode {
     
     static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) -> TextNodeLayout {
         if let attributedString = attributedString {
-            
+            if attributedString.string.hasPrefix("Д") {
+                print()
+            }
             let stringLength = attributedString.length
             
             let font: CTFont
@@ -1290,6 +1292,9 @@ public class TextNode: ASDisplayNode {
         
         var clearRects: [CGRect] = []
         if let layout = parameters as? TextNodeLayout {
+            if (layout.attributedString?.string ?? "").hasPrefix("Д") {
+                print()
+            }
             if !isRasterizing || layout.backgroundColor != nil {
                 context.setBlendMode(.copy)
                 context.setFillColor((layout.backgroundColor ?? UIColor.clear).cgColor)
@@ -1334,10 +1339,13 @@ public class TextNode: ASDisplayNode {
                 
                 if alignment == .center {
                     lineFrame.origin.x = offset.x + floor((bounds.size.width - lineFrame.width) / 2.0)
-                } else if alignment == .natural, line.isRTL {
-                    lineFrame.origin.x = offset.x + floor(bounds.size.width - lineFrame.width)
-                    
-                    lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: bounds.size), cutout: layout.cutout)
+                } else if alignment == .natural {
+                    if line.isRTL {
+                        lineFrame.origin.x = offset.x + floor(bounds.size.width - lineFrame.width)
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: bounds.size), cutout: layout.cutout)
+                    } else {
+                        lineFrame.origin.x += offset.x
+                    }
                 }
                 context.textPosition = CGPoint(x: lineFrame.minX, y: lineFrame.minY)
                 

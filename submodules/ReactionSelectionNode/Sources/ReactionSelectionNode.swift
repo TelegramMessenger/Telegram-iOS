@@ -35,9 +35,16 @@ private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat, shado
 
 private let font = Font.medium(13.0)
 
-final class ReactionNode: ASDisplayNode {
+protocol ReactionItemNode: ASDisplayNode {
+    var isExtracted: Bool { get }
+    
+    func appear(animated: Bool)
+    func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition)
+}
+
+final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
-    let item: ReactionContextItem
+    let item: ReactionItem
     
     private var animateInAnimationNode: AnimatedStickerNode?
     private let staticAnimationNode: AnimatedStickerNode
@@ -54,13 +61,10 @@ final class ReactionNode: ASDisplayNode {
     var isExtracted: Bool = false
     
     var didSetupStillAnimation: Bool = false
-    
-    private var isLongPressing: Bool = false
-    private var longPressAnimator: DisplayLinkAnimator?
-    
+        
     var expandedAnimationDidBegin: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, item: ReactionContextItem) {
+    init(context: AccountContext, theme: PresentationTheme, item: ReactionItem) {
         self.context = context
         self.item = item
         
@@ -291,32 +295,16 @@ final class ReactionNode: ASDisplayNode {
             }
         }
     }
+}
+
+final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
+    var isExtracted: Bool = false
     
-    func updateIsLongPressing(isLongPressing: Bool) {
-        if self.isLongPressing == isLongPressing {
-            return
-        }
-        self.isLongPressing = isLongPressing
+    func appear(animated: Bool) {
         
-        if isLongPressing {
-            if self.longPressAnimator == nil {
-                let longPressAnimator = DisplayLinkAnimator(duration: 2.0, from: 1.0, to: 2.0, update: { [weak self] value in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    let transition: ContainedViewLayoutTransition = .immediate
-                    transition.updateSublayerTransformScale(node: strongSelf, scale: value)
-                }, completion: {
-                })
-                self.longPressAnimator = longPressAnimator
-            }
-        } else if let longPressAnimator = self.longPressAnimator {
-            self.longPressAnimator = nil
-            
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
-            transition.updateSublayerTransformScale(node: self, scale: 1.0)
-            
-            longPressAnimator.invalidate()
-        }
+    }
+    
+    func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
+        
     }
 }

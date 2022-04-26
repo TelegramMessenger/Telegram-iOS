@@ -20,10 +20,15 @@ public protocol PeekControllerContent {
     func node() -> PeekControllerContentNode & ASDisplayNode
     
     func topAccessoryNode() -> ASDisplayNode?
+    func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)?
     
     func isEqual(to: PeekControllerContent) -> Bool
 }
 
 public protocol PeekControllerContentNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
+}
+
+public protocol PeekControllerAccessoryNode {
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
 }

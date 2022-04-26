@@ -660,7 +660,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                                     overrideImage = .image(representation)
                             }
                         } else if case .editSettings = item.mode {
-                            overrideImage = AvatarNodeImageOverride.editAvatarIcon
+                            overrideImage = AvatarNodeImageOverride.editAvatarIcon(forceNone: false)
                         } else if peer.isDeleted {
                             overrideImage = .deletedIcon
                         }

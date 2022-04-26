@@ -99,6 +99,10 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
+    func resetCode() {
+        self.controllerNode.resetCode()
+    }
+    
     func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
@@ -143,7 +147,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         }
         
         if self.controllerNode.currentCode.count < minimalCodeLength {
-            hapticFeedback.error()
+            self.hapticFeedback.error()
             self.controllerNode.animateError()
         } else {
             self.continueWithCode(self.controllerNode.currentCode)

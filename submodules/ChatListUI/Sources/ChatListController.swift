@@ -2327,7 +2327,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 
-                strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
                     var state = state
                     for peerId in peerIds {
                         state.pendingRemovalPeerIds.insert(peerId)
@@ -2365,7 +2365,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let _ = (signal
                         |> deliverOnMainQueue).start()
                         
-                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                        strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
                             var state = state
                             for peerId in peerIds {
                                 state.selectedPeerIds.remove(peerId)
@@ -2376,7 +2376,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return true
                     } else if value == .undo {
                         strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
-                        strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                        strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
                             var state = state
                             for peerId in peerIds {
                                 state.pendingRemovalPeerIds.remove(peerId)

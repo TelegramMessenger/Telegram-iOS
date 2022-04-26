@@ -187,7 +187,9 @@
     {
         if ([itemView.item isEqual:focusItem])
         {
-            itemView.alpha = 0.01;
+            TGDispatchAfter(0.1, dispatch_get_main_queue(), ^{
+                itemView.alpha = 0.01;
+            });
             UIView *contentView = [itemView transitionContentView];
             UIView *snapshotView = [contentView snapshotViewAfterScreenUpdates:true];
             snapshotView.frame = [contentView convertRect:contentView.bounds toView:nil];

@@ -52,7 +52,7 @@ final class LocationPlaceholderNode: ASDisplayNode {
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
         
-        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 12.0, gloss: true)
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
         
         self.cameraTextNode = ImmediateTextNode()
         self.cameraTextNode.isUserInteractionEnabled = false

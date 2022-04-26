@@ -885,15 +885,19 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     private var attachedAvatarNodeOffset: CGFloat = 0.0
 
     override public func attachedHeaderNodesUpdated() {
-        self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
-        for headerNode in self.attachedHeaderNodes {
-            if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
-                headerNode.updateSelectionState(animated: false)
+        if !self.attachedAvatarNodeOffset.isZero {
+            self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
+        } else {
+            for headerNode in self.attachedHeaderNodes {
+                if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
+                    headerNode.updateSelectionState(animated: false)
+                }
             }
         }
     }
 
     func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.attachedAvatarNodeOffset = offset
         for headerNode in self.attachedHeaderNodes {
             if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
                 transition.updateSublayerTransformOffset(layer: headerNode.layer, offset: CGPoint(x: offset, y: 0.0))

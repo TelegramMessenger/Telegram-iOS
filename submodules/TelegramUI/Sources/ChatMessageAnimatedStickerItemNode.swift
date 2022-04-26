@@ -479,6 +479,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                     self.updateVisibility()
                     self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
+                    
+                    if telegramFile.isPremiumSticker {
+                        if let effect = telegramFile.videoThumbnails.first {
+                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile), resource: effect.resource) .start())
+                        }
+                    }
                 }
                 break
             } else if let telegramDice = media as? TelegramMediaDice {
@@ -487,7 +493,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         self.setupNode(item: item)
-
+        
         if let telegramDice = self.telegramDice, let diceNode = self.animationNode as? SlotMachineAnimationNode {
             if let value = telegramDice.value {
                 diceNode.setState(value == 0 ? .rolling : .value(value, true))
@@ -631,6 +637,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         let mode: AnimatedStickerMode = .direct(cachePathPrefix: pathPrefix)
                         self.animationSize = fittedSize
                         animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier, isVideo: file.isVideoSticker), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: mode)
+                        
+                        if file.isPremiumSticker && !alreadySeen {
+                            item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
+                            Queue.mainQueue().after(0.1) {
+                                self.playPremiumStickerAnimation()
+                            }
+                        }
                     }
                 }
             }
@@ -1509,7 +1522,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         for animation in interaction.animations {
             if animation.timeOffset > 0.0 {
                 Queue.mainQueue().after(Double(animation.timeOffset)) {
-                    self.playAdditionalAnimation(index: animation.index)
+                    self.playAdditionalEmojiAnimation(index: animation.index)
                     if playHaptic {
                         let style: ImpactHapticFeedbackStyle
                         if index == 1 {
@@ -1522,7 +1535,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     index += 1
                 }
             } else {
-                self.playAdditionalAnimation(index: animation.index)
+                self.playAdditionalEmojiAnimation(index: animation.index)
                 if playHaptic {
                     hapticFeedback.impact(interaction.animations.count > 1 ? .light : .medium)
                 }
@@ -1531,11 +1544,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    func playAdditionalAnimation(index: Int) {
+    func playAdditionalEmojiAnimation(index: Int) {
         guard let item = self.item else {
-            return
-        }
-        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
             return
         }
         
@@ -1551,7 +1561,28 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         guard let animationItems = item.associatedData.additionalAnimatedEmojiStickers[additionalTextEmoji], index < 10, let file = animationItems[index]?.file else {
             return
         }
-        let source = AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: nil)
+        
+        self.playEffectAnimation(resource: file.resource)
+    }
+    
+    private var playedPremiumStickerAnimation = false
+    func playPremiumStickerAnimation() {
+        guard !self.playedPremiumStickerAnimation, let file = self.telegramFile, file.isPremiumSticker, let effect = file.videoThumbnails.first else {
+            return
+        }
+        self.playedPremiumStickerAnimation = true
+        self.playEffectAnimation(resource: effect.resource)
+    }
+    
+    func playEffectAnimation(resource: MediaResource) {
+        guard let item = self.item else {
+            return
+        }
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
+            return
+        }
+        
+        let source = AnimatedStickerResourceSource(account: item.context.account, resource: resource, fitzModifier: nil)
         guard let animationSize = self.animationSize, let animationNode = self.animationNode else {
             return
         }
@@ -1564,7 +1595,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let incomingMessage = item.message.effectivelyIncoming(item.context.account.peerId)
 
-        if #available(iOS 13.0, *), !"".isEmpty, item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: file.resource) {
+        if #available(iOS 13.0, *), !"".isEmpty, item.context.sharedContext.immediateExperimentalUISettings.acceleratedStickers, let meshAnimation = item.context.meshAnimationCache.get(resource: resource) {
             var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
             if let current = self.overlayMeshAnimationNode {
                 overlayMeshAnimationNode = current
@@ -1596,7 +1627,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 meshRenderer.add(mesh: meshAnimation, offset: CGPoint(x: CGFloat.random(in: -30.0 ... 30.0), y: CGFloat.random(in: -30.0 ... 30.0)))
             }
         } else {
-            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+            let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             let additionalAnimationNode = AnimatedStickerNode()
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
@@ -1816,7 +1847,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                                 if syncAnimations {
                                                     self.enqueuedAdditionalAnimations.append((index, timestamp + delay))
                                                 }
-                                                self.playAdditionalAnimation(index: index)
+                                                self.playAdditionalEmojiAnimation(index: index)
                                                 
                                                 if syncAnimations, self.additionalAnimationsCommitTimer == nil {
                                                     self.startAdditionalAnimationsCommitTimer()
@@ -1840,7 +1871,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             if syncAnimations {
                                                 self.enqueuedAdditionalAnimations.append((index, timestamp))
                                             }
-                                            self.playAdditionalAnimation(index: index)
+                                            self.playAdditionalEmojiAnimation(index: index)
                                         }
                                     }
                                 }

@@ -7,64 +7,145 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 
-private struct BotCheckoutPasswordAlertAction {
-    public let title: String
-    public let action: () -> Void
+private final class BotCheckoutPassworInputFieldNode: ASDisplayNode, UITextFieldDelegate {
+    private var theme: PresentationTheme
+    private let backgroundNode: ASImageNode
+    private let textInputNode: TextFieldNode
+    private let placeholderNode: ASTextNode
     
-    public init(title: String, action: @escaping () -> Void) {
-        self.title = title
-        self.action = action
-    }
-}
-
-private final class BotCheckoutPasswordAlertActionNode: HighlightableButtonNode {
-    private let backgroundNode: ASDisplayNode
+    var updateHeight: (() -> Void)?
+    var complete: (() -> Void)?
+    var textChanged: ((String) -> Void)?
     
-    let action: BotCheckoutPasswordAlertAction
+    private let backgroundInsets = UIEdgeInsets(top: 8.0, left: 16.0, bottom: 15.0, right: 16.0)
+    private let inputInsets = UIEdgeInsets(top: 5.0, left: 12.0, bottom: 5.0, right: 12.0)
     
-    init(theme: PresentationTheme, action: BotCheckoutPasswordAlertAction) {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
-        self.backgroundNode.alpha = 0.0
-        
-        self.action = action
-        
-        super.init()
-        
-        self.setTitle(action.title, with: Font.regular(17.0), with: theme.actionSheet.controlAccentColor, for: [])
-        self.setTitle(action.title, with: Font.regular(17.0), with: theme.actionSheet.disabledActionTextColor, for: [.disabled])
-        
-        self.highligthedChanged = { [weak self] value in
-            if let strongSelf = self {
-                if value {
-                    if strongSelf.backgroundNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                    }
-                    strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.backgroundNode.alpha = 1.0
-                } else if !strongSelf.backgroundNode.alpha.isZero {
-                    strongSelf.backgroundNode.alpha = 0.0
-                    strongSelf.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25)
-                }
-            }
+    var text: String {
+        get {
+            return self.textInputNode.textField.text ?? ""
+        }
+        set {
+            self.textInputNode.textField.text = newValue
+            self.placeholderNode.isHidden = !newValue.isEmpty
         }
     }
     
-    override func didLoad() {
-        super.didLoad()
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+    var placeholder: String = "" {
+        didSet {
+            self.placeholderNode.attributedText = NSAttributedString(string: self.placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        }
     }
     
-    @objc func pressed() {
-        self.action.action()
+    init(theme: PresentationTheme, placeholder: String) {
+        self.theme = theme
+        
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.displaysAsynchronously = false
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
+        
+        self.textInputNode = TextFieldNode()
+        self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
+        self.textInputNode.textField.clipsToBounds = true
+        self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+        self.textInputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.textInputNode.textField.returnKeyType = .done
+        self.textInputNode.textField.isSecureTextEntry = true
+        self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
+        
+        self.placeholderNode = ASTextNode()
+        self.placeholderNode.isUserInteractionEnabled = false
+        self.placeholderNode.displaysAsynchronously = false
+        self.placeholderNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        
+        super.init()
+        
+        self.textInputNode.textField.delegate = self
+        self.textInputNode.textField.addTarget(self, action: #selector(self.textDidChange), for: .editingChanged)
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.textInputNode)
+        self.addSubnode(self.placeholderNode)
     }
     
-    override func layout() {
-        super.layout()
+    func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
         
-        self.backgroundNode.frame = self.bounds
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 12.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
+        self.textInputNode.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
+        self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        self.textInputNode.textField.tintColor = self.theme.actionSheet.controlAccentColor
+        self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
+    }
+    
+    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let backgroundInsets = self.backgroundInsets
+        let inputInsets = self.inputInsets
+        
+        let textFieldHeight = self.calculateTextFieldMetrics(width: width)
+        let panelHeight = textFieldHeight + backgroundInsets.top + backgroundInsets.bottom
+        
+        let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: width - backgroundInsets.left - backgroundInsets.right, height: panelHeight - backgroundInsets.top - backgroundInsets.bottom))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        
+        let placeholderSize = self.placeholderNode.measure(backgroundFrame.size)
+        transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY + floor((backgroundFrame.size.height - placeholderSize.height) / 2.0)), size: placeholderSize))
+        
+        transition.updateFrame(node: self.textInputNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + inputInsets.left, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.size.width - inputInsets.left - inputInsets.right, height: backgroundFrame.size.height)))
+        
+        return panelHeight
+    }
+    
+    func activateInput() {
+        self.textInputNode.becomeFirstResponder()
+    }
+    
+    func deactivateInput() {
+        self.textInputNode.resignFirstResponder()
+    }
+    
+    func shake() {
+        self.layer.addShakeAnimation()
+    }
+
+    @objc func textDidChange() {
+        self.updateTextNodeText(animated: true)
+        self.textChanged?(self.textInputNode.textField.text ?? "")
+        self.placeholderNode.isHidden = !(self.textInputNode.textField.text ?? "").isEmpty
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        if text == "\n" {
+            self.complete?()
+            return false
+        }
+        return true
+    }
+    
+    private func calculateTextFieldMetrics(width: CGFloat) -> CGFloat {
+        let backgroundInsets = self.backgroundInsets
+        let inputInsets = self.inputInsets
+        
+        let unboundTextFieldHeight = max(33.0, ceil(self.textInputNode.measure(CGSize(width: width - backgroundInsets.left - backgroundInsets.right - inputInsets.left - inputInsets.right, height: CGFloat.greatestFiniteMagnitude)).height))
+        
+        return min(61.0, max(33.0, unboundTextFieldHeight))
+    }
+    
+    private func updateTextNodeText(animated: Bool) {
+        let backgroundInsets = self.backgroundInsets
+        
+        let textFieldHeight = self.calculateTextFieldMetrics(width: self.bounds.size.width)
+        
+        let panelHeight = textFieldHeight + backgroundInsets.top + backgroundInsets.bottom
+        if !self.bounds.size.height.isEqual(to: panelHeight) {
+            self.updateHeight?()
+        }
+    }
+    
+    @objc func clearPressed() {
+        self.textInputNode.textField.text = nil
+        self.deactivateInput()
     }
 }
 
@@ -78,14 +159,13 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     private let textNode: ASTextNode
     
     private let actionNodesSeparator: ASDisplayNode
-    private let actionNodes: [BotCheckoutPasswordAlertActionNode]
+    private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
-    private let cancelActionNode: BotCheckoutPasswordAlertActionNode
-    private let doneActionNode: BotCheckoutPasswordAlertActionNode
+    private let cancelActionNode: TextAlertContentActionNode
+    private let doneActionNode: TextAlertContentActionNode
     
-    private let textFieldNodeBackground: ASImageNode
-    private let textFieldNode: TextFieldNode
+    let inputFieldNode: BotCheckoutPassworInputFieldNode
     
     private var validLayout: CGSize?
     private var isVerifying = false
@@ -98,6 +178,8 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.period = period
         self.requiresBiometrics = requiresBiometrics
         self.completion = completion
+        
+        let alertTheme = AlertControllerTheme(presentationTheme: theme, fontSize: .regular)
         
         let titleNode = ASTextNode()
         titleNode.attributedText = NSAttributedString(string: strings.Checkout_PasswordEntry_Title, font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
@@ -112,16 +194,18 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
         
+        self.inputFieldNode = BotCheckoutPassworInputFieldNode(theme: theme, placeholder: passwordTip ?? "")
+                
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
         self.actionNodesSeparator.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
         
-        self.cancelActionNode = BotCheckoutPasswordAlertActionNode(theme: theme, action: BotCheckoutPasswordAlertAction(title: strings.Common_Cancel, action: {
+        self.cancelActionNode = TextAlertContentActionNode(theme: alertTheme, action: TextAlertAction(type: .genericAction, title: strings.Common_Cancel, action: {
             cancel()
         }))
         
         var doneImpl: (() -> Void)?
-        self.doneActionNode = BotCheckoutPasswordAlertActionNode(theme: theme, action: BotCheckoutPasswordAlertAction(title: strings.Checkout_PasswordEntry_Pay, action: {
+        self.doneActionNode = TextAlertContentActionNode(theme: alertTheme, action: TextAlertAction(type: .defaultAction, title: strings.Checkout_PasswordEntry_Pay, action: {
             doneImpl?()
         }))
         
@@ -138,26 +222,6 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         }
         self.actionVerticalSeparators = actionVerticalSeparators
         
-        self.textFieldNodeBackground = ASImageNode()
-        self.textFieldNodeBackground.displaysAsynchronously = false
-        self.textFieldNodeBackground.displayWithoutProcessing = true
-        self.textFieldNodeBackground.image = generateImage(CGSize(width: 4.0, height: 4.0), rotatedContext: { size, context in
-            context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setStrokeColor(theme.actionSheet.primaryTextColor.cgColor)
-            context.setLineWidth(UIScreenPixel)
-            context.stroke(CGRect(origin: CGPoint(), size: size))
-        })?.stretchableImage(withLeftCapWidth: 2, topCapHeight: 2)
-        
-        self.textFieldNode = TextFieldNode()
-        self.textFieldNode.textField.textColor = theme.actionSheet.primaryTextColor
-        self.textFieldNode.textField.font = Font.regular(12.0)
-        self.textFieldNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(12.0)]
-        self.textFieldNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
-        self.textFieldNode.textField.isSecureTextEntry = true
-        self.textFieldNode.textField.tintColor = theme.list.itemAccentColor
-        self.textFieldNode.textField.placeholder = passwordTip
-
-        
         super.init()
         
         self.addSubnode(self.titleNode)
@@ -173,11 +237,14 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
-        self.addSubnode(self.textFieldNodeBackground)
-        self.addSubnode(self.textFieldNode)
+        self.addSubnode(self.inputFieldNode)
         
-        self.textFieldNode.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
-        
+        self.inputFieldNode.textChanged = { [weak self] _ in
+            if let strongSelf = self {
+                strongSelf.updateState()
+            }
+        }
+                
         self.updateState()
         
         doneImpl = { [weak self] in
@@ -213,13 +280,11 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         let textFrame = CGRect(origin: CGPoint(x: insets.left + floor((contentWidth - textSize.width) / 2.0), y: titleFrame.maxY + spacing), size: textSize)
         transition.updateFrame(node: self.textNode, frame: textFrame)
         
-        let inputHeight: CGFloat = 38.0
+        let resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom + 46.0)
         
-        let resultSize = CGSize(width: contentWidth + insets.left + insets.right, height: titleSize.height + spacing + textSize.height + actionsHeight + insets.top + insets.bottom + inputHeight)
-        
-        let textFieldBackgroundFrame = CGRect(origin: CGPoint(x: insets.left, y: resultSize.height - inputHeight + 12.0 - actionsHeight - insets.bottom), size: CGSize(width: resultSize.width - insets.left - insets.right, height: 25.0))
-        self.textFieldNodeBackground.frame = textFieldBackgroundFrame
-        self.textFieldNode.frame = textFieldBackgroundFrame.offsetBy(dx: 0.0, dy: 0.0).insetBy(dx: 4.0, dy: 0.0)
+        let inputFieldWidth = resultSize.width
+        let inputFieldHeight = self.inputFieldNode.updateLayout(width: inputFieldWidth, transition: transition)
+        transition.updateFrame(node: self.inputFieldNode, frame: CGRect(x: 0.0, y: resultSize.height - 36.0 - actionsHeight - insets.bottom, width: resultSize.width, height: inputFieldHeight))
         
         self.actionNodesSeparator.frame = CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel))
         
@@ -250,7 +315,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         }
         
         if previousLayout == nil {
-            self.textFieldNode.textField.becomeFirstResponder()
+            self.inputFieldNode.activateInput()
         }
         
         return resultSize
@@ -262,24 +327,15 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
     
     private func updateState() {
         var enabled = true
-        
-        if self.isVerifying {
+        if self.isVerifying || self.inputFieldNode.text.isEmpty {
             enabled = false
         }
-        
-        if let text = self.textFieldNode.textField.text {
-            if text.isEmpty {
-                enabled = false
-            }
-        } else {
-            enabled = false
-        }
-        
-        self.doneActionNode.isEnabled = enabled
+        self.doneActionNode.actionEnabled = enabled
     }
     
     private func verify() {
-        guard let text = self.textFieldNode.textField.text, !text.isEmpty else {
+        let text = self.inputFieldNode.text
+        guard !text.isEmpty else {
             return
         }
         
@@ -290,8 +346,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
             }
         }, error: { [weak self] _ in
             if let strongSelf = self {
-                strongSelf.textFieldNodeBackground.layer.addShakeAnimation()
-                strongSelf.textFieldNode.layer.addShakeAnimation()
+                strongSelf.inputFieldNode.shake()
                 strongSelf.hapticFeedback.error()
                 strongSelf.isVerifying = false
                 strongSelf.updateState()

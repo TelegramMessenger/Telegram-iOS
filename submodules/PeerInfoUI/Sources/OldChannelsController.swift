@@ -216,7 +216,7 @@ private final class OldChannelsActionPanelNode: ASDisplayNode {
     init(presentationData: ItemListPresentationData, leaveAction: @escaping () -> Void) {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
-        self.buttonNode = SolidRoundedButtonNode(title: "", icon: nil, theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: "", icon: nil, theme: SolidRoundedButtonTheme(theme: presentationData.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
         
         super.init()
         

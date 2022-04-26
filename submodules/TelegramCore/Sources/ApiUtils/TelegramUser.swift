@@ -51,6 +51,9 @@ extension TelegramUser {
             if (flags & (1 << 26)) != 0 {
                 userFlags.insert(.isFake)
             }
+            if (flags & (1 << 28)) != 0 {
+                userFlags.insert(.isPremium)
+            }
 
             var botInfo: BotUserInfo?
             if (flags & (1 << 14)) != 0 {
@@ -107,6 +110,9 @@ extension TelegramUser {
                         }
                         if (flags & Int32(1 << 26)) != 0 {
                             userFlags.insert(.isFake)
+                        }
+                        if (flags & (1 << 28)) != 0 {
+                            userFlags.insert(.isPremium)
                         }
                         
                         var botInfo: BotUserInfo?
@@ -173,6 +179,9 @@ extension TelegramUser {
             }
             if rhs.flags.contains(.isFake) {
                 userFlags.insert(.isFake)
+            }
+            if rhs.flags.contains(.isPremium) {
+                userFlags.insert(.isPremium)
             }
 
             let botInfo: BotUserInfo? = rhs.botInfo

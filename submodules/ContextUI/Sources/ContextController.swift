@@ -222,7 +222,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var initialContinueGesturePoint: CGPoint?
     private var didMoveFromInitialGesturePoint = false
     private var highlightedActionNode: ContextActionNodeProtocol?
-    private var highlightedReaction: ReactionContextItem.Reaction?
+    private var highlightedReaction: ReactionItem.Reaction?
     
     private let hapticFeedback = HapticFeedback()
     

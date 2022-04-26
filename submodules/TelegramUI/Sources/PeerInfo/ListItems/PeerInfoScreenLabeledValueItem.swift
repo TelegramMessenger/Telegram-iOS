@@ -367,7 +367,12 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.expandBackgroundNode.image = generateExpandBackground(size: expandBackgroundFrame.size, color: presentationData.theme.list.itemBlocksBackgroundColor)
         
         transition.updateFrame(node: self.labelNode, frame: labelFrame)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
+        
+        var textTransition = transition
+        if self.textNode.frame.size != textFrame.size {
+            textTransition = .immediate
+        }
+        textTransition.updateFrame(node: self.textNode, frame: textFrame)
         
         let height = labelSize.height + 3.0 + textSize.height + 22.0
         

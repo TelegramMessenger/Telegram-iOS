@@ -1313,6 +1313,8 @@ public func channelAdminController(context: AccountContext, updatedPresentationD
                                         text = presentationData.strings.Privacy_GroupsAndChannels_InviteToGroupError(EnginePeer(admin).compactDisplayTitle, EnginePeer(admin).compactDisplayTitle).string
                                     } else if case .tooMuchJoined = error {
                                         text = presentationData.strings.Invite_ChannelsTooMuch
+                                    } else if case .kicked = error {
+                                        text = presentationData.strings.Channel_AddAdminKickedError
                                     }
                                     presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 } else if case .adminsTooMuch = error {

@@ -412,9 +412,13 @@ NSString * const TGPhotoCropOriginalAspectRatio = @"original";
     
     if (saving)
     {
+        CGFloat containerHeight = self.view.frame.size.height;
+        if (_forVideo && self.view.frame.size.width < self.view.frame.size.height) {
+            containerHeight -= 44.0;
+        }
         CGSize fittedSize = TGScaleToSize(snapshotView.frame.size, self.view.frame.size);
         targetFrame = CGRectMake((self.view.frame.size.width - fittedSize.width) / 2,
-                                 (self.view.frame.size.height - fittedSize.height) / 2,
+                                 (containerHeight - fittedSize.height) / 2,
                                  fittedSize.width,
                                  fittedSize.height);
         

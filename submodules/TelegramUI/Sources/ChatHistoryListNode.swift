@@ -49,7 +49,7 @@ public enum ChatHistoryListMode: Equatable {
 enum ChatHistoryViewScrollPosition {
     case unread(index: MessageIndex)
     case positionRestoration(index: MessageIndex, relativeOffset: CGFloat)
-    case index(index: MessageHistoryAnchorIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool, highlight: Bool)
+    case index(index: MessageHistoryAnchorIndex, position: ListViewScrollPosition, directionHint: ListViewScrollToItemDirectionHint, animated: Bool, highlight: Bool, displayLink: Bool)
 }
 
 enum ChatHistoryViewUpdateType {
@@ -558,6 +558,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     public private(set) var loadState: ChatHistoryNodeLoadState?
     private var loadStateUpdated: ((ChatHistoryNodeLoadState, Bool) -> Void)?
     
+    public private(set) var hasPlentyOfMessages: Bool = false
+    public var hasPlentyOfMessagesUpdated: ((Bool) -> Void)?
+    
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -797,7 +800,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let scrollPosition: ChatHistoryViewScrollPosition?
                 if isFirstTime, let messageIndex = messages.first(where: { $0.id == at })?.index {
-                    scrollPosition = .index(index: .message(messageIndex), position: .center(.bottom), directionHint: .Down, animated: false, highlight: false)
+                    scrollPosition = .index(index: .message(messageIndex), position: .center(.bottom), directionHint: .Down, animated: false, highlight: false, displayLink: false)
                     isFirstTime = false
                 } else {
                     scrollPosition = nil
@@ -1180,10 +1183,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 
                 if scrollPosition == nil, let originalScrollPosition = originalScrollPosition {
                     switch originalScrollPosition {
-                    case let .index(index, position, _, _, highlight):
+                    case let .index(index, position, _, _, highlight, displayLink):
                         if case .upperBound = index {
                             if let previous = previous, previous.filteredEntries.isEmpty {
-                                updatedScrollPosition = .index(index: index, position: position, directionHint: .Down, animated: false, highlight: highlight)
+                                updatedScrollPosition = .index(index: index, position: position, directionHint: .Down, animated: false, highlight: highlight, displayLink: displayLink)
                             }
                         }
                     default:
@@ -1223,7 +1226,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         if isFirstTime {
                         } else if case let .peer(peerId) = chatLocation, currentlyPlayingMessageId.id.peerId != peerId {
                         } else {
-                            updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true)
+                            updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
                             scrollAnimationCurve = .Spring(duration: 0.4)
                         }
                     }
@@ -1267,7 +1270,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
 
                     if fillsScreen, let firstNonAdIndex = firstNonAdIndex, previousNumAds == 0, updatedNumAds != 0 {
-                        updatedScrollPosition = .index(index: .message(firstNonAdIndex), position: .top(0.0), directionHint: .Up, animated: false, highlight: false)
+                        updatedScrollPosition = .index(index: .message(firstNonAdIndex), position: .top(0.0), directionHint: .Up, animated: false, highlight: false, displayLink: false)
                         disableAnimations = true
                     }
                 }
@@ -2520,6 +2523,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.loadStateUpdated?(loadState, animated || transition.animateIn || animateIn)
                 }
                 
+                var hasPlentyOfMessages = false
+                if let historyView = strongSelf.historyView {
+                    if historyView.originalView.holeEarlier || historyView.originalView.holeLater {
+                        hasPlentyOfMessages = true
+                    } else if !historyView.originalView.holeEarlier && !historyView.originalView.holeLater {
+                        if historyView.filteredEntries.count >= 10 {
+                            hasPlentyOfMessages = true
+                        }
+                    }
+                }
+                
+                if strongSelf.hasPlentyOfMessages != hasPlentyOfMessages {
+                    strongSelf.hasPlentyOfMessages = hasPlentyOfMessages
+                    strongSelf.hasPlentyOfMessagesUpdated?(hasPlentyOfMessages)
+                }
+                
                 if let _ = visibleRange.loadedRange {
                     if let visible = visibleRange.visibleRange {
                         let visibleFirstIndex = visible.firstIndex
@@ -2745,8 +2764,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         standaloneReactionAnimation.animateReactionSelection(
                             context: self.context,
                             theme: item.presentationData.theme.theme,
-                            reaction: ReactionContextItem(
-                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                            reaction: ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
                                 listAnimation: centerAnimation,
