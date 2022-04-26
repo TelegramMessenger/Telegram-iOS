@@ -146,3 +146,20 @@ jobs:
           asset_path: /Users/telegram/telegram-ios/build/artifacts/Telegram.DSYMs.zip
           asset_name: Telegram.DSYMs.zip
           asset_content_type: application/zip
+
+      - name: Deploy to App Store Connect
+        env:
+          APP_STORE_CONNECT_USERNAME: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
+          APP_STORE_CONNECT_PASSWORD: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
+        run: |
+          xcrun altool --validate-app --type ios \
+            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
+            --username "$APP_STORE_CONNECT_USERNAME" \
+            --password "$APP_STORE_CONNECT_PASSWORD" \
+            --verbose
+
+          xcrun altool --upload-app --type ios \
+            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
+            --username "$APP_STORE_CONNECT_USERNAME" \
+            --password "$APP_STORE_CONNECT_PASSWORD" \
+            --verbose
