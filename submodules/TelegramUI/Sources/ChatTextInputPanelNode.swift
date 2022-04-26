@@ -928,7 +928,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 })
                 self.menuButtonTextNode.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
-            menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width, height: 44.0))
+            menuTextSize = self.menuButtonTextNode.updateLayout(CGSize(width: width / 2.0 - 60.0, height: 44.0))
             
             var updateSendButtonIcon = false
             if (previousState?.interfaceState.editMessage != nil) != (interfaceState.interfaceState.editMessage != nil) {
@@ -1687,12 +1687,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.slowmodePlaceholderNode?.isHidden = true
         }
         
-        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size))
-        transition.updateAlpha(node: self.textPlaceholderNode, alpha: audioRecordingItemsAlpha)
-        
-        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom))
-        transition.updateAlpha(node: self.textInputBackgroundNode, alpha: audioRecordingItemsAlpha)
-        
         var nextButtonTopRight = CGPoint(x: width - rightInset - textFieldInsets.right - accessoryButtonInset, y: panelHeight - textFieldInsets.bottom - minimalInputHeight)
         for (_, button) in self.accessoryItemButtons.reversed() {
             let buttonSize = CGSize(width: button.buttonWidth, height: minimalInputHeight)
@@ -1712,6 +1706,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             nextButtonTopRight.x -= buttonSize.width
             nextButtonTopRight.x -= accessoryButtonSpacing
         }
+        
+        let textInputBackgroundFrame = CGRect(x: leftInset + textFieldInsets.left, y: textFieldInsets.top, width: baseWidth - textFieldInsets.left - textFieldInsets.right + textInputBackgroundWidthOffset, height: panelHeight - textFieldInsets.top - textFieldInsets.bottom)
+        transition.updateFrame(layer: self.textInputBackgroundNode.layer, frame: textInputBackgroundFrame)
+        transition.updateAlpha(node: self.textInputBackgroundNode, alpha: audioRecordingItemsAlpha)
+        
+        transition.updateFrame(node: self.textPlaceholderNode, frame: CGRect(origin: CGPoint(x: leftInset + textFieldInsets.left + self.textInputViewInternalInsets.left, y: textFieldInsets.top + self.textInputViewInternalInsets.top + textInputViewRealInsets.top + UIScreenPixel), size: self.textPlaceholderNode.frame.size))
+        
+        var textPlaceholderAlpha: CGFloat = audioRecordingItemsAlpha
+        if self.textPlaceholderNode.frame.width > (nextButtonTopRight.x - textInputBackgroundFrame.minX) - 32.0 {
+            textPlaceholderAlpha = 0.0
+        }
+        transition.updateAlpha(node: self.textPlaceholderNode, alpha: textPlaceholderAlpha)
         
         if let removeAccessoryButtons = removeAccessoryButtons {
             for button in removeAccessoryButtons {

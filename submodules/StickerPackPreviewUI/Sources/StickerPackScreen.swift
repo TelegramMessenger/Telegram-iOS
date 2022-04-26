@@ -209,6 +209,13 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
         
+//        self.gridNode.visibleContentOffsetChanged = { [weak self] offset in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            
+//        }
+        
         self.gridNode.interactiveScrollingWillBeEnded = { [weak self] contentOffset, velocity, targetOffset -> CGPoint in
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return targetOffset
@@ -360,7 +367,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                     }
                                 })))
                             }
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems))
                         } else {
                             return nil
                         }
@@ -628,22 +635,6 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             
             if !premiumItems.isEmpty {
-                var stableId: Int?
-                inner: for entry in self.currentEntries {
-                    if case let .premiumHeader(_, currentStableId, _) = entry {
-                        stableId = currentStableId
-                        break inner
-                    }
-                }
-                let resolvedStableId: Int
-                if let stableId = stableId {
-                    resolvedStableId = stableId
-                } else {
-                    resolvedStableId = self.nextStableId
-                    self.nextStableId += 1
-                }
-                entries.append(.premiumHeader(index: entries.count, stableId: resolvedStableId, count: Int32(premiumItems.count)))
-                
                 for item in premiumItems {
                     addItem(item, true, !hasPremium)
                 }
@@ -827,9 +818,11 @@ private final class StickerPackContainer: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.titleContainer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((56.0) / 2.0)), size: CGSize()))
         transition.updateFrame(node: self.titleSeparatorNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY + 56.0 - UIScreenPixel), size: CGSize(width: backgroundFrame.width, height: UIScreenPixel)))
-        self.titleSeparatorNode.alpha = unclippedBackgroundY < minBackgroundY ? 1.0 : 0.0
-        
+                
         transition.updateFrame(node: self.topContainerNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width, height: 56.0)))
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        transition.updateAlpha(node: self.titleSeparatorNode, alpha: unclippedBackgroundY < minBackgroundY ? 1.0 : 0.0)
     }
     
     private func enqueueTransaction(_ transaction: StickerPackPreviewGridTransaction) {

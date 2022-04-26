@@ -12,6 +12,7 @@ import ContextUI
 import SolidRoundedButtonNode
 import TelegramPresentationData
 import AccountContext
+import AppBundle
 
 public enum StickerPreviewPeekItem: Equatable {
     case pack(StickerPackItem)
@@ -30,13 +31,15 @@ public enum StickerPreviewPeekItem: Equatable {
 public final class StickerPreviewPeekContent: PeekControllerContent {
     let account: Account
     let theme: PresentationTheme
+    let strings: PresentationStrings
     public let item: StickerPreviewPeekItem
     let isLocked: Bool
     let menu: [ContextMenuItem]
     
-    public init(account: Account, theme: PresentationTheme, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem]) {
+    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem]) {
         self.account = account
         self.theme = theme
+        self.strings = strings
         self.item = item
         self.isLocked = isLocked
         if isLocked {
@@ -68,7 +71,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     
     public func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isLocked {
-            return PremiumStickerPackAccessoryNode(theme: self.theme)
+            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings)
         } else {
             return nil
         }
@@ -207,18 +210,19 @@ final class PremiumStickerPackAccessoryNode: ASDisplayNode, PeekControllerAccess
     let proceedButton: SolidRoundedButtonNode
     let cancelButton: HighlightableButtonNode
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: "Unlock this sticker and more by subscribing to Telegram Premium.", font: Font.regular(17.0), textColor: .black)
+        self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: .black)
+        self.textNode.lineSpacing = 0.1
         self.textNode.alpha = 0.4
         
-        self.proceedButton = SolidRoundedButtonNode(title: "Unlock Premium Stickers", theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: true)
+        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: true)
         
         self.cancelButton = HighlightableButtonNode()
-        self.cancelButton.setTitle("Cancel", with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
+        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
         
         super.init()
         

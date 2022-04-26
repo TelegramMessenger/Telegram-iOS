@@ -105,7 +105,6 @@ final class AudioWaveformNode: ASDisplayNode {
                         }
                     }
                     
-                    let invScale = 1.0 / max(1.0, CGFloat(maxSample))
                     let numSamples = Int(floor(size.width / (sampleWidth + distance)))
                     
                     let adjustedSamplesMemory = malloc(numSamples * 2)!
@@ -115,13 +114,35 @@ final class AudioWaveformNode: ASDisplayNode {
                     }
                     memset(adjustedSamplesMemory, 0, numSamples * 2)
                     
+                    var generateFakeSamples = false
+                    var minSample: UInt16 = maxSample
+                    
                     for i in 0 ..< maxReadSamples {
                         let index = i * numSamples / maxReadSamples
                         let sample = samples[i]
                         if adjustedSamples[index] < sample {
                             adjustedSamples[index] = sample
                         }
+                        if sample < minSample {
+                            minSample = sample
+                        }
                     }
+                    
+                    if maxSample - minSample < 3 {
+                        generateFakeSamples = true
+                    }
+                    
+                    if generateFakeSamples {
+                        if maxSample < 10 {
+                            maxSample = 20
+                        }
+                        for i in 0 ..< maxReadSamples {
+                            let index = i * numSamples / maxReadSamples
+                            adjustedSamples[index] = UInt16.random(in: 5...maxSample)
+                        }
+                    }
+                    
+                    let invScale = 1.0 / max(1.0, CGFloat(maxSample))
                     
                     for i in 0 ..< numSamples {
                         let offset = CGFloat(i) * (sampleWidth + distance)

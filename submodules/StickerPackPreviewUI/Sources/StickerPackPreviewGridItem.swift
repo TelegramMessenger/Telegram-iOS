@@ -31,15 +31,7 @@ final class StickerPackPreviewGridItem: GridItem {
     let isEmpty: Bool
     
     let section: GridSection? = nil
-    
-    var customItemSize: CGSize? {
-        if self.isPremium {
-            return CGSize(width: 129.0, height: 129.0)
-        } else {
-            return nil
-        }
-    }
-    
+        
     init(account: Account, stickerItem: StickerPackItem?, interaction: StickerPackPreviewInteraction, theme: PresentationTheme, isPremium: Bool, isLocked: Bool, isEmpty: Bool) {
         self.account = account
         self.stickerItem = stickerItem
@@ -75,9 +67,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     private var animationNode: AnimatedStickerNode?
     private var placeholderNode: StickerShimmerEffectNode
     
-    private var lockBackground: UIVisualEffectView?
-    private var lockTintView: UIView?
-    private var lockIconNode: ASImageNode?
+    private var lockBackground: UIImageView?
     
     private var theme: PresentationTheme?
     
@@ -177,43 +167,21 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.isLocked = isLocked
             
             if isLocked {
-                let lockBackground: UIVisualEffectView
-                let lockIconNode: ASImageNode
-                if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {
+                let lockBackground: UIImageView
+                if let currentBackground = self.lockBackground {
                     lockBackground = currentBackground
-                    lockIconNode = currentIcon
                 } else {
-                    let effect: UIBlurEffect
-                    if #available(iOS 10.0, *) {
-                        effect = UIBlurEffect(style: .regular)
-                    } else {
-                        effect = UIBlurEffect(style: .light)
-                    }
-                    lockBackground = UIVisualEffectView(effect: effect)
+                    lockBackground = UIImageView()
                     lockBackground.clipsToBounds = true
                     lockBackground.isUserInteractionEnabled = false
-                    lockIconNode = ASImageNode()
-                    lockIconNode.displaysAsynchronously = false
-                    lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/Lock"), color: .white)
-                    
-                    let lockTintView = UIView()
-                    lockTintView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
-                    lockBackground.contentView.addSubview(lockTintView)
-                    
+                    lockBackground.image = UIImage(bundleImageName: "Premium/StickerIcon")
                     self.lockBackground = lockBackground
-                    self.lockTintView = lockTintView
-                    self.lockIconNode = lockIconNode
                     
                     self.view.addSubview(lockBackground)
-                    self.addSubnode(lockIconNode)
                 }
-            } else if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
+            } else if let lockBackground = self.lockBackground {
                 self.lockBackground = nil
-                self.lockTintView = nil
-                self.lockIconNode = nil
                 lockBackground.removeFromSuperview()
-                lockTintView.removeFromSuperview()
-                lockIconNode.removeFromSupernode()
             }
             
             if let stickerItem = stickerItem {
@@ -279,6 +247,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     self.placeholderNode.alpha = 1.0
                 }
             }
+            
+            self.animationNode?.alpha = isLocked ? 0.5 : 1.0
+            
             self.currentState = (account, stickerItem)
             self.setNeedsLayout()
         }
@@ -314,18 +285,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             self.placeholderNode.update(backgroundColor: theme.list.itemBlocksBackgroundColor, foregroundColor: theme.list.mediaPlaceholderColor, shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), data: item.file.immediateThumbnailData, size: placeholderFrame.size)
         }
         
-        if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
-            let lockSize = CGSize(width: 30.0, height: 30.0)
+        if let lockBackground = self.lockBackground {
+            let lockSize = CGSize(width: 32.0, height: 32.0)
             let lockBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - lockSize.width) / 2.0), y: bounds.height - lockSize.height - 6.0), size: lockSize)
             lockBackground.frame = lockBackgroundFrame
-            lockBackground.layer.cornerRadius = lockSize.width / 2.0
-            if #available(iOS 13.0, *) {
-                lockBackground.layer.cornerCurve = .circular
-            }
-            lockTintView.frame = CGRect(origin: CGPoint(), size: lockBackgroundFrame.size)
-            if let icon = lockIconNode.image {
-                lockIconNode.frame = CGRect(origin: CGPoint(x: lockBackgroundFrame.minX + floorToScreenPixels((lockBackgroundFrame.width - icon.size.width) / 2.0), y: lockBackgroundFrame.minY + floorToScreenPixels((lockBackgroundFrame.height - icon.size.height) / 2.0)), size: icon.size)
-            }
         }
     }
     

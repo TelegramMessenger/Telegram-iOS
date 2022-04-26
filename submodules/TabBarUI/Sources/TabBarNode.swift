@@ -574,9 +574,9 @@ class TabBarNode: ASDisplayNode {
                 node.contentWidth = max(contentWidth, imageContentWidth)
                 node.isSelected = true
                 
-                ContainedViewLayoutTransition.animated(duration: 0.35, curve: .easeInOut).updateTransformScale(node: node.ringImageNode, scale: 1.0, delay: 0.1)
+                ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut).updateTransformScale(node: node.ringImageNode, scale: 1.0, delay: 0.1)
                 node.imageNode.layer.animateScale(from: 1.0, to: 0.87, duration: 0.1, removeOnCompletion: false, completion: { [weak node] _ in
-                    node?.imageNode.layer.animateScale(from: 0.87, to: 1.0, duration: 0.35, removeOnCompletion: false, completion: { [weak node] _ in
+                    node?.imageNode.layer.animateScale(from: 0.87, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
                         node?.imageNode.layer.removeAllAnimations()
                     })
                 })

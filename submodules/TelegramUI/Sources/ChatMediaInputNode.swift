@@ -1623,7 +1623,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, item: item, menu: menuItems))
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems))
                                 } else {
                                     return nil
                                 }
@@ -1655,11 +1655,17 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                             
                             if let (itemNode, item) = itemNodeAndItem {
-                                return strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                                    return getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                                let accountPeerId = strongSelf.context.account.peerId
+                                return strongSelf.context.account.postbox.transaction { transaction -> (Bool, Bool) in
+                                    let isStarred = getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
+                                    var hasPremium = false
+                                    if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.flags.contains(.isPremium) {
+                                        hasPremium = true
+                                    }
+                                    return (isStarred, hasPremium)
                                 }
                                 |> deliverOnMainQueue
-                                |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                                |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
                                     if let strongSelf = self {
                                         var menuItems: [ContextMenuItem] = []
                                         if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
@@ -1743,7 +1749,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, item: .pack(item), menu: menuItems))
+                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems))
                                     } else {
                                         return nil
                                     }
@@ -1779,6 +1785,25 @@ final class ChatMediaInputNode: ChatInputNode {
                 strongSelf.updatePreviewingItem(item: item, animated: true)
             }
         })
+        peekRecognizer.checkSingleTapActivationAtPoint = { [weak self] point in
+            guard let strongSelf = self else {
+                return false
+            }
+            
+            let pane = strongSelf.stickerPane
+            let panelPoint = strongSelf.view.convert(point, to: strongSelf.collectionListPanel.view)
+            if panelPoint.y < strongSelf.collectionListPanel.frame.maxY {
+                return false
+            }
+        
+            if pane.supernode != nil, pane.frame.contains(point) {
+                let itemNodeAndItem = pane.itemAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY))
+                if let item = itemNodeAndItem?.0 as? ChatMediaInputStickerGridItemNode, item.isLocked == true {
+                    return true
+                }
+            }
+            return false
+        }
         self.view.addGestureRecognizer(peekRecognizer)
         let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
         self.panRecognizer = panRecognizer
