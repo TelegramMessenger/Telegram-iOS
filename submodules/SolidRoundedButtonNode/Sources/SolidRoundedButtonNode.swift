@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import HierarchyTrackingLayer
+import ShimmerEffect
 
 private func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: CGFloat = 22.0, lineWidth: CGFloat = 2.0) -> UIImage? {
     return generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
@@ -52,7 +53,12 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     private var fontSize: CGFloat
     
     private let buttonBackgroundNode: ASDisplayNode
-    private let buttonGlossView: SolidRoundedButtonGlossView?
+    
+    private var shimmerView: ShimmerEffectForegroundView?
+    private var borderView: UIView?
+    private var borderMaskView: UIView?
+    private var borderShimmerView: ShimmerEffectForegroundView?
+        
     private let buttonNode: HighlightTrackingButtonNode
     private let titleNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
@@ -95,6 +101,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
+    private let gloss: Bool
+    
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
@@ -102,18 +110,13 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
         self.title = title
+        self.gloss = gloss
         
         self.buttonBackgroundNode = ASDisplayNode()
         self.buttonBackgroundNode.clipsToBounds = true
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonBackgroundNode.cornerRadius = cornerRadius
-        
-        if gloss {
-            self.buttonGlossView = SolidRoundedButtonGlossView(color: theme.foregroundColor, cornerRadius: cornerRadius)
-        } else {
-            self.buttonGlossView = nil
-        }
-        
+                
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.titleNode = ImmediateTextNode()
@@ -131,9 +134,6 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.buttonBackgroundNode)
-        if let buttonGlossView = self.buttonGlossView {
-            self.view.addSubview(buttonGlossView)
-        }
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
@@ -217,6 +217,57 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         if #available(iOS 13.0, *) {
             self.buttonBackgroundNode.layer.cornerCurve = .continuous
         }
+        
+        if self.gloss {
+            let shimmerView = ShimmerEffectForegroundView()
+            self.shimmerView = shimmerView
+            
+            let borderView = UIView()
+            borderView.isUserInteractionEnabled = false
+            self.borderView = borderView
+            
+            let borderMaskView = UIView()
+            borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
+            borderMaskView.layer.borderColor = UIColor.white.cgColor
+            borderMaskView.layer.cornerRadius = self.buttonCornerRadius
+            borderView.mask = borderMaskView
+            self.borderMaskView = borderMaskView
+            
+            let borderShimmerView = ShimmerEffectForegroundView()
+            self.borderShimmerView = borderShimmerView
+            borderView.addSubview(borderShimmerView)
+            
+            self.view.insertSubview(shimmerView, belowSubview: self.buttonNode.view)
+            self.view.insertSubview(borderView, belowSubview: self.buttonNode.view)
+            
+            self.updateShimmerParameters()
+        }
+    }
+    
+    func updateShimmerParameters() {
+        guard let shimmerView = self.shimmerView, let borderShimmerView = self.borderShimmerView else {
+            return
+        }
+        
+        let color = self.theme.foregroundColor
+        let alpha: CGFloat
+        let borderAlpha: CGFloat
+        let compositingFilter: String?
+        if color.lightness > 0.5 {
+            alpha = 0.5
+            borderAlpha = 0.75
+            compositingFilter = "overlayBlendMode"
+        } else {
+            alpha = 0.2
+            borderAlpha = 0.3
+            compositingFilter = nil
+        }
+        
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, duration: 2.4, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, duration: 2.4, horizontal: true)
+        
+        shimmerView.layer.compositingFilter = compositingFilter
+        borderShimmerView.layer.compositingFilter = compositingFilter
     }
     
     public func updateTheme(_ theme: SolidRoundedButtonTheme) {
@@ -226,7 +277,6 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.theme = theme
         
         self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
-        self.buttonGlossView?.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
@@ -235,6 +285,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         if let width = self.validLayout {
             _ = self.updateLayout(width: width, transition: .immediate)
         }
+        
+        self.updateShimmerParameters()
     }
     
     public func sizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -252,9 +304,17 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         let buttonSize = CGSize(width: width, height: self.buttonHeight)
         let buttonFrame = CGRect(origin: CGPoint(), size: buttonSize)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
-        if let buttonGlossView = self.buttonGlossView {
-            transition.updateFrame(view: buttonGlossView, frame: buttonFrame)
+        
+        if let shimmerView = self.shimmerView, let borderView = self.borderView, let borderMaskView = self.borderMaskView, let borderShimmerView = self.borderShimmerView {
+            transition.updateFrame(view: shimmerView, frame: buttonFrame)
+            transition.updateFrame(view: borderView, frame: buttonFrame)
+            transition.updateFrame(view: borderMaskView, frame: buttonFrame)
+            transition.updateFrame(view: borderShimmerView, frame: buttonFrame)
+            
+            shimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 3.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 7.0, height: buttonHeight))
+            borderShimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 3.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 7.0, height: buttonHeight))
         }
+        
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.titleNode.attributedText?.string {

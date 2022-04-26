@@ -12,7 +12,7 @@ import Lottie
 import AppBundle
 import AvatarNode
 
-public final class ReactionContextItem {
+public final class ReactionItem {
     public struct Reaction: Equatable {
         public var rawValue: String
         
@@ -21,7 +21,7 @@ public final class ReactionContextItem {
         }
     }
     
-    public let reaction: ReactionContextItem.Reaction
+    public let reaction: ReactionItem.Reaction
     public let appearAnimation: TelegramMediaFile
     public let stillAnimation: TelegramMediaFile
     public let listAnimation: TelegramMediaFile
@@ -30,7 +30,7 @@ public final class ReactionContextItem {
     public let largeApplicationAnimation: TelegramMediaFile
     
     public init(
-        reaction: ReactionContextItem.Reaction,
+        reaction: ReactionItem.Reaction,
         appearAnimation: TelegramMediaFile,
         stillAnimation: TelegramMediaFile,
         listAnimation: TelegramMediaFile,
@@ -48,6 +48,19 @@ public final class ReactionContextItem {
     }
 }
 
+public enum ReactionContextItem {
+    case reaction(ReactionItem)
+    case premium
+    
+    public var reaction: ReactionItem.Reaction? {
+        if case let .reaction(item) = self {
+            return item.reaction
+        } else {
+            return nil
+        }
+    }
+}
+
 private let largeCircleSize: CGFloat = 16.0
 private let smallCircleSize: CGFloat = 8.0
 
@@ -62,12 +75,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let contentContainerMask: UIImageView
     private let scrollNode: ASScrollNode
     private let previewingItemContainer: ASDisplayNode
-    private var visibleItemNodes: [Int: ReactionNode] = [:]
+    private var visibleItemNodes: [Int: ReactionItemNode] = [:]
     
     private var longPressRecognizer: UILongPressGestureRecognizer?
     private var longPressTimer: SwiftSignalKit.Timer?
     
-    private var highlightedReaction: ReactionContextItem.Reaction?
+    private var highlightedReaction: ReactionItem.Reaction?
     private var didTriggerExpandedReaction: Bool = false
     private var continuousHaptic: Any?
     private var validLayout: (CGSize, UIEdgeInsets, CGRect)?
@@ -255,7 +268,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         let appearBounds = visibleBounds.insetBy(dx: 16.0, dy: 0.0)
         
-        let highlightedReactionIndex = self.items.firstIndex(where: { $0.reaction == self.highlightedReaction })
+        let highlightedReactionIndex: Int?
+        if let highlightedReaction = self.highlightedReaction {
+            highlightedReactionIndex = self.items.firstIndex(where: { $0.reaction == highlightedReaction })
+        } else {
+            highlightedReactionIndex = nil
+        }
         
         var validIndices = Set<Int>()
         var nextX: CGFloat = sideInset
@@ -295,7 +313,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 let itemFrame = baseItemFrame
                 var isPreviewing = false
-                if self.highlightedReaction == self.items[i].reaction {
+                if let highlightedReaction = self.highlightedReaction, highlightedReaction == self.items[i].reaction {
                     //let updatedSize = CGSize(width: floor(itemFrame.width * 2.5), height: floor(itemFrame.height * 2.5))
                     //itemFrame = CGRect(origin: CGPoint(x: itemFrame.midX - updatedSize.width / 2.0, y: itemFrame.maxY + 4.0 - updatedSize.height), size: updatedSize)
                     isPreviewing = true
@@ -306,7 +324,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var animateIn = false
                 
-                let itemNode: ReactionNode
+                let itemNode: ReactionItemNode
                 var itemTransition = transition
                 if let current = self.visibleItemNodes[i] {
                     itemNode = current
@@ -314,7 +332,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     animateIn = self.didAnimateIn
                     itemTransition = .immediate
                     
-                    itemNode = ReactionNode(context: self.context, theme: self.theme, item: self.items[i])
+                    if case let .reaction(item) = self.items[i] {
+                        itemNode = ReactionNode(context: self.context, theme: self.theme, item: item)
+                    } else {
+                        itemNode = PremiumReactionsNode()
+                    }
                     self.visibleItemNodes[i] = itemNode
                     self.scrollNode.addSubnode(itemNode)
                 }
@@ -526,17 +548,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     public func willAnimateOutToReaction(value: String) {
         for (_, itemNode) in self.visibleItemNodes {
-            if itemNode.item.reaction.rawValue != value {
-                continue
+            if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction.rawValue == value {
+                itemNode.isExtracted = true
             }
-            itemNode.isExtracted = true
         }
     }
     
     public func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
         var foundItemNode: ReactionNode?
         for (_, itemNode) in self.visibleItemNodes {
-            if itemNode.item.reaction.rawValue == value {
+            if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction.rawValue == value {
                 foundItemNode = itemNode
                 break
             }
@@ -708,12 +729,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    private let longPressDuration: Double = 1.5
+    private let longPressDuration: Double = 0.5
     @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
         switch recognizer.state {
         case .began:
             let point = recognizer.location(in: self.view)
-            if let itemNode = self.reactionItemNode(at: point) {
+            if let itemNode = self.reactionItemNode(at: point) as? ReactionNode {
                 self.highlightedReaction = itemNode.item.reaction
                 if #available(iOS 13.0, *) {
                     self.continuousHaptic = try? ContinuousHaptic(duration: longPressDuration)
@@ -739,7 +760,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         case .changed:
             let point = recognizer.location(in: self.view)
             var shouldCancel = false
-            if let itemNode = self.reactionItemNode(at: point) {
+            if let itemNode = self.reactionItemNode(at: point) as? ReactionNode {
                 if self.highlightedReaction != itemNode.item.reaction {
                     shouldCancel = true
                 }
@@ -811,7 +832,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    private func previewReaction(at point: CGPoint) -> ReactionContextItem? {
+    private func previewReaction(at point: CGPoint) -> ReactionItem? {
         let scrollPoint = self.view.convert(point, to: self.scrollNode.view)
         if !self.scrollNode.bounds.contains(scrollPoint) {
             return nil
@@ -837,13 +858,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 closestItem = (index, distance)
             }
         }
-        if let closestItem = closestItem {
-            return self.visibleItemNodes[closestItem.index]?.item
+        if let closestItem = closestItem, let closestItemNode = self.visibleItemNodes[closestItem.index] as? ReactionNode {
+            return closestItemNode.item
         }
         return nil
     }
     
-    private func reactionItemNode(at point: CGPoint) -> ReactionNode? {
+    private func reactionItemNode(at point: CGPoint) -> ReactionItemNode? {
         for i in 0 ..< 2 {
             let touchInset: CGFloat = i == 0 ? 0.0 : 8.0
             for (_, itemNode) in self.visibleItemNodes {
@@ -860,13 +881,19 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     public func reaction(at point: CGPoint) -> ReactionContextItem? {
-        return self.reactionItemNode(at: point)?.item
+        let itemNode = self.reactionItemNode(at: point)
+        if let itemNode = itemNode as? ReactionNode {
+            return .reaction(itemNode.item)
+        } else if let _ = itemNode as? PremiumReactionsNode {
+            return .premium
+        }
+        return nil
     }
     
-    public func performReactionSelection(reaction: ReactionContextItem.Reaction, isLarge: Bool) {
+    public func performReactionSelection(reaction: ReactionItem.Reaction, isLarge: Bool) {
         for (_, itemNode) in self.visibleItemNodes {
-            if itemNode.item.reaction == reaction {
-                self.reactionSelected?(itemNode.item, isLarge)
+            if let itemNode = itemNode as? ReactionNode, itemNode.item.reaction == reaction {
+                self.reactionSelected?(.reaction(itemNode.item), isLarge)
                 break
             }
         }
@@ -881,7 +908,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public func setHighlightedReaction(_ value: ReactionContextItem.Reaction?) {
+    public func setHighlightedReaction(_ value: ReactionItem.Reaction?) {
         self.highlightedReaction = value
         if let (size, insets, anchorRect) = self.validLayout {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
@@ -905,11 +932,11 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.isUserInteractionEnabled = false
     }
     
-    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
         self.animateReactionSelection(context: context, theme: theme, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
-    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionContextItem, avatarPeers: [EnginePeer], playHaptic: Bool,  isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool,  isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return

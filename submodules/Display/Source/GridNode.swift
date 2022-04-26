@@ -543,8 +543,8 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                         
                         if let (height, fillWidth) = item.fillsRowWithHeight {
                             if fillWidth {
-                                if nextItemOrigin.x > 0.0 {
-                                    nextItemOrigin.x = 0.0
+                                if nextItemOrigin.x > initialSpacing + itemInsets.left {
+                                    nextItemOrigin.x = initialSpacing + itemInsets.left
                                     nextItemOrigin.y += itemSize.height + lineSpacing
                                     contentSize.height += itemSize.height + lineSpacing
                                 }
@@ -553,7 +553,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
                             itemSize.height = height
                         } else if let fillsRowWithDynamicHeight = item.fillsRowWithDynamicHeight {
                             let height = fillsRowWithDynamicHeight(gridLayout.size.width)
-                            nextItemOrigin.x = 0.0
+                            nextItemOrigin.x = initialSpacing + itemInsets.left
                             itemSize.width = gridLayout.size.width
                             itemSize.height = height
                         } else if index == 0 {

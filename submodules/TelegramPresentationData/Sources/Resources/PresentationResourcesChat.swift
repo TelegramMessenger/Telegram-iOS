@@ -292,11 +292,10 @@ public struct PresentationResourcesChat {
     
     public static func chatInputMediaPanelPremiumIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputMediaPanelPremiumIcon.rawValue, { theme in
-            return generateImage(CGSize(width: 48.0, height: 48.0), contextGenerator: { size, context in
+            return generateImage(CGSize(width: 44.0, height: 42.0), contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PremiumIcon"), color: theme.chat.inputMediaPanel.panelIconColor) {
-                    let imageSize = CGSize(width: 48.0, height: 48.0)
-                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size))
                 }
             })
         })

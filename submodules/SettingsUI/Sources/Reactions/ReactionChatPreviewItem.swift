@@ -161,8 +161,8 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                             supernode.addSubnode(standaloneReactionAnimation)
                             standaloneReactionAnimation.frame = supernode.bounds
                             standaloneReactionAnimation.animateReactionSelection(
-                                context: item.context, theme: item.theme, reaction: ReactionContextItem(
-                                    reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                context: item.context, theme: item.theme, reaction: ReactionItem(
+                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                     appearAnimation: reaction.appearAnimation,
                                     stillAnimation: reaction.selectAnimation,
                                     listAnimation: centerAnimation,

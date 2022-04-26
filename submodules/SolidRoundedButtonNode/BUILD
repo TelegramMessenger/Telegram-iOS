@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
+        "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
     ],
     visibility = [

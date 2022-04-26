@@ -1044,15 +1044,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case .all:
                                 break
                             }
-                            actions.reactionItems.append(ReactionContextItem(
-                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                            actions.reactionItems.append(.reaction(ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
                                 listAnimation: centerAnimation,
                                 largeListAnimation: reaction.activateAnimation,
                                 applicationAnimation: aroundAnimation,
                                 largeApplicationAnimation: reaction.effectAnimation
-                            ))
+                            )))
                         }
                     }
                     
@@ -1062,24 +1062,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.currentContextController = controller
                     
                     controller.reactionSelected = { [weak controller] value, isLarge in
-                        guard let strongSelf = self, let message = messages.first else {
+                        guard let strongSelf = self, let message = messages.first, let reaction = value.reaction else {
                             return
                         }
                         
-                        var updatedReaction: String? = value.reaction.rawValue
+                        var updatedReaction: String? = reaction.rawValue
                         var isFirst = true
                         for attribute in topMessage.attributes {
                             if let attribute = attribute as? ReactionsMessageAttribute {
-                                for reaction in attribute.reactions {
-                                    if reaction.value == value.reaction.rawValue {
-                                        if reaction.isSelected {
+                                for existingReaction in attribute.reactions {
+                                    if existingReaction.value == reaction.rawValue {
+                                        if existingReaction.isSelected {
                                             updatedReaction = nil
                                         }
                                         isFirst = false
                                     }
                                 }
                             } else if let attribute = attribute as? PendingReactionsMessageAttribute {
-                                if let current = attribute.value, current == value.reaction.rawValue {
+                                if let current = attribute.value, current == reaction.rawValue {
                                     updatedReaction = nil
                                 }
                             }
@@ -1302,8 +1302,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         standaloneReactionAnimation.animateReactionSelection(
                                             context: strongSelf.context,
                                             theme: strongSelf.presentationData.theme,
-                                            reaction: ReactionContextItem(
-                                                reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                            reaction: ReactionItem(
+                                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                 appearAnimation: reaction.appearAnimation,
                                                 stillAnimation: reaction.selectAnimation,
                                                 listAnimation: centerAnimation,
@@ -6231,8 +6231,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     standaloneReactionAnimation.animateReactionSelection(
                                                         context: strongSelf.context,
                                                         theme: strongSelf.presentationData.theme,
-                                                        reaction: ReactionContextItem(
-                                                            reaction: ReactionContextItem.Reaction(rawValue: reaction.value),
+                                                        reaction: ReactionItem(
+                                                            reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                                             appearAnimation: reaction.appearAnimation,
                                                             stillAnimation: reaction.selectAnimation,
                                                             listAnimation: centerAnimation,
