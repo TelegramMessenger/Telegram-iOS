@@ -31,6 +31,7 @@ public final class PremiumStickersScreen: ViewController {
         private let containerNode: ASDisplayNode
         
         private let textNode: ImmediateTextNode
+        private let overlayTextNode: ImmediateTextNode
         private let proceedButton: SolidRoundedButtonNode
         private let cancelButton: HighlightableButtonNode
         private let carouselNode: ReactionCarouselNode
@@ -62,8 +63,12 @@ public final class PremiumStickersScreen: ViewController {
             self.textNode.textAlignment = .center
             self.textNode.maximumNumberOfLines = 0
             self.textNode.lineSpacing = 0.1
-            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Premium_Reactions_Description, font: Font.regular(17.0), textColor: self.presentationData.theme.contextMenu.secondaryColor)
-            self.textNode.alpha = 1.0
+            
+            self.overlayTextNode = ImmediateTextNode()
+            self.overlayTextNode.displaysAsynchronously = false
+            self.overlayTextNode.textAlignment = .center
+            self.overlayTextNode.maximumNumberOfLines = 0
+            self.overlayTextNode.lineSpacing = 0.1
             
             self.proceedButton = SolidRoundedButtonNode(title: self.presentationData.strings.Premium_Reactions_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 11.0, gloss: true)
             
@@ -73,7 +78,7 @@ public final class PremiumStickersScreen: ViewController {
             self.carouselNode = ReactionCarouselNode(context: controller.context, theme: controller.presentationData.theme, reactions: controller.reactions)
             
             super.init()
-            
+                        
             self.addSubnode(self.dimNode)
             self.addSubnode(self.darkDimNode)
             self.addSubnode(self.containerNode)
@@ -81,6 +86,17 @@ public final class PremiumStickersScreen: ViewController {
             self.containerNode.addSubnode(self.proceedButton)
             self.containerNode.addSubnode(self.cancelButton)
             self.addSubnode(self.carouselNode)
+            
+            let textColor: UIColor
+            if self.presentationData.theme.overallDarkAppearance {
+                textColor = UIColor(white: 1.0, alpha: 1.0)
+                self.overlayTextNode.alpha = 0.2
+                self.addSubnode(self.overlayTextNode)
+            } else {
+                textColor = self.presentationData.theme.contextMenu.secondaryColor
+            }
+            self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Premium_Reactions_Description, font: Font.regular(17.0), textColor: textColor)
+            self.overlayTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Premium_Reactions_Description, font: Font.regular(17.0), textColor: textColor)
             
             self.proceedButton.pressed = { [weak self] in
                 self?.animateOut()
@@ -160,7 +176,10 @@ public final class PremiumStickersScreen: ViewController {
             self.proceedButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - cancelSize.height - 49.0 - buttonHeight - 23.0), size: CGSize(width: buttonWidth, height: buttonHeight))
             
             let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 5.0, height: CGFloat.greatestFiniteMagnitude))
-            self.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: layout.size.height - cancelSize.height - 48.0 - buttonHeight - 20.0 - textSize.height - 31.0), size: textSize)
+            let _ = self.overlayTextNode.updateLayout(CGSize(width: layout.size.width - sideInset * 5.0, height: CGFloat.greatestFiniteMagnitude))
+            let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textSize.width) / 2.0), y: layout.size.height - cancelSize.height - 48.0 - buttonHeight - 20.0 - textSize.height - 31.0), size: textSize)
+            self.textNode.frame = textFrame
+            self.overlayTextNode.frame = textFrame
         }
         
         

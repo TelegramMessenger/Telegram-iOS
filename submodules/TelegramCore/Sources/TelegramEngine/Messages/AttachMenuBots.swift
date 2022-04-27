@@ -228,6 +228,15 @@ private func setCachedAttachMenuBots(transaction: Transaction, attachMenuBots: A
     }
 }
 
+private func removeCachedAttachMenuBot(postbox: Postbox, botId: PeerId) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction in
+        if let bots = cachedAttachMenuBots(transaction: transaction) {
+            let updatedBots = bots.bots.filter { $0.peerId != botId }
+            setCachedAttachMenuBots(transaction: transaction, attachMenuBots: AttachMenuBots(hash: bots.hash, bots: updatedBots))
+        }
+    }
+}
+
 func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force: Bool = false) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         let signal: Signal<Void, NoError> = cachedAttachMenuBots(postbox: postbox)
@@ -339,7 +348,7 @@ func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: Pee
         }
         |> mapToSignal { value -> Signal<Bool, AddBotToAttachMenuError> in
             if value {
-                return managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
+                return managedSynchronizeAttachMenuBots(postbox: postbox, network: network, force: true)
                 |> castError(AddBotToAttachMenuError.self)
                 |> take(1)
                 |> map { _ -> Bool in
@@ -372,8 +381,10 @@ func _internal_removeBotFromAttachMenu(postbox: Postbox, network: Network, botId
             return .single(false)
         }
         |> afterCompleted {
-            let _ = (managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
-            |> take(1)).start()
+            let _ = (managedSynchronizeAttachMenuBots(postbox: postbox, network: network, force: true)
+            |> take(1)).start(completed: {
+                let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId)
+            })
         }
     }
     |> switchToLatest

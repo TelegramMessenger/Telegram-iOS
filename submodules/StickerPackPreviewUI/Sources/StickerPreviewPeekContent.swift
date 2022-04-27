@@ -69,7 +69,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
         return nil
     }
     
-    public func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)? {
+    public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isLocked {
             return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings)
         } else {
@@ -179,11 +179,12 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            var imageFrame = CGRect(origin: CGPoint(x: 0.0, y: textSize.height + textSpacing), size: imageSize)
+            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
             var centerOffset: CGFloat = 0.0
             if self.item.file.isPremiumSticker {
-                centerOffset = floor(imageFrame.width * 0.33)
-                imageFrame = imageFrame.offsetBy(dx: centerOffset, dy: 0.0)
+                let originalImageFrame = imageFrame
+                imageFrame.origin.x = size.width - imageFrame.width - 10.0
+                centerOffset = imageFrame.minX - originalImageFrame.minX
             }
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
@@ -198,7 +199,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)
             
-            return CGSize(width: imageFrame.width, height: imageFrame.height + textSize.height + textSpacing)
+            return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
         } else {
             return CGSize(width: size.width, height: 10.0)
         }
@@ -215,9 +216,8 @@ final class PremiumStickerPackAccessoryNode: ASDisplayNode, PeekControllerAccess
         self.textNode.displaysAsynchronously = false
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: .black)
+        self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
         self.textNode.lineSpacing = 0.1
-        self.textNode.alpha = 0.4
         
         self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: true)
         

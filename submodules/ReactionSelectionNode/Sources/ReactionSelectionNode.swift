@@ -304,17 +304,22 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     
     let imageNode: ASImageNode
     
-    override init() {
+    init(theme: PresentationTheme) {
         self.imageNode = ASImageNode()
         self.imageNode.contentMode = .center
         self.imageNode.displaysAsynchronously = false
-        self.imageNode.image = UIImage(bundleImageName: "Premium/ReactionIcon")
         self.imageNode.isUserInteractionEnabled = false
         self.imageNode.alpha = 0.5
         
         super.init()
         
         self.addSubnode(self.imageNode)
+        
+        if theme.overallDarkAppearance {
+            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/ReactionIcon"), color: .white)
+        } else {
+            self.imageNode.image = UIImage(bundleImageName: "Premium/ReactionIcon")
+        }
     }
     
     override func didLoad() {

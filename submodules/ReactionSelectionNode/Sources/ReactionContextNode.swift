@@ -335,7 +335,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     if case let .reaction(item) = self.items[i] {
                         itemNode = ReactionNode(context: self.context, theme: self.theme, item: item)
                     } else {
-                        itemNode = PremiumReactionsNode()
+                        itemNode = PremiumReactionsNode(theme: self.theme)
                     }
                     self.visibleItemNodes[i] = itemNode
                     self.scrollNode.addSubnode(itemNode)

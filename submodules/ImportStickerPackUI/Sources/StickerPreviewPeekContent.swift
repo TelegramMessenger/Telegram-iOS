@@ -41,7 +41,7 @@ final class StickerPreviewPeekContent: PeekControllerContent {
         return nil
     }
     
-    func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)? {
+    func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         return nil
     }
     

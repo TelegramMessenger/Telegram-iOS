@@ -47,7 +47,7 @@ final class ChatContextResultPeekContent: PeekControllerContent {
         return arrowNode
     }
     
-    func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)? {
+    func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         return nil
     }
     

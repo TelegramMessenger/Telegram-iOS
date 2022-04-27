@@ -41,13 +41,15 @@ public struct SearchBarToken {
     
     public let id: AnyHashable
     public let icon: UIImage?
+    public let iconOffset: CGFloat?
     public let title: String
     public let style: Style?
     public let permanent: Bool
     
-    public init(id: AnyHashable, icon: UIImage?, title: String, style: Style? = nil, permanent: Bool) {
+    public init(id: AnyHashable, icon: UIImage?, iconOffset: CGFloat? = 0.0, title: String, style: Style? = nil, permanent: Bool) {
         self.id = id
         self.icon = icon
+        self.iconOffset = iconOffset
         self.title = title
         self.style = style
         self.permanent = permanent
@@ -158,7 +160,11 @@ private final class TokenNode: ASDisplayNode {
         var leftInset: CGFloat = 3.0
         if let icon = self.iconNode.image {
             leftInset += 1.0
-            transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: leftInset, y: floor((height - icon.size.height) / 2.0)), size: icon.size))
+            var iconFrame = CGRect(origin: CGPoint(x: leftInset, y: floor((height - icon.size.height) / 2.0)), size: icon.size)
+            if let iconOffset = self.token.iconOffset {
+                iconFrame.origin.x += iconOffset
+            }
+            transition.updateFrame(node: self.iconNode, frame: iconFrame)
             leftInset += icon.size.width + 3.0
         }
 
