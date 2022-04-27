@@ -129,7 +129,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 
                 let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = AnimatedStickerNode()
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.5), height: Int(fittedDimensions.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 additionalAnimationNode.visibility = true
                 self.additionalAnimationNode = additionalAnimationNode
             }
@@ -191,7 +191,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 animationNode.updateLayout(size: imageSize)
                 
                 if let additionalAnimationNode = self.additionalAnimationNode {
-                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width / 2.0, dy: 0.0).insetBy(dx: -imageFrame.width / 2.0, dy: -imageFrame.height / 2.0)
+                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.66 + 15.0, dy: -2.0).insetBy(dx: -imageFrame.width * 0.66, dy: -imageFrame.height * 0.66)
                     additionalAnimationNode.updateLayout(size: additionalAnimationNode.frame.size)
                 }
             }
