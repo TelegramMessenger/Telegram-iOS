@@ -115,20 +115,40 @@ final class AudioWaveformNode: ASDisplayNode {
                     memset(adjustedSamplesMemory, 0, numSamples * 2)
                     
                     var generateFakeSamples = false
-                    var minSample: UInt16 = maxSample
                     
+                    var bins: [UInt16: Int] = [:]
                     for i in 0 ..< maxReadSamples {
                         let index = i * numSamples / maxReadSamples
                         let sample = samples[i]
                         if adjustedSamples[index] < sample {
                             adjustedSamples[index] = sample
                         }
-                        if sample < minSample {
-                            minSample = sample
+                      
+                        if let count = bins[sample] {
+                            bins[sample] = count + 1
+                        } else {
+                            bins[sample] = 1
                         }
                     }
                     
-                    if maxSample - minSample < 3 {
+                    var sortedSamples: [(UInt16, Int)] = []
+                    var totalCount: Int = 0
+                    for (sample, count) in bins {
+                        if sample > 0 {
+                            sortedSamples.append((sample, count))
+                            totalCount += count
+                        }
+                    }
+                    sortedSamples.sort { $0.1 > $1.1 }
+                    
+                    let topSamples = sortedSamples.prefix(1)
+                    let topCount = topSamples.map{ $0.1 }.reduce(.zero, +)
+                    var topCountPercent: Float = 0.0
+                    if bins.count > 0 {
+                        topCountPercent = Float(topCount) / Float(totalCount)
+                    }
+                    
+                    if topCountPercent > 0.75 {
                         generateFakeSamples = true
                     }
                     
@@ -138,7 +158,7 @@ final class AudioWaveformNode: ASDisplayNode {
                         }
                         for i in 0 ..< maxReadSamples {
                             let index = i * numSamples / maxReadSamples
-                            adjustedSamples[index] = UInt16.random(in: 5...maxSample)
+                            adjustedSamples[index] = UInt16.random(in: 6...maxSample)
                         }
                     }
                     

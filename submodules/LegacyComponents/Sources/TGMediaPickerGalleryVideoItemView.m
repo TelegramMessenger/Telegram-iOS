@@ -357,6 +357,8 @@
     if (_downloadDisposable == nil)
         _downloadDisposable = [[SMetaDisposable alloc] init];
     
+    [self setProgressVisible:true value:0.027 animated:true];
+    
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
     [_downloadDisposable setDisposable:[[[TGMediaAssetImageSignals avAssetForVideoAsset:(TGMediaAsset *)self.item.asset allowNetworkAccess:true] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
     {
@@ -379,6 +381,7 @@
         [strongSelf->_progressView setPlay];
         strongSelf->_progressView.alpha = 1.0;
         
+        strongSelf->_downloading = false;
         strongSelf->_downloaded = true;
         if (strongSelf->_currentAvailabilityObserver != nil)
             strongSelf->_currentAvailabilityObserver(true);

@@ -10772,6 +10772,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var peerType = peerType
                     if bot.peer.id == peer.id {
                         peerType.insert(.sameBot)
+                        peerType.remove(.bot)
                     }
                     
                     if !bot.peerTypes.intersection(peerType).isEmpty {

@@ -249,6 +249,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
             }
             
             self.animationNode?.alpha = isLocked ? 0.5 : 1.0
+            self.imageNode.alpha = isLocked ? 0.5 : 1.0
             
             self.currentState = (account, stickerItem)
             self.setNeedsLayout()
