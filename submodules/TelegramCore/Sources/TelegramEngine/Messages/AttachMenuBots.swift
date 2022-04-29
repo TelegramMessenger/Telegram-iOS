@@ -9,6 +9,7 @@ public final class AttachMenuBots: Equatable, Codable {
             case peerId
             case name
             case botIcons
+            case peerTypes
         }
         
         public enum IconName: Int32, Codable {
@@ -33,6 +34,32 @@ public final class AttachMenuBots: Equatable, Codable {
                     default:
                         return nil
                 }
+            }
+        }
+        
+        public struct PeerFlags: OptionSet, Codable {
+            public var rawValue: UInt32
+            
+            public init(rawValue: UInt32) {
+                self.rawValue = rawValue
+            }
+            
+            public init() {
+                self.rawValue = 0
+            }
+            
+            public static let sameBot = PeerFlags(rawValue: 1 << 0)
+            public static let bot = PeerFlags(rawValue: 1 << 1)
+            public static let user = PeerFlags(rawValue: 1 << 2)
+            public static let group = PeerFlags(rawValue: 1 << 3)
+            public static let channel = PeerFlags(rawValue: 1 << 4)
+            
+            public static var all: PeerFlags {
+                return [.sameBot, .bot, .user, .group, .channel]
+            }
+            
+            public static var `default`: PeerFlags {
+                return [.sameBot, .bot, .user]
             }
         }
         
@@ -65,15 +92,18 @@ public final class AttachMenuBots: Equatable, Codable {
         public let peerId: PeerId
         public let name: String
         public let icons: [IconName: TelegramMediaFile]
+        public let peerTypes: PeerFlags
         
         public init(
             peerId: PeerId,
             name: String,
-            icons: [IconName: TelegramMediaFile]
+            icons: [IconName: TelegramMediaFile],
+            peerTypes: PeerFlags
         ) {
             self.peerId = peerId
             self.name = name
             self.icons = icons
+            self.peerTypes = peerTypes
         }
         
         public static func ==(lhs: Bot, rhs: Bot) -> Bool {
@@ -84,6 +114,9 @@ public final class AttachMenuBots: Equatable, Codable {
                 return false
             }
             if lhs.icons != rhs.icons {
+                return false
+            }
+            if lhs.peerTypes != rhs.peerTypes {
                 return false
             }
             return true
@@ -103,6 +136,9 @@ public final class AttachMenuBots: Equatable, Codable {
                 icons[iconPair.name] = iconPair.value
             }
             self.icons = icons
+            
+            let value = try container.decodeIfPresent(Int32.self, forKey: .peerTypes) ?? Int32(PeerFlags.default.rawValue)
+            self.peerTypes = PeerFlags(rawValue: UInt32(value))
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -116,6 +152,8 @@ public final class AttachMenuBots: Equatable, Codable {
                 iconPairs.append(IconPair(key, value: value))
             }
             try container.encode(iconPairs, forKey: .botIcons)
+            
+            try container.encode(Int32(self.peerTypes.rawValue), forKey: .peerTypes)
         }
     }
     
@@ -190,6 +228,15 @@ private func setCachedAttachMenuBots(transaction: Transaction, attachMenuBots: A
     }
 }
 
+private func removeCachedAttachMenuBot(postbox: Postbox, botId: PeerId) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction in
+        if let bots = cachedAttachMenuBots(transaction: transaction) {
+            let updatedBots = bots.bots.filter { $0.peerId != botId }
+            setCachedAttachMenuBots(transaction: transaction, attachMenuBots: AttachMenuBots(hash: bots.hash, bots: updatedBots))
+        }
+    }
+}
+
 func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force: Bool = false) -> Signal<Void, NoError> {
     let poll = Signal<Void, NoError> { subscriber in
         let signal: Signal<Void, NoError> = cachedAttachMenuBots(postbox: postbox)
@@ -218,7 +265,7 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force:
                             var resultBots: [AttachMenuBots.Bot] = []
                             for bot in bots {
                                 switch bot {
-                                    case let .attachMenuBot(_, botId, name, botIcons):
+                                    case let .attachMenuBot(_, botId, name, apiPeerTypes, botIcons):
                                         var icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile] = [:]
                                         for icon in botIcons {
                                             switch icon {
@@ -229,7 +276,22 @@ func managedSynchronizeAttachMenuBots(postbox: Postbox, network: Network, force:
                                             }
                                         }
                                         if !icons.isEmpty {
-                                            resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), name: name, icons: icons))
+                                            var peerTypes: AttachMenuBots.Bot.PeerFlags = []
+                                            for apiType in apiPeerTypes {
+                                                switch apiType {
+                                                    case .attachMenuPeerTypeSameBotPM:
+                                                        peerTypes.insert(.sameBot)
+                                                    case .attachMenuPeerTypeBotPM:
+                                                        peerTypes.insert(.bot)
+                                                    case .attachMenuPeerTypePM:
+                                                        peerTypes.insert(.user)
+                                                    case .attachMenuPeerTypeChat:
+                                                        peerTypes.insert(.group)
+                                                    case .attachMenuPeerTypeBroadcast:
+                                                        peerTypes.insert(.channel)
+                                                }
+                                            }
+                                            resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), name: name, icons: icons, peerTypes: peerTypes))
                                         }
                                 }
                             }
@@ -286,7 +348,7 @@ func _internal_addBotToAttachMenu(postbox: Postbox, network: Network, botId: Pee
         }
         |> mapToSignal { value -> Signal<Bool, AddBotToAttachMenuError> in
             if value {
-                return managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
+                return managedSynchronizeAttachMenuBots(postbox: postbox, network: network, force: true)
                 |> castError(AddBotToAttachMenuError.self)
                 |> take(1)
                 |> map { _ -> Bool in
@@ -319,8 +381,10 @@ func _internal_removeBotFromAttachMenu(postbox: Postbox, network: Network, botId
             return .single(false)
         }
         |> afterCompleted {
-            let _ = (managedSynchronizeAttachMenuBots(postbox: postbox, network: network)
-            |> take(1)).start()
+            let _ = (managedSynchronizeAttachMenuBots(postbox: postbox, network: network, force: true)
+            |> take(1)).start(completed: {
+                let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId)
+            })
         }
     }
     |> switchToLatest
@@ -330,11 +394,13 @@ public struct AttachMenuBot {
     public let peer: Peer
     public let shortName: String
     public let icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile]
+    public let peerTypes: AttachMenuBots.Bot.PeerFlags
     
-    init(peer: Peer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile]) {
+    init(peer: Peer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags) {
         self.peer = peer
         self.shortName = shortName
         self.icons = icons
+        self.peerTypes = peerTypes
     }
 }
 
@@ -346,7 +412,7 @@ func _internal_attachMenuBots(postbox: Postbox) -> Signal<[AttachMenuBot], NoErr
         var resultBots: [AttachMenuBot] = []
         for bot in cachedBots {
             if let peer = transaction.getPeer(bot.peerId) {
-                resultBots.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons))
+                resultBots.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes))
             }
         }
         return resultBots
@@ -361,7 +427,7 @@ public func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId
     return postbox.transaction { transaction -> Signal<AttachMenuBot, GetAttachMenuBotError> in
         if cached, let cachedBots = cachedAttachMenuBots(transaction: transaction)?.bots {
             if let bot = cachedBots.first(where: { $0.peerId == botId }), let peer = transaction.getPeer(bot.peerId) {
-                return .single(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons))
+                return .single(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes))
             }
         }
         
@@ -395,7 +461,7 @@ public func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId
                         }
                     
                         switch bot {
-                            case let .attachMenuBot(_, _, name, botIcons):
+                            case let .attachMenuBot(_, _, name, apiPeerTypes, botIcons):
                                 var icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile] = [:]
                                 for icon in botIcons {
                                     switch icon {
@@ -405,7 +471,22 @@ public func _internal_getAttachMenuBot(postbox: Postbox, network: Network, botId
                                             }
                                     }
                                 }
-                                return .single(AttachMenuBot(peer: peer, shortName: name, icons: icons))
+                                var peerTypes: AttachMenuBots.Bot.PeerFlags = []
+                                for apiType in apiPeerTypes {
+                                    switch apiType {
+                                        case .attachMenuPeerTypeSameBotPM:
+                                            peerTypes.insert(.sameBot)
+                                        case .attachMenuPeerTypeBotPM:
+                                            peerTypes.insert(.bot)
+                                        case .attachMenuPeerTypePM:
+                                            peerTypes.insert(.user)
+                                        case .attachMenuPeerTypeChat:
+                                            peerTypes.insert(.group)
+                                        case .attachMenuPeerTypeBroadcast:
+                                            peerTypes.insert(.channel)
+                                    }
+                                }
+                                return .single(AttachMenuBot(peer: peer, shortName: name, icons: icons, peerTypes: peerTypes))
                         }
                 }
             }

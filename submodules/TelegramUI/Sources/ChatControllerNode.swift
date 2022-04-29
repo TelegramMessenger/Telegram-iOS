@@ -431,6 +431,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
             if let strongSelf = self {
+                let wasLoading = strongSelf.isLoadingValue
                 if case .loading = loadState {
                     strongSelf.updateIsLoading(isLoading: true, animated: animated)
                 } else {
@@ -450,7 +451,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 } else if case .messages = loadState {
                     strongSelf.didDisplayEmptyGreeting = true
                 }
-                strongSelf.updateIsEmpty(emptyType, animated: animated)
+                strongSelf.updateIsEmpty(emptyType, wasLoading: wasLoading, animated: animated)
             }
         }
         
@@ -646,7 +647,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
     }
     
-    private func updateIsEmpty(_ emptyType: ChatHistoryNodeLoadState.EmptyType?, animated: Bool) {
+    private func updateIsEmpty(_ emptyType: ChatHistoryNodeLoadState.EmptyType?, wasLoading: Bool, animated: Bool) {
         self.emptyType = emptyType
         if let emptyType = emptyType, self.emptyNode == nil {
             let emptyNode = ChatEmptyNode(context: self.context, interaction: self.interfaceInteraction)

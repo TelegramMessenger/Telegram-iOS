@@ -335,7 +335,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     if case let .reaction(item) = self.items[i] {
                         itemNode = ReactionNode(context: self.context, theme: self.theme, item: item)
                     } else {
-                        itemNode = PremiumReactionsNode()
+                        itemNode = PremiumReactionsNode(theme: self.theme)
                     }
                     self.visibleItemNodes[i] = itemNode
                     self.scrollNode.addSubnode(itemNode)
@@ -936,7 +936,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.animateReactionSelection(context: context, theme: theme, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
-    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool,  isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return

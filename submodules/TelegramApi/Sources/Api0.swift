@@ -43,12 +43,17 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[571523412] = { return $0.readDouble() }
     dict[-1255641564] = { return parseString($0) }
     dict[-1194283041] = { return Api.AccountDaysTTL.parse_accountDaysTTL($0) }
-    dict[-381896846] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
+    dict[-928371502] = { return Api.AttachMenuBot.parse_attachMenuBot($0) }
     dict[-1297663893] = { return Api.AttachMenuBotIcon.parse_attachMenuBotIcon($0) }
     dict[1165423600] = { return Api.AttachMenuBotIconColor.parse_attachMenuBotIconColor($0) }
     dict[1011024320] = { return Api.AttachMenuBots.parse_attachMenuBots($0) }
     dict[-237467044] = { return Api.AttachMenuBots.parse_attachMenuBotsNotModified($0) }
     dict[-1816172929] = { return Api.AttachMenuBotsBot.parse_attachMenuBotsBot($0) }
+    dict[-1020528102] = { return Api.AttachMenuPeerType.parse_attachMenuPeerTypeBotPM($0) }
+    dict[2080104188] = { return Api.AttachMenuPeerType.parse_attachMenuPeerTypeBroadcast($0) }
+    dict[84480319] = { return Api.AttachMenuPeerType.parse_attachMenuPeerTypeChat($0) }
+    dict[-247016673] = { return Api.AttachMenuPeerType.parse_attachMenuPeerTypePM($0) }
+    dict[2104224014] = { return Api.AttachMenuPeerType.parse_attachMenuPeerTypeSameBotPM($0) }
     dict[-1392388579] = { return Api.Authorization.parse_authorization($0) }
     dict[-532532493] = { return Api.AutoDownloadSettings.parse_autoDownloadSettings($0) }
     dict[-1065882623] = { return Api.AvailableReaction.parse_availableReaction($0) }
@@ -1096,6 +1101,8 @@ public extension Api {
             case let _1 as Api.AttachMenuBots:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.AttachMenuBotsBot:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.AttachMenuPeerType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Authorization:
                 _1.serialize(buffer, boxed)

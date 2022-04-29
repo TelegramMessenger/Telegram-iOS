@@ -76,6 +76,7 @@ import Pasteboard
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
 import WebUI
+import PremiumUI
 
 #if DEBUG
 import os.signpost
@@ -970,16 +971,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let _ = combineLatest(queue: .mainQueue(),
+                    strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId)),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction),
                     strongSelf.context.engine.stickers.availableReactions(),
                     peerAllowedReactions(context: strongSelf.context, peerId: topMessage.id.peerId),
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
-                ).start(next: { actions, availableReactions, allowedReactions, chatTextSelectionTips in
-                    var actions = actions
-
+                ).start(next: { peer, actions, availableReactions, allowedReactions, chatTextSelectionTips in
                     guard let strongSelf = self else {
                         return
                     }
+                    
+                    var hasPremium = false
+                    if case let .user(user) = peer, user.flags.contains(.isPremium) {
+                        hasPremium = true
+                    }
+                    
+                    var actions = actions
                     switch actions.content {
                     case let .list(itemList):
                         if itemList.isEmpty {
@@ -1024,15 +1031,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     actions.context = strongSelf.context
                     
+                    var premiumReactions: [AvailableReactions.Reaction] = []
+                    
                     if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
+                        var hasPremiumPlaceholder = false
                         filterReactions: for reaction in availableReactions.reactions {
-                            if !reaction.isEnabled {
-                                continue
-                            }
                             guard let centerAnimation = reaction.centerAnimation else {
                                 continue
                             }
                             guard let aroundAnimation = reaction.aroundAnimation else {
+                                continue
+                            }
+//                            if reaction.isPremium {
+                                premiumReactions.append(reaction)
+//                            }
+                            if !reaction.isEnabled {
+                                continue
+                            }
+                            if reaction.isPremium && !hasPremium {
+                                hasPremiumPlaceholder = true
                                 continue
                             }
                             
@@ -1054,6 +1071,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 largeApplicationAnimation: reaction.effectAnimation
                             )))
                         }
+                        if hasPremiumPlaceholder {
+                            actions.reactionItems.append(.premium)
+                        }
                     }
                     
                     strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
@@ -1062,7 +1082,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.currentContextController = controller
                     
                     controller.reactionSelected = { [weak controller] value, isLarge in
-                        guard let strongSelf = self, let message = messages.first, let reaction = value.reaction else {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if case .premium = value {
+                            controller?.dismiss()
+
+                            let controller = PremiumStickersScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, reactions: premiumReactions)
+                            strongSelf.present(controller, in: .window(.root))
+                            return
+                        }
+                        
+                        guard let message = messages.first, let reaction = value.reaction else {
                             return
                         }
                         
@@ -10710,7 +10742,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let buttons: Signal<([AttachmentButtonType], AttachmentButtonType?), NoError>
-        if let _ = peer as? TelegramUser, !isScheduledMessages {
+        if !isScheduledMessages {
             buttons = self.context.engine.messages.attachMenuBots()
             |> map { attachMenuBots in
                 var buttons = availableButtons
@@ -10718,12 +10750,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if botId == nil {
                     initialButton = .gallery
                 }
+                
+                var peerType: AttachMenuBots.Bot.PeerFlags = []
+                if let user = peer as? TelegramUser {
+                    if let _ = user.botInfo {
+                        peerType.insert(.bot)
+                    } else {
+                        peerType.insert(.user)
+                    }
+                } else if let _ = peer as? TelegramGroup {
+                    peerType = .group
+                } else if let channel = peer as? TelegramChannel {
+                    if case .broadcast = channel.info {
+                        peerType = .channel
+                    } else {
+                        peerType = .group
+                    }
+                }
+                 
                 for bot in attachMenuBots.reversed() {
-                    let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
-                    buttons.insert(button, at: 1)
+                    var peerType = peerType
+                    if bot.peer.id == peer.id {
+                        peerType.insert(.sameBot)
+                        peerType.remove(.bot)
+                    }
                     
-                    if initialButton == nil && bot.peer.id == botId {
-                        initialButton = button
+                    if !bot.peerTypes.intersection(peerType).isEmpty {
+                        let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                        buttons.insert(button, at: 1)
+                        
+                        if initialButton == nil && bot.peer.id == botId {
+                            initialButton = button
+                        }
                     }
                 }
                 return (buttons, initialButton)

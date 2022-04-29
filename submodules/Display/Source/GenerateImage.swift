@@ -354,6 +354,21 @@ public func generateGradientImage(size: CGSize, colors: [UIColor], locations: [C
     return image
 }
 
+public func generateGradientFilledCircleImage(diameter: CGFloat, colors: NSArray) -> UIImage? {
+    return generateImage(CGSize(width: diameter, height: diameter), contextGenerator: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        context.addEllipse(in: bounds)
+        context.clip()
+        
+        var locations: [CGFloat] = [0.0, 1.0]
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: &locations)!
+        
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: bounds.size.height), options: CGGradientDrawingOptions())
+    })
+}
+
 public func generateScaledImage(image: UIImage?, size: CGSize, opaque: Bool = true, scale: CGFloat? = nil) -> UIImage? {
     guard let image = image else {
         return nil

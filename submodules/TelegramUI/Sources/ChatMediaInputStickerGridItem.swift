@@ -178,10 +178,8 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     private(set) var animationNode: AnimatedStickerNode?
     private(set) var placeholderNode: StickerShimmerEffectNode?
     
-    private var lockBackground: UIVisualEffectView?
-    private var lockTintView: UIView?
-    private var lockIconNode: ASImageNode?
-    private var isLocked: Bool?
+    private var lockBackground: UIImageView?
+    var isLocked: Bool?
     
     private var didSetUpAnimationNode = false
     private var item: ChatMediaInputStickerGridItem?
@@ -315,43 +313,21 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             self.isLocked = item.isLocked
             
             if item.isLocked {
-                let lockBackground: UIVisualEffectView
-                let lockIconNode: ASImageNode
-                if let currentBackground = self.lockBackground, let currentIcon = self.lockIconNode {
+                let lockBackground: UIImageView
+                if let currentBackground = self.lockBackground {
                     lockBackground = currentBackground
-                    lockIconNode = currentIcon
                 } else {
-                    let effect: UIBlurEffect
-                    if #available(iOS 10.0, *) {
-                        effect = UIBlurEffect(style: .regular)
-                    } else {
-                        effect = UIBlurEffect(style: .light)
-                    }
-                    lockBackground = UIVisualEffectView(effect: effect)
+                    lockBackground = UIImageView()
                     lockBackground.clipsToBounds = true
                     lockBackground.isUserInteractionEnabled = false
-                    lockIconNode = ASImageNode()
-                    lockIconNode.displaysAsynchronously = false
-                    lockIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: .white)
-                    
-                    let lockTintView = UIView()
-                    lockTintView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.15)
-                    lockBackground.contentView.addSubview(lockTintView)
-                    
+                    lockBackground.image = UIImage(bundleImageName: "Premium/StickerIcon")
                     self.lockBackground = lockBackground
-                    self.lockTintView = lockTintView
-                    self.lockIconNode = lockIconNode
                     
                     self.view.addSubview(lockBackground)
-                    self.addSubnode(lockIconNode)
                 }
-            } else if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
+            } else if let lockBackground = self.lockBackground {
                 self.lockBackground = nil
-                self.lockTintView = nil
-                self.lockIconNode = nil
                 lockBackground.removeFromSuperview()
-                lockTintView.removeFromSuperview()
-                lockIconNode.removeFromSupernode()
             }
         }
         
@@ -384,18 +360,10 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             placeholderNode.update(backgroundColor: theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0), foregroundColor: theme.chat.inputMediaPanel.stickersSectionTextColor.blitOver(theme.chat.inputMediaPanel.stickersBackgroundColor, alpha: 0.15), shimmeringColor: theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.3), data: item.stickerItem.file.immediateThumbnailData, size: placeholderFrame.size)
         }
         
-        if let lockBackground = self.lockBackground, let lockTintView = self.lockTintView, let lockIconNode = self.lockIconNode {
-            let lockSize = CGSize(width: 24.0, height: 24.0)
+        if let lockBackground = self.lockBackground {
+            let lockSize = CGSize(width: 26.0, height: 26.0)
             let lockBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - lockSize.width) / 2.0), y: size.height - lockSize.height - 2.0), size: lockSize)
             lockBackground.frame = lockBackgroundFrame
-            lockBackground.layer.cornerRadius = lockSize.width / 2.0
-            if #available(iOS 13.0, *) {
-                lockBackground.layer.cornerCurve = .circular
-            }
-            lockTintView.frame = CGRect(origin: CGPoint(), size: lockBackgroundFrame.size)
-            if let icon = lockIconNode.image {
-                lockIconNode.frame = CGRect(origin: CGPoint(x: lockBackgroundFrame.minX + floorToScreenPixels((lockBackgroundFrame.width - icon.size.width) / 2.0), y: lockBackgroundFrame.minY + floorToScreenPixels((lockBackgroundFrame.height - icon.size.height) / 2.0)), size: icon.size)
-            }
         }
     }
     
@@ -410,8 +378,11 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), false, false, nil, false, self, self.bounds)
-            self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
+            if let isLocked = self.isLocked, isLocked {
+            } else {
+                let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), false, false, nil, false, self, self.bounds)
+                self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
+            }
         }
     }
     

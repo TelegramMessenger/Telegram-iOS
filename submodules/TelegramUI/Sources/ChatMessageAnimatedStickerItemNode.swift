@@ -1571,10 +1571,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return
         }
         self.playedPremiumStickerAnimation = true
-        self.playEffectAnimation(resource: effect.resource)
+        self.playEffectAnimation(resource: effect.resource, isStickerEffect: true)
     }
     
-    func playEffectAnimation(resource: MediaResource) {
+    func playEffectAnimation(resource: MediaResource, isStickerEffect: Bool = false) {
         guard let item = self.item else {
             return
         }
@@ -1629,10 +1629,19 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         } else {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             let additionalAnimationNode = AnimatedStickerNode()
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.0), height: Int(animationSize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
-            var animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
-                .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
-            animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.5), height: Int(animationSize.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            var animationFrame: CGRect
+            if isStickerEffect {
+                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * 0.66 - 14.0 : -animationNode.frame.width * 0.66 + 14.0, dy: 35.0).insetBy(dx: -animationNode.frame.width * 0.66, dy: -animationNode.frame.height * 0.66)
+                if incomingMessage {
+                    animationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
+                }
+            } else {
+                animationFrame = animationNode.frame.insetBy(dx: -animationNode.frame.width, dy: -animationNode.frame.height)
+                    .offsetBy(dx: incomingMessage ? animationNode.frame.width - 10.0 : -animationNode.frame.width + 10.0, dy: 0.0)
+                animationFrame = animationFrame.offsetBy(dx: CGFloat.random(in: -30.0 ... 30.0), dy: CGFloat.random(in: -30.0 ... 30.0))
+            }
+            
             additionalAnimationNode.frame = animationFrame
             if incomingMessage {
                 additionalAnimationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)

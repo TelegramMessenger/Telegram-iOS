@@ -531,7 +531,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, item: item, menu: menuItems))
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems))
                             } else {
                                 return nil
                             }
@@ -595,7 +595,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                 }
                             }))
                         ]
-                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, item: .pack(item), menu: menuItems))
+                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), menu: menuItems))
                     } else {
                         return nil
                     }
