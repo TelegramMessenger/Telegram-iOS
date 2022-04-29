@@ -27,7 +27,7 @@ private final class InstantPageContextExtractedContentSource: ContextExtractedCo
         guard let navigationBar = self.navigationBar else {
             return nil
         }
-        return ContextControllerTakeViewInfo(contentContainingNode: navigationBar.contextSourceNode, contentAreaInScreenSpace: navigationBar.convert(navigationBar.contextSourceNode.frame.offsetBy(dx: 0.0, dy: 40.0), to: nil))
+        return ContextControllerTakeViewInfo(containingItem: .node(navigationBar.contextSourceNode), contentAreaInScreenSpace: navigationBar.convert(navigationBar.contextSourceNode.frame.offsetBy(dx: 0.0, dy: 40.0), to: nil))
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {

@@ -7087,7 +7087,7 @@ private final class VoiceChatContextExtractedContentSource: ContextExtractedCont
     
     func takeView() -> ContextControllerTakeViewInfo? {
         self.animateTransitionIn()
-        return ContextControllerTakeViewInfo(contentContainingNode: self.sourceNode, contentAreaInScreenSpace: UIScreen.main.bounds, maskView: self.maskView)
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds, maskView: self.maskView)
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {

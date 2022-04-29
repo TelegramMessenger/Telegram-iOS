@@ -2091,12 +2091,17 @@ public extension ContextReferenceContentSource {
 }
 
 public final class ContextControllerTakeViewInfo {
-    public let contentContainingNode: ContextExtractedContentContainingNode
+    public enum ContainingItem {
+        case node(ContextExtractedContentContainingNode)
+        case view(ContextExtractedContentContainingView)
+    }
+    
+    public let containingItem: ContainingItem
     public let contentAreaInScreenSpace: CGRect
     public let maskView: UIView?
     
-    public init(contentContainingNode: ContextExtractedContentContainingNode, contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
-        self.contentContainingNode = contentContainingNode
+    public init(containingItem: ContainingItem, contentAreaInScreenSpace: CGRect, maskView: UIView? = nil) {
+        self.containingItem = containingItem
         self.contentAreaInScreenSpace = contentAreaInScreenSpace
         self.maskView = maskView
     }
