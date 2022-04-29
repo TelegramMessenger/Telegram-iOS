@@ -220,7 +220,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
                                     }
                                 }))
                             ]
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, item: .pack(item), menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems))
                         } else {
                             return nil
                         }

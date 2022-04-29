@@ -7536,3 +7536,9 @@ Sorry for the inconvenience.";
 
 "Channel.AddUserKickedError" = "Sorry, you can't add this user because they are on the list of Removed Users and you can't unban them.";
 "Channel.AddAdminKickedError" = "Sorry, you can't add this user as an admin because they are in the Removed Users list and you can't unban them.";
+
+"Premium.Stickers.Description" = "Unlock this sticker and more by subscribing to Telegram Premium.";
+"Premium.Stickers.Proceed" = "Unlock Premium Stickers";
+
+"Premium.Reactions.Description" = "Unlock additional reactions by subscribing to Telegram Premium.";
+"Premium.Reactions.Proceed" = "Unlock Additional Reactions";

@@ -12,6 +12,7 @@ import ContextUI
 import SolidRoundedButtonNode
 import TelegramPresentationData
 import AccountContext
+import AppBundle
 
 public enum StickerPreviewPeekItem: Equatable {
     case pack(StickerPackItem)
@@ -30,13 +31,15 @@ public enum StickerPreviewPeekItem: Equatable {
 public final class StickerPreviewPeekContent: PeekControllerContent {
     let account: Account
     let theme: PresentationTheme
+    let strings: PresentationStrings
     public let item: StickerPreviewPeekItem
     let isLocked: Bool
     let menu: [ContextMenuItem]
     
-    public init(account: Account, theme: PresentationTheme, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem]) {
+    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem]) {
         self.account = account
         self.theme = theme
+        self.strings = strings
         self.item = item
         self.isLocked = isLocked
         if isLocked {
@@ -66,9 +69,9 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
         return nil
     }
     
-    public func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)? {
+    public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isLocked {
-            return PremiumStickerPackAccessoryNode(theme: self.theme)
+            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings)
         } else {
             return nil
         }
@@ -126,7 +129,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 
                 let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = AnimatedStickerNode()
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.5), height: Int(fittedDimensions.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 additionalAnimationNode.visibility = true
                 self.additionalAnimationNode = additionalAnimationNode
             }
@@ -176,11 +179,12 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             
             let imageSize = dimensitons.cgSize.aspectFitted(boundingSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            var imageFrame = CGRect(origin: CGPoint(x: 0.0, y: textSize.height + textSpacing), size: imageSize)
+            var imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: textSize.height + textSpacing), size: imageSize)
             var centerOffset: CGFloat = 0.0
             if self.item.file.isPremiumSticker {
-                centerOffset = floor(imageFrame.width * 0.33)
-                imageFrame = imageFrame.offsetBy(dx: centerOffset, dy: 0.0)
+                let originalImageFrame = imageFrame
+                imageFrame.origin.x = size.width - imageFrame.width - 10.0
+                centerOffset = imageFrame.minX - originalImageFrame.minX
             }
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
@@ -188,14 +192,14 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 animationNode.updateLayout(size: imageSize)
                 
                 if let additionalAnimationNode = self.additionalAnimationNode {
-                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width / 2.0, dy: 0.0).insetBy(dx: -imageFrame.width / 2.0, dy: -imageFrame.height / 2.0)
+                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.66 + 15.0, dy: -2.0).insetBy(dx: -imageFrame.width * 0.66, dy: -imageFrame.height * 0.66)
                     additionalAnimationNode.updateLayout(size: additionalAnimationNode.frame.size)
                 }
             }
             
             self.textNode.frame = CGRect(origin: CGPoint(x: floor((imageFrame.size.width - textSize.width) / 2.0) - centerOffset, y: -textSize.height - textSpacing), size: textSize)
             
-            return CGSize(width: imageFrame.width, height: imageFrame.height + textSize.height + textSpacing)
+            return CGSize(width: size.width, height: imageFrame.height + textSize.height + textSpacing)
         } else {
             return CGSize(width: size.width, height: 10.0)
         }
@@ -207,18 +211,18 @@ final class PremiumStickerPackAccessoryNode: ASDisplayNode, PeekControllerAccess
     let proceedButton: SolidRoundedButtonNode
     let cancelButton: HighlightableButtonNode
     
-    init(theme: PresentationTheme) {
+    init(theme: PresentationTheme, strings: PresentationStrings) {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.textAlignment = .center
         self.textNode.maximumNumberOfLines = 0
-        self.textNode.attributedText = NSAttributedString(string: "Unlock this sticker and more by subscribing to Telegram Premium.", font: Font.regular(17.0), textColor: .black)
-        self.textNode.alpha = 0.4
+        self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
+        self.textNode.lineSpacing = 0.1
         
-        self.proceedButton = SolidRoundedButtonNode(title: "Unlock Premium Stickers", theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: true)
+        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: true)
         
         self.cancelButton = HighlightableButtonNode()
-        self.cancelButton.setTitle("Cancel", with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
+        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
         
         super.init()
         

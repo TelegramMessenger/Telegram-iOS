@@ -132,8 +132,9 @@ public final class TextNodeLayoutArguments {
     public let textShadowColor: UIColor?
     public let textStroke: (UIColor, CGFloat)?
     public let displaySpoilers: Bool
+    public let countIfMoreThanOneLineOverMaximum: Bool
     
-    public init(attributedString: NSAttributedString?, backgroundColor: UIColor? = nil, minimumNumberOfLines: Int = 0, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment = .natural, verticalAlignment: TextVerticalAlignment = .top, lineSpacing: CGFloat = 0.12, cutout: TextNodeCutout? = nil, insets: UIEdgeInsets = UIEdgeInsets(), lineColor: UIColor? = nil, textShadowColor: UIColor? = nil, textStroke: (UIColor, CGFloat)? = nil, displaySpoilers: Bool = false) {
+    public init(attributedString: NSAttributedString?, backgroundColor: UIColor? = nil, minimumNumberOfLines: Int = 0, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment = .natural, verticalAlignment: TextVerticalAlignment = .top, lineSpacing: CGFloat = 0.12, cutout: TextNodeCutout? = nil, insets: UIEdgeInsets = UIEdgeInsets(), lineColor: UIColor? = nil, textShadowColor: UIColor? = nil, textStroke: (UIColor, CGFloat)? = nil, displaySpoilers: Bool = false, countIfMoreThanOneLineOverMaximum: Bool = false) {
         self.attributedString = attributedString
         self.backgroundColor = backgroundColor
         self.minimumNumberOfLines = minimumNumberOfLines
@@ -149,6 +150,7 @@ public final class TextNodeLayoutArguments {
         self.textShadowColor = textShadowColor
         self.textStroke = textStroke
         self.displaySpoilers = displaySpoilers
+        self.countIfMoreThanOneLineOverMaximum = countIfMoreThanOneLineOverMaximum
     }
 }
 
@@ -177,8 +179,9 @@ public final class TextNodeLayout: NSObject {
     public let hasRTL: Bool
     public let spoilers: [(NSRange, CGRect)]
     public let spoilerWords: [(NSRange, CGRect)]
+    public let hasMoreThanOneLineOverMaximum: Bool?
     
-    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool) {
+    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, explicitAlignment: NSTextAlignment, resolvedAlignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, hasMoreThanOneLineOverMaximum: Bool?) {
         self.attributedString = attributedString
         self.maximumNumberOfLines = maximumNumberOfLines
         self.truncationType = truncationType
@@ -222,6 +225,7 @@ public final class TextNodeLayout: NSObject {
         self.hasRTL = hasRTL
         self.spoilers = spoilers
         self.spoilerWords = spoilerWords
+        self.hasMoreThanOneLineOverMaximum = hasMoreThanOneLineOverMaximum
     }
     
     public func areLinesEqual(to other: TextNodeLayout) -> Bool {
@@ -931,7 +935,7 @@ public class TextNode: ASDisplayNode {
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
             if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
+                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers, hasMoreThanOneLineOverMaximum: nil)
             }
             
             let typesetter = maybeTypesetter!
@@ -947,6 +951,8 @@ public class TextNode: ASDisplayNode {
             
             var bottomCutoutEnabled = false
             var bottomCutoutSize = CGSize()
+            
+            let hasMoreThanOneLineOverMaximum: Bool? = nil
             
             if let topLeft = cutout?.topLeft {
                 cutoutMinY = -fontLineSpacing
@@ -1262,9 +1268,9 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers, hasMoreThanOneLineOverMaximum: hasMoreThanOneLineOverMaximum)
         } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers, hasMoreThanOneLineOverMaximum: nil)
         }
     }
     
@@ -1588,7 +1594,7 @@ open class TextView: UIView {
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
             if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
+                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers, hasMoreThanOneLineOverMaximum: nil)
             }
             
             let typesetter = maybeTypesetter!
@@ -1919,9 +1925,9 @@ open class TextView: UIView {
                 }
             }
             
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers, hasMoreThanOneLineOverMaximum: nil)
         } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textStroke: textStroke, displaySpoilers: displaySpoilers, hasMoreThanOneLineOverMaximum: nil)
         }
     }
     

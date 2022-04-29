@@ -42,7 +42,7 @@ protocol ReactionItemNode: ASDisplayNode {
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition)
 }
 
-final class ReactionNode: ASDisplayNode, ReactionItemNode {
+public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
     let item: ReactionItem
     
@@ -64,14 +64,16 @@ final class ReactionNode: ASDisplayNode, ReactionItemNode {
         
     var expandedAnimationDidBegin: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, item: ReactionItem) {
+    public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, hasAppearAnimation: Bool = true) {
         self.context = context
         self.item = item
         
         self.staticAnimationNode = AnimatedStickerNode()
-        self.staticAnimationNode.isHidden = true
-        
-        self.animateInAnimationNode = AnimatedStickerNode()
+    
+        if hasAppearAnimation {
+            self.staticAnimationNode.isHidden = true
+            self.animateInAnimationNode = AnimatedStickerNode()
+        }
         
         super.init()
         
@@ -111,7 +113,7 @@ final class ReactionNode: ASDisplayNode, ReactionItemNode {
         }
     }
     
-    func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
         let intrinsicSize = size
         
         let animationSize = self.item.stillAnimation.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
@@ -300,11 +302,37 @@ final class ReactionNode: ASDisplayNode, ReactionItemNode {
 final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     var isExtracted: Bool = false
     
+    let imageNode: ASImageNode
+    
+    init(theme: PresentationTheme) {
+        self.imageNode = ASImageNode()
+        self.imageNode.contentMode = .center
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.isUserInteractionEnabled = false
+        self.imageNode.alpha = 0.5
+        
+        super.init()
+        
+        self.addSubnode(self.imageNode)
+        
+        if theme.overallDarkAppearance {
+            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/ReactionIcon"), color: .white)
+        } else {
+            self.imageNode.image = UIImage(bundleImageName: "Premium/ReactionIcon")
+        }
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.imageNode.layer.compositingFilter = "softLightBlendMode"
+    }
+    
     func appear(animated: Bool) {
         
     }
     
     func updateLayout(size: CGSize, isExpanded: Bool, largeExpanded: Bool, isPreviewing: Bool, transition: ContainedViewLayoutTransition) {
-        
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
     }
 }

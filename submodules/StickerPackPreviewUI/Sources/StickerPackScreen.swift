@@ -209,6 +209,13 @@ private final class StickerPackContainer: ASDisplayNode {
             }
         }
         
+//        self.gridNode.visibleContentOffsetChanged = { [weak self] offset in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            
+//        }
+        
         self.gridNode.interactiveScrollingWillBeEnded = { [weak self] contentOffset, velocity, targetOffset -> CGPoint in
             guard let strongSelf = self, !strongSelf.isDismissed else {
                 return targetOffset
@@ -342,8 +349,12 @@ private final class StickerPackContainer: ASDisplayNode {
                             if let (info, _, _) = strongSelf.currentStickerPack, info.id.namespace == Namespaces.ItemCollection.CloudStickerPacks {
                                 if strongSelf.sendSticker != nil {
                                     menuItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                        if let strongSelf = self, let peekController = strongSelf.peekController, let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                            let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                        if let strongSelf = self, let peekController = strongSelf.peekController {
+                                            if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), animationNode, animationNode.bounds)
+                                            } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                                let _ = strongSelf.sendSticker?(.standalone(media: item.file), imageNode, imageNode.bounds)
+                                            }
                                         }
                                         f(.default)
                                     })))
@@ -360,7 +371,7 @@ private final class StickerPackContainer: ASDisplayNode {
                                     }
                                 })))
                             }
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems))
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems))
                         } else {
                             return nil
                         }
@@ -442,8 +453,15 @@ private final class StickerPackContainer: ASDisplayNode {
             f(.default)
             
             if let strongSelf = self {
-                let controller = ShareController(context: strongSelf.context, subject: .url(link))
-                strongSelf.controller?.present(controller, in: .window(.root))
+                let parentNavigationController = strongSelf.controller?.parentNavigationController
+                let shareController = ShareController(context: strongSelf.context, subject: .url(link))
+                shareController.actionCompleted = { [weak parentNavigationController] in
+                    if let parentNavigationController = parentNavigationController, let controller = parentNavigationController.topViewController as? ViewController {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                }
+                strongSelf.controller?.present(shareController, in: .window(.root))
             }
         })))
         items.append(.action(ContextMenuActionItem(text: strings.StickerPack_CopyLink, icon: { theme in
@@ -479,17 +497,32 @@ private final class StickerPackContainer: ASDisplayNode {
             guard let strongSelf = self else {
                 return
             }
-            if installed {
-                let _ = strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete).start()
-            } else {
-                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+            
+            var dismissed = false
+            switch strongSelf.decideNextAction(strongSelf, installed ? .remove : .add) {
+                case .dismiss:
+                    strongSelf.requestDismiss()
+                    dismissed = true
+                case .navigatedNext, .ignored:
+                    strongSelf.updateStickerPackContents(.result(info: info, items: items, installed: !installed), hasPremium: false)
             }
             
-            switch strongSelf.decideNextAction(strongSelf, installed ? .remove : .add) {
-            case .dismiss:
-                strongSelf.requestDismiss()
-            case .navigatedNext, .ignored:
-                strongSelf.updateStickerPackContents(.result(info: info, items: items, installed: !installed), hasPremium: false)
+            let actionPerformed = strongSelf.controller?.actionPerformed
+            if installed {
+                let _ = (strongSelf.context.engine.stickers.removeStickerPackInteractively(id: info.id, option: .delete)
+                |> deliverOnMainQueue).start(next: { indexAndItems in
+                    guard let (positionInList, _) = indexAndItems else {
+                        return
+                    }
+                    if dismissed {
+                        actionPerformed?(info, items, .remove(positionInList: positionInList))
+                    }
+                })
+            } else {
+                let _ = strongSelf.context.engine.stickers.addStickerPackInteractively(info: info, items: items).start()
+                if dismissed {
+                    actionPerformed?(info, items, .add)
+                }
             }
         })
     }
@@ -628,22 +661,6 @@ private final class StickerPackContainer: ASDisplayNode {
             }
             
             if !premiumItems.isEmpty {
-                var stableId: Int?
-                inner: for entry in self.currentEntries {
-                    if case let .premiumHeader(_, currentStableId, _) = entry {
-                        stableId = currentStableId
-                        break inner
-                    }
-                }
-                let resolvedStableId: Int
-                if let stableId = stableId {
-                    resolvedStableId = stableId
-                } else {
-                    resolvedStableId = self.nextStableId
-                    self.nextStableId += 1
-                }
-                entries.append(.premiumHeader(index: entries.count, stableId: resolvedStableId, count: Int32(premiumItems.count)))
-                
                 for item in premiumItems {
                     addItem(item, true, !hasPremium)
                 }
@@ -827,9 +844,11 @@ private final class StickerPackContainer: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
         transition.updateFrame(node: self.titleContainer, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width) / 2.0), y: backgroundFrame.minY + floor((56.0) / 2.0)), size: CGSize()))
         transition.updateFrame(node: self.titleSeparatorNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY + 56.0 - UIScreenPixel), size: CGSize(width: backgroundFrame.width, height: UIScreenPixel)))
-        self.titleSeparatorNode.alpha = unclippedBackgroundY < minBackgroundY ? 1.0 : 0.0
-        
+                
         transition.updateFrame(node: self.topContainerNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width, height: 56.0)))
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
+        transition.updateAlpha(node: self.titleSeparatorNode, alpha: unclippedBackgroundY < minBackgroundY ? 1.0 : 0.0)
     }
     
     private func enqueueTransaction(_ transaction: StickerPackPreviewGridTransaction) {
@@ -1204,7 +1223,7 @@ public final class StickerPackScreenImpl: ViewController {
     
     private let stickerPacks: [StickerPackReference]
     private let initialSelectedStickerPackIndex: Int
-    private weak var parentNavigationController: NavigationController?
+    fileprivate weak var parentNavigationController: NavigationController?
     private let sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?
     
     private var controllerNode: StickerPackScreenNode {
@@ -1212,6 +1231,7 @@ public final class StickerPackScreenImpl: ViewController {
     }
     
     public var dismissed: (() -> Void)?
+    public var actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -1220,13 +1240,14 @@ public final class StickerPackScreenImpl: ViewController {
     
     private var alreadyDidAppear: Bool = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, stickerPacks: [StickerPackReference], selectedStickerPackIndex: Int = 0, parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.stickerPacks = stickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
+        self.actionPerformed = actionPerformed
         
         super.init(navigationBarPresentationData: nil)
         
@@ -1300,7 +1321,9 @@ public enum StickerPackScreenPerformedAction {
 }
 
 public func StickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: StickerPackPreviewControllerMode = .default, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, actionPerformed: ((StickerPackCollectionInfo, [StickerPackItem], StickerPackScreenPerformedAction) -> Void)? = nil, dismissed: (() -> Void)? = nil) -> ViewController {
-    return StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
+    let controller = StickerPackScreenImpl(context: context, stickerPacks: stickerPacks, selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0, parentNavigationController: parentNavigationController, sendSticker: sendSticker, actionPerformed: actionPerformed)
+    controller.dismissed = dismissed
+    return controller
     
 //    let controller = StickerPackPreviewController(context: context, updatedPresentationData: updatedPresentationData, stickerPack: mainStickerPack, mode: mode, parentNavigationController: parentNavigationController, actionPerformed: actionPerformed)
 //    controller.dismissed = dismissed

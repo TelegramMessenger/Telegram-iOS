@@ -174,7 +174,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 })))
                             }
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
                             var menuItems: [ContextMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {

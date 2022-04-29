@@ -22,6 +22,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     private let present: (PeekControllerContent, ASDisplayNode) -> ViewController?
     private let updateContent: (PeekControllerContent?) -> Void
     private let activateBySingleTap: Bool
+    public var checkSingleTapActivationAtPoint: ((CGPoint) -> Bool)?
     
     private var tapLocation: CGPoint?
     private var longTapTimer: SwiftSignalKit.Timer?
@@ -129,7 +130,12 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
-        if self.activateBySingleTap, self.presentedController == nil {
+        var activateBySingleTap = self.activateBySingleTap
+        if !activateBySingleTap, let checkSingleTapActivationAtPoint = self.checkSingleTapActivationAtPoint, let tapLocation = self.tapLocation {
+            activateBySingleTap = checkSingleTapActivationAtPoint(tapLocation)
+        }
+        
+        if activateBySingleTap, self.presentedController == nil {
             self.longTapTimer?.invalidate()
             self.pressTimer?.invalidate()
             if let tapLocation = self.tapLocation {

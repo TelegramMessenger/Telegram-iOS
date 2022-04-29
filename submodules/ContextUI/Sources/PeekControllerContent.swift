@@ -20,7 +20,7 @@ public protocol PeekControllerContent {
     func node() -> PeekControllerContentNode & ASDisplayNode
     
     func topAccessoryNode() -> ASDisplayNode?
-    func fullScreenAccessoryNode() -> (PeekControllerAccessoryNode & ASDisplayNode)?
+    func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)?
     
     func isEqual(to: PeekControllerContent) -> Bool
 }

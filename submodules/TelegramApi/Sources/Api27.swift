@@ -4944,15 +4944,16 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func prolongWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func prolongWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, queryId: Int64, replyToMsgId: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-768945848)
+                    buffer.appendInt32(-362824498)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     bot.serialize(buffer, true)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.prolongWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("queryId", String(describing: queryId)), ("replyToMsgId", String(describing: replyToMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "messages.prolongWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("queryId", String(describing: queryId)), ("replyToMsgId", String(describing: replyToMsgId)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -5257,9 +5258,9 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func requestWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, replyToMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
+                static func requestWebView(flags: Int32, peer: Api.InputPeer, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, replyToMsgId: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebViewResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(262163967)
+                    buffer.appendInt32(-1850648527)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     bot.serialize(buffer, true)
@@ -5267,7 +5268,8 @@ public extension Api.functions.messages {
                     if Int(flags) & Int(1 << 3) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {themeParams!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "messages.requestWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("url", String(describing: url)), ("startParam", String(describing: startParam)), ("themeParams", String(describing: themeParams)), ("replyToMsgId", String(describing: replyToMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewResult? in
+                    if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "messages.requestWebView", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("bot", String(describing: bot)), ("url", String(describing: url)), ("startParam", String(describing: startParam)), ("themeParams", String(describing: themeParams)), ("replyToMsgId", String(describing: replyToMsgId)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebViewResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.WebViewResult?
                         if let signature = reader.readInt32() {

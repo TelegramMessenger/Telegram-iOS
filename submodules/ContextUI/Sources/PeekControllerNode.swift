@@ -44,8 +44,10 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.controller = controller
         
         self.dimNode = ASDisplayNode()
-        self.blurView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.isDark ? .dark : .light))
-        self.blurView.isUserInteractionEnabled = false
+        
+        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.isDark ? .dark : .light))
+        blurView.isUserInteractionEnabled = false
+        self.blurView = blurView
         
         self.darkDimNode = ASDisplayNode()
         self.darkDimNode.alpha = 0.0
@@ -70,7 +72,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.content = content
         self.contentNode = content.node()
         self.topAccessoryNode = content.topAccessoryNode()
-        self.fullScreenAccessoryNode = content.fullScreenAccessoryNode()
+        self.fullScreenAccessoryNode = content.fullScreenAccessoryNode(blurView: blurView)
         self.fullScreenAccessoryNode?.alpha = 0.0
         
         var feedbackTapImpl: (() -> Void)?

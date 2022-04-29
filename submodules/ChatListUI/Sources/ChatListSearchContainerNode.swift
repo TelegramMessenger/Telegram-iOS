@@ -492,7 +492,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         var options = options
         var tokens: [SearchBarToken] = []
         if self.groupId == .archive {
-            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), title: self.presentationData.strings.ChatList_Archive, permanent: true))
+            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), iconOffset: -1.0, title: self.presentationData.strings.ChatList_Archive, permanent: true))
         }
         
         if options?.isEmpty ?? true {
@@ -566,7 +566,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         var tokens: [SearchBarToken] = []
         if self.groupId == .archive {
-            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), title: self.presentationData.strings.ChatList_Archive, permanent: true))
+            tokens.append(SearchBarToken(id: ChatListTokenId.archive.rawValue, icon: UIImage(bundleImageName: "Chat List/Search/Archive"), iconOffset: -1.0, title: self.presentationData.strings.ChatList_Archive, permanent: true))
         }
         self.setQuery?(nil, tokens, query ?? "")
     }

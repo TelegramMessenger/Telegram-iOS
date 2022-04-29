@@ -119,7 +119,7 @@ final class MediaPickerPlaceholderNode: ASDisplayNode {
         
         var imageSize = CGSize(width: 144.0, height: 144.0)
         var insets = layout.insets(options: [])
-        if layout.size.width == 460.0 {
+        if layout.size.width == 320.0 {
             insets.top += -60.0
             imageSize = CGSize(width: 112.0, height: 112.0)
         } else {
