@@ -177,8 +177,8 @@ private final class StickerPackContainer: ASDisplayNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.gridNode)
-        self.addSubnode(self.actionAreaBackgroundNode)
-        self.addSubnode(self.actionAreaSeparatorNode)
+//        self.addSubnode(self.actionAreaBackgroundNode)
+//        self.addSubnode(self.actionAreaSeparatorNode)
         self.addSubnode(self.buttonNode)
         
         self.addSubnode(self.titleBackgroundnode)
@@ -294,7 +294,7 @@ private final class StickerPackContainer: ASDisplayNode {
                 return
             }
             var hasPremium = false
-            if case let .user(user) = peer, user.flags.contains(.isPremium) {
+            if let peer = peer, peer.isPremium {
                 hasPremium = true
             }
             strongSelf.updateStickerPackContents(contents, hasPremium: hasPremium)
@@ -337,7 +337,7 @@ private final class StickerPackContainer: ASDisplayNode {
                     return strongSelf.context.account.postbox.transaction { transaction -> (Bool, Bool) in
                         let isStarred = getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                         var hasPremium = false
-                        if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.flags.contains(.isPremium) {
+                        if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.isPremium {
                             hasPremium = true
                         }
                         return (isStarred, hasPremium)

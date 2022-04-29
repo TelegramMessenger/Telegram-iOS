@@ -638,6 +638,18 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     }
                 }
             }
+            
+            if let overlayViews = self.getController()?.getOverlayViews?(), !overlayViews.isEmpty {
+                for view in overlayViews {
+                    if let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.frame = view.convert(view.bounds, to: nil)
+                        self.view.addSubview(snapshotView)
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                }
+            }
         case let .animateOut(result, completion):
             let duration: Double
             let timingFunction: String
@@ -784,6 +796,18 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             if let reactionContextNode = self.reactionContextNode {
                 reactionContextNode.animateOut(to: currentContentScreenFrame, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
+            }
+            
+            if let overlayViews = self.getController()?.getOverlayViews?(), !overlayViews.isEmpty {
+                for view in overlayViews {
+                    if let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                        snapshotView.frame = view.convert(view.bounds, to: nil)
+                        self.view.addSubview(snapshotView)
+                        snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                            snapshotView?.removeFromSuperview()
+                        })
+                    }
+                }
             }
         case .none:
             if animateReactionsIn, let reactionContextNode = self.reactionContextNode {

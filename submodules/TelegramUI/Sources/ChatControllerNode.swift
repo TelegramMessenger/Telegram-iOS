@@ -202,6 +202,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.isLoadingValue = isLoading
             if isLoading {
                 self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, belowSubnode: self.historyNodeContainer)
+                self.loadingNode.isHidden = false
                 self.loadingNode.layer.removeAllAnimations()
                 self.loadingNode.alpha = 1.0
                 if animated {
@@ -215,12 +216,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let strongSelf = self {
                             strongSelf.loadingNode.layer.removeAllAnimations()
                             if completed {
-                                strongSelf.loadingNode.removeFromSupernode()
+                                strongSelf.loadingNode.isHidden = true
                             }
                         }
                     })
                 } else {
-                    self.loadingNode.removeFromSupernode()
+                    self.loadingNode.isHidden = true
                 }
             }
         }
@@ -651,12 +652,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.emptyType = emptyType
         if let emptyType = emptyType, self.emptyNode == nil {
             let emptyNode = ChatEmptyNode(context: self.context, interaction: self.interfaceInteraction)
-            if let (size, insets) = self.validEmptyNodeLayout {
-                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: size, insets: insets, transition: .immediate)
-            }
             emptyNode.isHidden = self.restrictedNode != nil
             self.emptyNode = emptyNode
             self.historyNodeContainer.supernode?.insertSubnode(emptyNode, aboveSubnode: self.historyNodeContainer)
+            if let (size, insets) = self.validEmptyNodeLayout {
+                emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: wasLoading && self.loadingNode.supernode != nil ? self.loadingNode : nil, size: size, insets: insets, transition: .immediate)
+            }
             if animated {
                 emptyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
@@ -1211,7 +1212,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         emptyNodeInsets.bottom += inputPanelsHeight
         self.validEmptyNodeLayout = (contentBounds.size, emptyNodeInsets)
         if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
-            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
+            emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: nil, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
         }
         

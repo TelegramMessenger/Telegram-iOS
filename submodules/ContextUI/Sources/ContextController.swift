@@ -14,6 +14,7 @@ private let animationDurationFactor: Double = 1.0
 public protocol ContextControllerProtocol: AnyObject {
     var useComplexItemsTransitionAnimation: Bool { get set }
     var immediateItemsTransitionAnimation: Bool { get set }
+    var getOverlayViews: (() -> [UIView])? { get set }
 
     func getActionsMinHeight() -> ContextController.ActionsHeight?
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?)
@@ -1238,7 +1239,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             
             if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                 
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
@@ -2266,6 +2266,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     private var shouldBeDismissedDisposable: Disposable?
     
     public var reactionSelected: ((ReactionContextItem, Bool) -> Void)?
+    
+    public var getOverlayViews: (() -> [UIView])?
     
     public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
         self.account = account

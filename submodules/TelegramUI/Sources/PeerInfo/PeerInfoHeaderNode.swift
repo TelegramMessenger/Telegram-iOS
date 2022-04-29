@@ -2278,6 +2278,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if themeUpdated || !initializedCredibilityIcon {
             let image: UIImage?
+            var expandedImage: UIImage?
             if let peer = peer {
                 self.initializedCredibilityIcon = true
                 if peer.isFake {
@@ -2297,6 +2298,36 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     } else {
                         image = nil
                     }
+                } else if peer.isPremium {
+                    if let sourceImage = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
+                        image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                            if let cgImage = sourceImage.cgImage {
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                                
+                                let colorsArray: [CGColor] = [
+                                    UIColor(rgb: 0x418eff).cgColor,
+                                    UIColor(rgb: 0x418eff).cgColor,
+                                    UIColor(rgb: 0xfc7ebd).cgColor,
+                                    UIColor(rgb: 0xfc7ebd).cgColor
+                                ]
+                                var locations: [CGFloat] = [0.0, 0.35, 0.65, 1.0]
+                                let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+                                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+                            }
+                        }, opaque: false)
+                        expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in
+                            if let cgImage = sourceImage.cgImage {
+                                context.clear(CGRect(origin: CGPoint(), size: size))
+                                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                                context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
+                                context.fill(CGRect(origin: CGPoint(), size: size))
+                            }
+                        }, opaque: false)
+                    } else {
+                        image = nil
+                    }
                 } else {
                     image = nil
                 }
@@ -2304,7 +2335,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 image = nil
             }
             self.titleCredibilityIconNode.image = image
-            self.titleExpandedCredibilityIconNode.image = image
+            self.titleExpandedCredibilityIconNode.image = expandedImage ?? image
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
@@ -2524,7 +2555,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         if let image = self.titleCredibilityIconNode.image {
             transition.updateFrame(node: self.titleCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0, y: floor((titleSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
-            
             transition.updateFrame(node: self.titleExpandedCredibilityIconNode, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - image.size.height) / 2.0) + 1.0), size: image.size))
         }
         
