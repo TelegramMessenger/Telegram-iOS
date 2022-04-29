@@ -302,6 +302,10 @@ public func generateTextEntities(_ text: String, enabledTypes: EnabledEntityType
 }
 
 public func addLocallyGeneratedEntities(_ text: String, enabledTypes: EnabledEntityTypes, entities: [MessageTextEntity], mediaDuration: Double? = nil) -> [MessageTextEntity]? {
+    if "".isEmpty {
+        return nil
+    }
+    
     var resultEntities = entities
     
     var hasDigits = false

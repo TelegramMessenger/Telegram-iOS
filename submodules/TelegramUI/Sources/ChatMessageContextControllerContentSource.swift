@@ -55,7 +55,7 @@ final class ChatMessageContextExtractedContentSource: ContextExtractedContentSou
                 return
             }
             if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.selectAll ? nil : self.message.stableId) {
-                result = ContextControllerTakeViewInfo(contentContainingNode: contentNode, contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+                result = ContextControllerTakeViewInfo(containingItem: .node(contentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
         }
         return result
@@ -91,7 +91,7 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
     private weak var chatNode: ChatControllerNode?
     private let postbox: Postbox
     private let message: Message
-    private let contentNode: ContextExtractedContentContainingNode
+    private let contentView: ContextExtractedContentContainingView
     
     var shouldBeDismissed: Signal<Bool, NoError> {
         if self.message.adAttribute != nil {
@@ -112,11 +112,11 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
         |> distinctUntilChanged
     }
     
-    init(chatNode: ChatControllerNode, postbox: Postbox, message: Message, contentNode: ContextExtractedContentContainingNode) {
+    init(chatNode: ChatControllerNode, postbox: Postbox, message: Message, contentView: ContextExtractedContentContainingView) {
         self.chatNode = chatNode
         self.postbox = postbox
         self.message = message
-        self.contentNode = contentNode
+        self.contentView = contentView
     }
     
     func takeView() -> ContextControllerTakeViewInfo? {
@@ -133,7 +133,7 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
                 return
             }
             if item.content.contains(where: { $0.0.stableId == self.message.stableId }) {
-                result = ContextControllerTakeViewInfo(contentContainingNode: self.contentNode, contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+                result = ContextControllerTakeViewInfo(containingItem: .view(self.contentView), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
             }
         }
         return result
@@ -183,7 +183,7 @@ final class ChatMessageNavigationButtonContextExtractedContentSource: ContextExt
             return nil
         }
         
-        return ContextControllerTakeViewInfo(contentContainingNode: self.contentNode, contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
+        return ContextControllerTakeViewInfo(containingItem: .node(self.contentNode), contentAreaInScreenSpace: chatNode.convert(chatNode.frameForVisibleArea(), to: nil))
     }
     
     func putBack() -> ContextControllerPutBackViewInfo? {

@@ -1365,13 +1365,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                             }
-                            reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
+                            reactionButtonsNode.openReactionPreview = { gesture, sourceView, value in
                                 guard let strongSelf = self, let item = strongSelf.item else {
                                     gesture?.cancel()
                                     return
                                 }
                                 
-                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceView, gesture, value)
                             }
                             reactionButtonsNode.frame = reactionButtonsFrame
                             if let (rect, containerSize) = strongSelf.absoluteRect {

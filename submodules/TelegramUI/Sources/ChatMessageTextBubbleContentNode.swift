@@ -62,7 +62,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
         self.textNode.contentsScale = UIScreenScale
-        self.textNode.displaysAsynchronously = false
+        self.textNode.displaysAsynchronously = true
         self.addSubnode(self.textNode)
         self.addSubnode(self.textAccessibilityOverlayNode)
         

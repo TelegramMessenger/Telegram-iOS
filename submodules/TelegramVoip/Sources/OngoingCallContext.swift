@@ -8,7 +8,7 @@ import TgVoip
 import TgVoipWebrtc
 
 private let debugUseLegacyVersionForReflectors: Bool = {
-    #if DEBUG && false
+    #if DEBUG
     return true
     #else
     return false
@@ -827,15 +827,15 @@ public final class OngoingCallContext {
                         filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection, idMapping: reflectorIdMapping))
                     }
                     
-                    /*#if DEBUG
-                    for connection in filteredConnections {
-                        if connection.username == "reflector" {
-                            filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: "91.108.12.1", port: 533, username: "reflector", password: connection.password))
-                            
-                            break
+                    if debugUseLegacyVersionForReflectors {
+                        for connection in filteredConnections {
+                            if connection.username == "reflector" {
+                                filteredConnections.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: "91.108.12.1", port: 533, username: "reflector", password: connection.password))
+                                
+                                break
+                            }
                         }
                     }
-                    #endif*/
                     
                     let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: derivedState.data, key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         callSessionManager?.sendSignalingData(internalId: internalId, data: data)

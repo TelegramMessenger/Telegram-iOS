@@ -49,13 +49,13 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
         }
         
-        self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+        self.dateAndStatusNode.openReactionPreview = { [weak self] gesture, sourceView, value in
             guard let strongSelf = self, let item = strongSelf.item else {
                 gesture?.cancel()
                 return
             }
             
-            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceNode, gesture, value)
+            item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceView, gesture, value)
         }
     }
     
