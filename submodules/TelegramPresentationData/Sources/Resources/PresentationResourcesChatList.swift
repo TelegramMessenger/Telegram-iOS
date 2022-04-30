@@ -228,6 +228,32 @@ public struct PresentationResourcesChatList {
             return UIImage(bundleImageName: "Chat List/PeerVerifiedIcon")?.precomposed()
         })
     }
+    
+    public static func premiumIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListPremiumIcon.rawValue, { theme in
+            if let image = UIImage(bundleImageName: "Chat List/PeerPremiumIcon") {
+                return generateImage(image.size, contextGenerator: { size, context in
+                    if let cgImage = image.cgImage {
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                        
+                        let colorsArray: [CGColor] = [
+                            UIColor(rgb: 0x418eff).cgColor,
+                            UIColor(rgb: 0x418eff).cgColor,
+                            UIColor(rgb: 0xfc7ebd).cgColor,
+                            UIColor(rgb: 0xfc7ebd).cgColor
+                        ]
+                        var locations: [CGFloat] = [0.0, 0.35, 0.65, 1.0]
+                        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+                        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+                    }
+                }, opaque: false)
+            } else {
+                return nil
+            }
+        })
+    }
 
     public static func scamIcon(_ theme: PresentationTheme, strings: PresentationStrings, type: ScamIconType) -> UIImage? {
         let key: PresentationResourceKey

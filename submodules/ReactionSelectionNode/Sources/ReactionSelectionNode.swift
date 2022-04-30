@@ -316,9 +316,9 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         self.addSubnode(self.imageNode)
         
         if theme.overallDarkAppearance {
-            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/ReactionIcon"), color: .white)
+            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/BackgroundIcon"), color: .white)
         } else {
-            self.imageNode.image = UIImage(bundleImageName: "Premium/ReactionIcon")
+            self.imageNode.image = UIImage(bundleImageName: "Premium/BackgroundIcon")
         }
     }
     

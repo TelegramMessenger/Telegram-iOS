@@ -1659,7 +1659,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                 return strongSelf.context.account.postbox.transaction { transaction -> (Bool, Bool) in
                                     let isStarred = getIsStickerSaved(transaction: transaction, fileId: item.file.fileId)
                                     var hasPremium = false
-                                    if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.flags.contains(.isPremium) {
+                                    if let peer = transaction.getPeer(accountPeerId) as? TelegramUser, peer.isPremium {
                                         hasPremium = true
                                     }
                                     return (isStarred, hasPremium)

@@ -123,6 +123,14 @@ public final class NavigationBackgroundNode: ASDisplayNode {
     private let backgroundNode: ASDisplayNode
 
     private var validLayout: (CGSize, CGFloat)?
+    
+    public var backgroundCornerRadius: CGFloat {
+        if let (_, cornerRadius) = self.validLayout {
+            return cornerRadius
+        } else {
+            return 0.0
+        }
+    }
 
     public init(color: UIColor, enableBlur: Bool = true) {
         self._color = .clear

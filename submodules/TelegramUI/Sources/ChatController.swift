@@ -982,7 +982,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     var hasPremium = false
-                    if case let .user(user) = peer, user.flags.contains(.isPremium) {
+                    if case let .user(user) = peer, user.isPremium {
                         hasPremium = true
                     }
                     
@@ -1079,6 +1079,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
                     
                     let controller = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, postbox: strongSelf.context.account.postbox, message: message, selectAll: selectAll)), items: .single(actions), recognizer: recognizer, gesture: gesture)
+                    controller.getOverlayViews = { [weak self] in
+                        guard let strongSelf = self else {
+                            return []
+                        }
+                        return [strongSelf.chatDisplayNode.navigateButtons.view]
+                    }
                     strongSelf.currentContextController = controller
                     
                     controller.reactionSelected = { [weak controller] value, isLarge in
@@ -2355,15 +2361,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let message = message else {
                             return
                         }
+                    
                         let context = strongSelf.context
                         let chatPresentationInterfaceState = strongSelf.presentationInterfaceState
                         let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                         
-                        let isCopyLink: Bool
+                        var isCopyLink = false
+                        var isForward = false
                         if message.id.namespace == Namespaces.Message.Cloud, let _ = message.peers[message.id.peerId] as? TelegramChannel, !(message.media.first is TelegramMediaAction) {
                             isCopyLink = true
-                        } else {
-                            isCopyLink = false
+                        } else if let forwardInfo = message.forwardInfo, let _ = forwardInfo.author as? TelegramChannel {
+                            isCopyLink = true
+                            isForward = true
                         }
                         
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
@@ -2376,13 +2385,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }),
                             ActionSheetButtonItem(title: isCopyLink ? strongSelf.presentationData.strings.Conversation_ContextMenuCopyLink : strongSelf.presentationData.strings.Conversation_LinkDialogCopy, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                if isCopyLink, let channel = message.peers[message.id.peerId] as? TelegramChannel {
+                                
+                                var messageId = message.id
+                                var channel = message.peers[message.id.peerId]
+                                if isForward, let forwardMessageId = message.forwardInfo?.sourceMessageId, let forwardAuthor = message.forwardInfo?.author as? TelegramChannel {
+                                    messageId = forwardMessageId
+                                    channel = forwardAuthor
+                                }
+                                
+                                if isCopyLink, let channel = channel as? TelegramChannel {
                                     var threadMessageId: MessageId?
                                    
                                     if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
                                         threadMessageId = replyThreadMessage.messageId
                                     }
-                                    let _ = (context.engine.messages.exportMessageLink(peerId: message.id.peerId, messageId: message.id, isThread: threadMessageId != nil)
+                                    let _ = (context.engine.messages.exportMessageLink(peerId: messageId.peerId, messageId: messageId, isThread: threadMessageId != nil)
                                     |> map { result -> String? in
                                         return result
                                     }

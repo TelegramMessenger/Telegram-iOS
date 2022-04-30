@@ -155,7 +155,7 @@ public final class AvailableReactions: Equatable, Codable {
     }
     
     private enum CodingKeys: String, CodingKey {
-        case hash
+        case newHash
         case reactions
     }
     
@@ -183,14 +183,14 @@ public final class AvailableReactions: Equatable, Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        self.hash = try container.decode(Int32.self, forKey: .hash)
+        self.hash = try container.decodeIfPresent(Int32.self, forKey: .newHash) ?? 0
         self.reactions = try container.decode([Reaction].self, forKey: .reactions)
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        try container.encode(self.hash, forKey: .hash)
+        try container.encode(self.hash, forKey: .newHash)
         try container.encode(self.reactions, forKey: .reactions)
     }
 }
