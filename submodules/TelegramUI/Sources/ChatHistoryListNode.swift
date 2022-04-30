@@ -1806,10 +1806,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
     
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
-        if "".isEmpty {
-            return
-        }
-        
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
         var topVisibleMessageRange: ChatTopVisibleMessageRange?
