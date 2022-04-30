@@ -1365,7 +1365,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             var credibilityIconOffset: CGFloat = 0.0
-            if !isPeerGroup {
+            
+            if !isPeerGroup && item.index.messageIndex.id.peerId != item.context.account.peerId {
                 if displayAsMessage {
                     switch item.content {
                     case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _):

@@ -177,7 +177,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
         return LegacyComponentsAccessCheckerImpl(context: legacyContext)
     }
     
-    public func request(_ type: TGAudioSessionType, interrupted: (() -> Void)!) -> SDisposable! {
+    public func request(_ type: TGAudioSessionType, activated: (() -> Void)!, interrupted: (() -> Void)!) -> SDisposable! {
         if let legacyContext = legacyContext {
             let convertedType: ManagedAudioSessionType
             switch type {
@@ -187,6 +187,7 @@ private final class LegacyComponentsGlobalsProviderImpl: NSObject, LegacyCompone
                     convertedType = .play
             }
             let disposable = legacyContext.sharedContext.mediaManager.audioSession.push(audioSessionType: convertedType, once: true, activate: { _ in
+                activated?()
             }, deactivate: { _ in
                 interrupted?()
                 return .complete()

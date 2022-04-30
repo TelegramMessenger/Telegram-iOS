@@ -572,10 +572,6 @@ typedef enum
     [self _transitionIn];
     
     [self _beginAudioSession:false];
-    [_queue dispatch:^
-    {
-        [_capturePipeline startRunning];
-    }];
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -1308,7 +1304,16 @@ typedef enum
         _otherAudioPlaying = [[AVAudioSession sharedInstance] isOtherAudioPlaying];
         
         __weak TGVideoMessageCaptureController *weakSelf = self;
-        id<SDisposable> disposable = [[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord interrupted:^
+        id<SDisposable> disposable = [[LegacyComponentsGlobals provider] requestAudioSession:speaker ? TGAudioSessionTypePlayAndRecordHeadphones : TGAudioSessionTypePlayAndRecord
+        activated:^{
+            __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
+            if (strongSelf != nil) {
+                [strongSelf->_queue dispatch:^
+                {
+                    [strongSelf->_capturePipeline startRunning];
+                }];
+            }
+        } interrupted:^
         {
             TGDispatchOnMainThread(^{
                 __strong TGVideoMessageCaptureController *strongSelf = weakSelf;

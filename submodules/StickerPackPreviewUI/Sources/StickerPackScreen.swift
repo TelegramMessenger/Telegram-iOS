@@ -177,8 +177,8 @@ private final class StickerPackContainer: ASDisplayNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.gridNode)
-//        self.addSubnode(self.actionAreaBackgroundNode)
-//        self.addSubnode(self.actionAreaSeparatorNode)
+        self.addSubnode(self.actionAreaBackgroundNode)
+        self.addSubnode(self.actionAreaSeparatorNode)
         self.addSubnode(self.buttonNode)
         
         self.addSubnode(self.titleBackgroundnode)
