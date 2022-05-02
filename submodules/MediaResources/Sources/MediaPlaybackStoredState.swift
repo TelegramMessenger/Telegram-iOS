@@ -31,9 +31,11 @@ public final class MediaPlaybackStoredState: Codable {
 
 public func mediaPlaybackStoredState(postbox: Postbox, messageId: MessageId) -> Signal<MediaPlaybackStoredState?, NoError> {
     return postbox.transaction { transaction -> MediaPlaybackStoredState? in
-        let key = ValueBoxKey(length: 8)
+        let key = ValueBoxKey(length: 20)
         key.setInt32(0, value: messageId.namespace)
-        key.setInt32(4, value: messageId.id)
+        key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
+        key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
+        key.setInt32(16, value: messageId.id)
         if let entry = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, key: key))?.get(MediaPlaybackStoredState.self) {
             return entry
         } else {
@@ -46,9 +48,11 @@ private let collectionSpec = ItemCacheCollectionSpec(lowWaterItemCount: 25, high
 
 public func updateMediaPlaybackStoredStateInteractively(postbox: Postbox, messageId: MessageId, state: MediaPlaybackStoredState?) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        let key = ValueBoxKey(length: 8)
+        let key = ValueBoxKey(length: 20)
         key.setInt32(0, value: messageId.namespace)
-        key.setInt32(4, value: messageId.id)
+        key.setInt32(4, value: messageId.peerId.namespace._internalGetInt32Value())
+        key.setInt64(8, value: messageId.peerId.id._internalGetInt64Value())
+        key.setInt32(16, value: messageId.id)
         let id = ItemCacheEntryId(collectionId: ApplicationSpecificItemCacheCollectionId.mediaPlaybackStoredState, key: key)
         if let state = state, let entry = CodableEntry(state) {
             transaction.putItemCacheEntry(id: id, entry: entry, collectionSpec: collectionSpec)

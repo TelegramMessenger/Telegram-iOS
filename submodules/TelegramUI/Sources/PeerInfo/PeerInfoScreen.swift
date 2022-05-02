@@ -1271,7 +1271,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }
                 }
                 
-                if isCreator {
+                if isCreator { //if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canDeleteHistory) {
                     items[.peerActions]!.append(PeerInfoScreenActionItem(id: ItemDeleteChannel, text: presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, icon: nil, alignment: .natural, action: {
                         interaction.openDeletePeer()
                     }))
@@ -4144,16 +4144,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 
                                 self?.openLeavePeer(delete: false)
                             })))
-                            
-                            if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canDeleteHistory) {
-                                items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChannelInfo_DeleteChannel, textColor: .destructive, icon: { theme in
-                                    generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor)
-                                }, action: { [weak self] _, f in
-                                    f(.dismissWithoutContent)
-                                    
-                                    self?.openLeavePeer(delete: true)
-                                })))
-                            }
                         }
                     case .group:
                         if case .member = channel.participationStatus, !headerButtons.contains(.leave) {
@@ -5656,10 +5646,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let dismissAction: () -> Void = { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             }
+            
+            let title: String
+            let text: String
+            if isGroup {
+                title = strongSelf.presentationData.strings.PeerInfo_DeleteGroupTitle
+                text = strongSelf.presentationData.strings.PeerInfo_DeleteGroupText(peer.debugDisplayTitle).string
+            } else {
+                title = strongSelf.presentationData.strings.PeerInfo_DeleteChannelTitle
+                text = strongSelf.presentationData.strings.PeerInfo_DeleteChannelText(peer.debugDisplayTitle).string
+            }
+            
             actionSheet.setItemGroups([
                 ActionSheetItemGroup(items: [
-                    ActionSheetTextItem(title: isGroup ? presentationData.strings.ChannelInfo_DeleteGroupConfirmation : presentationData.strings.ChannelInfo_DeleteChannelConfirmation),
-                    ActionSheetButtonItem(title: isGroup ? presentationData.strings.ChannelInfo_DeleteGroup : presentationData.strings.ChannelInfo_DeleteChannel, color: .destructive, action: {
+                    ActionSheetTextItem(title: title),
+                    ActionSheetButtonItem(title: text, color: .destructive, action: {
                         dismissAction()
                         self?.deletePeerChat(peer: peer, globally: true)
                     }),
