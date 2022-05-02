@@ -651,7 +651,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 completion(false)
             }
         }, siriAuthorization: {
-            if #available(iOS 10, *), !BuildConfig.isNonDevAccount() {
+            if #available(iOS 10, *), BuildConfig.siriEnabled() {
                 switch INPreferences.siriAuthorizationStatus() {
                     case .authorized:
                         return .allowed

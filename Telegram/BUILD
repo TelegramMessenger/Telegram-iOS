@@ -573,6 +573,14 @@ plist_fragment(
     """
     <key>CFBundleShortVersionString</key>
     <string>{telegramVersion}</string>
+    """
+)
+
+plist_fragment(
+    name = "PTVersionInfoPlist",
+    extension = "plist",
+    template =
+    """
     <key>PTelegramVersion</key>
     <string>{partisanVersion}</string>
     """
@@ -1187,6 +1195,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = "9.0",
     provisioning_profile = select({
@@ -1292,6 +1301,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionNotificationContentExtension",
@@ -1396,6 +1406,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
@@ -1529,6 +1540,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionIntentsExtension",
@@ -1623,6 +1635,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionBroadcastUploadExtension",
@@ -1702,6 +1715,7 @@ ios_extension(
         ":VersionInfoPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
@@ -1909,6 +1923,7 @@ ios_application(
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
         ":UrlTypesInfoPlist",
+        ":PTVersionInfoPlist",
     ],
     alternate_icons = [
         ":{}".format(name) for name in alternate_icon_folders

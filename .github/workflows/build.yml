@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -27,6 +25,18 @@ jobs:
           mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
 
       - name: Build the App
+        env:
+          SIGNING_CERTIFICATE_P12_DATA: ${{ secrets.SIGNING_CERTIFICATE_P12_DATA }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          PROVISIONING_PROFILE_APP_DATA: ${{ secrets.PROVISIONING_PROFILE_APP_DATA }}
+          PROVISIONING_PROFILE_BROADCAST_UPLOAD_DATA: ${{ secrets.PROVISIONING_PROFILE_BROADCAST_UPLOAD_DATA }}
+          PROVISIONING_PROFILE_INTENTS_DATA: ${{ secrets.PROVISIONING_PROFILE_INTENTS_DATA }}
+          PROVISIONING_PROFILE_NOTIFICATION_CONTENT_DATA: ${{ secrets.PROVISIONING_PROFILE_NOTIFICATION_CONTENT_DATA }}
+          PROVISIONING_PROFILE_NOTIFICATION_SERVICE_DATA: ${{ secrets.PROVISIONING_PROFILE_NOTIFICATION_SERVICE_DATA }}
+          PROVISIONING_PROFILE_SHARE_DATA: ${{ secrets.PROVISIONING_PROFILE_SHARE_DATA }}
+          PROVISIONING_PROFILE_WATCH_APP_DATA: ${{ secrets.PROVISIONING_PROFILE_WATCH_APP_DATA }}
+          PROVISIONING_PROFILE_WATCH_EXTENSION_DATA: ${{ secrets.PROVISIONING_PROFILE_WATCH_EXTENSION_DATA }}
+          PROVISIONING_PROFILE_WIDGET_DATA: ${{ secrets.PROVISIONING_PROFILE_WIDGET_DATA }}
         run: |
           set -x
 
@@ -48,29 +58,37 @@ jobs:
           echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
 
           # prepare temporary keychain
-          export MY_KEYCHAIN="temp.keychain"
+          export MY_KEYCHAIN="$RUNNER_TEMP/temp.keychain"
           export MY_KEYCHAIN_PASSWORD="secret"
           security create-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
           security list-keychains -d user -s "$MY_KEYCHAIN" $(security list-keychains -d user | sed s/\"//g)
           security set-keychain-settings "$MY_KEYCHAIN"
           security unlock-keychain -p "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
-          # install fake certificates
-          export CERTS_PATH="build-system/fake-codesigning/certs/distribution"
-          for f in "$CERTS_PATH"/*.p12; do
-            security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security
-          done
-          sudo security authorizationdb write com.apple.trust-settings.admin allow
-          # fake certificates are self-signed, so we need to manually mark them as trusted (otherwise bazel will not pick them up)
-          for f in "$CERTS_PATH"/*.cer; do
-            sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$MY_KEYCHAIN" "$f"
-          done
+          # install certificates
+          SIGNING_CERTIFICATE_PATH="$RUNNER_TEMP/signing_certificate.p12"
+          echo "$SIGNING_CERTIFICATE_P12_DATA" | base64 -di - > "$SIGNING_CERTIFICATE_PATH"
+          security import "$SIGNING_CERTIFICATE_PATH" -k "$MY_KEYCHAIN" -P "$SIGNING_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
           # use the official release configuration
           rm -rf $HOME/telegram-configuration
           mkdir -p $HOME/telegram-configuration
           cp -R build-system/example-configuration/* $HOME/telegram-configuration/
+
+          # prepare provisioning profiles
+          PROVISIONING_PATH=$HOME/telegram-configuration/provisioning
+          find "$PROVISIONING_PATH" -type f -name "*.mobileprovision" -delete
+
+          echo "$PROVISIONING_PROFILE_APP_DATA" | base64 -di - > "$PROVISIONING_PATH/Telegram.mobileprovision"
+          echo "$PROVISIONING_PROFILE_BROADCAST_UPLOAD_DATA" | base64 -di - > "$PROVISIONING_PATH/BroadcastUpload.mobileprovision"
+          echo "$PROVISIONING_PROFILE_INTENTS_DATA" | base64 -di - > "$PROVISIONING_PATH/Intents.mobileprovision"
+          echo "$PROVISIONING_PROFILE_NOTIFICATION_CONTENT_DATA" | base64 -di - > "$PROVISIONING_PATH/NotificationContent.mobileprovision"
+          echo "$PROVISIONING_PROFILE_NOTIFICATION_SERVICE_DATA" | base64 -di - > "$PROVISIONING_PATH/NotificationService.mobileprovision"
+          echo "$PROVISIONING_PROFILE_SHARE_DATA" | base64 -di - > "$PROVISIONING_PATH/Share.mobileprovision"
+          echo "$PROVISIONING_PROFILE_WATCH_APP_DATA" | base64 -di - > "$PROVISIONING_PATH/WatchApp.mobileprovision"
+          echo "$PROVISIONING_PROFILE_WATCH_EXTENSION_DATA" | base64 -di - > "$PROVISIONING_PATH/WatchExtension.mobileprovision"
+          echo "$PROVISIONING_PROFILE_WIDGET_DATA" | base64 -di - > "$PROVISIONING_PATH/Widget.mobileprovision"
 
           # build the app
           python3 build-system/Make/Make.py \
@@ -104,8 +122,6 @@ jobs:
         with:
           tag_name: build-${{ env.BUILD_NUMBER }}
           release_name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
-          body: |
-            An unsigned build of Telegram for iOS ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
           draft: false
           prerelease: false
 
@@ -130,3 +146,18 @@ jobs:
           asset_path: /Users/telegram/telegram-ios/build/artifacts/Telegram.DSYMs.zip
           asset_name: Telegram.DSYMs.zip
           asset_content_type: application/zip
+
+      - name: Deploy to App Store Connect
+        env:
+          APP_STORE_CONNECT_USERNAME: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
+          APP_STORE_CONNECT_PASSWORD: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
+        run: |
+          xcrun altool --validate-app --type ios \
+            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
+            --username "$APP_STORE_CONNECT_USERNAME" \
+            --password "$APP_STORE_CONNECT_PASSWORD"
+
+          xcrun altool --upload-app --type ios \
+            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
+            --username "$APP_STORE_CONNECT_USERNAME" \
+            --password "$APP_STORE_CONNECT_PASSWORD"
