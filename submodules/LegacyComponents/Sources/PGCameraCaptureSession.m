@@ -367,7 +367,7 @@ const NSInteger PGCameraFrameRate = 30;
     _hasAudioSession = true;
     [_audioSessionQueue dispatchSync:^
     {
-        [_currentAudioSession setDisposable:[[LegacyComponentsGlobals provider] requestAudioSession:TGAudioSessionTypePlayAndRecord interrupted:nil]];
+        [_currentAudioSession setDisposable:[[LegacyComponentsGlobals provider] requestAudioSession:TGAudioSessionTypePlayAndRecord activated:nil interrupted:nil]];
     }];
 }
 
