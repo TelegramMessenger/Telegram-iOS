@@ -57,6 +57,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case sendLogs(PresentationTheme)
     case sendOneLog(PresentationTheme)
     case sendShareLogs
+    case sendGroupCallLogs
     case sendNotificationLogs(PresentationTheme)
     case sendCriticalLogs(PresentationTheme)
     case accounts(PresentationTheme)
@@ -97,7 +98,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         switch self {
         case .testStickerImport:
             return DebugControllerSection.sticker.rawValue
-        case .sendLogs, .sendOneLog, .sendShareLogs, .sendNotificationLogs, .sendCriticalLogs:
+        case .sendLogs, .sendOneLog, .sendShareLogs, .sendGroupCallLogs, .sendNotificationLogs, .sendCriticalLogs:
             return DebugControllerSection.logs.rawValue
         case .accounts:
             return DebugControllerSection.logs.rawValue
@@ -126,68 +127,70 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 2
         case .sendShareLogs:
             return 3
-        case .sendNotificationLogs:
+        case .sendGroupCallLogs:
             return 4
-        case .sendCriticalLogs:
+        case .sendNotificationLogs:
             return 5
-        case .accounts:
+        case .sendCriticalLogs:
             return 6
-        case .logToFile:
+        case .accounts:
             return 7
-        case .logToConsole:
+        case .logToFile:
             return 8
-        case .redactSensitiveData:
+        case .logToConsole:
             return 9
-        case .enableRaiseToSpeak:
+        case .redactSensitiveData:
             return 10
-        case .keepChatNavigationStack:
+        case .enableRaiseToSpeak:
             return 11
-        case .skipReadHistory:
+        case .keepChatNavigationStack:
             return 12
-        case .crashOnSlowQueries:
+        case .skipReadHistory:
             return 13
-        case .clearTips:
+        case .crashOnSlowQueries:
             return 14
-        case .crash:
+        case .clearTips:
             return 15
-        case .resetData:
+        case .crash:
             return 16
-        case .resetDatabase:
+        case .resetData:
             return 17
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 18
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 19
-        case .reindexUnread:
+        case .resetHoles:
             return 20
-        case .resetBiometricsData:
+        case .reindexUnread:
             return 21
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 22
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 23
-        case .photoPreview:
+        case .optimizeDatabase:
             return 24
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 25
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 26
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 27
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 28
-        case .experimentalBackground:
+        case .acceleratedStickers:
             return 29
-        case .snow:
+        case .experimentalBackground:
             return 30
-        case .playerEmbedding:
+        case .snow:
             return 31
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 32
-        case .voiceConference:
+        case .playlistPlayback:
             return 33
+        case .voiceConference:
+            return 34
         case let .preferredVideoCodec(index, _, _, _):
-            return 34 + index
+            return 35 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -390,6 +393,90 @@ private enum DebugControllerEntry: ItemListNodeEntry {
         case .sendShareLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Share Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs(prefix: "/share-logs")
+                |> deliverOnMainQueue).start(next: { logs in
+                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+
+                    var items: [ActionSheetButtonItem] = []
+
+                    if let context = arguments.context, context.sharedContext.applicationBindings.isMainApp {
+                        items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+
+                            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
+                            controller.peerSelected = { [weak controller] peer in
+                                let peerId = peer.id
+
+                                if let strongController = controller {
+                                    strongController.dismiss()
+
+                                    let lineFeed = "\n".data(using: .utf8)!
+                                    var rawLogData: Data = Data()
+                                    for (name, path) in logs {
+                                        if !rawLogData.isEmpty {
+                                            rawLogData.append(lineFeed)
+                                            rawLogData.append(lineFeed)
+                                        }
+
+                                        rawLogData.append("------ File: \(name) ------\n".data(using: .utf8)!)
+
+                                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                            rawLogData.append(data)
+                                        }
+                                    }
+
+                                    let tempSource = TempBox.shared.tempFile(fileName: "Log.txt")
+                                    let tempZip = TempBox.shared.tempFile(fileName: "destination.zip")
+                                    
+                                    let _ = try? rawLogData.write(to: URL(fileURLWithPath: tempSource.path))
+                                    
+                                    SSZipArchive.createZipFile(atPath: tempZip.path, withFilesAtPaths: [tempSource.path])
+
+                                    guard let gzippedData = try? Data(contentsOf: URL(fileURLWithPath: tempZip.path)) else {
+                                        return
+                                    }
+                                    
+                                    TempBox.shared.dispose(tempSource)
+                                    TempBox.shared.dispose(tempZip)
+
+                                    let id = Int64.random(in: Int64.min ... Int64.max)
+                                    let fileResource = LocalFileMediaResource(fileId: id, size: gzippedData.count, isSecretRelated: false)
+                                    context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: gzippedData)
+
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: gzippedData.count, attributes: [.FileName(fileName: "Log-iOS-Full.txt.zip")])
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+
+                                    let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                                }
+                            }
+                            arguments.pushController(controller)
+                        }))
+                    }
+                    items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+
+                        let composeController = MFMailComposeViewController()
+                        composeController.mailComposeDelegate = arguments.mailComposeDelegate
+                        composeController.setSubject("Telegram Logs")
+                        for (name, path) in logs {
+                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                                composeController.addAttachmentData(data, mimeType: "application/text", fileName: name)
+                            }
+                        }
+                        arguments.getRootController()?.present(composeController, animated: true, completion: nil)
+                    }))
+
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    arguments.presentController(actionSheet, nil)
+                })
+            })
+        case .sendGroupCallLogs:
+            return ItemListDisclosureItem(presentationData: presentationData, title: "Send Group Call Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
+                let _ = (Logger.shared.collectLogs(basePath: arguments.context!.account.basePath + "/group-calls")
                 |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -948,6 +1035,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.sendLogs(presentationData.theme))
     //entries.append(.sendOneLog(presentationData.theme))
     entries.append(.sendShareLogs)
+    entries.append(.sendGroupCallLogs)
     entries.append(.sendNotificationLogs(presentationData.theme))
     entries.append(.sendCriticalLogs(presentationData.theme))
     if isMainApp {

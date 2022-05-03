@@ -4,7 +4,7 @@
 	url=../rlottie.git
 [submodule "build-system/bazel-rules/rules_apple"]
 	path = build-system/bazel-rules/rules_apple
-url=https://github.com/bazelbuild/rules_apple.git
+url=https://github.com/ali-fareed/rules_apple.git
 [submodule "build-system/bazel-rules/rules_swift"]
 	path = build-system/bazel-rules/rules_swift
 url=https://github.com/bazelbuild/rules_swift.git
