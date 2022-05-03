@@ -618,39 +618,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if let starStatus = data.starStatus {
             actions.append(.action(ContextMenuActionItem(text: starStatus ? chatPresentationInterfaceState.strings.Stickers_RemoveFromFavorites : chatPresentationInterfaceState.strings.Stickers_AddToFavorites, icon: { theme in
                 return generateTintedImage(image: starStatus ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.actionSheet.primaryTextColor)
-            }, action: { c, f in
-//                interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
-                
-                var subItems: [ContextMenuItem] = []
-                
-                subItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Common_Back, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                }, action: { c, _ in
-                    c.popItems()
-                })))
-                subItems.append(.separator)
-                
-                subItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Stickers_FaveLimitReachedInfo("5", "10").string, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
-                    return nil
-                }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
-                
-                subItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Stickers_FaveLimitReplaceOlder, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor)
-                }, action: { _, f in
-                    f(.default)
-                    interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
-                })))
-                
-                subItems.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Stickers_FaveLimitIncrease, icon: { _ in
-                    return UIImage(bundleImageName: "Premium/Tmp2")
-                }, action: { _, f in
-                    f(.default)
-                    
-                })))
-                
-                c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
-//
-//                f(.default)
+            }, action: { _, f in
+                interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
+                f(.default)
             })))
         }
         
