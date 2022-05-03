@@ -1391,7 +1391,8 @@ private:
     videoContentType:(OngoingGroupCallVideoContentType)videoContentType
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
-    preferX264:(bool)preferX264 {
+    preferX264:(bool)preferX264
+    logPath:(NSString * _Nonnull)logPath {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -1429,10 +1430,8 @@ private:
         bool disableOutgoingAudioProcessing = false;
 
         tgcalls::GroupConfig config;
-        config.need_log = false;
-#if DEBUG
         config.need_log = true;
-#endif
+        config.logPath.data = std::string(logPath.length == 0 ? "" : logPath.UTF8String);
 
         __weak GroupCallThreadLocalContext *weakSelf = self;
         _instance.reset(new tgcalls::GroupInstanceCustomImpl((tgcalls::GroupInstanceDescriptor){
