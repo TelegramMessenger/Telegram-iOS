@@ -19,6 +19,7 @@
     if (self != nil) {
         _codec = codec;
         _impl = avcodec_alloc_context3((AVCodec *)[codec impl]);
+        _impl->max_pixels = 4 * 1024 * 4 * 1024;
     }
     return self;
 }

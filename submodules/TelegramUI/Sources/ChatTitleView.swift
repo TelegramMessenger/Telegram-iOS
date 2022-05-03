@@ -37,6 +37,14 @@ private enum ChatTitleIcon {
     case mute
 }
 
+private enum ChatTitleCredibilityIcon {
+    case none
+    case fake
+    case scam
+    case verified
+    case premium
+}
+
 final class ChatTitleView: UIView, NavigationBarTitleView {
     private let account: Account
     
@@ -59,8 +67,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     private var titleLeftIcon: ChatTitleIcon = .none
     private var titleRightIcon: ChatTitleIcon = .none
-    private var titleFakeIcon = false
-    private var titleScamIcon = false
+    private var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
     
     //private var networkStatusNode: ChatTitleNetworkStatusNode?
     
@@ -106,8 +113,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var segments: [AnimatedCountLabelNode.Segment] = []
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
-                var titleScamIcon = false
-                var titleFakeIcon = false
+                var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
                 var isEnabled = true
                 switch titleContent {
                     case let .peer(peerView, _, isScheduledMessages):
@@ -134,9 +140,13 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                     }
                                 }
                                 if peer.isFake {
-                                    titleFakeIcon = true
+                                    titleCredibilityIcon = .fake
                                 } else if peer.isScam {
-                                    titleScamIcon = true
+                                    titleCredibilityIcon = .scam
+                                } else if peer.isVerified {
+                                    titleCredibilityIcon = .verified
+                                } else if peer.isPremium {
+                                    titleCredibilityIcon = .premium
                                 }
                             }
                             if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -243,15 +253,20 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     updated = true
                 }
                 
-                if titleFakeIcon != self.titleFakeIcon {
-                    self.titleFakeIcon = titleFakeIcon
-                    self.titleCredibilityIconNode.image = titleFakeIcon ? PresentationResourcesChatList.fakeIcon(titleTheme, strings: self.strings, type: .regular) : nil
-                    updated = true
-                }
-                
-                if titleScamIcon != self.titleScamIcon {
-                    self.titleScamIcon = titleScamIcon
-                    self.titleCredibilityIconNode.image = titleScamIcon ? PresentationResourcesChatList.scamIcon(titleTheme, strings: self.strings, type: .regular) : nil
+                if titleCredibilityIcon != self.titleCredibilityIcon {
+                    self.titleCredibilityIcon = titleCredibilityIcon
+                    switch titleCredibilityIcon {
+                        case .none:
+                            self.titleCredibilityIconNode.image = nil
+                        case .fake:
+                            self.titleCredibilityIconNode.image = PresentationResourcesChatList.fakeIcon(titleTheme, strings: self.strings, type: .regular)
+                        case .scam:
+                            self.titleCredibilityIconNode.image = PresentationResourcesChatList.scamIcon(titleTheme, strings: self.strings, type: .regular)
+                        case .verified:
+                            self.titleCredibilityIconNode.image = PresentationResourcesChatList.verifiedIcon(titleTheme)
+                        case .premium:
+                            self.titleCredibilityIconNode.image = PresentationResourcesChatList.premiumIcon(titleTheme)
+                    }
                     updated = true
                 }
                 
@@ -349,6 +364,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = ""
                     }
                 } else {
+                    if inputActivities.count > 1 {
+                        let peerTitle = EnginePeer(inputActivities[0].0).compactDisplayTitle
+                        if inputActivities.count == 2 {
+                            let secondPeerTitle = EnginePeer(inputActivities[1].0).compactDisplayTitle
+                            stringValue = strings.Chat_MultipleTypingPair(peerTitle, secondPeerTitle).string
+                        } else {
+                            stringValue = strings.Chat_MultipleTypingMore(peerTitle, String(inputActivities.count - 1)).string
+                        }
+                    } else if let (peer, _) = inputActivities.first {
+                        stringValue = EnginePeer(peer).compactDisplayTitle
+                    }
                     for (peer, _) in inputActivities {
                         let title = EnginePeer(peer).compactDisplayTitle
                         if !title.isEmpty {
@@ -685,10 +711,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: -image.size.width - 3.0 - UIScreenPixel, y: 4.0), size: image.size)
             }
             if let image = self.titleCredibilityIconNode.image {
-                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width - image.size.width - 1.0, y: 2.0), size: image.size)
+                var originY: CGFloat = 3.0
+                if [.fake, .scam].contains(self.titleCredibilityIcon) {
+                    originY = 2.0
+                }
+                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width - image.size.width, y: originY), size: image.size)
             }
             if let image = self.titleRightIconNode.image {
-                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width + 3.0, y: 6.0), size: image.size)
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.width + 3.0 + UIScreenPixel, y: 6.0), size: image.size)
             }
         } else {
             let titleSize = self.titleNode.updateLayout(size: CGSize(width: floor(clearBounds.width / 2.0 - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0), height: size.height), animated: transition.isAnimated)
@@ -705,10 +735,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 self.titleLeftIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.minX, y: titleFrame.minY + 4.0), size: image.size)
             }
             if let image = self.titleCredibilityIconNode.image {
-                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
+                var originY: CGFloat = titleFrame.minY + 7.0
+                if [.fake, .scam].contains(self.titleCredibilityIcon) {
+                    originY = titleFrame.minY + 6.0
+                }
+                self.titleCredibilityIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width, y: originY), size: image.size)
             }
             if let image = self.titleRightIconNode.image {
-                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width - 1.0, y: titleFrame.minY + 6.0), size: image.size)
+                self.titleRightIconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX - image.size.width, y: titleFrame.minY + 6.0), size: image.size)
             }
         }
         

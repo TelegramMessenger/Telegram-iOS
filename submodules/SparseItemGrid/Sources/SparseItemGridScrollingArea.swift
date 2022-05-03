@@ -1204,7 +1204,7 @@ public final class SparseItemGridScrollingArea: ASDisplayNode {
 
         self.updateLineIndicator(transition: transition)
 
-        if isScrolling {
+        if isScrolling && !self.dateIndicator.isHidden {
             self.displayTooltipOnFirstScroll()
         }
     }

@@ -1365,13 +1365,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                             }
-                            reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
+                            reactionButtonsNode.openReactionPreview = { gesture, sourceView, value in
                                 guard let strongSelf = self, let item = strongSelf.item else {
                                     gesture?.cancel()
                                     return
                                 }
                                 
-                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceNode, gesture, value)
+                                item.controllerInteraction.openMessageReactionContextMenu(item.message, sourceView, gesture, value)
                             }
                             reactionButtonsNode.frame = reactionButtonsFrame
                             if let (rect, containerSize) = strongSelf.absoluteRect {
@@ -1629,10 +1629,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         } else {
             let pathPrefix = item.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(resource.id)
             let additionalAnimationNode = AnimatedStickerNode()
-            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2.5), height: Int(animationSize.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
+            additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2), height: Int(animationSize.height * 2), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
-                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * 0.66 - 14.0 : -animationNode.frame.width * 0.66 + 14.0, dy: 35.0).insetBy(dx: -animationNode.frame.width * 0.66, dy: -animationNode.frame.height * 0.66)
+                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * 0.5 : -animationNode.frame.width * 0.5, dy: 35.0).insetBy(dx: -animationNode.frame.width * 0.5, dy: -animationNode.frame.height * 0.5)
                 if incomingMessage {
                     animationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 }

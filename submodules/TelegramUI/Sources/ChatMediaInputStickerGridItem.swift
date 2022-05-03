@@ -320,7 +320,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                     lockBackground = UIImageView()
                     lockBackground.clipsToBounds = true
                     lockBackground.isUserInteractionEnabled = false
-                    lockBackground.image = UIImage(bundleImageName: "Premium/StickerIcon")
+                    lockBackground.image = PresentationResourcesChat.chatInputMediaStickerGridPremiumIcon(item.theme)
                     self.lockBackground = lockBackground
                     
                     self.view.addSubview(lockBackground)

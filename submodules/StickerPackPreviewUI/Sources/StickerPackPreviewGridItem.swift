@@ -174,7 +174,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                     lockBackground = UIImageView()
                     lockBackground.clipsToBounds = true
                     lockBackground.isUserInteractionEnabled = false
-                    lockBackground.image = UIImage(bundleImageName: "Premium/StickerIcon")
+                    lockBackground.image = PresentationResourcesChat.chatInputMediaStickerGridPremiumIcon(theme)
                     self.lockBackground = lockBackground
                     
                     self.view.addSubview(lockBackground)

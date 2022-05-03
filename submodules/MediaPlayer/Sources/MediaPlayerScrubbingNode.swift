@@ -18,7 +18,7 @@ private func generateHandleBackground(color: UIColor) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 2)
 }
 
-public struct MediaPlayerScrubbingChapter {
+public struct MediaPlayerScrubbingChapter: Equatable {
     public let title: String
     public let start: Double
     
@@ -37,7 +37,7 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureReco
     var highlighted: ((Bool) -> Void)?
     
     var verticalPanEnabled = false
-    var hapticFeedback = HapticFeedback()
+    private let hapticFeedback = HapticFeedback()
     
     private var scrubbingMultiplier: Double = 1.0
     private var scrubbingStartLocation: CGPoint?
@@ -285,6 +285,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     private let _scrubbingPosition = Promise<Double?>(nil)
     public var scrubbingPosition: Signal<Double?, NoError> {
         return self._scrubbingPosition.get()
+    }
+    
+    public var isScrubbing: Bool {
+        return self.scrubbingTimestampValue != nil
     }
     
     public var ignoreSeekId: Int?
@@ -853,19 +857,27 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         
                         chapterNodesContainer.frame = backgroundFrame
                         
+                        var addedBeginning = false
                         for i in 1 ..< node.chapterNodes.count {
                             let (previousChapter, previousChapterNode) = node.chapterNodes[i - 1]
                             let (chapter, chapterNode) = node.chapterNodes[i]
                             
                             let lineWidth: CGFloat = 1.0 + UIScreenPixel * 2.0
                             let startPosition: CGFloat
-                            if i == 1 {
+                            if !addedBeginning {
                                 startPosition = 0.0
                             } else {
                                 startPosition = floor(backgroundFrame.width * CGFloat(previousChapter.start / duration)) + lineWidth / 2.0
                             }
                             let endPosition: CGFloat = max(startPosition, floor(backgroundFrame.width * CGFloat(chapter.start / duration)) - lineWidth / 2.0)
+                            let width = endPosition - startPosition
+                            if width < lineWidth * 2.0 {
+                                previousChapterNode.frame = CGRect()
+                                continue
+                            }
                             previousChapterNode.frame = CGRect(x: startPosition, y: 0.0, width: endPosition - startPosition, height: backgroundFrame.size.height)
+                            
+                            addedBeginning = true
                             
                             if i == node.chapterNodes.count - 1 {
                                 let startPosition = endPosition + lineWidth
@@ -876,7 +888,6 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                         node.containerNode.view.mask = nil
                     }
                 }
-                
                 
                 if let handleNode = node.handleNode {
                     var handleSize: CGSize = CGSize(width: 2.0, height: bounds.size.height)

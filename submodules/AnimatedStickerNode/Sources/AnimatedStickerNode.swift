@@ -163,6 +163,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public var completed: (Bool) -> Void = { _ in }
     public var frameUpdated: (Int, Int) -> Void = { _, _ in }
     public private(set) var currentFrameIndex: Int = 0
+    public private(set) var currentFrameCount: Int = 0
     private var playFromIndex: Int?
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
@@ -452,6 +453,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
                             strongSelf.currentFrameIndex = frame.index
+                            strongSelf.currentFrameCount = frame.totalFrames
                             
                             if frame.isLastFrame {
                                 var stopped = false
@@ -556,6 +558,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                             
                             strongSelf.frameUpdated(frame.index, frame.totalFrames)
                             strongSelf.currentFrameIndex = frame.index
+                            strongSelf.currentFrameCount = frame.totalFrames;
                             
                             if frame.isLastFrame {
                                 var stopped = false

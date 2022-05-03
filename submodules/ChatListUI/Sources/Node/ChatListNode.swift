@@ -1782,12 +1782,14 @@ public final class ChatListNode: ListView {
             }
             
             var options = transition.options
-            if !options.contains(.AnimateInsertion) {
-                options.insert(.PreferSynchronousDrawing)
-                options.insert(.PreferSynchronousResourceLoading)
-            }
-            if options.contains(.AnimateCrossfade) && !self.isDeceleratingAfterTracking {
-                options.insert(.PreferSynchronousDrawing)
+            if self.view.window != nil {
+                if !options.contains(.AnimateInsertion) {
+                    options.insert(.PreferSynchronousDrawing)
+                    options.insert(.PreferSynchronousResourceLoading)
+                }
+                if options.contains(.AnimateCrossfade) && !self.isDeceleratingAfterTracking {
+                    options.insert(.PreferSynchronousDrawing)
+                }
             }
             
             var scrollToItem = transition.scrollToItem

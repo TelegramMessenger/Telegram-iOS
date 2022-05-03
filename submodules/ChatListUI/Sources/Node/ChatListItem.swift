@@ -1365,7 +1365,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentSecretIconImage = PresentationResourcesChatList.secretIcon(item.presentationData.theme)
             }
             var credibilityIconOffset: CGFloat = 0.0
-            if !isPeerGroup {
+            
+            if !isPeerGroup && item.index.messageIndex.id.peerId != item.context.account.peerId {
                 if displayAsMessage {
                     switch item.content {
                     case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _):
@@ -1379,6 +1380,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             } else if peer.isVerified {
                                 currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
                                 credibilityIconOffset = 3.0
+                            } else if peer.isPremium {
+                                currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                                credibilityIconOffset = 2.0
                             }
                         }
                     default:
@@ -1394,6 +1398,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isVerified {
                         currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
                         credibilityIconOffset = 3.0
+                    } else if peer.isPremium {
+                        currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                        credibilityIconOffset = 2.0
                     }
                 }
             }
@@ -1762,7 +1769,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let currentMutedIconImage = currentMutedIconImage {
                         strongSelf.mutedIconNode.image = currentMutedIconImage
                         strongSelf.mutedIconNode.isHidden = false
-                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 4.0, y: contentRect.origin.y - 2.0), size: currentMutedIconImage.size))
+                        transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 5.0, y: contentRect.origin.y - 3.0 + UIScreenPixel), size: currentMutedIconImage.size))
                         nextTitleIconOrigin += currentMutedIconImage.size.width + 1.0
                     } else {
                         strongSelf.mutedIconNode.image = nil

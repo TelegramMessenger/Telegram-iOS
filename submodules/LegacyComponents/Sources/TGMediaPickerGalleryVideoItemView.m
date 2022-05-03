@@ -1120,7 +1120,7 @@
     __weak TGMediaPickerGalleryVideoItemView *weakSelf = self;
     [[SQueue concurrentDefaultQueue] dispatch:^
     {
-        [_currentAudioSession setDisposable:[[LegacyComponentsGlobals provider] requestAudioSession:TGAudioSessionTypePlayVideo interrupted:^
+        [_currentAudioSession setDisposable:[[LegacyComponentsGlobals provider] requestAudioSession:TGAudioSessionTypePlayVideo activated:nil interrupted:^
         {
             TGDispatchOnMainThread(^
             {

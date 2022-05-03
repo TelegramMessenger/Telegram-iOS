@@ -807,7 +807,25 @@ final class ChatEmptyNode: ASDisplayNode {
         self.addSubnode(self.backgroundNode)
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func animateFromLoadingNode(_ loadingNode: ChatLoadingNode) {
+        guard let (_, node) = content else {
+            return
+        }
+        
+        let duration: Double = 0.2
+        node.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        node.layer.animateScale(from: 0.0, to: 1.0, duration: duration, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+        
+        let targetCornerRadius = self.backgroundNode.backgroundCornerRadius
+        let targetFrame = self.backgroundNode.frame
+        let initialFrame = loadingNode.convert(loadingNode.progressFrame, to: self)
+        
+        self.backgroundNode.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration)
+        self.backgroundNode.update(size: initialFrame.size, cornerRadius: initialFrame.size.width / 2.0, transition: .immediate)
+        self.backgroundNode.update(size: targetFrame.size, cornerRadius: targetCornerRadius, transition: .animated(duration: duration, curve: .easeInOut))
+    }
+    
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, loadingNode: ChatLoadingNode?, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
@@ -904,5 +922,9 @@ final class ChatEmptyNode: ASDisplayNode {
         
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
+        
+        if let loadingNode = loadingNode {
+            self.animateFromLoadingNode(loadingNode)
+        }
     }
 }

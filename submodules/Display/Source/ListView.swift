@@ -473,8 +473,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink.add(to: RunLoop.main, forMode: RunLoop.Mode.common)
         
-        if #available(iOS 10.0, *) {
-            self.displayLink.preferredFramesPerSecond = 60
+        if #available(iOS 15.0, iOSApplicationExtension 15.0, *) {
+            self.displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 120.0, preferred: 120.0)
         }
         
         self.displayLink.isPaused = true
@@ -522,15 +522,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func dispatchOnVSync(forceNext: Bool = false, action: @escaping () -> ()) {
-        Queue.mainQueue().async {
+        /*Queue.mainQueue().async {
             if !forceNext && self.inVSync {
                 action()
             } else {
                 action()
-                //self.actionsForVSync.append(action)
-                //self.setNeedsAnimations()
             }
-        }
+        }*/
+        DispatchQueue.main.async(execute: action)
     }
     
     private func beginReordering(itemNode: ListViewItemNode) {
@@ -1576,6 +1575,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     private func async(_ f: @escaping () -> Void) {
         DispatchQueue.global(qos: .userInteractive).async(execute: f)
+        //DispatchQueue.main.async(execute: f)
     }
     
     private func nodeForItem(synchronous: Bool, synchronousLoads: Bool, item: ListViewItem, previousNode: QueueLocalObject<ListViewItemNode>?, index: Int, previousItem: ListViewItem?, nextItem: ListViewItem?, params: ListViewItemLayoutParams, updateAnimationIsAnimated: Bool, updateAnimationIsCrossfade: Bool, completion: @escaping (QueueLocalObject<ListViewItemNode>, ListViewItemNodeLayout, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
