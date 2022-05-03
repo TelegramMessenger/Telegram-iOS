@@ -311,16 +311,36 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     }
 
                     if isPinned || chatListFilter == nil || peerId.namespace != Namespaces.Peer.SecretChat {
-                        items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                        items.append(.action(ContextMenuActionItem(text: isPinned ? strings.ChatList_Context_Unpin : strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin" : "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: .peer(peerId))
                             |> deliverOnMainQueue).start(next: { result in
                                 switch result {
                                 case .done:
-                                    break
+                                    f(.default)
                                 case .limitExceeded:
-                                    break
+                                    var subItems: [ContextMenuItem] = []
+                                    
+                                    subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
+                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                                    }, action: { c, _ in
+                                        c.popItems()
+                                    })))
+                                    subItems.append(.separator)
+                                    
+                                    subItems.append(.action(ContextMenuActionItem(text: strings.DialogList_ExtendedPinLimitError("5", "10").string, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
+                                        return nil
+                                    }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                                    
+                                    subItems.append(.action(ContextMenuActionItem(text: strings.DialogList_ExtendedPinLimitIncrease, icon: { _ in
+                                        return nil
+                                    }, action: { _, f in
+                                        f(.default)
+                                        
+                                    })))
+                                    
+                                    c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
                                 }
-                                f(.default)
+
                             })
                         })))
                     }

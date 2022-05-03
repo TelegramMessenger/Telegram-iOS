@@ -25,6 +25,11 @@ swift_library(
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ReactionSelectionNode:ReactionSelectionNode",
+        "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
+        "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/BundleIconComponent:BundleIconComponent",
+        "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
     ],
     visibility = [
         "//visibility:public",

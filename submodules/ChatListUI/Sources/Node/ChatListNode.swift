@@ -13,6 +13,7 @@ import ContextUI
 import ItemListUI
 import SearchUI
 import ChatListSearchItemHeader
+import PremiumUI
 
 public enum ChatListNodeMode {
     case chatList
@@ -840,14 +841,16 @@ public final class ChatListNode: ListView {
                     switch result {
                     case .done:
                         break
-                    case let .limitExceeded(maxCount):
-                        let text: String
-                        if chatListFilter != nil {
-                            text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
-                        } else {
-                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").string
-                        }
-                        strongSelf.presentAlert?(text)
+                    case .limitExceeded:
+                        let controller = LimitScreen(context: strongSelf.context, subject: .pins)
+                        strongSelf.present?(controller)
+//                        let text: String
+//                        if chatListFilter != nil {
+//                            text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
+//                        } else {
+//                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").string
+//                        }
+//                        strongSelf.presentAlert?(text)
                     }
                 }
             })

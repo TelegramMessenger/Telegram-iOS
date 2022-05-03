@@ -3358,7 +3358,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(false))).start(next: { [weak self] responded in
                             if let strongSelf = self {
                                 if !responded {
-                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, text: strongSelf.presentationData.strings.Conversation_InteractiveEmojiSyncTip(EnginePeer(peer).compactDisplayTitle).string), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Conversation_InteractiveEmojiSyncTip(EnginePeer(peer).compactDisplayTitle).string), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     
                                     let _ = ApplicationSpecificNotice.incrementInteractiveEmojiSyncTip(accountManager: strongSelf.context.sharedContext.accountManager, timestamp: currentTimestamp).start()
                                 }
@@ -7945,7 +7945,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> switchToLatest
                     |> deliverOnMainQueue).start(next: { [weak self] added in
                         if let strongSelf = self {
-                            strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
+//                            strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: added ? "The Limit of 5 Stickers Reached" : nil, text: added ? "An older sticker was replaced with this one. You can [increase the limit]() to 10 stickers." : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
+                            strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
                         }
                     })
                 }

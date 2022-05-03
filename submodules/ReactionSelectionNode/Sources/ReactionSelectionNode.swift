@@ -299,6 +299,37 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     }
 }
 
+private func generatePremiumReactionIcon() -> UIImage? {
+    return generateImage(CGSize(width: 32.0, height: 32.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        if let backgroundImage = UIImage(bundleImageName: "Premium/BackgroundIcon"), let foregroundImage = UIImage(bundleImageName: "Premium/ForegroundIcon") {
+            context.saveGState()
+            if let cgImage = backgroundImage.cgImage {
+                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+            }
+            
+            let colorsArray: [CGColor] = [
+                UIColor(rgb: 0xa34ecf).cgColor,
+                UIColor(rgb: 0xa34ecf).cgColor,
+                UIColor(rgb: 0xff7923).cgColor,
+                UIColor(rgb: 0xff7923).cgColor
+            ]
+            var locations: [CGFloat] = [0.0, 0.15, 0.85, 1.0]
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+            
+            context.restoreGState()
+            
+            if let cgImage = foregroundImage.cgImage {
+                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+            }
+            context.setFillColor(UIColor.white.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+    })
+}
+
 final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
     var isExtracted: Bool = false
     
@@ -309,23 +340,11 @@ final class PremiumReactionsNode: ASDisplayNode, ReactionItemNode {
         self.imageNode.contentMode = .center
         self.imageNode.displaysAsynchronously = false
         self.imageNode.isUserInteractionEnabled = false
-        self.imageNode.alpha = 0.5
+        self.imageNode.image = generatePremiumReactionIcon()
         
         super.init()
         
         self.addSubnode(self.imageNode)
-        
-        if theme.overallDarkAppearance {
-            self.imageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/BackgroundIcon"), color: .white)
-        } else {
-            self.imageNode.image = UIImage(bundleImageName: "Premium/BackgroundIcon")
-        }
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        self.imageNode.layer.compositingFilter = "softLightBlendMode"
     }
     
     func appear(animated: Bool) {

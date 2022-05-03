@@ -3,6 +3,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import SwiftSignalKit
+import Markdown
 
 public enum ContextActionSibling {
     case none
@@ -53,6 +54,9 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
         
+        let boldTextFont = Font.semibold(presentationData.listsFontSize.baseDisplaySize)
+        let smallBoldTextFont = Font.semibold(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
+        
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isAccessibilityElement = false
         self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
@@ -76,18 +80,29 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         }
         
         let titleFont: UIFont
+        let titleBoldFont: UIFont
         switch action.textFont {
         case .regular:
             titleFont = textFont
+            titleBoldFont = boldTextFont
         case .small:
             titleFont = smallTextFont
+            titleBoldFont = smallBoldTextFont
         case let .custom(customFont):
             titleFont = customFont
+            titleBoldFont = customFont
         }
         
         let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
         
-        self.textNode.attributedText = NSAttributedString(string: action.text, font: titleFont, textColor: textColor)
+        if action.parseMarkdown {
+            let attributedText = parseMarkdownIntoAttributedString(action.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: textColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: textColor), link: MarkdownAttributeSet(font: titleFont, textColor: textColor), linkAttribute: { _ in
+                return nil
+            }))
+            self.textNode.attributedText = attributedText
+        } else {
+            self.textNode.attributedText = NSAttributedString(string: action.text, font: titleFont, textColor: textColor)
+        }
         
         switch action.textLayout {
         case .singleLine:
