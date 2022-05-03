@@ -784,7 +784,7 @@ public final class OngoingCallContext {
                 var allowP2P = allowP2P
                 if debugUseLegacyVersionForReflectors {
                     useModernImplementation = true
-                    version = "4.0.3"
+                    version = "4.1.2"
                     allowP2P = false
                 } else {
                     useModernImplementation = version != OngoingCallThreadLocalContext.version()
@@ -830,27 +830,25 @@ public final class OngoingCallContext {
                         filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection, idMapping: reflectorIdMapping))
                     }
                     
-                    if debugUseLegacyVersionForReflectors {
-                        for connection in filteredConnections {
-                            if connection.username == "reflector" {
-                                let peerTag = dataWithHexString(connection.password)
-                                if #available(iOS 12.0, *) {
-                                    strongSelf.signalingConnectionManager = QueueLocalObject(queue: queue, generate: {
-                                        return CallSignalingConnectionManager(queue: queue, peerTag: peerTag, servers: [OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: "91.108.12.1", port: 533, username: "reflector", password: connection.password)], dataReceived: { data in
-                                            guard let strongSelf = self else {
-                                                return
+                    for connection in filteredConnections {
+                        if connection.username == "reflector" {
+                            let peerTag = dataWithHexString(connection.password)
+                            if #available(iOS 12.0, *) {
+                                strongSelf.signalingConnectionManager = QueueLocalObject(queue: queue, generate: {
+                                    return CallSignalingConnectionManager(queue: queue, peerTag: peerTag, servers: [OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: "91.108.12.1", port: 533, username: "reflector", password: connection.password)], dataReceived: { data in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.withContext { context in
+                                            if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                                                context.addSignaling(data)
                                             }
-                                            strongSelf.withContext { context in
-                                                if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                                                    context.addSignaling(data)
-                                                }
-                                            }
-                                        })
+                                        }
                                     })
-                                }
-                                
-                                break
+                                })
                             }
+                            
+                            break
                         }
                     }
                     
