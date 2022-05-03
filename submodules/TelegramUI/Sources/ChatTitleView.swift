@@ -375,17 +375,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     } else if let (peer, _) = inputActivities.first {
                         stringValue = EnginePeer(peer).compactDisplayTitle
                     }
-                    for (peer, _) in inputActivities {
-                        let title = EnginePeer(peer).compactDisplayTitle
-                        if !title.isEmpty {
-                            if first {
-                                first = false
-                            } else {
-                                stringValue += ", "
-                            }
-                            stringValue += title
-                        }
-                    }
                 }
                 let color = titleTheme.rootController.navigationBar.accentTextColor
                 let string = NSAttributedString(string: stringValue, font: subtitleFont, textColor: color)
