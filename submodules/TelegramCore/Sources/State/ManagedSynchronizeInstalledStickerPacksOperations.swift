@@ -345,8 +345,7 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
     
     var fetchSignals: [Signal<(StickerPackCollectionInfo, [ItemCollectionItem]), NoError>] = []
     for info in locallyAddedInfos {
-        fetchSignals.append(fetchStickerPack(network: network, info: info)
-        )
+        fetchSignals.append(fetchStickerPack(network: network, info: info))
     }
     let fetchedPacks = combineLatest(fetchSignals)
     
@@ -479,10 +478,26 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                                 }
                             }
                             
+
+                            let storePremiumSignal: Signal<Void, SynchronizeInstalledStickerPacksError> = postbox.transaction { transaction -> Void in
+                                var premiumStickers: [OrderedItemListEntry] = []
+                                for (id, _) in remoteInfos {
+                                    let items = transaction.getItemCollectionItems(collectionId: id)
+                                    for item in items {
+                                        if let stickerItem = item as? StickerPackItem, stickerItem.file.isPremiumSticker,
+                                           let entry = CodableEntry(RecentMediaItem(stickerItem.file)) {
+                                            premiumStickers.append(OrderedItemListEntry(id: RecentMediaItemId(stickerItem.file.fileId).rawValue, contents: entry))
+                                        }
+                                    }
+                                }
+                                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.PremiumStickers, items: premiumStickers)
+                            } |> castError(SynchronizeInstalledStickerPacksError.self)
+                            
                             return (
                                 storeSignal
                                 |> mapError { _ -> SynchronizeInstalledStickerPacksError in }
                             )
+                            |> then(storePremiumSignal)
                             |> then(.fail(.done))
                         }
                         |> castError(SynchronizeInstalledStickerPacksError.self)
@@ -585,6 +600,18 @@ private func continueSynchronizeInstalledStickerPacks(transaction: Transaction, 
                         for id in localCollectionIds.subtracting(resultingCollectionIds).union(archivedOrRemovedIds) {
                             transaction.replaceItemCollectionItems(collectionId: id, items: [])
                         }
+                        
+                        var premiumStickers: [OrderedItemListEntry] = []
+                        for id in resultingCollectionIds {
+                            let items = transaction.getItemCollectionItems(collectionId: id)
+                            for item in items {
+                                if let stickerItem = item as? StickerPackItem, stickerItem.file.isPremiumSticker,
+                                   let entry = CodableEntry(RecentMediaItem(stickerItem.file)) {
+                                    premiumStickers.append(OrderedItemListEntry(id: RecentMediaItemId(stickerItem.file.fileId).rawValue, contents: entry))
+                                }
+                            }
+                        }
+                        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.PremiumStickers, items: premiumStickers)
                         
                         return .complete()
                     }

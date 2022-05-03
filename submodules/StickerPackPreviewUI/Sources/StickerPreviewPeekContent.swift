@@ -129,7 +129,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 
                 let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = AnimatedStickerNode()
-                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.5), height: Int(fittedDimensions.height * 2.5), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                additionalAnimationNode.setup(source: source, width: Int(fittedDimensions.width * 2.0), height: Int(fittedDimensions.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: nil))
                 additionalAnimationNode.visibility = true
                 self.additionalAnimationNode = additionalAnimationNode
             }
@@ -171,8 +171,13 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
-        let boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
-        
+        let boundingSize: CGSize
+        if let _ = self.additionalAnimationNode {
+            boundingSize = CGSize(width: 240.0, height: 240.0).fitted(size)
+        } else {
+            boundingSize = CGSize(width: 180.0, height: 180.0).fitted(size)
+        }
+            
         if let dimensitons = self.item.file.dimensions {
             let textSpacing: CGFloat = 10.0
             let textSize = self.textNode.measure(CGSize(width: 100.0, height: 100.0))
@@ -183,7 +188,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             var centerOffset: CGFloat = 0.0
             if self.item.file.isPremiumSticker {
                 let originalImageFrame = imageFrame
-                imageFrame.origin.x = size.width - imageFrame.width - 10.0
+                imageFrame.origin.x = size.width - imageFrame.width
                 centerOffset = imageFrame.minX - originalImageFrame.minX
             }
             self.imageNode.frame = imageFrame
@@ -192,7 +197,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
                 animationNode.updateLayout(size: imageSize)
                 
                 if let additionalAnimationNode = self.additionalAnimationNode {
-                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.66 + 15.0, dy: -2.0).insetBy(dx: -imageFrame.width * 0.66, dy: -imageFrame.height * 0.66)
+                    additionalAnimationNode.frame = imageFrame.offsetBy(dx: -imageFrame.width * 0.25, dy: 0.0).insetBy(dx: -imageFrame.width * 0.25, dy: -imageFrame.height * 0.25)
                     additionalAnimationNode.updateLayout(size: additionalAnimationNode.frame.size)
                 }
             }
