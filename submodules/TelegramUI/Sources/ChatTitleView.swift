@@ -330,7 +330,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         case .online:
             if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty, inputActivitiesAllowed {
                 var stringValue = ""
-                var first = true
                 var mergedActivity = inputActivities[0].1
                 for (_, activity) in inputActivities {
                     if activity != mergedActivity {
