@@ -2306,10 +2306,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                                 context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
                                 
                                 let colorsArray: [CGColor] = [
-                                    UIColor(rgb: 0x418eff).cgColor,
-                                    UIColor(rgb: 0x418eff).cgColor,
-                                    UIColor(rgb: 0xfc7ebd).cgColor,
-                                    UIColor(rgb: 0xfc7ebd).cgColor
+                                    UIColor(rgb: 0xa34ecf).cgColor,
+                                    UIColor(rgb: 0xa34ecf).cgColor,
+                                    UIColor(rgb: 0xff7923).cgColor,
+                                    UIColor(rgb: 0xff7923).cgColor
                                 ]
                                 var locations: [CGFloat] = [0.0, 0.35, 0.65, 1.0]
                                 let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!

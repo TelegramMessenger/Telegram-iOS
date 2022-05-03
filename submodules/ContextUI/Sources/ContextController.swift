@@ -92,6 +92,7 @@ public final class ContextMenuActionItem {
     public let textColor: ContextMenuActionItemTextColor
     public let textFont: ContextMenuActionItemFont
     public let textLayout: ContextMenuActionItemTextLayout
+    public let parseMarkdown: Bool
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
@@ -103,6 +104,7 @@ public final class ContextMenuActionItem {
         textColor: ContextMenuActionItemTextColor = .primary,
         textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
         textFont: ContextMenuActionItemFont = .regular,
+        parseMarkdown: Bool = false,
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
@@ -114,6 +116,7 @@ public final class ContextMenuActionItem {
             textColor: textColor,
             textLayout: textLayout,
             textFont: textFont,
+            parseMarkdown: parseMarkdown,
             badge: badge,
             icon: icon,
             iconSource: iconSource,
@@ -131,6 +134,7 @@ public final class ContextMenuActionItem {
         textColor: ContextMenuActionItemTextColor = .primary,
         textLayout: ContextMenuActionItemTextLayout = .twoLinesMax,
         textFont: ContextMenuActionItemFont = .regular,
+        parseMarkdown: Bool = false,
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
@@ -141,6 +145,7 @@ public final class ContextMenuActionItem {
         self.textColor = textColor
         self.textFont = textFont
         self.textLayout = textLayout
+        self.parseMarkdown = parseMarkdown
         self.badge = badge
         self.icon = icon
         self.iconSource = iconSource

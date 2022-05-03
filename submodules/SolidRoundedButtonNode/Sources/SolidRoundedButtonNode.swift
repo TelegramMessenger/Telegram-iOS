@@ -19,12 +19,12 @@ private func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: 
 
 public final class SolidRoundedButtonTheme: Equatable {
     public let backgroundColor: UIColor
-    public let gradientBackgroundColor: UIColor?
+    public let backgroundColors: [UIColor]
     public let foregroundColor: UIColor
     
-    public init(backgroundColor: UIColor, gradientBackgroundColor: UIColor? = nil, foregroundColor: UIColor) {
+    public init(backgroundColor: UIColor, backgroundColors: [UIColor] = [], foregroundColor: UIColor) {
         self.backgroundColor = backgroundColor
-        self.gradientBackgroundColor = gradientBackgroundColor
+        self.backgroundColors = backgroundColors
         self.foregroundColor = foregroundColor
     }
     
@@ -32,7 +32,7 @@ public final class SolidRoundedButtonTheme: Equatable {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
-        if lhs.gradientBackgroundColor != rhs.gradientBackgroundColor {
+        if lhs.backgroundColors != rhs.backgroundColors {
             return false
         }
         if lhs.foregroundColor != rhs.foregroundColor {
@@ -47,13 +47,18 @@ public enum SolidRoundedButtonFont {
     case regular
 }
 
+public enum SolidRoundedButtonIconPosition {
+    case left
+    case right
+}
+
 public final class SolidRoundedButtonNode: ASDisplayNode {
     private var theme: SolidRoundedButtonTheme
     private var font: SolidRoundedButtonFont
     private var fontSize: CGFloat
     private let gloss: Bool
     
-    private let buttonBackgroundNode: ASDisplayNode
+    private let buttonBackgroundNode: ASImageNode
     
     private var shimmerView: ShimmerEffectForegroundView?
     private var borderView: UIView?
@@ -101,6 +106,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             }
         }
     }
+    
+    public var iconPosition: SolidRoundedButtonIconPosition = .left {
+        didSet {
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
         
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
@@ -111,9 +124,21 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.title = title
         self.gloss = gloss
         
-        self.buttonBackgroundNode = ASDisplayNode()
+        self.buttonBackgroundNode = ASImageNode()
+        self.buttonBackgroundNode.displaysAsynchronously = false
         self.buttonBackgroundNode.clipsToBounds = true
-        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+        if theme.backgroundColors.count > 1 {
+            self.buttonBackgroundNode.backgroundColor = nil
+            
+            var locations: [CGFloat] = []
+            let delta = 1.0 / CGFloat(theme.backgroundColors.count - 1)
+            for i in 0 ..< theme.backgroundColors.count {
+                locations.append(delta * CGFloat(i))
+            }
+            self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+        } else {
+            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+        }
         self.buttonBackgroundNode.cornerRadius = cornerRadius
                 
         self.buttonNode = HighlightTrackingButtonNode()
@@ -230,13 +255,34 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         borderShimmerView.layer.compositingFilter = compositingFilter
     }
     
-    public func updateTheme(_ theme: SolidRoundedButtonTheme) {
+    public func updateTheme(_ theme: SolidRoundedButtonTheme, animated: Bool = false) {
         guard theme !== self.theme else {
             return
         }
         self.theme = theme
         
-        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+        if animated {
+            if let snapshotView = self.buttonBackgroundNode.view.snapshotView(afterScreenUpdates: false) {
+                self.view.insertSubview(snapshotView, aboveSubview: self.buttonBackgroundNode.view)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+        }
+        if theme.backgroundColors.count > 1 {
+            self.buttonBackgroundNode.backgroundColor = nil
+            
+            var locations: [CGFloat] = []
+            let delta = 1.0 / CGFloat(theme.backgroundColors.count - 1)
+            for i in 0 ..< theme.backgroundColors.count {
+                locations.append(delta * CGFloat(i))
+            }
+            self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: self.buttonHeight), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+        } else {
+            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+            self.buttonBackgroundNode.image = nil
+        }
+        
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
@@ -284,6 +330,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         let iconSize = self.iconNode.image?.size ?? CGSize()
         let titleSize = self.titleNode.updateLayout(buttonSize)
         
+        let spacingOffset: CGFloat = 9.0
+        let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
+
         let iconSpacing: CGFloat = self.iconSpacing
         
         var contentWidth: CGFloat = titleSize.width
@@ -291,15 +340,25 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             contentWidth += iconSize.width + iconSpacing
         }
         var nextContentOrigin = floor((buttonFrame.width - contentWidth) / 2.0)
-        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize))
-        if !iconSize.width.isZero {
-            nextContentOrigin += iconSize.width + iconSpacing
+        
+        let iconFrame: CGRect
+        let titleFrame: CGRect
+        switch self.iconPosition {
+            case .left:
+                iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                if !iconSize.width.isZero {
+                    nextContentOrigin += iconSize.width + iconSpacing
+                }
+                titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+            case .right:
+                titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+                if !iconSize.width.isZero {
+                    nextContentOrigin += titleFrame.width + iconSpacing
+                }
+                iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
         }
         
-        let spacingOffset: CGFloat = 9.0
-        let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
-        
-        let titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+        transition.updateFrame(node: self.iconNode, frame: iconFrame)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
         if self.subtitle != self.subtitleNode.attributedText?.string {
@@ -374,7 +433,7 @@ public final class SolidRoundedButtonView: UIView {
     private var font: SolidRoundedButtonFont
     private var fontSize: CGFloat
     
-    private let buttonBackgroundNode: UIView
+    private let buttonBackgroundNode: UIImageView
     private let buttonGlossView: SolidRoundedButtonGlossView?
     private let buttonNode: HighlightTrackingButton
     private let titleNode: ImmediateTextView
@@ -418,6 +477,14 @@ public final class SolidRoundedButtonView: UIView {
         }
     }
     
+    public var iconPosition: SolidRoundedButtonIconPosition = .left {
+        didSet {
+            if let width = self.validLayout {
+                _ = self.updateLayout(width: width, transition: .immediate)
+            }
+        }
+    }
+    
     public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, font: SolidRoundedButtonFont = .bold, fontSize: CGFloat = 17.0, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.font = font
@@ -426,10 +493,22 @@ public final class SolidRoundedButtonView: UIView {
         self.buttonCornerRadius = cornerRadius
         self.title = title
         
-        self.buttonBackgroundNode = UIView()
+        self.buttonBackgroundNode = UIImageView()
         self.buttonBackgroundNode.clipsToBounds = true
-        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         self.buttonBackgroundNode.layer.cornerRadius = cornerRadius
+        
+        if theme.backgroundColors.count > 1 {
+            self.buttonBackgroundNode.backgroundColor = nil
+            
+            var locations: [CGFloat] = []
+            let delta = 1.0 / CGFloat(theme.backgroundColors.count - 1)
+            for i in 0 ..< theme.backgroundColors.count {
+                locations.append(delta * CGFloat(i))
+            }
+            self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+        } else {
+            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+        }
         
         if gloss {
             self.buttonGlossView = SolidRoundedButtonGlossView(color: theme.foregroundColor, cornerRadius: cornerRadius)
@@ -545,7 +624,20 @@ public final class SolidRoundedButtonView: UIView {
         }
         self.theme = theme
         
-        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+        if theme.backgroundColors.count > 1 {
+            self.buttonBackgroundNode.backgroundColor = nil
+            
+            var locations: [CGFloat] = []
+            let delta = 1.0 / CGFloat(theme.backgroundColors.count - 1)
+            for i in 0 ..< theme.backgroundColors.count {
+                locations.append(delta * CGFloat(i))
+            }
+            self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: self.buttonHeight), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+        } else {
+            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+            self.buttonBackgroundNode.image = nil
+        }
+        
         self.buttonGlossView?.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
@@ -579,6 +671,8 @@ public final class SolidRoundedButtonView: UIView {
         let iconSize = self.iconNode.image?.size ?? CGSize()
         let titleSize = self.titleNode.updateLayout(buttonSize)
         
+        let spacingOffset: CGFloat = 9.0
+        let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
         let iconSpacing: CGFloat = self.iconSpacing
         
         var contentWidth: CGFloat = titleSize.width
@@ -586,15 +680,25 @@ public final class SolidRoundedButtonView: UIView {
             contentWidth += iconSize.width + iconSpacing
         }
         var nextContentOrigin = floor((buttonFrame.width - contentWidth) / 2.0)
-        transition.updateFrame(view: self.iconNode, frame: CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize))
-        if !iconSize.width.isZero {
-            nextContentOrigin += iconSize.width + iconSpacing
+      
+        let iconFrame: CGRect
+        let titleFrame: CGRect
+        switch self.iconPosition {
+            case .left:
+                iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                if !iconSize.width.isZero {
+                    nextContentOrigin += iconSize.width + iconSpacing
+                }
+                titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+            case .right:
+                titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+                if !iconSize.width.isZero {
+                    nextContentOrigin += titleFrame.width + iconSpacing
+                }
+                iconFrame =  CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize)
         }
         
-        let spacingOffset: CGFloat = 9.0
-        let verticalInset: CGFloat = self.subtitle == nil ? floor((buttonFrame.height - titleSize.height) / 2.0) : floor((buttonFrame.height - titleSize.height) / 2.0) - spacingOffset
-        
-        let titleFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + verticalInset), size: titleSize)
+        transition.updateFrame(view: self.iconNode, frame: iconFrame)
         transition.updateFrame(view: self.titleNode, frame: titleFrame)
         
         if self.subtitle != self.subtitleNode.attributedText?.string {

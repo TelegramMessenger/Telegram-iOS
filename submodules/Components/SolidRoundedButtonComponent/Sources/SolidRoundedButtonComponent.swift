@@ -3,6 +3,7 @@ import UIKit
 import ComponentFlow
 import Display
 import SolidRoundedButtonNode
+import AppBundle
 
 public final class SolidRoundedButtonComponent: Component {
     public typealias Theme = SolidRoundedButtonTheme
@@ -15,6 +16,8 @@ public final class SolidRoundedButtonComponent: Component {
     public let height: CGFloat
     public let cornerRadius: CGFloat
     public let gloss: Bool
+    public let iconName: String?
+    public let iconPosition: SolidRoundedButtonIconPosition
     public let action: () -> Void
     
     public init(
@@ -26,6 +29,8 @@ public final class SolidRoundedButtonComponent: Component {
         height: CGFloat = 48.0,
         cornerRadius: CGFloat = 24.0,
         gloss: Bool = false,
+        iconName: String? = nil,
+        iconPosition: SolidRoundedButtonIconPosition = .left,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -36,6 +41,8 @@ public final class SolidRoundedButtonComponent: Component {
         self.height = height
         self.cornerRadius = cornerRadius
         self.gloss = gloss
+        self.iconName = iconName
+        self.iconPosition = iconPosition
         self.action = action
     }
     
@@ -64,6 +71,12 @@ public final class SolidRoundedButtonComponent: Component {
         if lhs.gloss != rhs.gloss {
             return false
         }
+        if lhs.iconName != rhs.iconName {
+            return false
+        }
+        if lhs.iconPosition != rhs.iconPosition {
+            return false
+        }
         
         return true
     }
@@ -84,6 +97,8 @@ public final class SolidRoundedButtonComponent: Component {
                     cornerRadius: component.cornerRadius,
                     gloss: component.gloss
                 )
+                button.iconPosition = component.iconPosition
+                button.icon = component.iconName.flatMap { UIImage(bundleImageName: $0) }
                 self.button = button
                 self.addSubview(button)
                 

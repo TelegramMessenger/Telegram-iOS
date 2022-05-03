@@ -59,6 +59,7 @@ private final class ChannelVisibilityControllerArguments {
 
 private enum ChannelVisibilitySection: Int32 {
     case type
+    case limitInfo
     case link
     case linkActions
     case joinToSend
@@ -87,6 +88,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
     
     case publicLinkHeader(PresentationTheme, String)
     case publicLinkAvailability(PresentationTheme, String, Bool)
+    case linksLimitInfo(PresentationTheme, String, String, Int)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String)
     case privateLinkHeader(PresentationTheme, String)
     case privateLink(PresentationTheme, ExportedInvitation?, [EnginePeer], Int32, Bool)
@@ -115,6 +117,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
         switch self {
             case .typeHeader, .typePublic, .typePrivate, .typeInfo:
                 return ChannelVisibilitySection.type.rawValue
+            case .linksLimitInfo:
+                return ChannelVisibilitySection.limitInfo.rawValue
             case .publicLinkHeader, .publicLinkAvailability, .privateLinkHeader, .privateLink, .editablePublicLink, .privateLinkInfo, .publicLinkInfo, .publicLinkStatus:
                 return ChannelVisibilitySection.link.rawValue
             case .privateLinkManage, .privateLinkManageInfo:
@@ -144,22 +148,24 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return 4
             case .publicLinkAvailability:
                 return 5
-            case .privateLinkHeader:
+            case .linksLimitInfo:
                 return 6
-            case .privateLink:
+            case .privateLinkHeader:
                 return 7
-            case .editablePublicLink:
+            case .privateLink:
                 return 8
-            case .privateLinkInfo:
+            case .editablePublicLink:
                 return 9
-            case .publicLinkStatus:
+            case .privateLinkInfo:
                 return 10
-            case .publicLinkInfo:
+            case .publicLinkStatus:
                 return 11
-            case .existingLinksInfo:
+            case .publicLinkInfo:
                 return 12
+            case .existingLinksInfo:
+                return 13
             case let .existingLinkPeerItem(index, _, _, _, _, _, _, _):
-                return 13 + index
+                return 14 + index
             case .privateLinkManage:
                 return 1000
             case .privateLinkManageInfo:
@@ -221,6 +227,12 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+        case let .linksLimitInfo(lhsTheme, lhsTitle, lhsText, lhsLimit):
+            if case let .linksLimitInfo(rhsTheme, rhsTitle, rhsText, rhsLimit) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsText == rhsText, lhsLimit == rhsLimit {
+                return true
+            } else {
+                return false
+            }
             case let .privateLinkHeader(lhsTheme, lhsTitle):
                 if case let .privateLinkHeader(rhsTheme, rhsTitle) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle {
                     return true
@@ -381,6 +393,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
                 attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
                 return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: attr, sectionId: self.section)
+            case let .linksLimitInfo(theme, title, text, limit):
+                return IncreaseLimitHeaderItem(theme: theme, icon: .link, count: limit, title: title, text: text, sectionId: self.section)
             case let .privateLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
             case let .privateLink(_, invite, peers, importersCount, displayImporters):
@@ -715,7 +729,8 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                 
                 if displayAvailability {
                     if let publicChannelsToRevoke = publicChannelsToRevoke {
-                        entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
+                        entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesTitle, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(20)").string, 10))
+                        
                         var index: Int32 = 0
                         for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
                             var lhsDate: Int32 = 0
@@ -803,7 +818,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             case .privateChannel:
                 let invite = (view.cachedData as? CachedChannelData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-            entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
+                entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                 if isGroup {
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                 } else {
@@ -885,6 +900,8 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         
                         if displayAvailability {
                             if let publicChannelsToRevoke = publicChannelsToRevoke {
+                                entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesTitle, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(1000)").string, 500))
+                                
                                 entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
                                 var index: Int32 = 0
                                 for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
@@ -1338,6 +1355,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     |> map { presentationData, state, view, publicChannelsToRevoke, importersContext, importers -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view)
         
+        var footerItem: ItemListControllerFooterItem?
+        
         var rightNavigationButton: ItemListNavigationButton?
         if let peer = peer as? TelegramChannel {
             var doneEnabled = true
@@ -1548,6 +1567,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
         
         var crossfade: Bool = false
+        var animateChanges: Bool = false
         if let cachedData = view.cachedData as? CachedChannelData {
             let invitation = cachedData.exportedInvitation
             let previousInvitation = previousInvitation.swap(invitation)
@@ -1580,6 +1600,14 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             if selectedType == .publicChannel, let hadNamesToRevoke = hadNamesToRevoke, !crossfade {
                 crossfade = hadNamesToRevoke != hasNamesToRevoke
             }
+            
+            if hasNamesToRevoke && selectedType == .publicChannel {
+                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Group_Username_IncreaseLimit, colorful: true, action: {})
+            }
+            
+            if let hadNamesToRevoke = hadNamesToRevoke {
+                animateChanges = hadNamesToRevoke != hasNamesToRevoke
+            }
         }
         
         let title: String
@@ -1601,7 +1629,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: focusItemTag, crossfadeState: crossfade, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks, focusItemTag: focusItemTag, footerItem: footerItem, crossfadeState: crossfade, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {
