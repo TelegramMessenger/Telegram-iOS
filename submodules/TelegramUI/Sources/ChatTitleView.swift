@@ -364,6 +364,17 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = ""
                     }
                 } else {
+                    if inputActivities.count > 1 {
+                        let peerTitle = EnginePeer(inputActivities[0].0).compactDisplayTitle
+                        if inputActivities.count == 2 {
+                            let secondPeerTitle = EnginePeer(inputActivities[1].0).compactDisplayTitle
+                            stringValue = strings.Chat_MultipleTypingPair(peerTitle, secondPeerTitle).string
+                        } else {
+                            stringValue = strings.Chat_MultipleTypingMore(peerTitle, String(inputActivities.count - 1)).string
+                        }
+                    } else if let (peer, _) = inputActivities.first {
+                        stringValue = EnginePeer(peer).compactDisplayTitle
+                    }
                     for (peer, _) in inputActivities {
                         let title = EnginePeer(peer).compactDisplayTitle
                         if !title.isEmpty {

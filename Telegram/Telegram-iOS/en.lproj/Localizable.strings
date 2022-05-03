@@ -7544,3 +7544,6 @@ Sorry for the inconvenience.";
 "Premium.Reactions.Proceed" = "Unlock Additional Reactions";
 
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
+
+"Chat.MultipleTypingPair" = "%@ and %@ ";
+"Chat.MultipleTypingMore" = "%@ and %@ others";
