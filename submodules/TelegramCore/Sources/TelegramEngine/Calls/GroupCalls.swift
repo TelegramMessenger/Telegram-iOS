@@ -1886,6 +1886,9 @@ public final class GroupCallParticipantsContext {
             if let muteState = muteState, (!muteState.canUnmute || peerId == myPeerId || muteState.mutedByYou) {
                 flags |= 1 << 0
                 muted = .boolTrue
+            } else if peerId == myPeerId {
+                flags |= 1 << 0
+                muted = .boolFalse
             }
             let raiseHandApi: Api.Bool?
             if let raiseHand = raiseHand {
