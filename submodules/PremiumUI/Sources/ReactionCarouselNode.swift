@@ -67,6 +67,12 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollTo(1, playReaction: true, duration: 0.5, clockwise: true)
     }
     
+    func animateOut() {
+        if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+            standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+    }
+    
     func scrollTo(_ index: Int, playReaction: Bool, duration: Double, clockwise: Bool? = nil) {
         guard index >= 0 && index < self.itemNodes.count else {
             return
@@ -188,6 +194,7 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             avatarPeers: [],
             playHaptic: false,
             isLarge: true,
+            forceSmallEffectAnimation: true,
             targetView: targetView,
             addStandaloneReactionAnimation: nil,
             completion: { [weak standaloneReactionAnimation, weak self] in

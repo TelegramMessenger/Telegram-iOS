@@ -97,6 +97,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     UIView<TGPhotoPaintPanelView> *_settingsView;
     id<TGPhotoPaintStickersScreen> _stickersScreen;
     
+    double _stickerStartTime;
+    
     bool _appeared;
     bool _skipEntitiesSetup;
     bool _entitiesReady;
@@ -148,6 +150,8 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     {
         _context = context;
         _enableStickers = photoEditor.enableStickers;
+        
+        _stickerStartTime = NAN;
         
         _actionHandle = [[ASHandle alloc] initWithDelegate:self releaseOnMainThread:true];
         
@@ -1196,40 +1200,64 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     TGPhotoPaintStickerEntity *entity = [[TGPhotoPaintStickerEntity alloc] initWithDocument:document baseSize:[self _stickerBaseSizeForCurrentPainting] animated:animated];
     [self _setStickerEntityPosition:entity];
     
+
+    TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+
     bool hasStickers = false;
+    TGPhotoStickerEntityView *existingStickerView;
     for (TGPhotoPaintEntityView *view in _entitiesContainerView.subviews) {
         if ([view isKindOfClass:[TGPhotoStickerEntityView class]]) {
             hasStickers = true;
+            
+            if (((TGPhotoStickerEntityView *)view).documentId == stickerView.documentId) {
+                existingStickerView = (TGPhotoStickerEntityView *)view;
+            }
             break;
         }
     }
     
-    TGPhotoStickerEntityView *stickerView = (TGPhotoStickerEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+    [_entitiesContainerView addSubview:stickerView];
     [self _commonEntityViewSetup:stickerView];
     
     __weak TGPhotoPaintController *weakSelf = self;
-    __weak TGPhotoStickerEntityView *weakStickerView = stickerView;
     stickerView.started = ^(double duration) {
         __strong TGPhotoPaintController *strongSelf = weakSelf;
         if (strongSelf != nil) {
-            TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
+            TGPhotoEditorController *editorController = (TGPhotoEditorController *)strongSelf.parentViewController;
             if (![editorController isKindOfClass:[TGPhotoEditorController class]])
                 return;
             
             if (!hasStickers) {
                 [editorController setMinimalVideoDuration:duration];
             }
-            
-            NSTimeInterval currentTime = editorController.currentTime;
-            __strong TGPhotoStickerEntityView *strongStickerView = weakStickerView;
-            if (strongStickerView != nil) {
-                if (!isnan(currentTime)) {
-                    [strongStickerView seekTo:currentTime];
-                    [strongStickerView play];
-                }
-            }
         }
     };
+    
+    NSTimeInterval currentTime = NAN;
+    NSTimeInterval stickerStartTime = _stickerStartTime;
+    TGPhotoEditorController *editorController = (TGPhotoEditorController *)self.parentViewController;
+    if ([editorController isKindOfClass:[TGPhotoEditorController class]]) {
+        currentTime = editorController.currentTime;
+    }
+    
+    if (!isnan(currentTime)) {
+        [stickerView seekTo:currentTime];
+        [stickerView play];
+    } else {
+        NSTimeInterval currentTime = CACurrentMediaTime();
+        if (!isnan(stickerStartTime)) {
+            if (existingStickerView != nil) {
+                [stickerView copyStickerView:existingStickerView];
+            } else {
+                NSTimeInterval position = currentTime - stickerStartTime;
+                [stickerView seekTo:position];
+                [stickerView play];
+            }
+        } else {
+            _stickerStartTime = currentTime;
+            [stickerView play];
+        }
+    }
     
     [self selectEntityView:stickerView];
     _entitySelectionView.alpha = 0.0f;
@@ -1261,6 +1289,7 @@ const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
     entity.angle = [self startRotation];
     
     TGPhotoTextEntityView *textView = (TGPhotoTextEntityView *)[_entitiesContainerView createEntityViewWithEntity:entity];
+    [_entitiesContainerView addSubview:textView];
     [self _commonEntityViewSetup:textView];
     
     [self selectEntityView:textView];

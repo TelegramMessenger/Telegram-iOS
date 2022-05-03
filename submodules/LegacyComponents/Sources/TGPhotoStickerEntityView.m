@@ -201,6 +201,18 @@ const CGFloat TGPhotoStickerSelectionViewHandleSide = 30.0f;
     [_stickerView resetToStart];
 }
 
+- (void)playFromFrame:(NSInteger)frameIndex {
+    [_stickerView playFromFrame:frameIndex];
+}
+
+- (void)copyStickerView:(TGPhotoStickerEntityView *)view {
+    [_stickerView copyStickerView:view->_stickerView];
+}
+
+- (int64_t)documentId {
+    return [_stickerView documentId];
+}
+
 @end
 
 

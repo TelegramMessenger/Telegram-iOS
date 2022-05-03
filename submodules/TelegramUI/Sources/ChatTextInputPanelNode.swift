@@ -279,7 +279,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var accessoryItemButtons: [(ChatTextInputAccessoryItem, AccessoryItemIconButtonNode)] = []
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, LayoutMetrics, Bool)?
     private var leftMenuInset: CGFloat = 0.0
     
     var displayAttachmentMenu: () -> Void = { }
@@ -450,6 +450,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     private var spoilersRevealed = false
     
+    private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
+    
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
 
@@ -584,15 +586,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.actionButtons.micButton.offsetRecordingControls = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
-                if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
-                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
+                if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
                 }
             }
         }
         self.actionButtons.micButton.updateCancelTranslation = { [weak self] in
             if let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState {
-                if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
-                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
+                if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
+                    let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: presentationInterfaceState, metrics: metrics)
                 }
             }
         }
@@ -739,6 +741,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         textInputNode.view.addGestureRecognizer(recognizer)
+        self.touchDownGestureRecognizer = recognizer
         
         textInputNode.textView.accessibilityHint = self.textPlaceholderNode.attributedText?.string
     }
@@ -824,9 +827,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        let previousAdditionalSideInsets = self.validLayout?.3
-        self.validLayout = (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, isSecondary)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+        let previousAdditionalSideInsets = self.validLayout?.4
+        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary)
+        
+        let textFieldWaitsForTouchUp: Bool
+        if case .regular = metrics.widthClass, bottomInset.isZero {
+            textFieldWaitsForTouchUp = true
+        } else {
+            textFieldWaitsForTouchUp = false
+        }
+        self.touchDownGestureRecognizer?.waitForTouchUp = textFieldWaitsForTouchUp
     
         var transition = transition
         var additionalOffset: CGFloat = 0.0
@@ -2026,7 +2037,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.counterTextNode.attributedText = NSAttributedString(string: "", font: counterFont, textColor: .black)
         }
         
-        if let (width, leftInset, rightInset, _, maxHeight, metrics, _) = self.validLayout {
+        if let (width, leftInset, rightInset, _, _, maxHeight, metrics, _) = self.validLayout {
             var composeButtonsOffset: CGFloat = 0.0
             if self.extendedSearchLayout {
                 composeButtonsOffset = 44.0
@@ -2217,7 +2228,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func updateTextHeight(animated: Bool) {
-        if let (width, leftInset, rightInset, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
+        if let (width, leftInset, rightInset, _, additionalSideInsets, maxHeight, metrics, _) = self.validLayout {
             let (_, textFieldHeight) = self.calculateTextFieldMetrics(width: width - leftInset - rightInset - additionalSideInsets.right - self.leftMenuInset, maxHeight: maxHeight, metrics: metrics)
             let panelHeight = self.panelHeight(textFieldHeight: textFieldHeight, metrics: metrics)
             if !self.bounds.size.height.isEqual(to: panelHeight) {

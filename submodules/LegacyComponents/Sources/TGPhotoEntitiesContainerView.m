@@ -191,7 +191,6 @@
 {
     TGPhotoStickerEntityView *stickerView = [[TGPhotoStickerEntityView alloc] initWithEntity:entity context:self.stickersContext];
     [self _commonEntityViewSetup:stickerView entity:entity];
-    [self addSubview:stickerView];
 
     return stickerView;
 }
@@ -202,7 +201,6 @@
     [textView sizeToFit];
     
     [self _commonEntityViewSetup:textView entity:entity];
-    [self addSubview:textView];
     
     return textView;
 }

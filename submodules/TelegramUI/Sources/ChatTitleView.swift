@@ -330,7 +330,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         case .online:
             if let (peerId, inputActivities) = self.inputActivities, !inputActivities.isEmpty, inputActivitiesAllowed {
                 var stringValue = ""
-                var first = true
                 var mergedActivity = inputActivities[0].1
                 for (_, activity) in inputActivities {
                     if activity != mergedActivity {
@@ -364,16 +363,16 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                             stringValue = ""
                     }
                 } else {
-                    for (peer, _) in inputActivities {
-                        let title = EnginePeer(peer).compactDisplayTitle
-                        if !title.isEmpty {
-                            if first {
-                                first = false
-                            } else {
-                                stringValue += ", "
-                            }
-                            stringValue += title
+                    if inputActivities.count > 1 {
+                        let peerTitle = EnginePeer(inputActivities[0].0).compactDisplayTitle
+                        if inputActivities.count == 2 {
+                            let secondPeerTitle = EnginePeer(inputActivities[1].0).compactDisplayTitle
+                            stringValue = strings.Chat_MultipleTypingPair(peerTitle, secondPeerTitle).string
+                        } else {
+                            stringValue = strings.Chat_MultipleTypingMore(peerTitle, String(inputActivities.count - 1)).string
                         }
+                    } else if let (peer, _) = inputActivities.first {
+                        stringValue = EnginePeer(peer).compactDisplayTitle
                     }
                 }
                 let color = titleTheme.rootController.navigationBar.accentTextColor
