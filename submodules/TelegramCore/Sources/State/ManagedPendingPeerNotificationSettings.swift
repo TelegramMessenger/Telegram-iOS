@@ -116,7 +116,7 @@ private func pushPeerNotificationSettings(postbox: Postbox, network: Network, pe
                     case .default:
                         muteUntil = nil
                 }
-                let sound: String? = settings.messageSound.apiSound
+                let sound: Api.NotificationSound? = settings.messageSound.apiSound
                 var flags: Int32 = 0
                 if showPreviews != nil {
                     flags |= (1 << 0)
@@ -129,14 +129,16 @@ private func pushPeerNotificationSettings(postbox: Postbox, network: Network, pe
                 }
                 let inputSettings = Api.InputPeerNotifySettings.inputPeerNotifySettings(flags: flags, showPreviews: showPreviews, silent: nil, muteUntil: muteUntil, sound: sound)
                 return network.request(Api.functions.account.updateNotifySettings(peer: .inputNotifyPeer(peer: inputPeer), settings: inputSettings))
-                    |> retryRequest
-                    |> mapToSignal { result -> Signal<Void, NoError> in
-                        return postbox.transaction { transaction -> Void in
-                            transaction.updateCurrentPeerNotificationSettings([notificationPeerId: settings])
-                            if let pending = transaction.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
-                                transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
-                            }
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    return postbox.transaction { transaction -> Void in
+                        transaction.updateCurrentPeerNotificationSettings([notificationPeerId: settings])
+                        if let pending = transaction.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {
+                            transaction.updatePendingPeerNotificationSettings(peerId: peerId, settings: nil)
                         }
+                    }
                 }
             } else {
                 if let pending = transaction.getPendingPeerNotificationSettings(peerId), pending.isEqual(to: settings) {

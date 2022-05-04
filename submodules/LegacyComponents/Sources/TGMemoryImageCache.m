@@ -127,7 +127,6 @@
         return;
     }
     
-    __block id result = nil;
     [_queue dispatch:^
     {
         TGMemoryImageCacheItem *item = _cache[key];
@@ -139,6 +138,8 @@
                 *attributes = item.attributes;
             
             completion(item.object);
+        } else {
+            completion(nil);
         }
     }];
 }

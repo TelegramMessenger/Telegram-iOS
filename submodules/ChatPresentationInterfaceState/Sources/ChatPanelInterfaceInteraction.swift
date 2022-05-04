@@ -26,7 +26,7 @@ public final class ChatPanelInterfaceInteractionStatuses {
     public let searching: Signal<Bool, NoError>
     public let loadingMessage: Signal<ChatLoadingMessageSubject?, NoError>
     public let inlineSearch: Signal<Bool, NoError>
-
+    
     public init(editingMessage: Signal<Float?, NoError>, startingBot: Signal<Bool, NoError>, unblockingPeer: Signal<Bool, NoError>, searching: Signal<Bool, NoError>, loadingMessage: Signal<ChatLoadingMessageSubject?, NoError>, inlineSearch: Signal<Bool, NoError>) {
         self.editingMessage = editingMessage
         self.startingBot = startingBot
@@ -144,8 +144,11 @@ public final class ChatPanelInterfaceInteraction {
     public let openSendAsPeer: (ASDisplayNode, ContextGesture?) -> Void
     public let presentChatRequestAdminInfo: () -> Void
     public let displayCopyProtectionTip: (ASDisplayNode, Bool) -> Void
+    public let openWebView: (String, String, Bool, Bool) -> Void
+    public let updateShowWebView: ((Bool) -> Bool) -> Void
+    public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
-
+    
     public init(
         cloudMessages: @escaping ([Message]?) -> Void,
         copyForwardMessages: @escaping ([Message]?) -> Void,
@@ -237,6 +240,9 @@ public final class ChatPanelInterfaceInteraction {
         openSendAsPeer: @escaping (ASDisplayNode, ContextGesture?) -> Void,
         presentChatRequestAdminInfo: @escaping () -> Void,
         displayCopyProtectionTip: @escaping (ASDisplayNode, Bool) -> Void,
+        openWebView: @escaping (String, String, Bool, Bool) -> Void,
+        updateShowWebView: @escaping ((Bool) -> Bool) -> Void,
+        chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
         self.cloudMessages = cloudMessages
@@ -329,9 +335,12 @@ public final class ChatPanelInterfaceInteraction {
         self.openSendAsPeer = openSendAsPeer
         self.presentChatRequestAdminInfo = presentChatRequestAdminInfo
         self.displayCopyProtectionTip = displayCopyProtectionTip
+        self.openWebView = openWebView
+        self.updateShowWebView = updateShowWebView
+        self.chatController = chatController
         self.statuses = statuses
     }
-
+    
     public convenience init(
         updateTextInputStateAndMode: @escaping ((ChatTextInputState, ChatInputMode) -> (ChatTextInputState, ChatInputMode)) -> Void,
         updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void,
@@ -428,6 +437,10 @@ public final class ChatPanelInterfaceInteraction {
         }, openSendAsPeer:  { _, _ in
         }, presentChatRequestAdminInfo: {
         }, displayCopyProtectionTip: { _, _ in
+        }, openWebView: { _, _, _, _ in
+        }, updateShowWebView: { _ in
+        }, chatController: {
+            return nil
         }, statuses: nil)
     }
 }

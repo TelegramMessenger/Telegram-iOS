@@ -235,6 +235,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
             case let .groupInfo(_, _, dateTimeFormat, peer, state, avatar):
                 return ItemListAvatarAndNameInfoItem(accountContext: arguments.context, presentationData: presentationData, dateTimeFormat: dateTimeFormat, mode: .editSettings, peer: peer.flatMap(EnginePeer.init), presence: nil, memberCount: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
                     arguments.updateEditingName(editingName)
+                }, editingNameCompleted: {
+                    arguments.done()
                 }, avatarTapped: {
                     arguments.changeProfilePhoto()
                 }, updatingImage: avatar, tag: CreateGroupEntryTag.info)
@@ -510,7 +512,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             dismissImpl?()
                         })
                     } else {
-                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(peerId))
+                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(id: peerId))
                         replaceControllerImpl?(controller)
                     }
                 }

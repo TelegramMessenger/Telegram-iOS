@@ -59,6 +59,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     private let hasGlobalSearch: Bool
     private let pretendPresentedInModal: Bool
     private let forwardedMessageIds: [EngineMessage.Id]
+    private let hasTypeHeaders: Bool
     
     override public var _presentedInModal: Bool {
         get {
@@ -87,6 +88,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.createNewGroup = params.createNewGroup
         self.pretendPresentedInModal = params.pretendPresentedInModal
         self.forwardedMessageIds = params.forwardedMessageIds
+        self.hasTypeHeaders = params.hasTypeHeaders
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -151,7 +153,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = PeerSelectionControllerNode(context: self.context, presentationData: self.presentationData, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, forwardedMessageIds: self.forwardedMessageIds, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
+        self.displayNode = PeerSelectionControllerNode(context: self.context, presentationData: self.presentationData, filter: self.filter, hasChatListSelector: self.hasChatListSelector, hasContactSelector: self.hasContactSelector, hasGlobalSearch: self.hasGlobalSearch, forwardedMessageIds: self.forwardedMessageIds, hasTypeHeaders: self.hasTypeHeaders, createNewGroup: self.createNewGroup, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, presentInGlobalOverlay: { [weak self] c, a in
             self?.presentInGlobalOverlay(c, with: a)

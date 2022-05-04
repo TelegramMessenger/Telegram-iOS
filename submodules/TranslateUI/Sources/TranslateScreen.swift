@@ -15,11 +15,10 @@ import MultilineTextComponent
 import BundleIconComponent
 import UndoUI
 
-private func generateExpandBackground(size: CGSize) -> UIImage {
+private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage {
     return generateImage(size, rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        let color = UIColor.white
         var locations: [CGFloat] = [0.0, 1.0]
         let colors: [CGColor] = [color.withAlphaComponent(0.0).cgColor, color.cgColor]
         
@@ -86,8 +85,9 @@ private final class TranslateScreenComponent: CombinedComponent {
         fileprivate var isSpeakingOriginalText: Bool = false
         fileprivate var isSpeakingTranslatedText: Bool = false
         private var speechHolder: SpeechSynthesizerHolder?
+        fileprivate var availableSpeakLanguages: Set<String>
         
-        fileprivate var moreBackgroundImage: (CGSize, UIImage)?
+        fileprivate var moreBackgroundImage: (CGSize, UIImage, UIColor)?
         
         init(context: AccountContext, fromLanguage: String?, text: String, toLanguage: String, expand: @escaping () -> Void) {
             self.context = context
@@ -95,6 +95,7 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.fromLanguage = fromLanguage
             self.toLanguage = toLanguage
             self.expand = expand
+            self.availableSpeakLanguages = supportedSpeakLanguages()
             
             super.init()
             
@@ -113,6 +114,7 @@ private final class TranslateScreenComponent: CombinedComponent {
         }
         
         deinit {
+            self.speechHolder?.stop()
             self.translationDisposable.dispose()
         }
         
@@ -158,7 +160,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 self.isSpeakingTranslatedText = false
                 
                 self.isSpeakingOriginalText = true
-                self.speechHolder = speakText(self.text)
+                self.speechHolder = speakText(context: self.context, text: self.text)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -186,7 +188,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                 self.isSpeakingOriginalText = false
                 
                 self.isSpeakingTranslatedText = true
-                self.speechHolder = speakText(translatedText)
+                self.speechHolder = speakText(context: self.context, text: translatedText)
                 self.speechHolder?.completion = { [weak self] in
                     guard let strongSelf = self else {
                         return
@@ -238,7 +240,12 @@ private final class TranslateScreenComponent: CombinedComponent {
             let itemSpacing: CGFloat = 16.0
             let itemHeight: CGFloat = 44.0
             
-            let locale = Locale(identifier: environment.strings.baseLanguageCode)
+            var languageCode = environment.strings.baseLanguageCode
+            let rawSuffix = "-raw"
+            if languageCode.hasSuffix(rawSuffix) {
+                languageCode = String(languageCode.dropLast(rawSuffix.count))
+            }
+            let locale = Locale(identifier: languageCode)
             let fromLanguage: String
             if let languageCode = state.fromLanguage {
                 fromLanguage = locale.localizedString(forLanguageCode: languageCode) ?? ""
@@ -334,32 +341,40 @@ private final class TranslateScreenComponent: CombinedComponent {
             )
             
             if state.textExpanded {
-                let originalSpeakButton = originalSpeakButton.update(
-                    component: Button(
-                        content: AnyComponent(ZStack([
-                            AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
-                                fillColor: theme.list.itemPrimaryTextColor,
-                                size: CGSize(width: 22.0, height: 22.0)
-                            ))),
-                            AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
-                                state: state.isSpeakingOriginalText ? .pause : .play,
-                                size: CGSize(width: 18.0, height: 18.0)
-                            ))),
-                        ])),
-                        action: { [weak state] in
-                            guard let state = state else {
-                                return
+                if let fromLanguage = state.fromLanguage, state.availableSpeakLanguages.contains(fromLanguage) {
+                    var checkColor = theme.list.itemCheckColors.foregroundColor
+                    if checkColor.rgb == theme.list.itemPrimaryTextColor.rgb {
+                        checkColor = theme.list.plainBackgroundColor
+                    }
+                    
+                    let originalSpeakButton = originalSpeakButton.update(
+                        component: Button(
+                            content: AnyComponent(ZStack([
+                                AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
+                                    fillColor: theme.list.itemPrimaryTextColor,
+                                    size: CGSize(width: 22.0, height: 22.0)
+                                ))),
+                                AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
+                                    state: state.isSpeakingOriginalText ? .pause : .play,
+                                    tintColor: checkColor,
+                                    size: CGSize(width: 18.0, height: 18.0)
+                                ))),
+                            ])),
+                            action: { [weak state] in
+                                guard let state = state else {
+                                    return
+                                }
+                                state.speakOriginalText()
                             }
-                            state.speakOriginalText()
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)),
-                    availableSize: CGSize(width: 22.0, height: 22.0),
-                    transition: .immediate
-                )
-                
-                context.add(originalSpeakButton
-                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height - originalSpeakButton.size.height / 2.0 - 2.0))
-                )
+                        ).minSize(CGSize(width: 44.0, height: 44.0)),
+                        availableSize: CGSize(width: 22.0, height: 22.0),
+                        transition: .immediate
+                    )
+                    
+                    context.add(originalSpeakButton
+                        .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - originalSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height - originalSpeakButton.size.height / 2.0 - 2.0))
+                    )
+                }
             } else {
                 let originalMoreButton = originalMoreButton.update(
                     component: Button(
@@ -377,14 +392,15 @@ private final class TranslateScreenComponent: CombinedComponent {
                 
                 let originalMoreBackgroundSize = CGSize(width: originalMoreButton.size.width + 50.0, height: originalMoreButton.size.height)
                 let originalMoreBackgroundImage: UIImage
-                if let (size, image) = state.moreBackgroundImage, size == originalMoreBackgroundSize {
+                let backgroundColor = theme.list.itemBlocksBackgroundColor
+                if let (size, image, color) = state.moreBackgroundImage, size == originalMoreBackgroundSize && color == backgroundColor {
                     originalMoreBackgroundImage = image
                 } else {
-                    originalMoreBackgroundImage = generateExpandBackground(size: originalMoreBackgroundSize)
-                    state.moreBackgroundImage = (originalMoreBackgroundSize, originalMoreBackgroundImage)
+                    originalMoreBackgroundImage = generateExpandBackground(size: originalMoreBackgroundSize, color: backgroundColor)
+                    state.moreBackgroundImage = (originalMoreBackgroundSize, originalMoreBackgroundImage, backgroundColor)
                 }
                 let originalMoreBackground = originalMoreBackground.update(
-                    component: Image(image: originalMoreBackgroundImage, tintColor: theme.list.itemBlocksBackgroundColor),
+                    component: Image(image: originalMoreBackgroundImage, tintColor: backgroundColor),
                     availableSize: originalMoreBackgroundSize,
                     transition: .immediate
                 )
@@ -406,7 +422,13 @@ private final class TranslateScreenComponent: CombinedComponent {
                 context.add(translationText
                     .position(CGPoint(x: textBackgroundOrigin.x + textSideInset + translationText.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationText.size.height / 2.0))
                 )
-                
+            } else if let translationPlaceholder = maybeTranslationPlaceholder {
+                context.add(translationPlaceholder
+                    .position(CGPoint(x: textBackgroundOrigin.x + textSideInset + translationPlaceholder.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationPlaceholder.size.height / 2.0 + 4.0))
+                )
+            }
+            
+            if state.availableSpeakLanguages.contains(state.toLanguage) {
                 let translationSpeakButton = translationSpeakButton.update(
                     component: Button(
                         content: AnyComponent(ZStack([
@@ -416,6 +438,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                             ))),
                             AnyComponentWithIdentity(id: "a", component: AnyComponent(PlayPauseIconComponent(
                                 state: state.isSpeakingTranslatedText ? .pause : .play,
+                                tintColor: theme.list.itemCheckColors.foregroundColor,
                                 size: CGSize(width: 18.0, height: 18.0)
                             ))),
                         ])),
@@ -429,13 +452,9 @@ private final class TranslateScreenComponent: CombinedComponent {
                     availableSize: CGSize(width: 22.0, height: 22.0),
                     transition: .immediate
                 )
-                
+                                
                 context.add(translationSpeakButton
-                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - translationSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationText.size.height - translationSpeakButton.size.height / 2.0 - 2.0))
-                )
-            } else if let translationPlaceholder = maybeTranslationPlaceholder {
-                context.add(translationPlaceholder
-                    .position(CGPoint(x: textBackgroundOrigin.x + textSideInset + translationPlaceholder.size.width / 2.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationPlaceholder.size.height / 2.0 + 4.0))
+                    .position(CGPoint(x: context.availableSize.width - sideInset - textSideInset - translationSpeakButton.size.width / 2.0 - 3.0, y: textBackgroundOrigin.y + textTopInset + originalTitle.size.height + textSpacing + originalText.size.height + itemSpacing + textTopInset + translationTitle.size.height + textSpacing + translationTextHeight - translationSpeakButton.size.height / 2.0 - 2.0))
                 )
             }
             
@@ -970,7 +989,14 @@ public class TranslateScreen: ViewController {
     
     public convenience init(context: AccountContext, text: String, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        var toLanguage = toLanguage ?? presentationData.strings.baseLanguageCode
+        
+        var baseLanguageCode = presentationData.strings.baseLanguageCode
+        let rawSuffix = "-raw"
+        if baseLanguageCode.hasSuffix(rawSuffix) {
+            baseLanguageCode = String(baseLanguageCode.dropLast(rawSuffix.count))
+        }
+        
+        var toLanguage = toLanguage ?? baseLanguageCode
         
         if toLanguage == fromLanguage {
             toLanguage = "en"
@@ -996,6 +1022,7 @@ public class TranslateScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         copyTranslationImpl = { [weak self] text in
+            UIPasteboard.general.string = text
             let content = UndoOverlayContent.copy(text: presentationData.strings.Conversation_TextCopied)
             self?.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             self?.dismiss(animated: true, completion: nil)

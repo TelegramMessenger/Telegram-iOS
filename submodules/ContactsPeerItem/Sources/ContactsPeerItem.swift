@@ -478,7 +478,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             switch item.peer {
             case let .peer(_, chatPeer):
                 if let peer = chatPeer {
-                    if ChatLocation.peer(peer.id) == item.itemHighlighting?.chatLocation {
+                    if ChatLocation.peer(id: peer.id) == item.itemHighlighting?.chatLocation {
                         reallyHighlighted = true
                     }
                 }

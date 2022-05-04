@@ -29,7 +29,7 @@
 }
 
 -(void)dealloc {
-    __block id value = self->valueRef;
+    __unused __block id value = self->valueRef;
     self->valueRef = nil;
     [_queue dispatch:^{
         value = nil;

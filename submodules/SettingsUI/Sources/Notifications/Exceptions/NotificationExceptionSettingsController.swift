@@ -17,30 +17,30 @@ private enum NotificationPeerExceptionSection: Int32 {
     case remove
     case switcher
     case displayPreviews
+    case soundCloud
     case soundModern
     case soundClassic
 }
 
-private enum NotificationPeerExceptionSwitcher : Equatable {
+private enum NotificationPeerExceptionSwitcher: Hashable {
     case alwaysOn
     case alwaysOff
 }
 
-private enum NotificationPeerExceptionEntryId : Hashable {
+private enum NotificationPeerExceptionEntryId: Hashable {
     case remove
     case switcher(NotificationPeerExceptionSwitcher)
-    case sound(PeerMessageSound)
+    case sound(PeerMessageSound.Id)
     case switcherHeader
     case displayPreviews(NotificationPeerExceptionSwitcher)
     case displayPreviewsHeader
     case soundModernHeader
     case soundClassicHeader
     case none
+    case uploadSound
+    case cloudHeader
+    case cloudInfo
     case `default`
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(0)
-    }
 }
 
 private final class NotificationPeerExceptionArguments  {
@@ -52,8 +52,10 @@ private final class NotificationPeerExceptionArguments  {
     let removeFromExceptions: () -> Void
     let complete: () -> Void
     let cancel: () -> Void
+    let upload: () -> Void
+    let deleteSound: (PeerMessageSound, String) -> Void
     
-    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, removeFromExceptions: @escaping () -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void) {
+    init(account: Account, selectSound: @escaping(PeerMessageSound) -> Void, selectMode: @escaping(NotificationPeerExceptionSwitcher) -> Void, selectDisplayPreviews: @escaping (NotificationPeerExceptionSwitcher) -> Void, removeFromExceptions: @escaping () -> Void, complete: @escaping()->Void, cancel: @escaping() -> Void, upload: @escaping () -> Void, deleteSound: @escaping (PeerMessageSound, String) -> Void) {
         self.account = account
         self.selectSound = selectSound
         self.selectMode = selectMode
@@ -61,6 +63,8 @@ private final class NotificationPeerExceptionArguments  {
         self.removeFromExceptions = removeFromExceptions
         self.complete = complete
         self.cancel = cancel
+        self.upload = upload
+        self.deleteSound = deleteSound
     }
 }
 
@@ -77,8 +81,10 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
     case soundClassicHeader(index:Int32, theme: PresentationTheme, title: String)
     case none(index:Int32, section: NotificationPeerExceptionSection, theme: PresentationTheme, text: String, selected: Bool)
     case `default`(index:Int32, section: NotificationPeerExceptionSection, theme: PresentationTheme, text: String, selected: Bool)
-    case sound(index:Int32, section: NotificationPeerExceptionSection, theme: PresentationTheme, text: String, sound: PeerMessageSound, selected: Bool)
-    
+    case sound(index:Int32, section: NotificationPeerExceptionSection, theme: PresentationTheme, text: String, sound: PeerMessageSound, selected: Bool, canBeDeleted: Bool)
+    case cloudHeader(index: Int32, text: String)
+    case uploadSound(index: Int32, text: String)
+    case cloudInfo(index: Int32, text: String)
     
     var index: Int32 {
         switch self {
@@ -100,7 +106,13 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return index
         case let .default(index, _, _, _, _):
             return index
-        case let .sound(index, _, _, _, _, _):
+        case let .sound(index, _, _, _, _, _, _):
+            return index
+        case let .cloudHeader(index, _):
+            return index
+        case let .cloudInfo(index, _):
+            return index
+        case let .uploadSound(index, _):
             return index
         }
     }
@@ -113,6 +125,8 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return NotificationPeerExceptionSection.switcher.rawValue
         case .displayPreviews, .displayPreviewsHeader:
             return NotificationPeerExceptionSection.displayPreviews.rawValue
+        case .cloudInfo, .cloudHeader, .uploadSound:
+            return NotificationPeerExceptionSection.soundCloud.rawValue
         case .soundModernHeader:
             return NotificationPeerExceptionSection.soundModern.rawValue
         case .soundClassicHeader:
@@ -121,7 +135,7 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return section.rawValue
         case let .default(_, section, _, _, _):
             return section.rawValue
-        case let .sound(_, section, _, _, _, _):
+        case let .sound(_, section, _, _, _, _, _):
             return section.rawValue
         }
     }
@@ -146,8 +160,14 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return .none
         case .default:
             return .default
-        case let .sound(_, _, _, _, sound, _):
-            return .sound(sound)
+        case let .sound(_, _, _, _, sound, _, _):
+            return .sound(sound.id)
+        case .uploadSound:
+            return .uploadSound
+        case .cloudHeader:
+            return .cloudHeader
+        case .cloudInfo:
+            return .cloudInfo
         }
     }
 
@@ -186,6 +206,15 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: title, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectDisplayPreviews(value)
             })
+        case let .cloudHeader(_, text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .cloudInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .uploadSound(_, text):
+            let icon = PresentationResourcesItemList.uploadToneIcon(presentationData.theme)
+            return ItemListCheckboxItem(presentationData: presentationData, icon: icon, iconSize: nil, iconPlacement: .check, title: text, style: .left, textColor: .accent, checked: false, zeroSeparatorInsets: false, sectionId: self.section, action: {
+                arguments.upload()
+            })
         case let .displayPreviewsHeader(_, _, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .soundModernHeader(_, _, text):
@@ -200,17 +229,21 @@ private enum NotificationPeerExceptionEntry: ItemListNodeEntry {
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(.default)
             })
-        case let .sound(_, _, _, text, sound, selected):
+        case let .sound(_, _, _, text, sound, selected, canBeDeleted):
             return ItemListCheckboxItem(presentationData: presentationData, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
                 arguments.selectSound(sound)
-            })
+            }, deleteAction: canBeDeleted ? {
+                arguments.deleteSound(sound, text)
+            } : nil)
         }
     }
 }
 
 
-private func notificationPeerExceptionEntries(presentationData: PresentationData, state: NotificationExceptionPeerState) -> [NotificationPeerExceptionEntry] {
-    var entries:[NotificationPeerExceptionEntry] = []
+private func notificationPeerExceptionEntries(presentationData: PresentationData, notificationSoundList: NotificationSoundList?, state: NotificationExceptionPeerState) -> [NotificationPeerExceptionEntry] {
+    let selectedSound = resolvedNotificationSound(sound: state.selectedSound, notificationSoundList: notificationSoundList)
+    
+    var entries: [NotificationPeerExceptionEntry] = []
     
     var index: Int32 = 0
     
@@ -236,28 +269,56 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
         entries.append(.displayPreviews(index: index, theme: presentationData.theme, strings: presentationData.strings, value: .alwaysOff, selected: state.displayPreviews == .alwaysOff))
         index += 1
         
-        entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
+        entries.append(.cloudHeader(index: index, text: presentationData.strings.Notifications_TelegramTones))
         index += 1
         
-        entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .default, default: state.defaultSound), selected: state.selectedSound == .default))
-        index += 1
-
-        entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: .none), selected: state.selectedSound == .none))
-        index += 1
-
-        for i in 0 ..< 12 {
-            let sound: PeerMessageSound = .bundledModern(id: Int32(i))
-            entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+        index = 1000
+        
+        if let notificationSoundList = notificationSoundList {
+            let cloudSounds = notificationSoundList.sounds.filter({ CloudSoundBuiltinCategory(id: $0.file.fileId.id) == nil })
+            let modernSounds = notificationSoundList.sounds.filter({ CloudSoundBuiltinCategory(id: $0.file.fileId.id) == .modern })
+            let classicSounds = notificationSoundList.sounds.filter({ CloudSoundBuiltinCategory(id: $0.file.fileId.id) == .classic })
+            
+            for listSound in cloudSounds {
+                let sound: PeerMessageSound = .cloud(fileId: listSound.file.fileId.id)
+                if state.removedSounds.contains(where: { $0.id == sound.id }) {
+                    continue
+                }
+                entries.append(.sound(index: index, section: .soundCloud, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: selectedSound.id == sound.id, canBeDeleted: true))
+                index += 1
+            }
+            
+            index = 2000
+            
+            entries.append(.uploadSound(index: index, text: presentationData.strings.Notifications_UploadSound))
             index += 1
-        }
-        
-        entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
-        index += 1
-        
-        for i in 0 ..< 8 {
-            let sound: PeerMessageSound = .bundledClassic(id: Int32(i))
-            entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, sound: sound), sound: sound, selected: sound == state.selectedSound))
+            entries.append(.cloudInfo(index: index, text: presentationData.strings.Notifications_MessageSoundInfo))
             index += 1
+            
+            entries.append(.soundModernHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_AlertTones))
+            
+            index = 3000
+            
+            entries.append(.default(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .default, default: state.defaultSound), selected: selectedSound == .default))
+            index += 1
+
+            entries.append(.none(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: .none), selected: selectedSound == .none))
+            index += 1
+
+            for i in 0 ..< modernSounds.count {
+                let sound: PeerMessageSound = .cloud(fileId: modernSounds[i].file.fileId.id)
+                entries.append(.sound(index: index, section: .soundModern, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
+                index += 1
+            }
+            
+            entries.append(.soundClassicHeader(index: index, theme: presentationData.theme, title: presentationData.strings.Notifications_ClassicTones))
+            index += 1
+            
+            for i in 0 ..< classicSounds.count {
+                let sound: PeerMessageSound = .cloud(fileId: classicSounds[i].file.fileId.id)
+                entries.append(.sound(index: index, section: .soundClassic, theme: presentationData.theme, text: localizedPeerNotificationSoundString(strings: presentationData.strings, notificationSoundList: notificationSoundList, sound: sound), sound: sound, selected: sound.id == selectedSound.id, canBeDeleted: false))
+                index += 1
+            }
         }
     }
     
@@ -265,11 +326,12 @@ private func notificationPeerExceptionEntries(presentationData: PresentationData
 }
 
 private struct NotificationExceptionPeerState : Equatable {
-    let canRemove: Bool
-    let selectedSound: PeerMessageSound
-    let mode: NotificationPeerExceptionSwitcher
-    let defaultSound: PeerMessageSound
-    let displayPreviews: NotificationPeerExceptionSwitcher
+    var canRemove: Bool
+    var selectedSound: PeerMessageSound
+    var mode: NotificationPeerExceptionSwitcher
+    var defaultSound: PeerMessageSound
+    var displayPreviews: NotificationPeerExceptionSwitcher
+    var removedSounds: [PeerMessageSound]
     
     init(canRemove: Bool, notifications: TelegramPeerNotificationSettings? = nil) {
         self.canRemove = canRemove
@@ -290,30 +352,18 @@ private struct NotificationExceptionPeerState : Equatable {
         }
       
         self.defaultSound = .default
+        self.removedSounds = []
     }
     
-    init(canRemove: Bool, selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher) {
+    init(canRemove: Bool, selectedSound: PeerMessageSound, mode: NotificationPeerExceptionSwitcher, defaultSound: PeerMessageSound, displayPreviews: NotificationPeerExceptionSwitcher, removedSounds: [PeerMessageSound]) {
         self.canRemove = canRemove
         self.selectedSound = selectedSound
         self.mode = mode
         self.defaultSound = defaultSound
         self.displayPreviews = displayPreviews
-    }
-    
-    func withUpdatedDefaultSound(_ defaultSound: PeerMessageSound) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: self.selectedSound, mode: self.mode, defaultSound: defaultSound, displayPreviews: self.displayPreviews)
-    }
-    func withUpdatedSound(_ selectedSound: PeerMessageSound) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
-    }
-    func withUpdatedMode(_ mode: NotificationPeerExceptionSwitcher) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: self.selectedSound, mode: mode, defaultSound: self.defaultSound, displayPreviews: self.displayPreviews)
-    }
-    func withUpdatedDisplayPreviews(_ displayPreviews: NotificationPeerExceptionSwitcher) -> NotificationExceptionPeerState {
-        return NotificationExceptionPeerState(canRemove: self.canRemove, selectedSound: self.selectedSound, mode: self.mode, defaultSound: self.defaultSound, displayPreviews: displayPreviews)
+        self.removedSounds = removedSounds
     }
 }
-
 
 public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, mode: NotificationExceptionMode, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState(canRemove: false)
@@ -327,19 +377,34 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     var removeFromExceptionsImpl: (() -> Void)?
     var cancelImpl: (() -> Void)?
     let playSoundDisposable = MetaDisposable()
+    var presentFilePicker: (() -> Void)?
+    var deleteSoundImpl: ((PeerMessageSound, String) -> Void)?
+    
+    let soundActionDisposable = MetaDisposable()
 
     let arguments = NotificationPeerExceptionArguments(account: context.account, selectSound: { sound in
         updateState { state in
-            playSoundDisposable.set(playSound(context: context, sound: sound, defaultSound: state.defaultSound).start())
-            return state.withUpdatedSound(sound)
+            let _ = (context.engine.peers.notificationSoundList()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { notificationSoundList in
+                playSoundDisposable.set(playSound(context: context, notificationSoundList: notificationSoundList, sound: sound, defaultSound: state.defaultSound).start())
+            })
+            
+            var state = state
+            state.selectedSound = sound
+            return state
         }
     }, selectMode: { mode in
         updateState { state in
-            return state.withUpdatedMode(mode)
+            var state = state
+            state.mode = mode
+            return state
         }
     }, selectDisplayPreviews: { value in
         updateState { state in
-            return state.withUpdatedDisplayPreviews(value)
+            var state = state
+            state.displayPreviews = value
+            return state
         }
     }, removeFromExceptions: {
         removeFromExceptionsImpl?()
@@ -347,26 +412,31 @@ public func notificationPeerExceptionController(context: AccountContext, updated
         completeImpl?()
     }, cancel: {
         cancelImpl?()
+    }, upload: {
+        presentFilePicker?()
+    }, deleteSound: { sound, title in
+        deleteSoundImpl?(sound, title)
     })
     
     statePromise.set(context.account.postbox.transaction { transaction -> NotificationExceptionPeerState in
         var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings)
         let globalSettings: GlobalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
         switch mode {
-            case .channels:
-                state = state.withUpdatedDefaultSound(globalSettings.effective.channels.sound)
-            case .groups:
-                state = state.withUpdatedDefaultSound(globalSettings.effective.groupChats.sound)
-            case .users:
-                state = state.withUpdatedDefaultSound(globalSettings.effective.privateChats.sound)
+        case .channels:
+            state.defaultSound = globalSettings.effective.channels.sound
+        case .groups:
+            state.defaultSound = globalSettings.effective.groupChats.sound
+        case .users:
+            state.defaultSound = globalSettings.effective.privateChats.sound
         }
-        _ = stateValue.swap(state)
+        let _ = stateValue.swap(state)
         return state
     })
     
+    let previousSoundIds = Atomic<Set<Int64>>(value: Set())
     
-    let signal = combineLatest(queue: .mainQueue(), (updatedPresentationData?.signal ?? context.sharedContext.presentationData), statePromise.get() |> distinctUntilChanged)
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let signal = combineLatest(queue: .mainQueue(), (updatedPresentationData?.signal ?? context.sharedContext.presentationData), context.engine.peers.notificationSoundList(), statePromise.get() |> distinctUntilChanged)
+    |> map { presentationData, notificationSoundList, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             arguments.cancel()
         })
@@ -375,14 +445,30 @@ public func notificationPeerExceptionController(context: AccountContext, updated
             arguments.complete()
         })
         
+        var updatedSoundIds = Set<Int64>()
+        if let notificationSoundList = notificationSoundList {
+            for sound in notificationSoundList.sounds {
+                if state.removedSounds.contains(.cloud(fileId: sound.file.fileId.id)) {
+                    continue
+                }
+                updatedSoundIds.insert(sound.file.fileId.id)
+            }
+        }
+        
+        var animated = false
+        if previousSoundIds.swap(updatedSoundIds) != updatedSoundIds {
+            animated = true
+        }
+        
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, state: state), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, notificationSoundList: notificationSoundList, state: state), style: .blocks, animateChanges: animated)
         
         return (controllerState, (listState, arguments))
     }
     
     let controller = ItemListController(context: context, state: signal |> afterDisposed {
         playSoundDisposable.dispose()
+        soundActionDisposable.dispose()
     })
 
     controller.enableInteractiveDismiss = true
@@ -390,12 +476,17 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     completeImpl = { [weak controller] in
         controller?.dismiss()
         modifiedPeer()
-        updateState { state in
-            updatePeerSound(peer.id, state.selectedSound)
-            updatePeerNotificationInterval(peer.id, state.mode == .alwaysOn ? 0 : Int32.max)
-            updatePeerDisplayPreviews(peer.id, state.displayPreviews == .alwaysOn ? .show : .hide)
-            return state
-        }
+        
+        let _ = (context.engine.peers.notificationSoundList()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { notificationSoundList in
+            updateState { state in
+                updatePeerSound(peer.id, resolvedNotificationSound(sound: state.selectedSound, notificationSoundList: notificationSoundList))
+                updatePeerNotificationInterval(peer.id, state.mode == .alwaysOn ? 0 : Int32.max)
+                updatePeerDisplayPreviews(peer.id, state.displayPreviews == .alwaysOn ? .show : .hide)
+                return state
+            }
+        })
     }
     
     removeFromExceptionsImpl = { [weak controller] in
@@ -405,6 +496,46 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     
     cancelImpl = { [weak controller] in
         controller?.dismiss()
+    }
+    
+    presentFilePicker = { [weak controller] in
+        guard let controller = controller else {
+            return
+        }
+        presentCustomNotificationSoundFilePicker(context: context, controller: controller, disposable: soundActionDisposable)
+    }
+    
+    deleteSoundImpl = { [weak controller] sound, title in
+        guard let controller = controller else {
+            return
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.PeerInfo_DeleteToneTitle, text: presentationData.strings.PeerInfo_DeleteToneText(title).string, actions: [
+            TextAlertAction(type: .destructiveAction, title: presentationData.strings.Common_Delete, action: {
+                updateState { state in
+                    var state = state
+                    
+                    state.removedSounds.append(sound)
+                    if state.selectedSound.id == sound.id {
+                        state.selectedSound = defaultCloudPeerNotificationSound
+                    }
+                    
+                    return state
+                }
+                switch sound {
+                case let .cloud(id):
+                    soundActionDisposable.set((context.engine.peers.deleteNotificationSound(fileId: id)
+                    |> deliverOnMainQueue).start(completed: {
+                    }))
+                default:
+                    break
+                }
+            }),
+            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+            })
+        ], parseMarkdown: true), in: .window(.root))
     }
 
     return controller

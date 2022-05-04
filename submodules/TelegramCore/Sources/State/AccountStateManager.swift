@@ -115,6 +115,11 @@ public final class AccountStateManager {
         return self.displayAlertsPipe.signal()
     }
     
+    private let dismissBotWebViewsPipe = ValuePipe<[Int64]>()
+    public var dismissBotWebViews: Signal<[Int64], NoError> {
+        return self.dismissBotWebViewsPipe.signal()
+    }
+    
     private let externallyUpdatedPeerIdsPipe = ValuePipe<[PeerId]>()
     var externallyUpdatedPeerIds: Signal<[PeerId], NoError> {
         return self.externallyUpdatedPeerIdsPipe.signal()
@@ -760,6 +765,10 @@ public final class AccountStateManager {
                     self.displayAlertsPipe.putNext(events.displayAlerts)
                 }
             
+                if !events.dismissBotWebViews.isEmpty {
+                    self.dismissBotWebViewsPipe.putNext(events.dismissBotWebViews)
+                }
+            
                 if !events.externallyUpdatedPeerId.isEmpty {
                     self.externallyUpdatedPeerIdsPipe.putNext(Array(events.externallyUpdatedPeerId))
                 }
@@ -1302,11 +1311,11 @@ public final class AccountStateManager {
 public func messagesForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (messages: [Message], notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
     guard let message = transaction.getMessage(id) else {
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
-        return ([], false, .bundledModern(id: 0), false)
+        return ([], false, defaultCloudPeerNotificationSound, false)
     }
 
     var notify = true
-    var sound: PeerMessageSound = .bundledModern(id: 0)
+    var sound: PeerMessageSound = defaultCloudPeerNotificationSound
     var muted = false
     var displayContents = true
     
@@ -1340,7 +1349,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     }
     
     if let notificationSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
-        var defaultSound: PeerMessageSound = .bundledModern(id: 0)
+        var defaultSound: PeerMessageSound = defaultCloudPeerNotificationSound
         var defaultNotify: Bool = true
         if let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) {
             if id.peerId.namespace == Namespaces.Peer.CloudUser {

@@ -108,8 +108,10 @@ public func parseMarkdownIntoAttributedString(_ string: String, attributes: Mark
                             }
                             result.append(NSAttributedString(string: bold, attributes: boldAttributes))
                         } else {
-                            result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))
-                            remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
+                            if remainingRange.length != 0 {
+                                result.append(NSAttributedString(string: nsString.substring(with: NSMakeRange(remainingRange.location, 1)), attributes: bodyAttributes))
+                                remainingRange = NSMakeRange(range.location + 1, remainingRange.length - 1)
+                            }
                         }
                     } else {
                         if result.string.hasSuffix("\\") {

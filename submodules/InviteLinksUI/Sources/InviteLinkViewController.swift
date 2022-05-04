@@ -416,7 +416,7 @@ public final class InviteLinkViewController: ViewController {
             self.controller = controller
             
             self.importersContext = importersContext ?? context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: false))
-            if invite.requestApproval {
+            if case let .link(_, _, _, requestApproval, _, _, _, _, _, _, _, _) = invite, requestApproval {
                 self.requestsContext = context.engine.peers.peerInvitationImporters(peerId: peerId, subject: .invite(invite: invite, requested: true))
             } else {
                 self.requestsContext = nil
@@ -473,7 +473,7 @@ public final class InviteLinkViewController: ViewController {
         
             self.interaction = InviteLinkViewInteraction(context: context, openPeer: { [weak self] peerId in
                 if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), keepStack: .always))
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), keepStack: .always))
                 }
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
@@ -483,7 +483,10 @@ public final class InviteLinkViewController: ViewController {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 self?.controller?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
             }, shareLink: { [weak self] invite in
-                let shareController = ShareController(context: context, subject: .url(invite.link))
+                guard let inviteLink = invite.link else {
+                    return
+                }
+                let shareController = ShareController(context: context, subject: .url(inviteLink))
                 shareController.completed = { [weak self] peerIds in
                     if let strongSelf = self {
                         let _ = (strongSelf.context.account.postbox.transaction { transaction -> [Peer] in
@@ -569,8 +572,9 @@ public final class InviteLinkViewController: ViewController {
                                     dismissAction()
                                     self?.controller?.dismiss()
                                     
-                                    let _ = (context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(completed: {
-                                    })
+                                    if let inviteLink = invite.link {
+                                        let _ = (context.engine.peers.deletePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start()
+                                    }
                                     
                                     self?.controller?.revokedInvitationsContext?.remove(invite)
                                 })
@@ -626,11 +630,13 @@ public final class InviteLinkViewController: ViewController {
                                         dismissAction()
                                         self?.controller?.dismiss()
 
-                                        let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: invite.link) |> deliverOnMainQueue).start(next: { result in
-                                            if case let .replace(_, newInvite) = result {
-                                                self?.controller?.invitationsContext?.add(newInvite)
-                                            }
-                                        })
+                                        if let inviteLink = invite.link {
+                                            let _ = (context.engine.peers.revokePeerExportedInvitation(peerId: peerId, link: inviteLink) |> deliverOnMainQueue).start(next: { result in
+                                                if case let .replace(_, newInvite) = result {
+                                                    self?.controller?.invitationsContext?.add(newInvite)
+                                                }
+                                            })
+                                        }
                                         
                                         self?.controller?.invitationsContext?.remove(invite)
                                         let revokedInvite = invite.withUpdated(isRevoked: true)
@@ -662,93 +668,98 @@ public final class InviteLinkViewController: ViewController {
                 requestsState = .single(PeerInvitationImportersState.Empty)
             }
             
-            let creatorPeer = context.account.postbox.loadedPeerWithId(invite.adminId)
-            self.disposable = (combineLatest(self.presentationDataPromise.get(), self.importersContext.state, requestsState, creatorPeer)
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, requestsState, creatorPeer in
-                if let strongSelf = self {
-                    var entries: [InviteLinkViewEntry] = []
-                    
-                    entries.append(.link(presentationData.theme, invite))
-                    entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
-                    entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), invite.date))
-                                        
-                    if !requestsState.importers.isEmpty || (state.isLoadingMore && requestsState.count > 0) {
-                        entries.append(.requestHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(requestsState.count)).uppercased(), "", false))
-                    }
-                    
-                    var count: Int32
-                    var loading: Bool
-                    var index: Int32 = 0
-                    if requestsState.importers.isEmpty && requestsState.isLoadingMore {
-                        count = min(4, state.count)
-                        loading = true
-                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-                        for i in 0 ..< count {
-                            entries.append(.request(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
+            if case let .link(_, _, _, _, _, adminId, date, _, _, usageLimit, _, _) = invite {
+                self.disposable = (combineLatest(
+                    self.presentationDataPromise.get(),
+                    self.importersContext.state,
+                    requestsState,
+                    context.account.postbox.loadedPeerWithId(adminId)
+                ) |> deliverOnMainQueue).start(next: { [weak self] presentationData, state, requestsState, creatorPeer in
+                    if let strongSelf = self {
+                        var entries: [InviteLinkViewEntry] = []
+                        
+                        entries.append(.link(presentationData.theme, invite))
+                        entries.append(.creatorHeader(presentationData.theme, presentationData.strings.InviteLink_CreatedBy.uppercased()))
+                        entries.append(.creator(presentationData.theme, presentationData.dateTimeFormat, EnginePeer(creatorPeer), date))
+                                            
+                        if !requestsState.importers.isEmpty || (state.isLoadingMore && requestsState.count > 0) {
+                            entries.append(.requestHeader(presentationData.theme, presentationData.strings.MemberRequests_PeopleRequested(Int32(requestsState.count)).uppercased(), "", false))
                         }
-                    } else {
-                        count = min(4, Int32(requestsState.importers.count))
-                        loading = false
-                        for importer in requestsState.importers {
-                            if let peer = importer.peer.peer {
-                                entries.append(.request(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                        
+                        var count: Int32
+                        var loading: Bool
+                        var index: Int32 = 0
+                        if requestsState.importers.isEmpty && requestsState.isLoadingMore {
+                            count = min(4, state.count)
+                            loading = true
+                            let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                            for i in 0 ..< count {
+                                entries.append(.request(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                             }
-                            index += 1
-                        }
-                    }
-                    
-                    if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
-                        let subtitle: String
-                        let subtitleExpired: Bool
-                        if let usageLimit = invite.usageLimit {
-                            let remaining = max(0, usageLimit - state.count)
-                            subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
-                            subtitleExpired = remaining <= 0
                         } else {
-                            subtitle = ""
-                            subtitleExpired = false
-                        }
-
-                        entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
-                    }
-                    
-                    index = 0
-                    if state.importers.isEmpty && state.isLoadingMore {
-                        count = min(4, state.count)
-                        loading = true
-                        let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-                        for i in 0 ..< count {
-                            entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
-                        }
-                    } else {
-                        count = min(4, Int32(state.importers.count))
-                        loading = false
-                        for importer in state.importers {
-                            if let peer = importer.peer.peer {
-                                entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                            count = min(4, Int32(requestsState.importers.count))
+                            loading = false
+                            for importer in requestsState.importers {
+                                if let peer = importer.peer.peer {
+                                    entries.append(.request(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                                }
+                                index += 1
                             }
-                            index += 1
                         }
-                    }
-                    
-                    let previousCount = previousCount.swap(count)
-                    let previousLoading = previousLoading.swap(loading)
-                    
-                    var animated = false
-                    var crossfade = false
-                    if let previousCount = previousCount, let previousLoading = previousLoading {
-                        if (previousCount == count || previousCount >= 4) && previousLoading && !loading {
-                            crossfade = true
-                        } else if previousCount < 4 && previousCount != count && !loading {
-                            animated = true
+                        
+                        if !state.importers.isEmpty || (state.isLoadingMore && state.count > 0) {
+                            let subtitle: String
+                            let subtitleExpired: Bool
+                            if let usageLimit = usageLimit {
+                                let remaining = max(0, usageLimit - state.count)
+                                subtitle = presentationData.strings.InviteLink_PeopleRemaining(remaining).uppercased()
+                                subtitleExpired = remaining <= 0
+                            } else {
+                                subtitle = ""
+                                subtitleExpired = false
+                            }
+
+                            entries.append(.importerHeader(presentationData.theme, presentationData.strings.InviteLink_PeopleJoined(Int32(state.count)).uppercased(), subtitle, subtitleExpired))
                         }
+                        
+                        index = 0
+                        if state.importers.isEmpty && state.isLoadingMore {
+                            count = min(4, state.count)
+                            loading = true
+                            let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+                            for i in 0 ..< count {
+                                entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
+                            }
+                        } else {
+                            count = min(4, Int32(state.importers.count))
+                            loading = false
+                            for importer in state.importers {
+                                if let peer = importer.peer.peer {
+                                    entries.append(.importer(index, presentationData.theme, presentationData.dateTimeFormat, EnginePeer(peer), importer.date, false))
+                                }
+                                index += 1
+                            }
+                        }
+                        
+                        let previousCount = previousCount.swap(count)
+                        let previousLoading = previousLoading.swap(loading)
+                        
+                        var animated = false
+                        var crossfade = false
+                        if let previousCount = previousCount, let previousLoading = previousLoading {
+                            if (previousCount == count || previousCount >= 4) && previousLoading && !loading {
+                                crossfade = true
+                            } else if previousCount < 4 && previousCount != count && !loading {
+                                animated = true
+                            }
+                        }
+                        let previousEntries = previousEntries.swap(entries)
+                        
+                        let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: false, animated: animated, crossfade: crossfade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction!)
+                        strongSelf.enqueueTransition(transition)
                     }
-                    let previousEntries = previousEntries.swap(entries)
-                    
-                    let transition = preparedTransition(from: previousEntries ?? [], to: entries, isLoading: false, animated: animated, crossfade: crossfade, account: context.account, presentationData: presentationData, interaction: strongSelf.interaction!)
-                    strongSelf.enqueueTransition(transition)
-                }
-            })
+                })
+            }
             
             self.listNode.preloadPages = true
             self.listNode.stackFromBottom = true
@@ -940,43 +951,45 @@ public final class InviteLinkViewController: ViewController {
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 68.0))
             
             var titleText = self.presentationData.strings.InviteLink_InviteLink
-            
             var subtitleText = ""
             var subtitleColor = self.presentationData.theme.list.itemSecondaryTextColor
-            if self.invite.isRevoked {
-                subtitleText = self.presentationData.strings.InviteLink_Revoked
-            } else if let usageLimit = self.invite.usageLimit, let count = self.invite.count, count >= usageLimit {
-                subtitleText = self.presentationData.strings.InviteLink_UsageLimitReached
-                subtitleColor = self.presentationData.theme.list.itemDestructiveColor
-            } else if let expireDate = self.invite.expireDate {
-                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                if currentTime >= expireDate {
-                    titleText = self.presentationData.strings.InviteLink_ExpiredLink
-                    subtitleText = self.presentationData.strings.InviteLink_ExpiredLinkStatus
+            
+            if case let .link(_, title, _, _, isRevoked, _, _, _, expireDate, usageLimit, count, _) = self.invite {
+                if isRevoked {
+                    subtitleText = self.presentationData.strings.InviteLink_Revoked
+                } else if let usageLimit = usageLimit, let count = count, count >= usageLimit {
+                    subtitleText = self.presentationData.strings.InviteLink_UsageLimitReached
                     subtitleColor = self.presentationData.theme.list.itemDestructiveColor
-                    self.countdownTimer?.invalidate()
-                    self.countdownTimer = nil
-                } else {
-                    let elapsedTime = expireDate - currentTime
-                    if elapsedTime >= 86400 {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).string
+                } else if let expireDate = expireDate {
+                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                    if currentTime >= expireDate {
+                        titleText = self.presentationData.strings.InviteLink_ExpiredLink
+                        subtitleText = self.presentationData.strings.InviteLink_ExpiredLinkStatus
+                        subtitleColor = self.presentationData.theme.list.itemDestructiveColor
+                        self.countdownTimer?.invalidate()
+                        self.countdownTimer = nil
                     } else {
-                        subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).string
-                        if self.countdownTimer == nil {
-                            let countdownTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
-                                if let strongSelf = self, let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout, transition: .immediate)
-                                }
-                            }, queue: Queue.mainQueue())
-                            self.countdownTimer = countdownTimer
-                            countdownTimer.start()
+                        let elapsedTime = expireDate - currentTime
+                        if elapsedTime >= 86400 {
+                            subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(scheduledTimeIntervalString(strings: self.presentationData.strings, value: elapsedTime)).string
+                        } else {
+                            subtitleText = self.presentationData.strings.InviteLink_ExpiresIn(textForTimeout(value: elapsedTime)).string
+                            if self.countdownTimer == nil {
+                                let countdownTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                                    if let strongSelf = self, let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout, transition: .immediate)
+                                    }
+                                }, queue: Queue.mainQueue())
+                                self.countdownTimer = countdownTimer
+                                countdownTimer.start()
+                            }
                         }
                     }
                 }
-            }
             
-            if let title = self.invite.title, !title.isEmpty {
-                titleText = title
+                if let title = title, !title.isEmpty {
+                    titleText = title
+                }
             }
             
             self.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)

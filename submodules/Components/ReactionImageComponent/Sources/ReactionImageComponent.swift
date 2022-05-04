@@ -26,7 +26,7 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
                 guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
                     return
                 }
-                guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, cacheKey: "") else {
+                guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
                     return
                 }
                 

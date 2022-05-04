@@ -9,10 +9,17 @@ import AccountContext
 import SolidRoundedButtonNode
 import TelegramPresentationData
 import PresentationDataUtils
+import TelegramStringFormatting
 
 enum ChatTimerScreenStyle {
     case `default`
     case media
+}
+
+enum ChatTimerScreenMode {
+    case sendTimer
+    case autoremove
+    case mute
 }
 
 final class ChatTimerScreen: ViewController {
@@ -25,6 +32,7 @@ final class ChatTimerScreen: ViewController {
     private let context: AccountContext
     private let peerId: PeerId
     private let style: ChatTimerScreenStyle
+    private let mode: ChatTimerScreenMode
     private let currentTime: Int32?
     private let dismissByTapOutside: Bool
     private let completion: (Int32) -> Void
@@ -32,10 +40,11 @@ final class ChatTimerScreen: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, style: ChatTimerScreenStyle, currentTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, style: ChatTimerScreenStyle, mode: ChatTimerScreenMode = .sendTimer, currentTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.peerId = peerId
         self.style = style
+        self.mode = mode
         self.currentTime = currentTime
         self.dismissByTapOutside = dismissByTapOutside
         self.completion = completion
@@ -68,7 +77,7 @@ final class ChatTimerScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatTimerScreenNode(context: self.context, presentationData: presentationData, style: self.style, currentTime: self.currentTime, dismissByTapOutside: self.dismissByTapOutside)
+        self.displayNode = ChatTimerScreenNode(context: self.context, presentationData: presentationData, style: self.style, mode: self.mode, currentTime: self.currentTime, dismissByTapOutside: self.dismissByTapOutside)
         self.controllerNode.completion = { [weak self] time in
             guard let strongSelf = self else {
                 return
@@ -108,7 +117,45 @@ final class ChatTimerScreen: ViewController {
     }
 }
 
-private class TimerPickerView: UIPickerView {
+private protocol TimerPickerView: UIView {
+    
+}
+
+private class TimerCustomPickerView: UIPickerView, TimerPickerView {
+    var selectorColor: UIColor? = nil {
+        didSet {
+            for subview in self.subviews {
+                if subview.bounds.height <= 1.0 {
+                    subview.backgroundColor = self.selectorColor
+                }
+            }
+        }
+    }
+    
+    override func didAddSubview(_ subview: UIView) {
+        super.didAddSubview(subview)
+        
+        if let selectorColor = self.selectorColor {
+            if subview.bounds.height <= 1.0 {
+                subview.backgroundColor = selectorColor
+            }
+        }
+    }
+    
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        
+        if let selectorColor = self.selectorColor {
+            for subview in self.subviews {
+                if subview.bounds.height <= 1.0 {
+                    subview.backgroundColor = selectorColor
+                }
+            }
+        }
+    }
+}
+
+private class TimerDatePickerView: UIDatePicker, TimerPickerView {
     var selectorColor: UIColor? = nil {
         didSet {
             for subview in self.subviews {
@@ -213,6 +260,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     private let controllerStyle: ChatTimerScreenStyle
     private var presentationData: PresentationData
     private let dismissByTapOutside: Bool
+    private let mode: ChatTimerScreenMode
     
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
@@ -225,7 +273,13 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     private let cancelButton: HighlightableButtonNode
     private let doneButton: SolidRoundedButtonNode
     
+    private let disableButton: HighlightableButtonNode
+    private let disableButtonTitle: ImmediateTextNode
+    
+    private var initialTime: Int32?
     private var pickerView: TimerPickerView?
+    
+    private let autoremoveTimerValues: [Int32]
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
@@ -233,11 +287,13 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, presentationData: PresentationData, style: ChatTimerScreenStyle, currentTime: Int32?, dismissByTapOutside: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, style: ChatTimerScreenStyle, mode: ChatTimerScreenMode, currentTime: Int32?, dismissByTapOutside: Bool) {
         self.context = context
         self.controllerStyle = style
         self.presentationData = presentationData
         self.dismissByTapOutside = dismissByTapOutside
+        self.mode = mode
+        self.initialTime = currentTime
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -278,7 +334,15 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         self.contentBackgroundNode = ASDisplayNode()
         self.contentBackgroundNode.backgroundColor = backgroundColor
         
-        let title = self.presentationData.strings.Conversation_Timer_Title
+        let title: String
+        switch self.mode {
+        case .sendTimer:
+            title = self.presentationData.strings.Conversation_Timer_Title
+        case .autoremove:
+            title = self.presentationData.strings.Conversation_DeleteTimer_SetupTitle
+        case .mute:
+            title = self.presentationData.strings.Conversation_Mute_SetupTitle
+        }
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: textColor)
         
@@ -289,6 +353,40 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         
         self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
         self.doneButton.title = self.presentationData.strings.Conversation_Timer_Send
+        
+        self.disableButton = HighlightableButtonNode()
+        self.disableButtonTitle = ImmediateTextNode()
+        self.disableButton.addSubnode(self.disableButtonTitle)
+        self.disableButtonTitle.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_DeleteTimer_Disable, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemAccentColor)
+        self.disableButton.isHidden = true
+        
+        switch self.mode {
+        case .autoremove:
+            if self.initialTime != nil {
+                self.disableButton.isHidden = false
+            }
+        default:
+            break
+        }
+        
+        self.autoremoveTimerValues = [
+            1 * 24 * 60 * 60 as Int32,
+            2 * 24 * 60 * 60 as Int32,
+            3 * 24 * 60 * 60 as Int32,
+            4 * 24 * 60 * 60 as Int32,
+            5 * 24 * 60 * 60 as Int32,
+            6 * 24 * 60 * 60 as Int32,
+            1 * 7 * 24 * 60 * 60 as Int32,
+            2 * 7 * 24 * 60 * 60 as Int32,
+            3 * 7 * 24 * 60 * 60 as Int32,
+            1 * 31 * 24 * 60 * 60 as Int32,
+            2 * 30 * 24 * 60 * 60 as Int32,
+            3 * 31 * 24 * 60 * 60 as Int32,
+            4 * 30 * 24 * 60 * 60 as Int32,
+            5 * 31 * 24 * 60 * 60 as Int32,
+            6 * 30 * 24 * 60 * 60 as Int32,
+            365 * 24 * 60 * 60 as Int32
+        ]
         
         super.init()
         
@@ -310,16 +408,41 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         self.contentContainerNode.addSubnode(self.textNode)
         self.contentContainerNode.addSubnode(self.cancelButton)
         self.contentContainerNode.addSubnode(self.doneButton)
+        self.contentContainerNode.addSubnode(self.disableButton)
         
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self, let pickerView = strongSelf.pickerView {
                 strongSelf.doneButton.isUserInteractionEnabled = false
-                strongSelf.completion?(timerValues[pickerView.selectedRow(inComponent: 0)])
+                if let pickerView = pickerView as? TimerCustomPickerView {
+                    switch strongSelf.mode {
+                    case .sendTimer:
+                        strongSelf.completion?(timerValues[pickerView.selectedRow(inComponent: 0)])
+                    case .autoremove:
+                        let timeInterval = strongSelf.autoremoveTimerValues[pickerView.selectedRow(inComponent: 0)]
+                        strongSelf.completion?(Int32(timeInterval))
+                    case .mute:
+                        break
+                    }
+                } else if let pickerView = pickerView as? TimerDatePickerView {
+                    switch strongSelf.mode {
+                    case .mute:
+                        let timeInterval = max(0, Int32(pickerView.date.timeIntervalSince1970) - Int32(Date().timeIntervalSince1970))
+                        strongSelf.completion?(timeInterval)
+                    default:
+                        break
+                    }
+                }
             }
         }
         
+        self.disableButton.addTarget(self, action: #selector(self.disableButtonPressed), forControlEvents: .touchUpInside)
+        
         self.setupPickerView(currentTime: currentTime)
+    }
+    
+    @objc private func disableButtonPressed() {
+        self.completion?(0)
     }
     
     func setupPickerView(currentTime: Int32? = nil) {
@@ -327,35 +450,119 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
             pickerView.removeFromSuperview()
         }
         
-        let pickerView = TimerPickerView()
-        pickerView.selectorColor = UIColor(rgb: 0xffffff, alpha: 0.18)
-        pickerView.dataSource = self
-        pickerView.delegate = self
-        
-        self.contentContainerNode.view.addSubview(pickerView)
-        self.pickerView = pickerView
+        switch self.mode {
+        case .sendTimer:
+            let pickerView = TimerCustomPickerView()
+            pickerView.selectorColor = UIColor(rgb: 0xffffff, alpha: 0.18)
+            pickerView.dataSource = self
+            pickerView.delegate = self
+            
+            self.contentContainerNode.view.addSubview(pickerView)
+            self.pickerView = pickerView
+        case .autoremove:
+            let pickerView = TimerCustomPickerView()
+            pickerView.dataSource = self
+            pickerView.delegate = self
+            
+            pickerView.selectorColor = self.presentationData.theme.list.itemPrimaryTextColor.withMultipliedAlpha(0.18)
+            
+            self.contentContainerNode.view.addSubview(pickerView)
+            self.pickerView = pickerView
+            
+            if let value = self.initialTime {
+                var selectedRowIndex = 0
+                for i in 0 ..< self.autoremoveTimerValues.count {
+                    if self.autoremoveTimerValues[i] <= value {
+                        selectedRowIndex = i
+                    }
+                }
+                
+                pickerView.selectRow(selectedRowIndex, inComponent: 0, animated: false)
+            }
+        case .mute:
+            let pickerView = TimerDatePickerView()
+            pickerView.locale = localeWithStrings(self.presentationData.strings)
+            pickerView.datePickerMode = .dateAndTime
+            pickerView.minimumDate = Date()
+            if #available(iOS 13.4, *) {
+                pickerView.preferredDatePickerStyle = .wheels
+            }
+            pickerView.setValue(self.presentationData.theme.list.itemPrimaryTextColor, forKey: "textColor")
+            pickerView.setValue(false, forKey: "highlightsToday")
+            pickerView.selectorColor = UIColor(rgb: 0xffffff, alpha: 0.18)
+            pickerView.addTarget(self, action: #selector(self.dataPickerChanged), for: .valueChanged)
+            
+            self.contentContainerNode.view.addSubview(pickerView)
+            self.pickerView = pickerView
+        }
+    }
+    
+    @objc private func dataPickerChanged() {
+        if let (layout, navigationBarHeight) = self.containerLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        }
     }
     
     func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 1
+        switch self.mode {
+        case .sendTimer:
+            return 1
+        case .autoremove:
+            return 1
+        case .mute:
+            return 0
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        return timerValues.count
+        switch self.mode {
+        case .sendTimer:
+            return timerValues.count
+        case .autoremove:
+            return self.autoremoveTimerValues.count
+        case .mute:
+            return 0
+        }
     }
     
     func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
-        let value = timerValues[row]
-        let string = timeIntervalString(strings: self.presentationData.strings, value: value)
-        if let view = view as? TimerPickerItemView {
+        switch self.mode {
+        case .sendTimer:
+            let value = timerValues[row]
+            let string = timeIntervalString(strings: self.presentationData.strings, value: value)
+            if let view = view as? TimerPickerItemView {
+                view.value = (value, string)
+                return view
+            }
+            
+            let view = TimerPickerItemView()
             view.value = (value, string)
+            view.textColor = .white
             return view
+        case .autoremove:
+            let itemView: TimerPickerItemView
+            if let current = view as? TimerPickerItemView {
+                itemView = current
+            } else {
+                itemView = TimerPickerItemView()
+                itemView.textColor = self.presentationData.theme.list.itemPrimaryTextColor
+            }
+            
+            let value = self.autoremoveTimerValues[row]
+            
+            let string: String
+            string = timeIntervalString(strings: self.presentationData.strings, value: value)
+            
+            itemView.value = (value, string)
+            
+            return itemView
+        case .mute:
+            preconditionFailure()
         }
-        
-        let view = TimerPickerItemView()
-        view.value = (value, string)
-        view.textColor = .white
-        return view
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+        self.dataPickerChanged()
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -466,11 +673,16 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         let cleanInsets = layout.insets(options: [.statusBar])
         insets.top = max(10.0, insets.top)
         
-        let buttonOffset: CGFloat = 0.0
+        var buttonOffset: CGFloat = 0.0
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
         let titleHeight: CGFloat = 54.0
         var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
         let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
+        
+        if !self.disableButton.isHidden {
+            buttonOffset += 52.0
+        }
+        
         contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight + buttonOffset
         
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
@@ -498,8 +710,36 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
         transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
         
         let buttonInset: CGFloat = 16.0
+        
+        switch self.mode {
+        case .sendTimer:
+            break
+        case .autoremove:
+            self.doneButton.title = self.presentationData.strings.Conversation_DeleteTimer_Apply
+        case .mute:
+            if let pickerView = self.pickerView as? TimerDatePickerView {
+                let timeInterval = max(0, Int32(pickerView.date.timeIntervalSince1970) - Int32(Date().timeIntervalSince1970))
+                
+                if timeInterval > 0 {
+                    let timeString = stringForPreciseRelativeTimestamp(strings: self.presentationData.strings, relativeTimestamp: Int32(pickerView.date.timeIntervalSince1970), relativeTo: Int32(Date().timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
+                    
+                    self.doneButton.title = self.presentationData.strings.Conversation_Mute_ApplyMuteUntil(timeString).string
+                } else {
+                    self.doneButton.title = self.presentationData.strings.Common_Close
+                }
+            } else {
+                self.doneButton.title = self.presentationData.strings.Common_Close
+            }
+        }
+        
         let doneButtonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
-        transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight))
+        let doneButtonFrame = CGRect(x: buttonInset, y: contentHeight - doneButtonHeight - insets.bottom - 16.0 - buttonOffset, width: contentFrame.width, height: doneButtonHeight)
+        transition.updateFrame(node: self.doneButton, frame: doneButtonFrame)
+        
+        let disableButtonTitleSize = self.disableButtonTitle.updateLayout(CGSize(width: contentFrame.width, height: doneButtonHeight))
+        let disableButtonFrame = CGRect(origin: CGPoint(x: doneButtonFrame.minX, y: doneButtonFrame.maxY), size: CGSize(width: contentFrame.width - buttonInset * 2.0, height: doneButtonHeight))
+        transition.updateFrame(node: self.disableButton, frame: disableButtonFrame)
+        transition.updateFrame(node: self.disableButtonTitle, frame: CGRect(origin: CGPoint(x: floor((disableButtonFrame.width - disableButtonTitleSize.width) / 2.0), y: floor((disableButtonFrame.height - disableButtonTitleSize.height) / 2.0)), size: disableButtonTitleSize))
         
         self.pickerView?.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         

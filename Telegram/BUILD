@@ -2,6 +2,8 @@ load("@bazel_skylib//rules:common_settings.bzl",
     "bool_flag",
 )
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
+
 load("@build_bazel_rules_apple//apple:ios.bzl",
     "ios_application",
     "ios_extension",
@@ -35,8 +37,6 @@ load(
     "telegram_enable_icloud",
     "telegram_enable_siri",
     "telegram_enable_watch",
-    "facebook_url_schemes",
-    "facebook_app_id",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -73,6 +73,19 @@ config_setting(
     name = "disableProvisioningProfilesSetting",
     flag_values = {
         ":disableProvisioningProfiles": "True",
+    },
+)
+
+bool_flag(
+    name = "disableStripping",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "disableStrippingSetting",
+    flag_values = {
+        ":disableStripping": "True",
     },
 )
 
@@ -186,8 +199,13 @@ debug_deps = select({
     "//conditions:default": [],
 })
 
+selects.config_setting_group(
+    name = "resolvedDisableStrippingSetting",
+    match_any = [":debug", ":disableStrippingSetting"],
+)
+
 strip_framework = select({
-    ":debug": None,
+    ":resolvedDisableStrippingSetting": None,
     "//conditions:default": ":StripFramework",
 })
 
@@ -288,6 +306,7 @@ alternate_icon_folders = [
     "WhiteFilledIcon",
     "New1",
     "New2",
+    "New3",
 ]
 
 [
@@ -365,7 +384,6 @@ plist_fragment(
             <string>{telegram_bundle_id}</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>{facebook_url_schemes}</string>
                 <string>telegram</string>
                 <string>nicegram</string>
             </array>
@@ -377,25 +395,14 @@ plist_fragment(
             <string>{telegram_bundle_id}.compatibility</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>{facebook_url_schemes}</string>
                 <string>tg</string>
                 <string>ng</string>
                 <string>ngcn</string>
             </array>
         </dict>
     </array>
-    <key>NSUserTrackingUsageDescription</key>
-    <string>We need access to your advertising identifier in order to correctly identify the source of your installation and provide you with a high quality service.</string>
-    <key>FacebookAppID</key>
-    <string>{facebook_app_id}</string>
-    <key>FacebookClientToken</key>
-    <string>74f6476c9428ec13a71ba158eed5c83f</string>
-    <key>FacebookDisplayName</key>
-    <string>Nicegram</string>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
-        facebook_url_schemes = facebook_url_schemes,
-        facebook_app_id = facebook_app_id,
     )
 )
 
@@ -419,6 +426,12 @@ official_apple_pay_merchants = [
 official_bundle_ids = [
     "ph.telegra.Telegraph",
     "org.telegram.Telegram-iOS",
+]
+
+nicegram_bundle_ids = [
+    "ph.telegra.Telegraph",
+    "org.telegram.Telegram-iOS",
+    "app.nicegram",
 ]
 
 apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else []
@@ -461,7 +474,7 @@ icloud_fragment = "" if not telegram_enable_icloud else """
     telegram_icloud_environment="Production" if telegram_aps_environment == "production" else "Development"
 )
 
-associated_domains_fragment = "" if telegram_bundle_id not in official_bundle_ids else """
+associated_domains_fragment = "" if telegram_bundle_id not in nicegram_bundle_ids else """
 <key>com.apple.developer.associated-domains</key>
 <array>
     <string>applinks:telegram.me</string>
@@ -498,10 +511,10 @@ communication_notifications_fragment = """
 <true/>
 """
 
-#filtering_notifications_fragment = """
-#<key>com.apple.developer.usernotifications.filtering</key>
-#<true/>
-#"""
+filtering_notifications_fragment = """
+<key>com.apple.developer.usernotifications.filtering</key>
+<true/>
+"""
 
 plist_fragment(
     name = "TelegramEntitlements",
@@ -516,7 +529,7 @@ plist_fragment(
         unrestricted_voip_fragment,
         carplay_fragment,
         communication_notifications_fragment,
-#        filtering_notifications_fragment,
+        filtering_notifications_fragment,
     ])
 )
 
@@ -1813,8 +1826,6 @@ plist_fragment(
         <string>ucbrowser</string>
         <string>dolphin</string>
         <string>instagram-stories</string>
-        <string>fbapi</string>
-        <string>fb-messenger-share-api</string>
     </array>
     <key>LSRequiresIPhoneOS</key>
     <true/>

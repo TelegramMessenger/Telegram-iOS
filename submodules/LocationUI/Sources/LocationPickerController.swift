@@ -75,6 +75,8 @@ public final class LocationPickerController: ViewController, AttachmentContainab
     public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
     public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
     public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: LocationPickerMode, completion: @escaping (TelegramMediaMap, String?) -> Void) {
         self.context = context

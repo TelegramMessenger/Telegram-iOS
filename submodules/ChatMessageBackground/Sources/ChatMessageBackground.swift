@@ -542,6 +542,24 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
         self.backgroundContent?.offsetSpring(value: value, duration: duration, damping: damping)
     }
     
+    public func updateFrame(_ value: CGRect, animator: ControlledTransitionAnimator, completion: @escaping () -> Void = {}) {
+        if let maskView = self.maskView {
+            animator.updateFrame(layer: maskView.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset), completion: nil)
+        }
+        if let backgroundContent = self.backgroundContent {
+            animator.updateFrame(layer: backgroundContent.layer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)), completion: nil)
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .animated(duration: animator.duration, curve: .spring))
+            }
+        }
+        animator.updateFrame(layer: self.layer, frame: value, completion: { _ in
+            completion()
+        })
+    }
+    
     public func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
         if let maskView = self.maskView {
             transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value.size.width, height: value.size.height)).insetBy(dx: -maskInset, dy: -maskInset))

@@ -64,6 +64,8 @@
         return STPCardBrandJCB;
     } else if ([brand isEqualToString:@"diners club"]) {
         return STPCardBrandDinersClub;
+    } else if ([brand isEqualToString:@"other"]) {
+        return STPCardBrandOther;
     } else {
         return STPCardBrandUnknown;
     }
@@ -114,6 +116,8 @@
         return @"MasterCard";
     case STPCardBrandVisa:
         return @"Visa";
+    case STPCardBrandOther:
+        return @"Other";
     default:
         return @"Unknown";
     }

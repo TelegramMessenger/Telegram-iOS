@@ -19,6 +19,8 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
+        "//submodules/UndoUI:UndoUI",
     ],
     visibility = [
         "//visibility:public",

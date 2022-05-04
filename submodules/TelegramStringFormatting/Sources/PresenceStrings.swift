@@ -270,6 +270,23 @@ public func stringForRelativeTimestamp(strings: PresentationStrings, relativeTim
     }
 }
 
+public func stringForPreciseRelativeTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    var t: time_t = time_t(relativeTimestamp)
+    var timeinfo: tm = tm()
+    localtime_r(&t, &timeinfo)
+    
+    var now: time_t = time_t(timestamp)
+    var timeinfoNow: tm = tm()
+    localtime_r(&now, &timeinfoNow)
+    
+    let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+    if dayDifference == 0 {
+        return stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)
+    } else {
+        return "\(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)), \(stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat))"
+    }
+}
+
 public func stringForRelativeLiveLocationTimestamp(strings: PresentationStrings, relativeTimestamp: Int32, relativeTo timestamp: Int32, dateTimeFormat: PresentationDateTimeFormat) -> String {
     let difference = timestamp - relativeTimestamp
     if difference < 60 {

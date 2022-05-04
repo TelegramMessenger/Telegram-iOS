@@ -44,7 +44,7 @@ class BazelCommandLine:
             # repository), but disabling it also causes a noticeable build time regression
             # so it can be explicitly re-enabled by users who are not affected by those
             # crashes.
-            '--features=swift.use_global_module_cache',
+            #'--features=swift.use_global_module_cache',
 
             # https://docs.bazel.build/versions/master/command-line-reference.html
             # Print the subcommand details in case of failure.
@@ -143,6 +143,17 @@ class BazelCommandLine:
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=armv7k,arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'debug_sim_arm64':
+            self.configuration_args = [
+                # bazel debug build configuration
+                '-c', 'dbg',
+
+                # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
+                '--ios_multi_cpus=sim_arm64',
 
                 # Always build universal Watch binaries.
                 '--watchos_cpus=armv7k,arm64_32'
@@ -317,6 +328,47 @@ class BazelCommandLine:
         call_executable(combined_arguments)
 
 
+    def invoke_test(self):
+        combined_arguments = [
+            self.build_environment.bazel_path
+        ]
+        combined_arguments += self.get_startup_bazel_arguments()
+        combined_arguments += ['test']
+
+        combined_arguments += ['--cache_test_results=no']
+        combined_arguments += ['--test_output=errors']
+
+        combined_arguments += ['Tests/AllTests']
+
+        if self.configuration_path is None:
+            raise Exception('configuration_path is not defined')
+
+        combined_arguments += [
+            '--override_repository=build_configuration={}'.format(self.configuration_path)
+        ]
+
+        combined_arguments += self.common_args
+        combined_arguments += self.common_build_args
+        combined_arguments += self.get_define_arguments()
+        combined_arguments += self.get_additional_build_arguments()
+
+        if self.remote_cache is not None:
+            combined_arguments += [
+                '--remote_cache={}'.format(self.remote_cache),
+                '--experimental_remote_downloader={}'.format(self.remote_cache)
+            ]
+        elif self.cache_dir is not None:
+            combined_arguments += [
+                '--disk_cache={path}'.format(path=self.cache_dir)
+            ]
+
+        combined_arguments += self.configuration_args
+
+        print('TelegramBuild: running')
+        print(subprocess.list2cmdline(combined_arguments))
+        call_executable(combined_arguments)
+
+
 def clean(bazel, arguments):
     bazel_command_line = BazelCommandLine(
         bazel=bazel,
@@ -430,6 +482,27 @@ def build(bazel, arguments):
     bazel_command_line.invoke_build()
 
 
+def test(bazel, arguments):
+    bazel_command_line = BazelCommandLine(
+        bazel=bazel,
+        override_bazel_version=arguments.overrideBazelVersion,
+        override_xcode_version=arguments.overrideXcodeVersion,
+        bazel_user_root=arguments.bazelUserRoot
+    )
+
+    if arguments.cacheDir is not None:
+        bazel_command_line.add_cache_dir(arguments.cacheDir)
+    elif arguments.cacheHost is not None:
+        bazel_command_line.add_remote_cache(arguments.cacheHost)
+
+    resolve_configuration(bazel_command_line, arguments)
+
+    bazel_command_line.set_configuration('debug_sim_arm64')
+    bazel_command_line.set_build_number('10000')
+
+    bazel_command_line.invoke_test()
+
+
 def add_project_and_build_common_arguments(current_parser: argparse.ArgumentParser):
     group = current_parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -519,6 +592,13 @@ if __name__ == '__main__':
             locally in an external directory ('--cacheDir=...')
             '''
     )
+
+    testParser = subparsers.add_parser(
+        'test', help='''
+            Run all tests.
+            '''
+    )
+    add_project_and_build_common_arguments(testParser)
 
     generateProjectParser = subparsers.add_parser('generateProject', help='Generate Xcode project')
     generateProjectParser.add_argument(
@@ -646,6 +726,8 @@ if __name__ == '__main__':
             generate_project(bazel=bazel_path, arguments=args)
         elif args.commandName == 'build':
             build(bazel=bazel_path, arguments=args)
+        elif args.commandName == 'test':
+            test(bazel=bazel_path, arguments=args)
         else:
             raise Exception('Unknown command')
     except KeyboardInterrupt:

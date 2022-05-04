@@ -145,5 +145,11 @@
 "NicegramSettings.Other.showProfileId" = "Show Profile ID";
 "NicegramSettings.Other.showRegDate" = "Show Registration Date";
 "Premium.OnetapTranslate.LowPower" = "Recognition on Low Power";
-"Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-prefomance task which can affect your battery life.";
+"Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-performance task which can affect your battery life.";
 "Premium.rememberFolderOnExit" = "Remember current folder on exit";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Older than";
+"NiceFeatures.RegDate.Approximately" = "Approximately";
+"NiceFeatures.RegDate.NewerThan" = "Newer than";
+

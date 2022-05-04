@@ -69,7 +69,7 @@ private enum ChatHistorySearchEntry: Comparable, Identifiable {
     func item(context: AccountContext, peerId: PeerId, interaction: ChatControllerInteraction) -> ListViewItem {
         switch self {
             case let .message(message, theme, strings, dateTimeFormat, fontSize):
-                return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: .builtin(WallpaperSettings())), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(peerId), interaction: ListMessageItemInteraction(controllerInteraction: interaction), message: message, selection: .none, displayHeader: true)
+            return ListMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: .builtin(WallpaperSettings())), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: .firstLast, disableAnimations: false, largeEmoji: false, chatBubbleCorners: PresentationChatBubbleCorners(mainRadius: 0.0, auxiliaryRadius: 0.0, mergeBubbleCorners: false)), context: context, chatLocation: .peer(id: peerId), interaction: ListMessageItemInteraction(controllerInteraction: interaction), message: message, selection: .none, displayHeader: true)
         }
     }
 }

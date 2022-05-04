@@ -13,7 +13,8 @@ public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     func update(
         presentationData: PresentationData,
         constrainedSize: CGSize,
-        standardWidth: CGFloat,
+        standardMinWidth: CGFloat,
+        standardMaxWidth: CGFloat,
         transition: ContainedViewLayoutTransition
     ) -> (size: CGSize, apparentHeight: CGFloat)
     
@@ -106,6 +107,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.addSubnode(self.labelNode)
         self.addSubnode(self.iconNode)
         
+        self.isEnabled = self.canBeHighlighted()
+        
         self.highligthedChanged = { [weak self] highlighted in
             guard let strongSelf = self else {
                 return
@@ -147,7 +150,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     }
     
     func canBeHighlighted() -> Bool {
-        return true
+        return self.item.action != nil
     }
     
     func updateIsHighlighted(isHighlighted: Bool) {
@@ -165,7 +168,8 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         let iconSideInset: CGFloat = 12.0
         let standardIconWidth: CGFloat = 32.0
         let badgeSize = CGSize(width: 22.0, height: 22.0)
-
+        let iconSpacing: CGFloat = 8.0
+        
         self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
         
         var subtitle: String?
@@ -177,12 +181,17 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         case let .secondLineWithValue(subtitleValue):
             self.titleLabelNode.maximumNumberOfLines = 1
             subtitle = subtitleValue
+        case .multiline:
+            self.titleLabelNode.maximumNumberOfLines = 0
         }
         
         let titleFont: UIFont
         switch self.item.textFont {
         case let .custom(font):
             titleFont = font
+        case .small:
+            let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
+            titleFont = smallTextFont
         case .regular:
             titleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
         }
@@ -250,6 +259,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         maxTextWidth -= sideInset
         if let iconSize = iconSize {
             maxTextWidth -= max(standardIconWidth, iconSize.width)
+            maxTextWidth -= iconSpacing
         } else {
             maxTextWidth -= sideInset
         }
@@ -258,7 +268,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         let titleSize = self.titleLabelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
         let _ = self.labelNode.updateLayout(CGSize(width: maxTextWidth, height: 1000.0))
-
+        
         var minSize = CGSize()
         minSize.width += sideInset
         minSize.width += max(titleSize.width, subtitleSize.width)
@@ -269,6 +279,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         if let iconSize = iconSize {
             minSize.width += max(standardIconWidth, iconSize.width)
             minSize.width += iconSideInset
+            minSize.width += iconSpacing
         } else {
             minSize.width += sideInset
         }
@@ -425,7 +436,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         ) {
             self.requestUpdate = requestUpdate
             self.items = items
-
+            
             var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
             self.itemNodes = items.map { item -> Item in
                 switch item {
@@ -511,7 +522,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
-            standardWidth: CGFloat,
+            standardMinWidth: CGFloat,
+            standardMaxWidth: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             var itemNodeLayouts: [(minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)] = []
@@ -521,13 +533,13 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                 
                 let itemNodeLayout = item.node.update(
                     presentationData: presentationData,
-                    constrainedSize: constrainedSize
+                    constrainedSize: CGSize(width: standardMaxWidth, height: constrainedSize.height)
                 )
                 itemNodeLayouts.append(itemNodeLayout)
                 combinedSize.width = max(combinedSize.width, itemNodeLayout.minSize.width)
                 combinedSize.height += itemNodeLayout.minSize.height
             }
-            combinedSize.width = max(combinedSize.width, standardWidth)
+            combinedSize.width = max(combinedSize.width, standardMinWidth)
             
             var nextItemOrigin = CGPoint()
             for i in 0 ..< self.itemNodes.count {
@@ -654,7 +666,8 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
-            standardWidth: CGFloat,
+            standardMinWidth: CGFloat,
+            standardMaxWidth: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let contentLayout = self.contentNode.update(
@@ -719,7 +732,15 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> Co
 }
 
 final class ContextControllerActionsStackNode: ASDisplayNode {
+    enum Presentation {
+        case modal
+        case inline
+    }
+    
     final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
+        let backgroundNode: NavigationBackgroundNode
+        let parentShadowNode: ASImageNode
+        
         var requestUpdate: ((ContainedViewLayoutTransition) -> Void)?
         var requestPop: (() -> Void)?
         var transitionFraction: CGFloat = 0.0
@@ -733,7 +754,13 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         
         override init() {
+            self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: false)
+            self.parentShadowNode = ASImageNode()
+            self.parentShadowNode.image = UIImage(bundleImageName: "Components/Context Menu/Shadow")?.stretchableImage(withLeftCapWidth: 60, topCapHeight: 48)
+            
             super.init()
+            
+            self.addSubnode(self.backgroundNode)
             
             self.clipsToBounds = true
             self.cornerRadius = 14.0
@@ -790,7 +817,16 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             }
         }
         
-        func update(presentationData: PresentationData, size: CGSize, transition: ContainedViewLayoutTransition) {
+        func update(presentationData: PresentationData, presentation: Presentation, size: CGSize, transition: ContainedViewLayoutTransition) {
+            switch presentation {
+            case .modal:
+                self.backgroundNode.updateColor(color: presentationData.theme.contextMenu.backgroundColor, enableBlur: false, forceKeepBlur: false, transition: transition)
+                self.parentShadowNode.isHidden = true
+            case .inline:
+                self.backgroundNode.updateColor(color: presentationData.theme.contextMenu.backgroundColor, enableBlur: true, forceKeepBlur: true, transition: transition)
+                self.parentShadowNode.isHidden = false
+            }
+            self.backgroundNode.update(size: size, transition: transition)
         }
     }
     
@@ -842,14 +878,16 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
-            standardWidth: CGFloat,
+            standardMinWidth: CGFloat,
+            standardMaxWidth: CGFloat,
             transitionFraction: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let (size, apparentHeight) = self.node.update(
                 presentationData: presentationData,
                 constrainedSize: constrainedSize,
-                standardWidth: standardWidth,
+                standardMinWidth: standardMinWidth,
+                standardMaxWidth: standardMaxWidth,
                 transition: transition
             )
             
@@ -909,7 +947,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     private let navigationContainer: NavigationContainer
     private var itemContainers: [ItemContainer] = []
     private var dismissingItemContainers: [(container: ItemContainer, isPopped: Bool)] = []
-
+    
     private var selectionPanGesture: UIPanGestureRecognizer?
     
     var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? {
@@ -936,9 +974,10 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.navigationContainer = NavigationContainer()
         
         super.init()
-
+        
+        self.addSubnode(self.navigationContainer.parentShadowNode)
         self.addSubnode(self.navigationContainer)
-
+        
         self.navigationContainer.requestUpdate = { [weak self] transition in
             guard let strongSelf = self else {
                 return
@@ -983,7 +1022,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         self.itemContainers.removeAll()
         self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
-
+        
         self.push(item: item, currentScrollingState: nil, positionLock: nil, animated: animated)
     }
     
@@ -1041,11 +1080,10 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     func update(
         presentationData: PresentationData,
         constrainedSize: CGSize,
+        presentation: Presentation,
         transition: ContainedViewLayoutTransition
     ) -> CGSize {
         let tipSpacing: CGFloat = 10.0
-        
-        self.navigationContainer.backgroundColor = presentationData.theme.contextMenu.backgroundColor
         
         let animateAppearingContainers = transition.isAnimated && !self.dismissingItemContainers.isEmpty
         
@@ -1088,7 +1126,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             let itemSize = itemContainer.update(
                 presentationData: presentationData,
                 constrainedSize: CGSize(width: constrainedSize.width, height: itemConstrainedHeight),
-                standardWidth: 250.0,
+                standardMinWidth: 220.0,
+                standardMaxWidth: 240.0,
                 transitionFraction: alphaTransitionFraction,
                 transition: itemContainerTransition
             )
@@ -1125,7 +1164,10 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         
         let navigationContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: topItemWidth, height: max(14 * 2.0, topItemApparentHeight)))
         transition.updateFrame(node: self.navigationContainer, frame: navigationContainerFrame, beginWithCurrentState: true)
-        self.navigationContainer.update(presentationData: presentationData, size: navigationContainerFrame.size, transition: transition)
+        self.navigationContainer.update(presentationData: presentationData, presentation: presentation, size: navigationContainerFrame.size, transition: transition)
+        
+        let navigationContainerShadowFrame = navigationContainerFrame.insetBy(dx: -30.0, dy: -30.0)
+        transition.updateFrame(node: self.navigationContainer.parentShadowNode, frame: navigationContainerShadowFrame, beginWithCurrentState: true)
         
         for i in 0 ..< self.itemContainers.count {
             let xOffset: CGFloat
@@ -1182,7 +1224,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             }
         }
         self.dismissingItemContainers.removeAll()
-
+        
         return CGSize(width: topItemWidth, height: topItemSize.height)
     }
     

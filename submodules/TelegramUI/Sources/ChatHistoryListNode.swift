@@ -248,8 +248,8 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ReplyCountEntry(_, isComments, count, presentationData):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(title, text, presentationData):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(title, text, photo, presentationData):
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, photo: photo, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -293,8 +293,8 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatUnreadItem(index: entry.entry.index, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .ReplyCountEntry(_, isComments, count, presentationData):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatReplyCountItem(index: entry.entry.index, isComments: isComments, count: count, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction), directionHint: entry.directionHint)
-            case let .ChatInfoEntry(title, text, presentationData):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, controllerInteraction: controllerInteraction, presentationData: presentationData), directionHint: entry.directionHint)
+            case let .ChatInfoEntry(title, text, photo, presentationData):
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatBotInfoItem(title: title, text: text, photo: photo, controllerInteraction: controllerInteraction, presentationData: presentationData, context: context), directionHint: entry.directionHint)
             case let .SearchEntry(theme, strings):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     controllerInteraction.openSearch()
@@ -932,7 +932,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let customChannelDiscussionReadState: Signal<MessageId?, NoError>
         if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-            let cachedDataKey = PostboxViewKey.cachedPeerData(peerId: chatLocation.peerId)
+            let cachedDataKey = PostboxViewKey.cachedPeerData(peerId: peerId)
             let peerKey = PostboxViewKey.basicPeer(peerId)
             customChannelDiscussionReadState = context.account.postbox.combinedView(keys: [cachedDataKey, peerKey])
             |> mapToSignal { views -> Signal<PeerId?, NoError> in
@@ -1066,7 +1066,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 case let .id(id):
                                     initialSearchLocation = .id(id)
                                 case let .timestamp(timestamp):
-                                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: strongSelf.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                                    if let peerId = strongSelf.chatLocation.peerId {
+                                        initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                                    } else {
+                                        //TODO:implement
+                                        initialSearchLocation = .index(.absoluteUpperBound())
+                                    }
                                 }
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
@@ -1311,7 +1316,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 if apply {
                     switch chatLocation {
-                    case .peer, .replyThread:
+                    case .peer, .replyThread, .feed:
                         if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                             context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
                         }
@@ -1352,7 +1357,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             case let .id(id):
                 initialSearchLocation = .id(id)
             case let .timestamp(timestamp):
-                initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: self.chatLocation.peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                if let peerId = self.chatLocation.peerId {
+                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                } else {
+                    //TODO:implement
+                    initialSearchLocation = .index(MessageIndex.absoluteUpperBound())
+                }
             }
             self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: 0)
         } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
@@ -2112,7 +2122,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 switch self.chatLocation {
                 case .peer:
                     messageIndex = maxIncomingIndex
-                case .replyThread:
+                case .replyThread, .feed:
                     messageIndex = maxOverallIndex
                 }
                 
@@ -2524,7 +2534,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             switch strongSelf.chatLocation {
                             case .peer:
                                 messageIndex = incomingIndex
-                            case .replyThread:
+                            case .replyThread, .feed:
                                 messageIndex = overallIndex
                             }
                             

@@ -30,7 +30,7 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
             
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
-                if let player = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: cacheKey) {
+                if let player = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: cacheKey) {
                     if cancelled.with({ $0 }) {
                         return
                     }
@@ -128,7 +128,7 @@ public func cacheAnimatedStickerFrames(data: Data, size: CGSize, fitzModifier: E
        
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
-                if let player = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, cacheKey: cacheKey) {
+                if let player = LottieInstance(data: decompressedData, fitzModifier: fitzModifier?.lottieFitzModifier ?? .none, colorReplacements: nil, cacheKey: cacheKey) {
                     let endFrame = Int(player.frameCount)
                     
                     if cancelled.with({ $0 }) {

@@ -16,28 +16,44 @@ public enum ItemListCheckboxItemColor {
 }
 
 public class ItemListCheckboxItem: ListViewItem, ItemListItem {
+    public enum IconPlacement {
+        case `default`
+        case check
+    }
+    
+    public enum TextColor {
+        case primary
+        case accent
+    }
+    
     let presentationData: ItemListPresentationData
     let icon: UIImage?
     let iconSize: CGSize?
+    let iconPlacement: IconPlacement
     let title: String
     let style: ItemListCheckboxItemStyle
     let color: ItemListCheckboxItemColor
+    let textColor: TextColor
     let checked: Bool
     let zeroSeparatorInsets: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
+    let deleteAction: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage? = nil, iconSize: CGSize? = nil, iconPlacement: IconPlacement = .default, title: String, style: ItemListCheckboxItemStyle, color: ItemListCheckboxItemColor = .accent, textColor: TextColor = .primary, checked: Bool, zeroSeparatorInsets: Bool, sectionId: ItemListSectionId, action: @escaping () -> Void, deleteAction: (() -> Void)? = nil) {
         self.presentationData = presentationData
         self.icon = icon
         self.iconSize = iconSize
+        self.iconPlacement = iconPlacement
         self.title = title
         self.style = style
         self.color = color
+        self.textColor = textColor
         self.checked = checked
         self.zeroSeparatorInsets = zeroSeparatorInsets
         self.sectionId = sectionId
         self.action = action
+        self.deleteAction = deleteAction
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -81,7 +97,7 @@ public class ItemListCheckboxItem: ListViewItem, ItemListItem {
     }
 }
 
-public class ItemListCheckboxItemNode: ListViewItemNode {
+public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -90,11 +106,17 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
     
     private let activateArea: AccessibilityAreaNode
     
+    private let contentParentNode: ASDisplayNode
+    private let contentContainerNode: ASDisplayNode
     private let imageNode: ASImageNode
     private let iconNode: ASImageNode
     private let titleNode: TextNode
     
     private var item: ItemListCheckboxItem?
+    
+    override public var controlsContainer: ASDisplayNode {
+        return self.contentParentNode
+    }
     
     public init() {
         self.backgroundNode = ASDisplayNode()
@@ -107,6 +129,10 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
         self.bottomStripeNode.isLayerBacked = true
         
         self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
+        
+        self.contentParentNode = ASDisplayNode()
+        self.contentContainerNode = ASDisplayNode()
         
         self.imageNode = ASImageNode()
         self.imageNode.isLayerBacked = true
@@ -128,11 +154,13 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
         
         self.activateArea = AccessibilityAreaNode()
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.titleNode)
+        self.addSubnode(self.contentParentNode)
+        self.contentParentNode.addSubnode(self.contentContainerNode)
+        self.contentContainerNode.addSubnode(self.imageNode)
+        self.contentContainerNode.addSubnode(self.iconNode)
+        self.contentContainerNode.addSubnode(self.titleNode)
         self.addSubnode(self.activateArea)
         
         self.activateArea.activate = { [weak self] in
@@ -151,19 +179,32 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
             
             switch item.style {
             case .left:
-                leftInset += 44.0
+                leftInset += 62.0
             case .right:
                 leftInset += 16.0
             }
             
-            let iconInset: CGFloat = 44.0
+            let iconInset: CGFloat = 62.0
             if item.icon != nil {
-                leftInset += iconInset
+                switch item.iconPlacement {
+                case .default:
+                    leftInset += iconInset
+                case .check:
+                    break
+                }
             }
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleColor: UIColor
+            switch item.textColor {
+            case .primary:
+                titleColor = item.presentationData.theme.list.itemPrimaryTextColor
+            case .accent:
+                titleColor = item.presentationData.theme.list.itemAccentColor
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 28.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let separatorHeight = UIScreenPixel
             
@@ -191,6 +232,9 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    strongSelf.contentParentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width, height: layout.contentSize.height))
+                    strongSelf.contentContainerNode.frame = CGRect(origin: CGPoint(x: strongSelf.contentContainerNode.frame.minX, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
                     
                     strongSelf.activateArea.accessibilityLabel = item.title
                     if item.checked {
@@ -234,7 +278,7 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.insertSubnode(strongSelf.maskNode, aboveSubnode: strongSelf.contentParentNode)
                     }
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
@@ -273,10 +317,26 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
                     if let icon = item.icon {
                         let iconSize = item.iconSize ?? icon.size
                         strongSelf.imageNode.image = icon
-                        strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        
+                        let iconFrame: CGRect
+                        switch item.iconPlacement {
+                        case .default:
+                            iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        case .check:
+                            iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: floor((contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        }
+                        strongSelf.imageNode.frame = iconFrame
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))
+                    
+                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    if item.deleteAction != nil {
+                        strongSelf.setRevealOptions((left: [], right: [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)]))
+                    } else {
+                        strongSelf.setRevealOptions((left: [], right: []))
+                    }
                 }
             })
         }
@@ -326,5 +386,26 @@ public class ItemListCheckboxItemNode: ListViewItemNode {
     
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+    
+    override public func updateRevealOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        super.updateRevealOffset(offset: offset, transition: transition)
+        
+        transition.updateFrame(node: self.contentContainerNode, frame: CGRect(origin: CGPoint(x: offset, y: self.contentContainerNode.frame.minY), size: self.contentContainerNode.bounds.size))
+    }
+
+    override public func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        self.setRevealOptionsOpened(false, animated: true)
+        self.revealOptionsInteractivelyClosed()
+        
+        if let item = self.item {
+            item.deleteAction?()
+        }
+    }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        
+        return result
     }
 }

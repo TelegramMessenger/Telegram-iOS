@@ -137,6 +137,14 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
             }
             return fetchPreparedPatternWallpaperRepresentation(resource: resource, resourceData: data, representation: representation)
         }
+    } else if let representation = representation as? CachedPreparedSvgRepresentation {
+        return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
+        |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
+            if !data.complete {
+                return .complete()
+            }
+            return fetchPreparedSvgRepresentation(resource: resource, resourceData: data, representation: representation)
+        }
     }
     return .never()
 }
@@ -745,6 +753,21 @@ private func fetchPreparedPatternWallpaperRepresentation(resource: MediaResource
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if let unpackedData = TGGUnzipData(data, 2 * 1024 * 1024), let data = prepareSvgImage(unpackedData) {
+                let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
+                let url = URL(fileURLWithPath: path)
+                let _ = try? data.write(to: url)
+                subscriber.putNext(.temporaryPath(path))
+                subscriber.putCompletion()
+            }
+        }
+        return EmptyDisposable
+    }) |> runOn(Queue.concurrentDefaultQueue())
+}
+
+private func fetchPreparedSvgRepresentation(resource: MediaResource, resourceData: MediaResourceData, representation: CachedPreparedSvgRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+    return Signal({ subscriber in
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
+            if let data = prepareSvgImage(data) {
                 let path = NSTemporaryDirectory() + "\(Int64.random(in: Int64.min ... Int64.max))"
                 let url = URL(fileURLWithPath: path)
                 let _ = try? data.write(to: url)

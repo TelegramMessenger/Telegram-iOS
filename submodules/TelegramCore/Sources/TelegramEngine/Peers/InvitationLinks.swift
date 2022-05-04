@@ -245,7 +245,7 @@ func _internal_peerExportedInvitations(account: Account, peerId: PeerId, revoked
     return account.postbox.transaction { transaction -> Signal<ExportedInvitations?, NoError> in
         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer), let adminPeer = transaction.getPeer(adminId ?? account.peerId), let adminId = apiInputUser(adminPeer) {
             var flags: Int32 = 0
-            if let _ = offsetLink {
+            if let _ = offsetLink?.date {
                 flags |= (1 << 2)
             }
             if revoked {
@@ -828,19 +828,27 @@ private final class PeerInvitationImportersContextImpl {
             case let .requests(maybeQuery):
                 query = maybeQuery
         }
-        self.link = invite?.link
+        
+        var link: String?
+        var count: Int32 = 0
+        if let invite = invite, case let .link(inviteLink, _, _, _, _, _, _, _, _, _, inviteCount, _) = invite {
+            link = inviteLink
+            if let inviteCount = inviteCount {
+                count = inviteCount
+            }
+        }
+        self.link = link
+        self.count = count
+        
         self.requested = requested
         self.query = query
-        
-        let count = invite?.count ?? 0
-        self.count = count
         
         self.isLoadingMore = true
         self.disposable.set((account.postbox.transaction { transaction -> (peers: [PeerInvitationImportersState.Importer], count: Int32, canLoadMore: Bool)? in
             guard query == nil else {
                 return nil
             }
-            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: invite?.link ?? "requests", requested: self.requested)))?.get(CachedPeerInvitationImporters.self)
+            let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedPeerInvitationImporters, key: CachedPeerInvitationImporters.key(peerId: peerId, link: link ?? "requests", requested: requested)))?.get(CachedPeerInvitationImporters.self)
             if let cachedResult = cachedResult, (Int(cachedResult.count) == count || invite == nil) {
                 var result: [PeerInvitationImportersState.Importer] = []
                 for peerId in cachedResult.peerIds {

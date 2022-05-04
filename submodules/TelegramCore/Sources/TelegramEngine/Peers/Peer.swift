@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public enum EnginePeer: Equatable {
@@ -75,6 +76,7 @@ public enum EnginePeer: Equatable {
             case `default`
             case bundledModern(id: Int32)
             case bundledClassic(id: Int32)
+            case cloud(fileId: Int64)
         }
 
         public enum DisplayPreviews {
@@ -200,6 +202,8 @@ public extension EnginePeer.NotificationSettings.MessageSound {
             self = .bundledClassic(id: id)
         case let .bundledModern(id):
             self = .bundledModern(id: id)
+        case let .cloud(fileId):
+            self = .cloud(fileId: fileId)
         }
     }
 
@@ -213,6 +217,8 @@ public extension EnginePeer.NotificationSettings.MessageSound {
             return .bundledClassic(id: id)
         case let .bundledModern(id):
             return .bundledModern(id: id)
+        case let .cloud(fileId):
+            return .cloud(fileId: fileId)
         }
     }
 }

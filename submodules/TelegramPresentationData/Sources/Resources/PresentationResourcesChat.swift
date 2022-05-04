@@ -1204,4 +1204,58 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "NGTranslateIcon"), color: bubbleVariableColor(variableColor: theme.chat.message.shareButtonForegroundColor, wallpaper: wallpaper), customSize: CGSize(width: 18.0, height: 18.0))
         })
     }
+    
+    public static func chatKeyboardActionButtonMessageIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonMessageIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotMessage"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonLinkIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonLinkIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLink"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonShareIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonShareIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotShare"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonPhoneIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonPhoneIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPhone"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonLocationIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonLocationIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotLocation"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonPaymentIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonPaymentIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotPayment"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonProfileIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonProfileIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotProfile"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonAddToChatIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonAddToChatIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotAddToChat"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
+    
+    public static func chatKeyboardActionButtonWebAppIconImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatKeyboardActionButtonWebAppIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/BotWebApp"), color: theme.chat.inputButtonPanel.buttonTextColor)
+        })
+    }
 }

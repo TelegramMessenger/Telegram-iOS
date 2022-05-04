@@ -889,7 +889,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
 
             switch contentType {
             case .gifs:
-                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false)
+                return PeerInfoStatusData(text: presentationData.strings.SharedMedia_GifCount(Int32(count)), isActivity: false, key: .gifs)
             default:
                 return nil
             }
@@ -922,7 +922,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
             return
         }
         self.isRequestingView = true
-        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
+        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
         |> deliverOnMainQueue).start(next: { [weak self] (view, updateType, _) in
             guard let strongSelf = self else {
                 return

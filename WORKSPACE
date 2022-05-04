@@ -64,11 +64,12 @@ http_archive(
     build_file = "@//third-party/AppCenter:AppCenter.BUILD",
 )
 
+
 http_archive(
         name = "FirebaseSDK",
         urls = ["https://github.com/firebase/firebase-ios-sdk/releases/download/v8.11.0/Firebase.zip"],
         build_file = "@//third-party/Firebase:BUILD",
-        sha256 = "ecf1013b5d616bb5d3acc7d9ddf257c06228c0a7364dd84d03989bae6af5ac5b"
+	sha256 = "ecf1013b5d616bb5d3acc7d9ddf257c06228c0a7364dd84d03989bae6af5ac5b",
 )
 
 http_archive(

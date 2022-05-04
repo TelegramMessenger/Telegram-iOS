@@ -137,7 +137,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .voiceOrInstantVideo, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(id: params.message.id.peerId), tagMask: .voiceOrInstantVideo, at: params.message.id)
                     }
                     playerType = .voice
                 } else if file.isMusic && params.message.tags.contains(.music) {
@@ -146,7 +146,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     } else if params.standalone {
                         location = .recentActions(params.message)
                     } else {
-                        location = .messages(chatLocation: params.chatLocation ?? .peer(params.message.id.peerId), tagMask: .music, at: params.message.id)
+                        location = .messages(chatLocation: params.chatLocation ?? .peer(id: params.message.id.peerId), tagMask: .music, at: params.message.id)
                     }
                     playerType = .music
                 } else {

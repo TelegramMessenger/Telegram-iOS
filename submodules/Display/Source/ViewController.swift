@@ -554,7 +554,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
-    public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
+    open func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation, self.navigationController != nil {
             controller.navigationPresentation = .modal
             self.push(controller)

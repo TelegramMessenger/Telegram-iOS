@@ -981,7 +981,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                                 } else if let ssrc = participantUpdate.ssrc, strongSelf.ssrcMapping[ssrc] == nil {
                                 }
                             }
-                        case let .call(isTerminated, _, _, _, _, _):
+                        case let .call(isTerminated, _, _, _, _, _, _):
                             if isTerminated {
                                 strongSelf.markAsCanBeRemoved()
                             }

@@ -111,6 +111,10 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
         return nil;
     }
     
+    if (CGSizeEqualToSize(size, CGSizeZero)) {
+        size = CGSizeMake(image->width, image->height);
+    }
+    
     double deltaTime = -1.0f * [startTime timeIntervalSinceNow];
     printf("parseTime = %f\n", deltaTime);
     
@@ -354,32 +358,46 @@ UIImage * _Nullable drawSvgImage(NSData * _Nonnull data, CGSize size, UIColor *b
 
 @end
 
-UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size) {
+UIImage * _Nullable renderPreparedImage(NSData * _Nonnull data, CGSize size, UIColor *backgroundColor, CGFloat scale) {
     NSDate *startTime = [NSDate date];
     
     UIColor *foregroundColor = [UIColor whiteColor];
-    UIColor *backgroundColor = [UIColor blackColor];
+    
     
     int32_t ptr = 0;
     int32_t width;
     int32_t height;
+    
+    if (data.length < 4 * 2) {
+        return nil;
+    }
     
     [data getBytes:&width range:NSMakeRange(ptr, sizeof(width))];
     ptr += sizeof(width);
     [data getBytes:&height range:NSMakeRange(ptr, sizeof(height))];
     ptr += sizeof(height);
     
-    UIGraphicsBeginImageContextWithOptions(size, true, 1.0);
+    if (CGSizeEqualToSize(size, CGSizeZero)) {
+        size = CGSizeMake(width, height);
+    }
+    
+    bool isTransparent = [backgroundColor isEqual:[UIColor clearColor]];
+    
+    UIGraphicsBeginImageContextWithOptions(size, !isTransparent, scale);
     CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, backgroundColor.CGColor);
-    CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
+    if (isTransparent) {
+        CGContextClearRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
+    } else {
+        CGContextSetFillColorWithColor(context, backgroundColor.CGColor);
+        CGContextFillRect(context, CGRectMake(0.0f, 0.0f, size.width, size.height));
+    }
     
     CGSize svgSize = CGSizeMake(width, height);
     CGSize drawingSize = aspectFillSize(svgSize, size);
     
-    CGFloat scale = MAX(size.width / MAX(1.0, svgSize.width), size.height / MAX(1.0, svgSize.height));
+    CGFloat renderScale = MAX(size.width / MAX(1.0, svgSize.width), size.height / MAX(1.0, svgSize.height));
     
-    CGContextScaleCTM(context, scale, scale);
+    CGContextScaleCTM(context, renderScale, renderScale);
     CGContextTranslateCTM(context, (size.width - drawingSize.width) / 2.0, (size.height - drawingSize.height) / 2.0);
     
     while (ptr < data.length) {
