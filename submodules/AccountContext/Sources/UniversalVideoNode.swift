@@ -63,10 +63,11 @@ public protocol UniversalVideoDecoration: AnyObject {
 }
 
 public enum UniversalVideoPriority: Int32, Comparable {
-    case secondaryOverlay = 0
-    case embedded = 1
-    case gallery = 2
-    case overlay = 3
+    case minimal = 0
+    case secondaryOverlay = 1
+    case embedded = 2
+    case gallery = 3
+    case overlay = 4
     
     public static func <(lhs: UniversalVideoPriority, rhs: UniversalVideoPriority) -> Bool {
         return lhs.rawValue < rhs.rawValue

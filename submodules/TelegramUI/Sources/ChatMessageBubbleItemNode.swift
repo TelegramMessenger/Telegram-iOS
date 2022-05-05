@@ -832,11 +832,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         return .fail
                     }
                 }
-                
-                if let avatarNode = strongSelf.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
-                    return .waitForSingleTap
-                }
-                
+                                
                 if let nameNode = strongSelf.nameNode, nameNode.frame.contains(point) {
                     if let item = strongSelf.item {
                         for attribute in item.message.attributes {
@@ -3115,46 +3111,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         switch gesture {
             case .tap:
-                if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                    return .action({
-                        if let item = self.item, let author = item.content.firstMessage.author {
-                            var openPeerId = item.effectiveAuthorId ?? author.id
-                            var navigate: ChatControllerInteractionNavigateToPeer
-                            
-                            if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                                navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
-                            } else if openPeerId.namespace == Namespaces.Peer.CloudUser {
-                                navigate = .info
-                            } else {
-                                navigate = .chat(textInputState: nil, subject: nil, peekData: nil)
-                            }
-                            
-                            for attribute in item.content.firstMessage.attributes {
-                                if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                    openPeerId = attribute.messageId.peerId
-                                    navigate = .chat(textInputState: nil, subject: .message(id: .id(attribute.messageId), highlight: true, timecode: nil), peekData: nil)
-                                }
-                            }
-                            
-                            if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                                item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                            } else if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.flags.contains(.isImported), forwardInfo.author == nil {
-                                item.controllerInteraction.displayImportedMessageTooltip(avatarNode)
-                            } else {
-                                if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId), let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                    if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
-                                    } else if case .member = channel.participationStatus {
-                                    } else if !item.message.id.peerId.isReplies {
-                                        item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                        return
-                                    }
-                                }
-                                item.controllerInteraction.openPeer(openPeerId, navigate, MessageReference(item.message), item.message.peers[openPeerId])
-                            }
-                        }
-                    })
-                }
-                
                 if let nameNode = self.nameNode, nameNode.frame.contains(location) {
                     if let item = self.item {
                         for attribute in item.message.attributes {
@@ -3482,10 +3438,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             } else {
                 return nil
             }
-        }
-        
-        if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(point) {
-            return avatarNode.containerNode.view
         }
         
         if !self.backgroundNode.frame.contains(point) {

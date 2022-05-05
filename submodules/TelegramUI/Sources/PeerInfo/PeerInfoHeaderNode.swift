@@ -413,29 +413,29 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 let representations: [ImageRepresentationWithReference]
                 let videoRepresentations: [VideoRepresentationWithReference]
                 let immediateThumbnailData: Data?
-                var id: Int64
+                var videoId: Int64
                 switch item {
                 case .custom:
                     representations = []
                     videoRepresentations = []
                     immediateThumbnailData = nil
-                    id = 0
+                    videoId = 0
                 case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = topRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
-                    id = peer.id.id._internalGetInt64Value()
+                    videoId = peer.id.id._internalGetInt64Value()
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
-                        id = id &+ resource.photoId
+                        videoId = videoId &+ resource.photoId
                     }
                 case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
                     if case let .cloud(imageId, _, _) = reference {
-                        id = imageId
+                        videoId = imageId
                     } else {
-                        id = peer.id.id._internalGetInt64Value()
+                        videoId = peer.id.id._internalGetInt64Value()
                     }
                 }
                 
@@ -443,7 +443,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 
                 if let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
                     let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-                    let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled)
+                    let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled)
                     if videoContent.id != self.videoContent?.id {
                         self.videoNode?.removeFromSupernode()
                         

@@ -723,12 +723,6 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    override public func layoutAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode, leftInset: CGFloat, rightInset: CGFloat) {
-        if let avatarNode = accessoryItemNode as? ChatMessageAvatarAccessoryItemNode {
-            avatarNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: self.apparentFrame.height - 38.0 - self.insets.top - 2.0 - UIScreenPixel), size: CGSize(width: 38.0, height: 38.0))
-        }
-    }
-
     func cancelInsertionAnimations() {
     }
     

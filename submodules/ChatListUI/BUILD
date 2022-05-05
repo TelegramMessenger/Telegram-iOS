@@ -52,6 +52,7 @@ swift_library(
         "//submodules/ChatMessageInteractiveMediaBadge:ChatMessageInteractiveMediaBadge",
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/GalleryData:GalleryData",
+        "//submodules/GalleryUI:GalleryUI",
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
         "//submodules/ChatInterfaceState:ChatInterfaceState",
@@ -68,6 +69,8 @@ swift_library(
         "//submodules/Components/ProgressIndicatorComponent:ProgressIndicatorComponent",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/PremiumUI:PremiumUI",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",
