@@ -67,6 +67,7 @@ swift_library(
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/ProgressIndicatorComponent:ProgressIndicatorComponent",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/PremiumUI:PremiumUI",
     ],
     visibility = [
         "//visibility:public",

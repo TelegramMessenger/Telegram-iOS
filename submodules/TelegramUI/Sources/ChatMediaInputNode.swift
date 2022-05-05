@@ -1087,7 +1087,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     return false
                 }
             })
-            strongSelf.controllerInteraction.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            strongSelf.controllerInteraction.presentController(controller, nil)
         }, getItemIsPreviewed: { item in
             return getItemIsPreviewedImpl?(item) ?? false
         }, openSearch: {

@@ -8,6 +8,7 @@ import TelegramCore
 import SwiftSignalKit
 import AccountContext
 import ReactionSelectionNode
+import Markdown
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     func update(
@@ -170,17 +171,22 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             subtitle = subtitleValue
         case .multiline:
             self.titleLabelNode.maximumNumberOfLines = 0
+            self.titleLabelNode.lineSpacing = 0.1
         }
         
         let titleFont: UIFont
+        let titleBoldFont: UIFont
         switch self.item.textFont {
         case let .custom(font):
             titleFont = font
+            titleBoldFont = font
         case .small:
             let smallTextFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
             titleFont = smallTextFont
+            titleBoldFont = Font.semibold(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
         case .regular:
             titleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+            titleBoldFont = Font.semibold(presentationData.listsFontSize.baseDisplaySize)
         }
         
         let subtitleFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0)
@@ -196,11 +202,23 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             titleColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.4)
         }
         
-        self.titleLabelNode.attributedText = NSAttributedString(
-            string: self.item.text,
-            font: titleFont,
-            textColor: titleColor
-        )
+        if self.item.parseMarkdown {
+            let attributedText = parseMarkdownIntoAttributedString(
+                self.item.text,
+                attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: titleFont, textColor: titleColor),
+                    bold: MarkdownAttributeSet(font: titleBoldFont, textColor: titleColor),
+                    link: MarkdownAttributeSet(font: titleFont, textColor: titleColor),
+                    linkAttribute: { _ in return nil }
+                )
+            )
+            self.titleLabelNode.attributedText = attributedText
+        } else {
+            self.titleLabelNode.attributedText = NSAttributedString(
+                string: self.item.text,
+                font: titleFont,
+                textColor: titleColor)
+        }
         
         self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
             return NSAttributedString(
