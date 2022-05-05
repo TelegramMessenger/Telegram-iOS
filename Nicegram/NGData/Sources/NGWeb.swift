@@ -123,7 +123,7 @@ public func getNGSettings(_ userId: Int64, completion: @escaping (_ sync: Bool, 
         var restricitionReasons = VARNGAPISETTINGS.RESTRICTION_REASONS
         var allowedChats = VARNGAPISETTINGS.ALLOWED
         var restrictedChats = VARNGAPISETTINGS.RESTRICTED
-        var localPremium = NGSettings.premium
+        var localPremium = isPremium()
         // var betaPremium = SecureNiceSettings().isBetaPremium
         
         if let response = apiResponse {
@@ -176,7 +176,7 @@ public func updateNGInfo(userId: Int64) {
 public func requestValidator(_ receipt: Data,  completion: @escaping (_ apiResult: String) -> Void) {
     let startTime = CFAbsoluteTimeGetCurrent()
     ngLog("DECLARING REQUEST VALIDATOR", LOGTAG)
-    var urlString = NGENV.validator_url
+    let urlString = NGENV.validator_url
     
     let url = URL(string: urlString)!
     var request : URLRequest = URLRequest(url: url)
@@ -208,7 +208,7 @@ public func validatePremium(_ current: Bool, forceValid: Bool = false) {
     if (current) {
         guard let receiptURL = Bundle.main.appStoreReceiptURL,
             let data = try? Data(contentsOf: receiptURL) else {
-                NGSettings.premium = false
+                // NGSettings.premium = false
                 ngLog("Hello hacker?????", LOGTAG)
                 sem.signal()
                 return
@@ -217,14 +217,14 @@ public func validatePremium(_ current: Bool, forceValid: Bool = false) {
         let encodedData = data.base64EncodedData(options: [])
         requestValidator(encodedData, completion: { validStatus in
             if validStatus == "0" { // Hacker
-                NGSettings.premium = false
+                // NGSettings.premium = false
                 ngLog("Hello hacker", LOGTAG)
                 // preconditionFailure("Hello hacker")
             } else if validStatus == "1" { // OK
                 ngLog("Okie-dokie", LOGTAG)
             } else { // Error
                 if forceValid {
-                    NGSettings.premium = false
+                    // NGSettings.premium = false
                     ngLog("Hello hacker?", LOGTAG)
                 }
             }

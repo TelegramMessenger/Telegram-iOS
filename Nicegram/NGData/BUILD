@@ -9,7 +9,8 @@ swift_library(
     deps = [
         "//Nicegram/NGRequests:NGRequests",
         "//Nicegram/NGLogging:NGLogging",
-        "//Nicegram/NGEnv:NGEnv"
+        "//Nicegram/NGEnv:NGEnv",
+        "//Nicegram/NGAppCache:NGAppCache"
     ],
     visibility = [
         "//visibility:public",

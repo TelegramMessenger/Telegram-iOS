@@ -228,45 +228,45 @@ private enum PremiumControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PremiumControllerArguments
         switch self {
-        case let .header(theme, text):
+        case let .header(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .syncPinsHeader(theme, text):
+        case let .syncPinsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .syncPinsToggle(theme, text, value):
+        case let .syncPinsToggle(_, text, value):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleSetting(value, .syncPins)
             })
-        case let .syncPinsNotice(theme, text):
+        case let .syncPinsNotice(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
-        case let .notifyMissed(theme, title, value):
+        case let .notifyMissed(_, title, value):
             return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                 arguments.openSetMissedInterval()
             })
-        case let .notifyMissedNotice(theme, text):
+        case let .notifyMissedNotice(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .manageFiltersHeader(theme, text):
+        case let .manageFiltersHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .manageFilters(theme, text):
+        case let .manageFilters(_, text):
             return ItemListDisclosureItem(presentationData: presentationData, icon: nil, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                 arguments.openManageFilters()
             })
-        case let .otherHeader(theme, text):
+        case let .otherHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .onetaptr(theme, text, value):
+        case let .onetaptr(_, text, value):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleSetting(value, .oneTapTr)
             })
 
-        case let .testButton(theme, text):
+        case let .testButton(_, _):
             return ItemListActionItem(presentationData: presentationData, title: "Test Button", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.testAction()
             })
-        case let .ignoretr(theme, text):
+        case let .ignoretr(_, text):
             return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
                 arguments.openIgnoreTranslations()
             })
-        case let .rememberFolderOnExit(theme, text, value):
+        case let .rememberFolderOnExit(_, text, value):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleSetting(value, .rememberFilterOnExit)
             })
@@ -440,7 +440,7 @@ public func premiumController(context: AccountContext) -> ViewController {
 
             let entries = premiumControllerEntries(presentationData: presentationData)
 
-            var index = 0
+            var _ = 0
             var scrollToItem: ListViewScrollToItem?
             // workaround
             //            let focusOnItemTag: FakeEntryTag? = nil

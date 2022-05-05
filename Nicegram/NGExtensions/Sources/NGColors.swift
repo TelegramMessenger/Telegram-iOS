@@ -120,6 +120,16 @@ extension UIColor {
     open class var ngRedButton: UIColor {
         return UIColor(red: 0.922, green: 0.333, blue: 0.271, alpha: 1)
     }
+    
+    // MARK: White theme
+    
+    open class var ngWhiteBackground: UIColor {
+        return UIColor(red: 0.937, green: 0.937, blue: 0.957, alpha: 1)
+    }
+    
+    open class var ngWhiteIncativeButton: UIColor {
+        return UIColor(red: 0.678, green: 0.678, blue: 0.682, alpha: 1)
+    }
 }
 
 extension Array where Element == UIColor {

@@ -23,6 +23,10 @@ import TelegramNotices
 import TelegramPresentationData
 import TelegramUIPreferences
 import UIKit
+import NGEnv
+import NGWebUtils
+import NGAppCache
+import NGLoadingIndicator
 
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
@@ -52,6 +56,7 @@ private enum NicegramSettingsControllerSection: Int32 {
     case Folders
     case RoundVideos
     case Other
+    case Premium
 }
 
 
@@ -86,6 +91,7 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     case hidePhoneInSettingsNotice(String)
     
     case easyToggle(Int32, EasyToggleType, String, Bool)
+    case restorePremium(String, String)
 
     // MARK: Section
 
@@ -101,6 +107,8 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return NicegramSettingsControllerSection.RoundVideos.rawValue
         case .OtherHeader, .hidePhoneInSettings, .hidePhoneInSettingsNotice, .easyToggle:
             return NicegramSettingsControllerSection.Other.rawValue
+        case .restorePremium:
+            return NicegramSettingsControllerSection.Premium.rawValue
         }
     }
 
@@ -152,6 +160,9 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
         case .hidePhoneInSettingsNotice:
             return 2400
+
+        case .restorePremium:
+            return 2500
             
         case let .easyToggle(index, _, _, _):
             return 5000 + Int32(index)
@@ -266,8 +277,14 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .easyToggle(lhsIndex, lhsType, lhsText, lhsValue):
-            if case let .easyToggle(rhsIndex, rhsType, rhsText, rhsValue) = rhs, lhsIndex == rhsIndex, lhsText == rhsText, lhsValue == rhsValue {
+        case let .easyToggle(lhsIndex, _, lhsText, lhsValue):
+            if case let .easyToggle(rhsIndex, _, rhsText, rhsValue) = rhs, lhsIndex == rhsIndex, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .restorePremium(lhsText, lhsId):
+            if case let .restorePremium(rhsText, rhsId) = rhs, lhsText == rhsText, lhsId == rhsId {
                 return true
             } else {
                 return false
@@ -382,7 +399,73 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
                     NGSettings.showRegDate = value
                 }
             })
-            
+
+        case let .restorePremium(text, id):
+            return ItemListActionItem(presentationData: presentationData, title: text, kind: .neutral, alignment: .natural, sectionId: section, style: .blocks) {
+                NGLoadingIndicator.shared.startAnimating()
+                guard var urlComponents = URLComponents(string: NGENV.restore_url) else { return }
+                urlComponents.queryItems = [
+                    URLQueryItem(name: "id", value: id)
+                ]
+                guard let url = urlComponents.url else { return }
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
+                    var alertTitle = ""
+                    var alertText = ""
+                    guard
+                        let data = data,                              // is there data
+                        let response = response as? HTTPURLResponse,  // is there HTTP response
+                        200 ..< 300 ~= response.statusCode,           // is statusCode 2XX
+                        error == nil                                  // was there no error
+                    else {
+                        NGLoadingIndicator.shared.stopAnimating()
+                        DispatchQueue.main.async {
+                            let controller = standardTextAlertController(
+                                theme: AlertControllerTheme(presentationData: arguments.context.sharedContext.currentPresentationData.with { $0 }),
+                                title: "Failure",
+                                text: "Something went wrong. Please, use Nicegram Bot to restore your Premium Lifetime Subscription",
+                                actions: [
+                                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                                ]
+                            )
+                            arguments.presentController(controller, nil)
+                        }
+                        return
+                    }
+                    let responseObject = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+
+                    NGLoadingIndicator.shared.stopAnimating()
+
+                    if let premiumData = responseObject?["data"] as? [String: Any], let premiumAccess = premiumData["premiumAccess"] as? Bool {
+                        if premiumAccess {
+                            AppCache.hasUnlimPremium = true
+                            alertTitle = "Success"
+                            alertText = "Your Premium Lifetime Subscription has been successfully restored!"
+                        } else {
+                            AppCache.hasUnlimPremium = false
+                            alertTitle = "Failure"
+                            alertText = "Your request is pending. Please, wait until Nicegram Bot approves it"
+                        }
+                    } else {
+                        alertTitle = "Failure"
+                        alertText = "Something went wrong. Please, use Nicegram Bot to restore your Premium Lifetime Subscription"
+                    }
+
+                    DispatchQueue.main.async {
+                        let controller = standardTextAlertController(
+                            theme: AlertControllerTheme(presentationData: arguments.context.sharedContext.currentPresentationData.with { $0 }),
+                            title: alertTitle,
+                            text: alertText,
+                            actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})
+                            ]
+                        )
+                        arguments.presentController(controller, nil)
+                    }
+                }
+                task.resume()
+            }
         }
         
     }
@@ -390,7 +473,7 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
 // MARK: Entries list
 
-private func nicegramSettingsControllerEntries(presentationData: PresentationData, experimentalSettings: ExperimentalUISettings, showCalls: Bool) -> [NicegramSettingsControllerEntry] {
+private func nicegramSettingsControllerEntries(presentationData: PresentationData, experimentalSettings: ExperimentalUISettings, showCalls: Bool, peerId: PeerId) -> [NicegramSettingsControllerEntry] {
     var entries: [NicegramSettingsControllerEntry] = []
 
     let locale = presentationData.strings.baseLanguageCode
@@ -446,7 +529,8 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     entries.append(.hidePhoneInSettingsNotice(
         l("NicegramSettings.Other.hidePhoneInSettingsNotice", locale)
     ))
-    
+    entries.append(.restorePremium("Restore premium", "\(peerId.id._internalGetInt64Value())"))
+
     var toggleIndex: Int32 = 1
     // MARK: Other Toggles (Easy)
     entries.append(.easyToggle(toggleIndex, .sendWithEnter, l("SendWithKb", locale), NGSettings.sendWithEnter))
@@ -457,7 +541,7 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     
     entries.append(.easyToggle(toggleIndex, .showRegDate, l("NicegramSettings.Other.showRegDate", locale), NGSettings.showRegDate))
     toggleIndex += 1
-    
+
 
     return entries
 }
@@ -507,7 +591,7 @@ public func nicegramSettingsController(context: AccountContext, modal: Bool = fa
             })
         }
 
-        let entries = nicegramSettingsControllerEntries(presentationData: presentationData, experimentalSettings: experimentalSettings, showCalls: showCalls)
+        let entries = nicegramSettingsControllerEntries(presentationData: presentationData, experimentalSettings: experimentalSettings, showCalls: showCalls, peerId: context.account.peerId)
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(l("AppName", presentationData.strings.baseLanguageCode)), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: entries, style: .blocks)
 

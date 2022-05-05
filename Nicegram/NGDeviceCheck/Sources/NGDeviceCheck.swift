@@ -17,7 +17,7 @@ public func getDeviceToken(completion: @escaping (String?) -> ()) {
                     #endif
                     ngLog("Received token \(tokenString.count)", LOGTAG)
                     completion(tokenString)
-                } else{
+                } else {
                     ngLog("Error generating token: \(error!.localizedDescription)", LOGTAG)
                 }
             })

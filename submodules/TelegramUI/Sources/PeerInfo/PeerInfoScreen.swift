@@ -4788,7 +4788,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         let progressDisposable = progressSignal.start()
         
         // regDate signale
-        var _ = (getRegDate(peerId, requestByUserId: ownerId)  |> deliverOnMainQueue).start(next: { response in
+        var _ = (getRegDate(peerId)  |> deliverOnMainQueue).start(next: { response in
 //            let regdateString = makeNiceRegDateStr(response)
 //            let title = "NGLab.RegDate.Notice"
 //            let regdateController = textAlertController(context: self.context, title: regdateString, text: l(title, self.presentationData.strings.baseLanguageCode), actions: [

@@ -1,4 +1,5 @@
 import UIKit
+import NGExtensions
 
 open class TitleTextField: TextField {
     open var borderInactiveColor: UIColor? {
@@ -45,6 +46,14 @@ open class TitleTextField: TextField {
         }
     }
 
+    open var errorText: String?
+    open var showError: Bool = false {
+        didSet {
+            updateError()
+        }
+    }
+
+
     override open var bounds: CGRect {
         didSet {
             updateBorder()
@@ -54,6 +63,7 @@ open class TitleTextField: TextField {
 
     private let borderThickness: (active: CGFloat, inactive: CGFloat) = (active: 0.25, inactive: 0.25)
     private let placeholderInsets = CGPoint(x: 0, y: 6)
+    private let errorInsets = CGPoint(x: 0, y: 0)
     private let textFieldInsets = CGPoint(x: 0, y: 12)
     private let inactiveBorderLayer = CALayer()
     private let activeBorderLayer = CALayer()
@@ -67,12 +77,19 @@ open class TitleTextField: TextField {
         placeholderLabel.frame = frame.insetBy(dx: placeholderInsets.x, dy: placeholderInsets.y)
         placeholderLabel.font = placeholderFontFromFont(font!)
 
+        errorLabel.frame = frame.insetBy(dx: placeholderInsets.x, dy: frame.maxY + 5.0)
+        errorLabel.font = .systemFont(ofSize: 14.0)
+        errorLabel.textColor = .ngRedAlert
+        errorLabel.isHidden = !showError
+
         updateBorder()
         updatePlaceholder()
+        updateError()
 
         layer.addSublayer(inactiveBorderLayer)
         layer.addSublayer(activeBorderLayer)
         addSubview(placeholderLabel)
+        addSubview(errorLabel)
     }
 
     override open func animateViewsForTextEntry() {
@@ -92,7 +109,7 @@ open class TitleTextField: TextField {
             self.placeholderLabel.alpha = 1.0
         })
 
-        activeBorderLayer.frame = rectForBorder(borderThickness.active, isFilled: true)
+        activeBorderLayer.frame = rectForBorder(borderThickness.active)
     }
 
     override open func animateViewsForTextDisplay() {
@@ -104,8 +121,8 @@ open class TitleTextField: TextField {
                 self.animationCompletionHandler?(.textDisplay)
             })
 
-            activeBorderLayer.frame = self.rectForBorder(self.borderThickness.active, isFilled: false)
-            inactiveBorderLayer.frame = self.rectForBorder(self.borderThickness.inactive, isFilled: true)
+            activeBorderLayer.frame = self.rectForBorder(self.borderThickness.active)
+            inactiveBorderLayer.frame = self.rectForBorder(self.borderThickness.inactive)
 
         }
     }
@@ -113,10 +130,10 @@ open class TitleTextField: TextField {
     // MARK: - Private
 
     private func updateBorder() {
-        inactiveBorderLayer.frame = rectForBorder(borderThickness.inactive, isFilled: !isFirstResponder)
+        inactiveBorderLayer.frame = rectForBorder(borderThickness.inactive)
         inactiveBorderLayer.backgroundColor = borderInactiveColor?.cgColor
 
-        activeBorderLayer.frame = rectForBorder(borderThickness.active, isFilled: isFirstResponder)
+        activeBorderLayer.frame = rectForBorder(borderThickness.active)
         activeBorderLayer.backgroundColor = borderActiveColor?.cgColor
     }
 
@@ -131,17 +148,20 @@ open class TitleTextField: TextField {
         }
     }
 
+    private func updateError() {
+        errorLabel.text = errorText
+        errorLabel.isHidden = !showError
+        errorLabel.sizeToFit()
+        layoutErrorInTextRect()
+    }
+
     private func placeholderFontFromFont(_ font: UIFont) -> UIFont! {
         let smallerFont = UIFont(descriptor: font.fontDescriptor, size: font.pointSize * placeholderFontScale)
         return smallerFont
     }
 
-    private func rectForBorder(_ thickness: CGFloat, isFilled: Bool) -> CGRect {
-        if isFilled {
-            return CGRect(origin: CGPoint(x: 0, y: frame.height-thickness), size: CGSize(width: frame.width, height: thickness))
-        } else {
-            return CGRect(origin: CGPoint(x: 0, y: frame.height-thickness), size: CGSize(width: frame.width, height: thickness))
-        }
+    private func rectForBorder(_ thickness: CGFloat) -> CGRect {
+        return CGRect(origin: CGPoint(x: 0, y: frame.height-thickness), size: CGSize(width: frame.width, height: thickness))
     }
 
     private func layoutPlaceholderInTextRect() {
@@ -155,10 +175,24 @@ open class TitleTextField: TextField {
         default:
             break
         }
-        placeholderLabel.frame = CGRect(x: originX, y: textRect.height/2,
-            width: placeholderLabel.bounds.width, height: placeholderLabel.bounds.height)
+        placeholderLabel.frame = CGRect(
+            x: originX,
+            y: textRect.height / 2,
+            width: placeholderLabel.bounds.width,
+            height: placeholderLabel.bounds.height
+        )
         activePlaceholderPoint = CGPoint(x: placeholderLabel.frame.origin.x, y: placeholderLabel.frame.origin.y - placeholderLabel.frame.size.height - placeholderInsets.y)
+    }
 
+    private func layoutErrorInTextRect() {
+        let textRect = self.textRect(forBounds: bounds)
+        let originX = textRect.origin.x
+        errorLabel.frame = CGRect(
+            x: originX,
+            y: textRect.height / 2,
+            width: errorLabel.bounds.width,
+            height: errorLabel.bounds.width
+        )
     }
 
     // MARK: - Overrides

@@ -42,6 +42,62 @@ extension UIView {
             return self.snp
         }
     }
+
+    public func hasSuperview(_ superview: UIView) -> Bool{
+        return viewHasSuperview(self, superview: superview)
+    }
+
+    public func viewHasSuperview(_ view: UIView, superview: UIView) -> Bool {
+        if let sview = view.superview {
+            if sview === superview {
+                return true
+            } else {
+                return viewHasSuperview(sview, superview: superview)
+            }
+        } else {
+            return false
+        }
+    }
+}
+
+extension UIView {
+    public func padding(_ insets: UIEdgeInsets) -> UIView {
+        let stack = UIStackView(arrangedSubviews: [self])
+        stack.isLayoutMarginsRelativeArrangement = true
+        stack.layoutMargins = insets
+        return stack
+    }
+    
+    public func padding(top: CGFloat = .zero, left: CGFloat = .zero, bottom: CGFloat = .zero, right: CGFloat = .zero) -> UIView {
+        return padding(.init(top: top, left: left, bottom: bottom, right: right))
+    }
+}
+
+extension UIStackView {
+    public func removeAllArrangedSubviews() {
+        
+        let removedSubviews = arrangedSubviews.reduce([]) { (allSubviews, subview) -> [UIView] in
+            self.removeArrangedSubview(subview)
+            return allSubviews + [subview]
+        }
+        
+        // Deactivate all constraints
+        NSLayoutConstraint.deactivate(removedSubviews.flatMap({ $0.constraints }))
+        
+        // Remove the views from self
+        removedSubviews.forEach({ $0.removeFromSuperview() })
+    }
+}
+
+extension UIView {
+    public static func separator() -> UIView {
+        let view = UIView()
+        view.backgroundColor = .ngLine
+        view.snp.makeConstraints { make in
+            make.height.equalTo(1)
+        }
+        return view
+    }
 }
 
 public struct KeyboardChange {
@@ -79,5 +135,14 @@ public protocol ReuseIdentifiable {
 public extension ReuseIdentifiable where Self: UIView {
     static var reuseIdentifier: String {
         return String(describing: self)
+    }
+}
+
+public extension UIBarItem {
+    public var view: UIView? {
+        if let item = self as? UIBarButtonItem, let customView = item.customView {
+            return customView
+        }
+        return self.value(forKey: "view") as? UIView
     }
 }

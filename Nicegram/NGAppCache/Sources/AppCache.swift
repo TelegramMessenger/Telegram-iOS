@@ -20,7 +20,7 @@ public final class AppCache {
     private static var _wasLauchedBefore: Bool
 
     @UserDefaultsBacked(key: "hasUnlimPremium", storage: .standard, defaultValue: false)
-    private static var hasUnlimPremium: Bool
+    public static var hasUnlimPremium: Bool
 
     public static var wasLauchedBefore: Bool {
         get {

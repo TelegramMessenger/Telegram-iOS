@@ -7,8 +7,14 @@ public struct NGEnvObj: Decodable {
     public let validator_url: String
     public let ng_lab_url: String
     public let ng_lab_token: String
+    public let moby_key: String
+    public let app_id: String
+    public let privacy_url: String
+    public let terms_url: String
+    public let restore_url: String
+    public let reg_date_url: String
+    public let reg_date_key: String
 }
-
 
 func parseNGEnv() -> NGEnvObj {
     let ngEnv = BuildConfig(baseAppBundleId: Bundle.main.bundleIdentifier!).ngEnv

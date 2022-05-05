@@ -1,4 +1,5 @@
 import Foundation
+import NGAppCache
 
 @propertyWrapper
 public struct NGStorage<T: Codable> {
@@ -43,10 +44,6 @@ public struct NGStorage<T: Codable> {
 }
 
 public struct NGSettings {
-    // MARK: Premium
-    @NGStorage(key: "premium", defaultValue: false)
-    public static var premium: Bool
-    
     @NGStorage(key: "oneTapTr", defaultValue: true)
     public static var oneTapTr: Bool
     
@@ -132,19 +129,8 @@ public struct NGSharedSettings {
 public var VarNGSharedSettings = NGSharedSettings()
 
 
-public func isPremium() -> Bool {    
-    let bb = (Bundle.main.infoDictionary?[kCFBundleVersionKey as String] ?? "") as! String
-    if bb.last != "1" {
-        return false
-    }
-    let premium = NGSettings.premium
-    if !premium {
-        if  #available(iOS 13, *) {
-        } else {
-            return UserDefaults.standard.bool(forKey: "ng:premiumLegacy")
-        }
-    }
-    return premium
+public func isPremium() -> Bool {
+    return AppCache.haveValidSubscription
 }
 
 public func usetrButton() -> [(Bool, [String])] {

@@ -49,8 +49,7 @@ public func isNGAllowedReason(_ peer: Peer?, _ contentSettings: ContentSettings)
     return isAllowedReason
 }
 
-public func isAllowedChat(peer: Peer?, contentSettings: ContentSettings
-) -> Bool {
+public func isAllowedChat(peer: Peer?, contentSettings: ContentSettings) -> Bool {
     var isAllowed: Bool = false
     if VARNGAPISETTINGS.SYNC_CHATS {
         if isNGAllowedReason(peer, contentSettings) {

@@ -9,13 +9,15 @@
 import Foundation
 import NGEnv
 
+public typealias ProductIdentifier = String
+
 public struct NicegramProducts {
     
     public static let Premium = NGENV.premium_bundle
     
     private static let productIdentifiers: Set<ProductIdentifier> = [NicegramProducts.Premium]
     
-    public static let store = IAPHelper(productIds: NicegramProducts.productIdentifiers)
+//    public static let store = IAPHelper(productIds: NicegramProducts.productIdentifiers)
 }
 
 func resourceNameForProductIdentifier(_ productIdentifier: String) -> String? {

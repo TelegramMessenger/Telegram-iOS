@@ -1,13 +1,13 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "NGTextFields",
-    module_name = "NGTextFields",
+    name = "NGPhoneFormatter",
+    module_name = "NGPhoneFormatter",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//Nicegram/NGExtensions:NGExtensions",
+
     ],
     visibility = ["//visibility:public"],
 

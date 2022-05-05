@@ -34,6 +34,8 @@ open class TextField: UITextField {
     */
     public let placeholderLabel = UILabel()
 
+    public let errorLabel = UILabel()
+
     /**
     Creates all the animations that are used to leave the textfield in the "entering text" state.
     */

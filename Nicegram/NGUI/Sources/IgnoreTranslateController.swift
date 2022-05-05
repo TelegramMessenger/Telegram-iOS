@@ -80,23 +80,23 @@ private enum Entry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! IgnoreTranslateArguments
         switch self {
-            case let .trButtonLowPowerMode(theme, text, value):
+            case let .trButtonLowPowerMode(_, text, value):
                 return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                     NGSettings.oneTapTrButtonLowPowerMode = value
                 })
-            case let .trButtonLowPowerModeNotice(theme, text):
+            case let .trButtonLowPowerModeNotice(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: section)
-            case let .header(theme, text):
+            case let .header(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, multiline: true, sectionId: self.section)
-        case let .commonlanguageToggle(theme, text, langCode, value, id):
+        case let .commonlanguageToggle(_, text, langCode, value, id):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateData(langCode, value)
             })
-        case let .languageToggle(theme, text, langCode, value, id):
+        case let .languageToggle(_, text, langCode, value, _):
             return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.updateData(langCode, value)
             })
-        case let .footer(theme, text):
+        case let .footer(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -114,7 +114,7 @@ private func getLocaleName(_ langCode: String, _ systemLang: Locale) -> String {
 private func ignoreTranslateControllerEntries(presentationData: PresentationData) -> [Entry] {
     var entries: [Entry] = []
     let theme = presentationData.theme
-    let strings = presentationData.strings
+    let _ = presentationData.strings
     let locale = presentationData.strings.baseLanguageCode
     
     let ignoredTranslations = NGSettings.ignoreTranslate
@@ -195,8 +195,6 @@ private struct SelectionState: Equatable {
 
 
 public func ignoreTranslateController(context: AccountContext) -> ViewController {
-    
-    
     var dismissImpl: (() -> Void)?
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -212,7 +210,7 @@ public func ignoreTranslateController(context: AccountContext) -> ViewController
                 NGSettings.ignoreTranslate.append(langCode)
             }
         } else {
-            if let index = NGSettings.ignoreTranslate.index(of: langCode) {
+            if let index = NGSettings.ignoreTranslate.firstIndex(of: langCode) {
                     NGSettings.ignoreTranslate.remove(at: index)
                 }
         }
@@ -224,7 +222,6 @@ public func ignoreTranslateController(context: AccountContext) -> ViewController
             let entries = ignoreTranslateControllerEntries(presentationData: presentationData)
             
             
-            var index = 0
             var scrollToItem: ListViewScrollToItem?
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(l("Premium.IgnoreTranslate.Title", presentationData.strings.baseLanguageCode)), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
