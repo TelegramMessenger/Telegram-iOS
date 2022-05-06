@@ -461,7 +461,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         loadStickerSaveStatus = file.fileId
                     }
                 }
-                loadCopyMediaResource = file.resource
+                if loadStickerSaveStatus == nil {
+                    loadCopyMediaResource = file.resource
+                }
             } else if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
                 isAction = true
             } else if let image = media as? TelegramMediaImage {

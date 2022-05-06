@@ -33,7 +33,7 @@ public final class NativeVideoContent: UniversalVideoContent {
     let onlyFullSizeThumbnail: Bool
     let useLargeThumbnail: Bool
     let autoFetchFullSizeThumbnail: Bool
-    let startTimestamp: Double?
+    public let startTimestamp: Double?
     let endTimestamp: Double?
     let continuePlayingWithoutSoundOnLostAudioSession: Bool
     let placeholderColor: UIColor

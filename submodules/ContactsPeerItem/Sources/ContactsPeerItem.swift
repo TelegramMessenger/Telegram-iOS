@@ -333,6 +333,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
+    private var credibilityIconNode: ASImageNode?
     private var verificationIconNode: ASImageNode?
     private let statusNode: TextNode
     private var badgeBackgroundNode: ASImageNode?
@@ -562,11 +563,19 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
-            var verificationIconImage: UIImage?
+            var currentCredibilityIconImage: UIImage?
             switch item.peer {
             case let .peer(peer, _):
-                if let peer = peer, peer.isVerified {
-                    verificationIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                if let peer = peer {
+                    if peer.isScam {
+                        currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                    } else if peer.isFake {
+                        currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                    } else if peer.isVerified {
+                        currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                    } else if peer.isPremium {
+                        currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                    }
                 }
             case .deviceContact:
                 break
@@ -726,8 +735,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             }
             
             var additionalTitleInset: CGFloat = 0.0
-            if let verificationIconImage = verificationIconImage {
-                additionalTitleInset += 3.0 + verificationIconImage.size.width
+            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                additionalTitleInset += 3.0 + currentCredibilityIconImage.size.width
             }
             if let actionButtons = actionButtons {
                 additionalTitleInset += 3.0
@@ -900,7 +909,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: strongSelf.avatarNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 50.0, y: floor((nodeLayout.contentSize.height - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter)))
                             
                             let _ = titleApply()
-                            transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame.offsetBy(dx: revealOffset, dy: 0.0))
+                            let titleFrame = titleFrame.offsetBy(dx: revealOffset, dy: 0.0)
+                            transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                             
                             strongSelf.titleNode.alpha = item.enabled ? 1.0 : 0.4
                             strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
@@ -912,23 +922,23 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.frame = statusFrame
                             transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
                             
-                            if let verificationIconImage = verificationIconImage {
-                                if strongSelf.verificationIconNode == nil {
-                                    let verificationIconNode = ASImageNode()
-                                    verificationIconNode.isLayerBacked = true
-                                    verificationIconNode.displayWithoutProcessing = true
-                                    verificationIconNode.displaysAsynchronously = false
-                                    strongSelf.verificationIconNode = verificationIconNode
-                                    strongSelf.offsetContainerNode.addSubnode(verificationIconNode)
+                            if let currentCredibilityIconImage = currentCredibilityIconImage {
+                                let iconNode: ASImageNode
+                                if let current = strongSelf.credibilityIconNode {
+                                    iconNode = current
+                                } else {
+                                    iconNode = ASImageNode()
+                                    iconNode.isLayerBacked = true
+                                    iconNode.displaysAsynchronously = false
+                                    iconNode.displayWithoutProcessing = true
+                                    strongSelf.containerNode.addSubnode(iconNode)
+                                    strongSelf.credibilityIconNode = iconNode
                                 }
-                                if let verificationIconNode = strongSelf.verificationIconNode {
-                                    verificationIconNode.image = verificationIconImage
-                                    
-                                    transition.updateFrame(node: verificationIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + titleFrame.maxX + 3.0, y: titleFrame.minY + 3.0 + UIScreenPixel), size: verificationIconImage.size))
-                                }
-                            } else if let verificationIconNode = strongSelf.verificationIconNode {
-                                strongSelf.verificationIconNode = nil
-                                verificationIconNode.removeFromSupernode()
+                                iconNode.image = currentCredibilityIconImage
+                                transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - currentCredibilityIconImage.size.height / 2.0) - UIScreenPixel), size: currentCredibilityIconImage.size))
+                            } else if let credibilityIconNode = strongSelf.credibilityIconNode {
+                                strongSelf.credibilityIconNode = nil
+                                credibilityIconNode.removeFromSupernode()
                             }
                             
                             if let actionButtons = actionButtons {
@@ -1128,10 +1138,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             self.statusNode.frame = statusFrame
             transition.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
             
-            if let verificationIconNode = self.verificationIconNode {
-                var iconFrame = verificationIconNode.frame
-                iconFrame.origin.x = titleFrame.maxX + 3.0
-                transition.updateFrame(node: verificationIconNode, frame: iconFrame)
+            if let credibilityIconNode = self.credibilityIconNode {
+                var iconFrame = credibilityIconNode.frame
+                iconFrame.origin.x = titleFrame.maxX + 4.0
+                transition.updateFrame(node: credibilityIconNode, frame: iconFrame)
             }
             
             if let badgeBackgroundNode = self.badgeBackgroundNode, let badgeTextNode = self.badgeTextNode {
