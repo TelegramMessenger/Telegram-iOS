@@ -252,13 +252,11 @@ public enum ResolvedUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
-    #if ENABLE_WALLET
-    case wallet(address: String, amount: Int64?, comment: String?)
-    #endif
     case settings(ResolvedUrlSettingsSection)
     case joinVoiceChat(PeerId, String?)
     case importStickers
     case startAttach(peerId: PeerId, payload: String?)
+    case invoice(slug: String, invoice: TelegramMediaInvoice)
 }
 
 public enum NavigateToChatKeepStack {

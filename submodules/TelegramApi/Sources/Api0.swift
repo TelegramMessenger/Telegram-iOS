@@ -277,6 +277,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1210199983] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[-659913713] = { return Api.InputGroupCall.parse_inputGroupCall($0) }
+    dict[-977967015] = { return Api.InputInvoice.parse_inputInvoiceMessage($0) }
+    dict[-1020867857] = { return Api.InputInvoice.parse_inputInvoiceSlug($0) }
     dict[-122978821] = { return Api.InputMedia.parse_inputMediaContact($0) }
     dict[-428884101] = { return Api.InputMedia.parse_inputMediaDice($0) }
     dict[860303448] = { return Api.InputMedia.parse_inputMediaDocument($0) }
@@ -987,7 +989,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1575684144] = { return Api.messages.TranslatedText.parse_translateResultText($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
-    dict[378828315] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
+    dict[-1362048039] = { return Api.payments.ExportedInvoice.parse_exportedInvoice($0) }
+    dict[-1340916937] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
     dict[1891958275] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
     dict[1314881805] = { return Api.payments.PaymentResult.parse_paymentResult($0) }
     dict[-666824391] = { return Api.payments.PaymentResult.parse_paymentVerificationNeeded($0) }
@@ -1279,6 +1282,8 @@ public extension Api {
             case let _1 as Api.InputGeoPoint:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputGroupCall:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputInvoice:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputMedia:
                 _1.serialize(buffer, boxed)
@@ -1739,6 +1744,8 @@ public extension Api {
             case let _1 as Api.messages.VotesList:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.BankCardData:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.ExportedInvoice:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.PaymentForm:
                 _1.serialize(buffer, boxed)

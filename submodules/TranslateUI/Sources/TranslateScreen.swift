@@ -254,7 +254,7 @@ private final class TranslateScreenComponent: CombinedComponent {
             }
             let originalTitle = originalTitle.update(
                 component: MultilineTextComponent(
-                    text: NSAttributedString(string: fromLanguage, font: Font.medium(13.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .natural),
+                    text: .plain(NSAttributedString(string: fromLanguage, font: Font.medium(13.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .natural)),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 1
                 ),
@@ -264,7 +264,7 @@ private final class TranslateScreenComponent: CombinedComponent {
                         
             let originalText = originalText.update(
                 component: MultilineTextComponent(
-                    text: NSAttributedString(string: state.text, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .natural),
+                    text: .plain(NSAttributedString(string: state.text, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .natural)),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: state.textExpanded ? 0 : 1,
                     lineSpacing: 0.1
@@ -276,7 +276,7 @@ private final class TranslateScreenComponent: CombinedComponent {
             let toLanguage = locale.localizedString(forLanguageCode: state.toLanguage) ?? ""
             let translationTitle = translationTitle.update(
                 component: MultilineTextComponent(
-                    text: NSAttributedString(string: toLanguage, font: Font.medium(13.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural),
+                    text: .plain(NSAttributedString(string: toLanguage, font: Font.medium(13.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural)),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 1
                 ),
@@ -291,7 +291,7 @@ private final class TranslateScreenComponent: CombinedComponent {
             if let translatedText = state.translatedText {
                 maybeTranslationText = translationText.update(
                     component: MultilineTextComponent(
-                        text: NSAttributedString(string: translatedText, font: Font.medium(17.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural),
+                        text: .plain(NSAttributedString(string: translatedText, font: Font.medium(17.0), textColor: theme.list.itemAccentColor, paragraphAlignment: .natural)),
                         horizontalAlignment: .natural,
                         maximumNumberOfLines: 0,
                         lineSpacing: 0.1

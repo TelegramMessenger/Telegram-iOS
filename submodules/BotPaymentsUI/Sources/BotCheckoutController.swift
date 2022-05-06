@@ -24,7 +24,7 @@ public final class BotCheckoutController: ViewController {
             self.validatedFormInfo = validatedFormInfo
         }
 
-        public static func fetch(context: AccountContext, messageId: EngineMessage.Id) -> Signal<InputData, FetchError> {
+        public static func fetch(context: AccountContext, source: BotPaymentInvoiceSource) -> Signal<InputData, FetchError> {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let themeParams: [String: Any] = [
                 "bg_color": Int32(bitPattern: presentationData.theme.list.plainBackgroundColor.argb),
@@ -34,13 +34,13 @@ public final class BotCheckoutController: ViewController {
                 "button_text_color": Int32(bitPattern: presentationData.theme.list.itemCheckColors.foregroundColor.argb)
             ]
 
-            return context.engine.payments.fetchBotPaymentForm(messageId: messageId, themeParams: themeParams)
+            return context.engine.payments.fetchBotPaymentForm(source: source, themeParams: themeParams)
             |> mapError { _ -> FetchError in
                 return .generic
             }
             |> mapToSignal { paymentForm -> Signal<InputData, FetchError> in
                 if let current = paymentForm.savedInfo {
-                    return context.engine.payments.validateBotPaymentForm(saveInfo: true, messageId: messageId, formInfo: current)
+                    return context.engine.payments.validateBotPaymentForm(saveInfo: true, source: source, formInfo: current)
                     |> mapError { _ -> FetchError in
                         return .generic
                     }
@@ -77,7 +77,7 @@ public final class BotCheckoutController: ViewController {
     
     private let context: AccountContext
     private let invoice: TelegramMediaInvoice
-    private let messageId: EngineMessage.Id
+    private let source: BotPaymentInvoiceSource
     private let completed: (String, EngineMessage.Id?) -> Void
     
     private var presentationData: PresentationData
@@ -86,10 +86,10 @@ public final class BotCheckoutController: ViewController {
 
     private let inputData: Promise<BotCheckoutController.InputData?>
     
-    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: EngineMessage.Id, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, EngineMessage.Id?) -> Void) {
+    public init(context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, EngineMessage.Id?) -> Void) {
         self.context = context
         self.invoice = invoice
-        self.messageId = messageId
+        self.source = source
         self.inputData = inputData
         self.completed = completed
         
@@ -113,7 +113,7 @@ public final class BotCheckoutController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        let displayNode = BotCheckoutControllerNode(controller: self, navigationBar: self.navigationBar!, context: self.context, invoice: self.invoice, messageId: self.messageId, inputData: self.inputData, present: { [weak self] c, a in
+        let displayNode = BotCheckoutControllerNode(controller: self, navigationBar: self.navigationBar!, context: self.context, invoice: self.invoice, source: self.source, inputData: self.inputData, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
         }, dismissAnimated: { [weak self] in
             self?.dismiss()

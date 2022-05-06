@@ -114,11 +114,14 @@ open class ViewControllerComponentContainer: ViewController {
         }
     }
     
+    public final class AnimateInTransition {
+    }
+    
     public final class Node: ViewControllerTracingNode {
         private var presentationData: PresentationData
         private weak var controller: ViewControllerComponentContainer?
         
-        private let component: AnyComponent<ViewControllerComponentContainer.Environment>
+        private var component: AnyComponent<ViewControllerComponentContainer.Environment>
         private let theme: PresentationTheme?
         public let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
@@ -164,7 +167,7 @@ open class ViewControllerComponentContainer: ViewController {
             transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
         }
         
-        func updateIsVisible(isVisible: Bool) {
+        func updateIsVisible(isVisible: Bool, animated: Bool) {
             if self.currentIsVisible == isVisible {
                 return
             }
@@ -173,7 +176,16 @@ open class ViewControllerComponentContainer: ViewController {
             guard let currentLayout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: .immediate)
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(AnimateInTransition()) : .immediate)
+        }
+        
+        func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
+            self.component = component
+            
+            guard let currentLayout = self.currentLayout else {
+                return
+            }
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: transition)
         }
     }
     
@@ -215,13 +227,13 @@ open class ViewControllerComponentContainer: ViewController {
     override open func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.node.updateIsVisible(isVisible: true)
+        self.node.updateIsVisible(isVisible: true, animated: true)
     }
     
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        self.node.updateIsVisible(isVisible: false)
+        self.node.updateIsVisible(isVisible: false, animated: false)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -230,5 +242,9 @@ open class ViewControllerComponentContainer: ViewController {
         let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
         
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
+    }
+    
+    public func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
+        self.node.updateComponent(component: component, transition: transition)
     }
 }
