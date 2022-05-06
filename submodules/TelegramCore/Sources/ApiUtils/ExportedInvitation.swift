@@ -27,7 +27,7 @@ public extension ExportedInvitation {
     
     var date: Int32? {
         switch self {
-            case let .link(_, _, _, _, _, _, _, date, _, _, _, _):
+            case let .link(_, _, _, _, _, _, date, _, _, _, _, _):
                 return date
             case .publicJoinRequest:
                 return nil
