@@ -3676,7 +3676,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     private func updateItemNodesVisibilities(onlyPositive: Bool) {
-        let visibilityRect = CGRect(origin: CGPoint(x: 0.0, y: self.insets.top), size: CGSize(width: self.visibleSize.width, height: self.visibleSize.height - self.insets.top - self.insets.bottom))
+        let insets: UIEdgeInsets = self.visualInsets ?? self.insets
+        let visibilityRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: self.visibleSize.width, height: self.visibleSize.height - insets.top - insets.bottom))
         for itemNode in self.itemNodes {
             let itemFrame = itemNode.apparentFrame
             var visibility: ListViewItemNodeVisibility = .none
