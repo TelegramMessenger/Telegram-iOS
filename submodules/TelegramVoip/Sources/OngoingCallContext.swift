@@ -9,7 +9,7 @@ import TgVoip
 import TgVoipWebrtc
 
 private let debugUseLegacyVersionForReflectors: Bool = {
-    #if DEBUG
+    #if DEBUG && false
     return true
     #else
     return false
@@ -81,10 +81,10 @@ private func callConnectionDescriptionsWebrtc(_ connection: CallSessionConnectio
         }
         var result: [OngoingCallConnectionDescriptionWebrtc] = []
         if !reflector.ip.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: false, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: reflector.isTcp, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         if !reflector.ipv6.isEmpty {
-            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: false, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
+            result.append(OngoingCallConnectionDescriptionWebrtc(reflectorId: id, hasStun: false, hasTurn: true, hasTcp: reflector.isTcp, ip: reflector.ipv6, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag)))
         }
         return result
     case let .webRtcReflector(reflector):
@@ -743,6 +743,12 @@ public final class OngoingCallContext {
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
     
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
+        #if DEBUG
+        if "".isEmpty {
+            return [("5.0.0", true)]
+        }
+        #endif
+        
         if debugUseLegacyVersionForReflectors {
             return [(OngoingCallThreadLocalContext.version(), true)]
         } else {
@@ -784,7 +790,7 @@ public final class OngoingCallContext {
                 var allowP2P = allowP2P
                 if debugUseLegacyVersionForReflectors {
                     useModernImplementation = true
-                    version = "10.0.0"
+                    version = "5.0.0"
                     allowP2P = false
                 } else {
                     useModernImplementation = version != OngoingCallThreadLocalContext.version()
@@ -820,35 +826,53 @@ public final class OngoingCallContext {
                         reflectorIdMapping[reflectorIdList[i]] = UInt8(i + 1)
                     }
                     
+                    var signalingReflector: OngoingCallConnectionDescriptionWebrtc?
+                    
                     var processedConnections: [CallSessionConnection] = []
                     var filteredConnections: [OngoingCallConnectionDescriptionWebrtc] = []
-                    for connection in unfilteredConnections {
+                    connectionsLoop: for connection in unfilteredConnections {
                         if processedConnections.contains(connection) {
                             continue
                         }
                         processedConnections.append(connection)
-                        filteredConnections.append(contentsOf: callConnectionDescriptionsWebrtc(connection, idMapping: reflectorIdMapping))
+                        
+                        switch connection {
+                        case let .reflector(reflector):
+                            if reflector.isTcp {
+                                if signalingReflector == nil {
+                                    signalingReflector = OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: reflector.ip, port: reflector.port, username: "reflector", password: hexString(reflector.peerTag))
+                                }
+                                
+                                continue connectionsLoop
+                            }
+                        case .webRtcReflector:
+                            break
+                        }
+                        
+                        var webrtcConnections: [OngoingCallConnectionDescriptionWebrtc] = []
+                        for connection in callConnectionDescriptionsWebrtc(connection, idMapping: reflectorIdMapping) {
+                            webrtcConnections.append(connection)
+                        }
+                        
+                        filteredConnections.append(contentsOf: webrtcConnections)
                     }
                     
-                    for connection in filteredConnections {
-                        if connection.username == "reflector" {
-                            let peerTag = dataWithHexString(connection.password)
-                            if #available(iOS 12.0, *) {
-                                strongSelf.signalingConnectionManager = QueueLocalObject(queue: queue, generate: {
-                                    return CallSignalingConnectionManager(queue: queue, peerTag: peerTag, servers: [OngoingCallConnectionDescriptionWebrtc(reflectorId: 0, hasStun: false, hasTurn: true, hasTcp: true, ip: "91.108.12.1", port: 533, username: "reflector", password: connection.password)], dataReceived: { data in
-                                        guard let strongSelf = self else {
-                                            return
-                                        }
-                                        strongSelf.withContext { context in
-                                            if let context = context as? OngoingCallThreadLocalContextWebrtc {
-                                                context.addSignaling(data)
-                                            }
-                                        }
-                                    })
-                                })
-                            }
+                    if let signalingReflector = signalingReflector {
+                        if #available(iOS 12.0, *) {
+                            let peerTag = dataWithHexString(signalingReflector.password)
                             
-                            break
+                            strongSelf.signalingConnectionManager = QueueLocalObject(queue: queue, generate: {
+                                return CallSignalingConnectionManager(queue: queue, peerTag: peerTag, servers: [signalingReflector], dataReceived: { data in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.withContext { context in
+                                        if let context = context as? OngoingCallThreadLocalContextWebrtc {
+                                            context.addSignaling(data)
+                                        }
+                                    }
+                                })
+                            })
                         }
                     }
                     
