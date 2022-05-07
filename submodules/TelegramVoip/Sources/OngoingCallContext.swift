@@ -784,7 +784,7 @@ public final class OngoingCallContext {
                 var allowP2P = allowP2P
                 if debugUseLegacyVersionForReflectors {
                     useModernImplementation = true
-                    version = "4.1.2"
+                    version = "10.0.0"
                     allowP2P = false
                 } else {
                     useModernImplementation = version != OngoingCallThreadLocalContext.version()
