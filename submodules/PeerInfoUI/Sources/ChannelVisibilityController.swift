@@ -696,7 +696,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         if let _ = (view.cachedData as? CachedChannelData)?.peerGeoLocation {
         } else {
             switch mode {
-                case .privateLink:
+                case .privateLink, .revokeNames:
                     break
                 case .initialSetup, .generic:
                     entries.append(.typeHeader(presentationData.theme, isGroup ? presentationData.strings.Group_Setup_TypeHeader.uppercased() : presentationData.strings.Channel_Edit_LinkItem.uppercased()))
@@ -808,7 +808,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         entries.append(.publicLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePublicLinkHelp))
                     }
                     switch mode {
-                        case .initialSetup:
+                        case .initialSetup, .revokeNames:
                             break
                         case .generic, .privateLink:
                             entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
@@ -825,7 +825,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Channel_Username_CreatePrivateLinkHelp))
                 }
                 switch mode {
-                    case .initialSetup:
+                    case .initialSetup, .revokeNames:
                         break
                     case .generic, .privateLink:
                         entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
@@ -856,13 +856,34 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         entries.append(.forwardingInfo(presentationData.theme, forwardingEnabled ? (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfo : presentationData.strings.Group_Setup_ForwardingChannelInfo) : (isGroup ? presentationData.strings.Group_Setup_ForwardingGroupInfoDisabled : presentationData.strings.Group_Setup_ForwardingChannelInfoDisabled)))
     } else if let peer = view.peers[view.peerId] as? TelegramGroup {
         switch mode {
+            case .revokeNames:
+                if let publicChannelsToRevoke = publicChannelsToRevoke {
+                    entries.append(.linksLimitInfo(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesTitle, presentationData.strings.Group_Username_RemoveExistingUsernamesOrExtendInfo("\(1000)").string, 500))
+                    
+                    entries.append(.publicLinkAvailability(presentationData.theme, presentationData.strings.Group_Username_RemoveExistingUsernamesInfo, false))
+                    var index: Int32 = 0
+                    for peer in publicChannelsToRevoke.sorted(by: { lhs, rhs in
+                        var lhsDate: Int32 = 0
+                        var rhsDate: Int32 = 0
+                        if let lhs = lhs as? TelegramChannel {
+                            lhsDate = lhs.creationDate
+                        }
+                        if let rhs = rhs as? TelegramChannel {
+                            rhsDate = rhs.creationDate
+                        }
+                        return lhsDate > rhsDate
+                    }) {
+                        entries.append(.existingLinkPeerItem(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, peer, ItemListPeerItemEditing(editable: true, editing: true, revealed: state.revealedRevokePeerId == peer.id), state.revokingPeerId == nil))
+                        index += 1
+                    }
+                }
             case .privateLink:
                 let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                 entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
                 entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                 entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.GroupInfo_InviteLink_Help))
                 switch mode {
-                    case .initialSetup:
+                    case .initialSetup, .revokeNames:
                         break
                     case .generic, .privateLink:
                         entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
@@ -963,7 +984,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, mode != .initialSetup))
                         entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                         switch mode {
-                            case .initialSetup:
+                            case .initialSetup, .revokeNames:
                                 break
                             case .generic, .privateLink:
                                 entries.append(.privateLinkManage(presentationData.theme, presentationData.strings.InviteLink_Manage))
@@ -1057,6 +1078,7 @@ public enum ChannelVisibilityControllerMode {
     case initialSetup
     case generic
     case privateLink
+    case revokeNames
 }
 
 public func channelVisibilityController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, mode: ChannelVisibilityControllerMode, upgradedToSupergroup: @escaping (PeerId, @escaping () -> Void) -> Void, onDismissRemoveController: ViewController? = nil) -> ViewController {
@@ -1358,189 +1380,193 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         var footerItem: ItemListControllerFooterItem?
         
         var rightNavigationButton: ItemListNavigationButton?
-        if let peer = peer as? TelegramChannel {
-            var doneEnabled = true
-            if let selectedType = state.selectedType {
-                switch selectedType {
-                    case .privateChannel:
-                        break
-                    case .publicChannel:
-                        var hasLocation = false
-                        if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
-                            hasLocation = true
-                        }
-                        
-                        if let addressNameValidationStatus = state.addressNameValidationStatus {
-                            switch addressNameValidationStatus {
-                                case .availability(.available):
-                                    break
-                                default:
-                                    doneEnabled = false
-                            }
-                        } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
-                        }
-                }
-            }
+        if case .revokeNames = mode {
             
-            rightNavigationButton = ItemListNavigationButton(content: .text(mode == .initialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
-                var updatedAddressNameValue: String?
-                updateState { state in
-                    updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: view.cachedData)
-                    return state
+        } else {
+            if let peer = peer as? TelegramChannel {
+                var doneEnabled = true
+                if let selectedType = state.selectedType {
+                    switch selectedType {
+                        case .privateChannel:
+                            break
+                        case .publicChannel:
+                            var hasLocation = false
+                            if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                                hasLocation = true
+                            }
+                            
+                            if let addressNameValidationStatus = state.addressNameValidationStatus {
+                                switch addressNameValidationStatus {
+                                    case .availability(.available):
+                                        break
+                                    default:
+                                        doneEnabled = false
+                                }
+                            } else {
+                                doneEnabled = !(peer.addressName?.isEmpty ?? true) || hasLocation
+                            }
+                    }
                 }
                 
-                if let updatedCopyProtection = state.forwardingEnabled {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
-                }
-                
-                if let updatedJoinToSend = state.joinToSend {
-                    toggleJoinToSendDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
-                }
-                
-                if let updatedApproveMembers = state.approveMembers {
-                    toggleRequestToJoinDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
-                }
-                
-                if let updatedAddressNameValue = updatedAddressNameValue {
-                    let invokeAction: () -> Void = {
-                        updateState { state in
-                            return state.withUpdatedUpdatingAddressName(true)
+                rightNavigationButton = ItemListNavigationButton(content: .text(mode == .initialSetup ? presentationData.strings.Common_Next : presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                    var updatedAddressNameValue: String?
+                    updateState { state in
+                        updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: view.cachedData)
+                        return state
+                    }
+                    
+                    if let updatedCopyProtection = state.forwardingEnabled {
+                        toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
+                    }
+                    
+                    if let updatedJoinToSend = state.joinToSend {
+                        toggleJoinToSendDisposable.set(context.engine.peers.toggleChannelJoinToSend(peerId: peerId, enabled: updatedJoinToSend == .members).start())
+                    }
+                    
+                    if let updatedApproveMembers = state.approveMembers {
+                        toggleRequestToJoinDisposable.set(context.engine.peers.toggleChannelJoinRequest(peerId: peerId, enabled: updatedApproveMembers).start())
+                    }
+                    
+                    if let updatedAddressNameValue = updatedAddressNameValue {
+                        let invokeAction: () -> Void = {
+                            updateState { state in
+                                return state.withUpdatedUpdatingAddressName(true)
+                            }
+                            _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
+                            
+                            updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
+                                |> deliverOnMainQueue).start(error: { _ in
+                                    updateState { state in
+                                        return state.withUpdatedUpdatingAddressName(false)
+                                    }
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }, completed: {
+                                    updateState { state in
+                                        return state.withUpdatedUpdatingAddressName(false)
+                                    }
+                                    switch mode {
+                                        case .initialSetup:
+                                            nextImpl?()
+                                        case .generic, .privateLink, .revokeNames:
+                                            dismissImpl?()
+                                    }
+                                }))
+                            
                         }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
                         
-                        updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .peer(peerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue) |> timeout(10, queue: Queue.mainQueue(), alternate: .fail(.generic))
-                            |> deliverOnMainQueue).start(error: { _ in
-                                updateState { state in
-                                    return state.withUpdatedUpdatingAddressName(false)
+                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                            if showAlert {
+                                let text: String
+                                if case .broadcast = peer.info {
+                                    text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                                } else {
+                                    text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
                                 }
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            }, completed: {
-                                updateState { state in
-                                    return state.withUpdatedUpdatingAddressName(false)
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
+                            } else {
+                                invokeAction()
+                            }
+                        })
+                    } else {
+                        switch mode {
+                            case .initialSetup:
+                                nextImpl?()
+                            case .generic, .privateLink, .revokeNames:
+                                dismissImpl?()
+                        }
+                    }
+                })
+            } else if let peer = peer as? TelegramGroup {
+                var doneEnabled = true
+                if let selectedType = state.selectedType {
+                    switch selectedType {
+                        case .privateChannel:
+                            break
+                        case .publicChannel:
+                            if let addressNameValidationStatus = state.addressNameValidationStatus {
+                                switch addressNameValidationStatus {
+                                    case .availability(.available):
+                                        break
+                                    default:
+                                        doneEnabled = false
                                 }
-                                switch mode {
-                                    case .initialSetup:
-                                        nextImpl?()
-                                    case .generic, .privateLink:
+                            } else {
+                                doneEnabled = !(peer.addressName?.isEmpty ?? true)
+                            }
+                    }
+                }
+                
+                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                    var updatedAddressNameValue: String?
+                    updateState { state in
+                        updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: nil)
+                        return state
+                    }
+                    
+                    if let updatedCopyProtection = state.forwardingEnabled {
+                        toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
+                    }
+                    
+                    if let updatedAddressNameValue = updatedAddressNameValue {
+                        let invokeAction: () -> Void = {
+                            updateState { state in
+                                return state.withUpdatedUpdatingAddressName(true)
+                            }
+                            _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
+                            
+                            let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
+                            |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
+                                return context.engine.peers.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                                |> `catch` { _ -> Signal<Void, NoError> in
+                                    return .complete()
+                                }
+                                |> mapToSignal { _ -> Signal<PeerId?, NoError> in
+                                    return .complete()
+                                }
+                                |> then(.single(upgradedPeerId))
+                                |> castError(ConvertGroupToSupergroupError.self)
+                            }
+                            |> deliverOnMainQueue
+                            
+                            updateAddressNameDisposable.set((signal
+                            |> deliverOnMainQueue).start(next: { updatedPeerId in
+                                if let updatedPeerId = updatedPeerId {
+                                    upgradedToSupergroup(updatedPeerId, {
                                         dismissImpl?()
+                                    })
+                                } else {
+                                    dismissImpl?()
+                                }
+                            }, error: { error in
+                                updateState { state in
+                                    return state.withUpdatedUpdatingAddressName(false)
+                                }
+                                switch error {
+                                case .tooManyChannels:
+                                    pushControllerImpl?(oldChannelsController(context: context, updatedPresentationData: updatedPresentationData, intent: .upgrade))
+                                default:
+                                    presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                             }))
+                        }
                         
-                    }
-                    
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                        if showAlert {
-                            let text: String
-                            if case .broadcast = peer.info {
-                                text = presentationData.strings.Channel_Edit_PrivatePublicLinkAlert
+                        _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
+                            if showAlert {
+                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
                             } else {
-                                text = presentationData.strings.Group_Edit_PrivatePublicLinkAlert
+                                invokeAction()
                             }
-                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
-                        } else {
-                            invokeAction()
-                        }
-                    })
-                } else {
-                    switch mode {
-                        case .initialSetup:
-                            nextImpl?()
-                        case .generic, .privateLink:
-                            dismissImpl?()
-                    }
-                }
-            })
-        } else if let peer = peer as? TelegramGroup {
-            var doneEnabled = true
-            if let selectedType = state.selectedType {
-                switch selectedType {
-                    case .privateChannel:
-                        break
-                    case .publicChannel:
-                        if let addressNameValidationStatus = state.addressNameValidationStatus {
-                            switch addressNameValidationStatus {
-                                case .availability(.available):
-                                    break
-                                default:
-                                    doneEnabled = false
-                            }
-                        } else {
-                            doneEnabled = !(peer.addressName?.isEmpty ?? true)
-                        }
-                }
-            }
-            
-            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
-                var updatedAddressNameValue: String?
-                updateState { state in
-                    updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: nil)
-                    return state
-                }
-                
-                if let updatedCopyProtection = state.forwardingEnabled {
-                    toggleCopyProtectionDisposable.set(context.engine.peers.toggleMessageCopyProtection(peerId: peerId, enabled: !updatedCopyProtection).start())
-                }
-                
-                if let updatedAddressNameValue = updatedAddressNameValue {
-                    let invokeAction: () -> Void = {
-                        updateState { state in
-                            return state.withUpdatedUpdatingAddressName(true)
-                        }
-                        _ = ApplicationSpecificNotice.markAsSeenSetPublicChannelLink(accountManager: context.sharedContext.accountManager).start()
-                        
-                        let signal = context.engine.peers.convertGroupToSupergroup(peerId: peerId)
-                        |> mapToSignal { upgradedPeerId -> Signal<PeerId?, ConvertGroupToSupergroupError> in
-                            return context.engine.peers.updateAddressName(domain: .peer(upgradedPeerId), name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
-                            |> `catch` { _ -> Signal<Void, NoError> in
-                                return .complete()
-                            }
-                            |> mapToSignal { _ -> Signal<PeerId?, NoError> in
-                                return .complete()
-                            }
-                            |> then(.single(upgradedPeerId))
-                            |> castError(ConvertGroupToSupergroupError.self)
-                        }
-                        |> deliverOnMainQueue
-                        
-                        updateAddressNameDisposable.set((signal
-                        |> deliverOnMainQueue).start(next: { updatedPeerId in
-                            if let updatedPeerId = updatedPeerId {
-                                upgradedToSupergroup(updatedPeerId, {
-                                    dismissImpl?()
-                                })
-                            } else {
+                        })
+                    } else {
+                        switch mode {
+                            case .initialSetup:
+                                nextImpl?()
+                            case .generic, .privateLink, .revokeNames:
                                 dismissImpl?()
-                            }
-                        }, error: { error in
-                            updateState { state in
-                                return state.withUpdatedUpdatingAddressName(false)
-                            }
-                            switch error {
-                            case .tooManyChannels:
-                                pushControllerImpl?(oldChannelsController(context: context, updatedPresentationData: updatedPresentationData, intent: .upgrade))
-                            default:
-                                presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
-                            }
-                        }))
-                    }
-                    
-                    _ = (ApplicationSpecificNotice.getSetPublicChannelLink(accountManager: context.sharedContext.accountManager) |> deliverOnMainQueue).start(next: { showAlert in
-                        if showAlert {
-                            presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Group_Edit_PrivatePublicLinkAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: invokeAction)]), nil)
-                        } else {
-                            invokeAction()
                         }
-                    })
-                } else {
-                    switch mode {
-                        case .initialSetup:
-                            nextImpl?()
-                        case .generic, .privateLink:
-                            dismissImpl?()
                     }
-                }
-            })
+                })
+            }
         }
         
         if state.revokingPeerId != nil {
@@ -1560,7 +1586,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         switch mode {
             case .initialSetup:
                 leftNavigationButton = nil
-            case .generic, .privateLink:
+            case .generic, .privateLink, .revokeNames:
                 leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                     dismissImpl?()
                 })
@@ -1602,7 +1628,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             }
             
             if hasNamesToRevoke && selectedType == .publicChannel {
-                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Group_Username_IncreaseLimit, colorful: true, action: {})
+                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {})
             }
             
             if let hadNamesToRevoke = hadNamesToRevoke {
@@ -1611,16 +1637,19 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         }
         
         let title: String
-        if case .privateLink = mode {
-            title = presentationData.strings.GroupInfo_InviteLink_Title
-        } else {
-            if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
-                title = presentationData.strings.Group_PublicLink_Title
-            } else {
-                title = isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title
-            }
+        switch mode {
+            case .generic, .initialSetup:
+                if let cachedChannelData = view.cachedData as? CachedChannelData, cachedChannelData.peerGeoLocation != nil {
+                    title = presentationData.strings.Group_PublicLink_Title
+                } else {
+                    title = isGroup ? presentationData.strings.GroupInfo_GroupType : presentationData.strings.Channel_TypeSetup_Title
+                }
+            case .privateLink:
+                title = presentationData.strings.GroupInfo_InviteLink_Title
+            case .revokeNames:
+                title = presentationData.strings.Premium_LimitReached
         }
-        
+
         let entries = channelVisibilityControllerEntries(presentationData: presentationData, mode: mode, view: view, publicChannelsToRevoke: publicChannelsToRevoke, importers: importers, state: state)
         
         var focusItemTag: ItemListItemTag?

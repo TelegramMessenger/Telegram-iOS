@@ -309,7 +309,7 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
             buttonText = presentationData.strings.OldChannels_LeaveCommunities(Int32(state.selectedPeers.count))
             colorful = false
         } else {
-            buttonText = presentationData.strings.OldChannels_IncreaseLimit
+            buttonText = presentationData.strings.Premium_IncreaseLimit
             colorful = true
         }
         let footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {

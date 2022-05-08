@@ -7549,18 +7549,18 @@ Sorry for the inconvenience.";
 "Chat.MultipleTypingMore" = "%@ and %@ others";
 
 "DialogList.ExtendedPinLimitError" = "Sorry, you can pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
-"DialogList.ExtendedPinLimitIncrease" = "Increase Limit";
 
 "Group.Username.RemoveExistingUsernamesTitle" = "Too Many Public Links";
 "Group.Username.RemoveExistingUsernamesOrExtendInfo" = "You have reserved too many public links. Try revoking a link from an older group or channel, or upgrade to **Telegram Premium** to double the limit to **%@** public links.";
-"Group.Username.IncreaseLimit" = "Increase Limit";
 
 "OldChannels.TooManyCommunitiesTitle" = "Too Many Communities";
 "OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
-"OldChannels.IncreaseLimit" = "Increase Limit";
 "OldChannels.LeaveCommunities_1" = "Leave %@ Community";
 "OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
 
-"Stickers.FaveLimitReachedInfo" = "Sorry, you can't add more than **%@** stickers to favorites. Replace an older saved sticker or subscribe to **Telegram Premium** to double the limit to **%@** favorites stickers.";
-"Stickers.FaveLimitReplaceOlder" = "Replace Older Sticker";
-"Stickers.FaveLimitIncrease" = "Increase Limit";
+"Premium.LimitReached" = "Limit Reached";
+"Premium.IncreaseLimit" = "Increase Limit";
+
+"Premium.MaxFoldersCountText" = "You have reached the limit of **%@** folders. You can double the limit to **%@** folders by subscribing to **Telegram Premium**.";
+"Premium.MaxChatsInFolderCountText" = "Sorry, you can't add more than **%@** chats to a folder. You can increase this limit to **%@** by upgrading to **Telegram Premium**.";
+"Premium.MaxFileSizeText" = "Double this limit to %@ per file by subscribing to **Telegram Premium**.";

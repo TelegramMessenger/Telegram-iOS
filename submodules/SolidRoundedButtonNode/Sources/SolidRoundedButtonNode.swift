@@ -434,6 +434,7 @@ public final class SolidRoundedButtonView: UIView {
     private var fontSize: CGFloat
     
     private let buttonBackgroundNode: UIImageView
+    private var buttonBackgroundAnimationView: UIImageView?
     private let buttonGlossView: SolidRoundedButtonGlossView?
     private let buttonNode: HighlightTrackingButton
     private let titleNode: ImmediateTextView
@@ -506,6 +507,11 @@ public final class SolidRoundedButtonView: UIView {
                 locations.append(delta * CGFloat(i))
             }
             self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            
+            let buttonBackgroundAnimationView = UIImageView()
+            buttonBackgroundAnimationView.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            self.buttonBackgroundNode.addSubview(buttonBackgroundAnimationView)
+            self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
         } else {
             self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         }
@@ -573,6 +579,42 @@ public final class SolidRoundedButtonView: UIView {
     
     required public init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupGradientAnimations() {
+        guard let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView else {
+            return
+        }
+
+        if let _ = buttonBackgroundAnimationView.layer.animation(forKey: "movement") {
+        } else {
+            let offset = (buttonBackgroundAnimationView.frame.width - self.frame.width) / 2.0
+            let previousValue = buttonBackgroundAnimationView.center.x
+            var newValue: CGFloat = offset
+            if offset - previousValue < buttonBackgroundAnimationView.frame.width * 0.25 {
+                newValue -= CGFloat.random(in: buttonBackgroundAnimationView.frame.width * 0.3 ..< buttonBackgroundAnimationView.frame.width * 0.4)
+            } else {
+//                newValue -= CGFloat.random(in: 0.0 ..< buttonBackgroundAnimationView.frame.width * 0.1)
+            }
+            buttonBackgroundAnimationView.center = CGPoint(x: newValue, y: buttonBackgroundAnimationView.bounds.size.height / 2.0)
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "position.x")
+            animation.duration = Double.random(in: 1.8 ..< 2.3)
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            
+            CATransaction.setCompletionBlock { [weak self] in
+//                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
+                    self?.setupGradientAnimations()
+//                }
+            }
+
+            buttonBackgroundAnimationView.layer.add(animation, forKey: "movement")
+            CATransaction.commit()
+        }
     }
     
     public func transitionToProgress() {
@@ -659,6 +701,12 @@ public final class SolidRoundedButtonView: UIView {
         let buttonSize = CGSize(width: width, height: self.buttonHeight)
         let buttonFrame = CGRect(origin: CGPoint(), size: buttonSize)
         transition.updateFrame(view: self.buttonBackgroundNode, frame: buttonFrame)
+        
+        if let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView {
+            transition.updateFrame(view: buttonBackgroundAnimationView, frame: CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width * 2.4, height: buttonSize.height)))
+            self.setupGradientAnimations()
+        }
+        
         if let buttonGlossView = self.buttonGlossView {
             transition.updateFrame(view: buttonGlossView, frame: buttonFrame)
         }

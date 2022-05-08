@@ -66,6 +66,7 @@ open class ViewControllerComponentContainer: ViewController {
         public let isVisible: Bool
         public let theme: PresentationTheme
         public let strings: PresentationStrings
+        public let dateTimeFormat: PresentationDateTimeFormat
         public let controller: () -> ViewController?
         
         public init(
@@ -75,6 +76,7 @@ open class ViewControllerComponentContainer: ViewController {
             isVisible: Bool,
             theme: PresentationTheme,
             strings: PresentationStrings,
+            dateTimeFormat: PresentationDateTimeFormat,
             controller: @escaping () -> ViewController?
         ) {
             self.statusBarHeight = statusBarHeight
@@ -83,6 +85,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.isVisible = isVisible
             self.theme = theme
             self.strings = strings
+            self.dateTimeFormat = dateTimeFormat
             self.controller = controller
         }
         
@@ -107,6 +110,9 @@ open class ViewControllerComponentContainer: ViewController {
                 return false
             }
             if lhs.strings !== rhs.strings {
+                return false
+            }
+            if lhs.dateTimeFormat != rhs.dateTimeFormat {
                 return false
             }
             
@@ -149,6 +155,7 @@ open class ViewControllerComponentContainer: ViewController {
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,
+                dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
                     return self?.controller
                 }

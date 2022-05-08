@@ -40,20 +40,45 @@ private final class LimitScreenComponent: CombinedComponent {
     
     final class State: ComponentState {
         private let context: AccountContext
-                
-        init(context: AccountContext) {
-            self.context = context
         
+        private var disposable: Disposable?
+        var limits: EngineConfiguration.UserLimits
+        var premiumLimits: EngineConfiguration.UserLimits
+        
+        init(context: AccountContext, subject: LimitScreen.Subject) {
+            self.context = context
+            self.limits = EngineConfiguration.UserLimits.defaultValue
+            self.premiumLimits = EngineConfiguration.UserLimits.defaultValue
+            
             super.init()
+            
+            self.disposable = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+            ) |> deliverOnMainQueue).start(next: { [weak self] result in
+                if let strongSelf = self {
+                    let (limits, premiumLimits) = result
+                    strongSelf.limits = limits
+                    strongSelf.premiumLimits = premiumLimits
+                    strongSelf.updated(transition: .immediate)
+                }
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
         }
     }
     
     func makeState() -> State {
-        return State(context: self.context)
+        return State(context: self.context, subject: self.subject)
     }
     
     static var body: Body {
-        let icon = Child(BundleIconComponent.self)
+        let badgeBackground = Child(RoundedRectangle.self)
+        let badgeIcon = Child(BundleIconComponent.self)
+        let badgeText = Child(MultilineTextComponent.self)
+        
         let title = Child(MultilineTextComponent.self)
         let text = Child(MultilineTextComponent.self)
         
@@ -66,22 +91,84 @@ private final class LimitScreenComponent: CombinedComponent {
             let theme = environment.theme
             let strings = environment.strings
             
+            let state = context.state
+            let subject = component.subject
+            
             let topInset: CGFloat = 34.0 + 38.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 24.0 + environment.safeInsets.left
             
-            let icon = icon.update(
+            let iconName: String
+            let badgeString: String
+            let string: String
+            switch subject {
+                case .folders:
+                    let limit = state.limits.maxFoldersCount
+                    let premiumLimit = state.premiumLimits.maxFoldersCount
+                    iconName = "Premium/Folder"
+                    badgeString = "\(limit)"
+                    string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
+                case .chatsInFolder:
+                    let limit = state.limits.maxFolderChatsCount
+                    let premiumLimit = state.premiumLimits.maxFolderChatsCount
+                    iconName = "Premium/Chat"
+                    badgeString = "\(limit)"
+                    string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
+                case .pins:
+                    let limit = state.limits.maxPinnedChatCount
+                    let premiumLimit = state.premiumLimits.maxPinnedChatCount
+                    iconName = "Premium/Pin"
+                    badgeString = "\(limit)"
+                    string = strings.DialogList_ExtendedPinLimitError("\(limit)", "\(premiumLimit)").string
+                case .files:
+                    let limit = 2048 * 1024 * 1024 //state.limits.maxPinnedChatCount
+                    let premiumLimit = 4096 * 1024 * 1024 //state.premiumLimits.maxPinnedChatCount
+                    iconName = "Premium/File"
+                    badgeString = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                    string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
+            }
+            
+            let badgeIcon = badgeIcon.update(
                 component: BundleIconComponent(
-                    name: "Premium/Tmp",
-                    tintColor: nil
+                    name: iconName,
+                    tintColor: .white
                 ),
-                availableSize: CGSize(width: context.availableSize.width, height: CGFloat.greatestFiniteMagnitude),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            
+            let badgeText = badgeText.update(
+                component: MultilineTextComponent(
+                    text: NSAttributedString(
+                        string: badgeString,
+                        font: Font.with(size: 24.0, design: .round, weight: .semibold, traits: []),
+                        textColor: .white,
+                        paragraphAlignment: .center
+                    ),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 1
+                ),
+                availableSize: context.availableSize,
+                transition: .immediate
+            )
+            
+            let badgeBackground = badgeBackground.update(
+                component: RoundedRectangle(
+                    colors: [UIColor(rgb: 0xa34fcf), UIColor(rgb: 0xc8498a), UIColor(rgb: 0xff7a23)],
+                    cornerRadius: 23.5
+                ),
+                availableSize: CGSize(width: badgeText.size.width + 67.0, height: 47.0),
                 transition: .immediate
             )
             
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: NSAttributedString(string: "Limit Reached", font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center),
+                    text: NSAttributedString(
+                        string: strings.Premium_LimitReached,
+                        font: Font.semibold(17.0),
+                        textColor: theme.actionSheet.primaryTextColor,
+                        paragraphAlignment: .center
+                    ),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 ),
@@ -89,19 +176,10 @@ private final class LimitScreenComponent: CombinedComponent {
                 transition: .immediate
             )
             
-            let textFont = Font.regular(15.0)
-            let boldTextFont = Font.semibold(15.0)
+            let textFont = Font.regular(16.0)
+            let boldTextFont = Font.semibold(16.0)
             
-            let textColor = theme.actionSheet.secondaryTextColor
-            let string: String
-            switch component.subject {
-                case .chatsInFolder:
-                    string = ""
-                case .folders:
-                    string = ""
-                case .pins:
-                    string = strings.DialogList_ExtendedPinLimitError("\(5)", "\(10)").string
-            }
+            let textColor = theme.actionSheet.primaryTextColor
             let attributedText = parseMarkdownIntoAttributedString(string, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
                 return nil
             }))
@@ -111,7 +189,7 @@ private final class LimitScreenComponent: CombinedComponent {
                     text: attributedText,
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.1
+                    lineSpacing: 0.2
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                 transition: .immediate
@@ -119,7 +197,7 @@ private final class LimitScreenComponent: CombinedComponent {
             
             let button = button.update(
                 component: SolidRoundedButtonComponent(
-                    title: "Increase Limit",
+                    title: strings.Premium_IncreaseLimit,
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: .black,
                         backgroundColors: [UIColor(rgb: 0x407af0), UIColor(rgb: 0x9551e8), UIColor(rgb: 0xbf499a), UIColor(rgb: 0xf17b30)],
@@ -154,10 +232,21 @@ private final class LimitScreenComponent: CombinedComponent {
             
             let width = context.availableSize.width
             
-            context.add(icon
-                .position(CGPoint(x: width / 2.0, y: 57.0))
+            let badgeFrame = CGRect(origin: CGPoint(x: floor((context.availableSize.width - badgeBackground.size.width) / 2.0), y: 33.0), size: badgeBackground.size)
+            context.add(badgeBackground
+                .position(CGPoint(x: badgeFrame.midX, y: badgeFrame.midY))
             )
             
+            let badgeIconFrame = CGRect(origin: CGPoint(x: badgeFrame.minX + 18.0, y: badgeFrame.minY + floor((badgeFrame.height - badgeIcon.size.height) / 2.0)), size: badgeIcon.size)
+            context.add(badgeIcon
+                .position(CGPoint(x: badgeIconFrame.midX, y: badgeIconFrame.midY))
+            )
+            
+            let badgeTextFrame = CGRect(origin: CGPoint(x: badgeFrame.maxX - badgeText.size.width - 15.0, y: badgeFrame.minY + floor((badgeFrame.height - badgeText.size.height) / 2.0)), size: badgeText.size)
+            context.add(badgeText
+                .position(CGPoint(x: badgeTextFrame.midX, y: badgeTextFrame.midY))
+            )
+                        
             context.add(title
                 .position(CGPoint(x: width / 2.0, y: topInset + 39.0))
             )
@@ -174,7 +263,7 @@ private final class LimitScreenComponent: CombinedComponent {
                 .position(CGPoint(x: width / 2.0, y: topInset + 76.0 + text.size.height + 20.0 + button.size.height + 40.0))
             )
             
-            let contentSize = CGSize(width: context.availableSize.width, height: topInset + title.size.height + text.size.height)
+            let contentSize = CGSize(width: context.availableSize.width, height: topInset + 76.0 + text.size.height + 20.0 + button.size.height + 40.0 + 33.0 + environment.safeInsets.bottom)
             
             return contentSize
         }
@@ -182,7 +271,7 @@ private final class LimitScreenComponent: CombinedComponent {
 }
 
 public class LimitScreen: ViewController {
-    final class Node: ViewControllerTracingNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+    final class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
         private var presentationData: PresentationData
         private weak var controller: LimitScreen?
         
@@ -192,12 +281,9 @@ public class LimitScreen: ViewController {
         let dim: ASDisplayNode
         let wrappingView: UIView
         let containerView: UIView
-        let scrollView: UIScrollView
         let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
-        private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
-        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
         
         private var currentIsVisible: Bool = false
         private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
@@ -218,14 +304,10 @@ public class LimitScreen: ViewController {
             
             self.wrappingView = UIView()
             self.containerView = UIView()
-            self.scrollView = UIScrollView()
             self.hostView = ComponentHostView()
             
             super.init()
-            
-            self.scrollView.delegate = self
-            self.scrollView.showsVerticalScrollIndicator = false
-            
+                        
             self.containerView.clipsToBounds = true
             self.containerView.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
             
@@ -233,8 +315,7 @@ public class LimitScreen: ViewController {
             
             self.view.addSubview(self.wrappingView)
             self.wrappingView.addSubview(self.containerView)
-            self.containerView.addSubview(self.scrollView)
-            self.scrollView.addSubview(self.hostView)
+            self.containerView.addSubview(self.hostView)
         }
         
         override func didLoad() {
@@ -248,8 +329,6 @@ public class LimitScreen: ViewController {
             self.wrappingView.addGestureRecognizer(panRecognizer)
             
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
-            
-            self.controller?.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
@@ -262,16 +341,16 @@ public class LimitScreen: ViewController {
             if let (layout, _) = self.currentLayout {
                 if case .regular = layout.metrics.widthClass {
                     return false
+                } else {
+                    let location = gestureRecognizer.location(in: self.containerView)
+                    if !self.hostView.frame.contains(location) {
+                        return false
+                    }
                 }
             }
             return true
         }
-        
-        func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            let contentOffset = self.scrollView.contentOffset.y
-            self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
-        }
-        
+                
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
                 return true
@@ -303,10 +382,6 @@ public class LimitScreen: ViewController {
             })
             let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
             alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
-            
-            if !self.temporaryDismiss {
-                self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
-            }
         }
                 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
@@ -318,29 +393,11 @@ public class LimitScreen: ViewController {
             
             self.dim.frame = CGRect(origin: CGPoint(x: 0.0, y: -layout.size.height), size: CGSize(width: layout.size.width, height: layout.size.height * 3.0))
                         
-            var effectiveExpanded = self.isExpanded
-            if case .regular = layout.metrics.widthClass {
-                effectiveExpanded = true
-            }
-            
             let isLandscape = layout.orientation == .landscape
-            let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
-            let topInset: CGFloat
-            if let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
-                if effectiveExpanded {
-                    topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
-                } else {
-                    topInset = max(0.0, panInitialTopInset + min(0.0, panOffset))
-                }
-            } else {
-                topInset = effectiveExpanded ? 0.0 : edgeTopInset
-            }
-            transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: layout.size), completion: nil)
-            
-            let modalProgress = isLandscape ? 0.0 : (1.0 - topInset / self.defaultTopInset)
-            self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
-            
-            let clipFrame: CGRect
+
+            transition.setFrame(view: self.wrappingView, frame: CGRect(origin: CGPoint(), size: layout.size), completion: nil)
+                        
+            var clipFrame: CGRect
             if layout.metrics.widthClass == .compact {
                 self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.25)
                 if isLandscape {
@@ -386,10 +443,7 @@ public class LimitScreen: ViewController {
                 let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
                 clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
             }
-            
-            transition.setFrame(view: self.containerView, frame: clipFrame)
-            transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
-            
+                        
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: 0.0,
                 navigationHeight: navigationHeight,
@@ -397,23 +451,28 @@ public class LimitScreen: ViewController {
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,
+                dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
                     return self?.controller
                 }
             )
-            var contentSize = self.hostView.update(
+            let contentSize = self.hostView.update(
                 transition: transition,
                 component: self.component,
                 environment: {
                     environment
                 },
                 forceUpdate: true,
-                containerSize: CGSize(width: clipFrame.size.width, height: 10000.0)
+                containerSize: CGSize(width: clipFrame.size.width, height: clipFrame.size.height)
             )
-            contentSize.height = max(layout.size.height - navigationHeight, contentSize.height)
             transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
             
-            self.scrollView.contentSize = contentSize
+            if !isLandscape {
+                clipFrame.origin.y = layout.size.height - contentSize.height
+                transition.setFrame(view: self.containerView, frame: clipFrame)
+            } else {
+                
+            }
         }
         
         private var didPlayAppearAnimation = false
@@ -433,194 +492,29 @@ public class LimitScreen: ViewController {
                 self.animateIn()
             }
         }
-        
-        private var defaultTopInset: CGFloat {
-            return 390.0
-//            guard let (layout, _) = self.currentLayout else{
-//                return 210.0
-//            }
-//            if case .compact = layout.metrics.widthClass {
-//                var factor: CGFloat = 0.2488
-//                if layout.size.width <= 320.0 {
-//                    factor = 0.15
-//                }
-//                return floor(max(layout.size.width, layout.size.height) * factor)
-//            } else {
-//                return 210.0
-//            }
-        }
-        
-        private func findScrollView(view: UIView?) -> (UIScrollView, ListView?)? {
-            if let view = view {
-                if let view = view as? UIScrollView {
-                    return (view, nil)
-                }
-                if let node = view.asyncdisplaykit_node as? ListView {
-                    return (node.scroller, node)
-                }
-                return findScrollView(view: view.superview)
-            } else {
-                return nil
-            }
-        }
-        
+                
         @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
-            guard let (layout, navigationHeight) = self.currentLayout else {
-                return
-            }
-            
-            let isLandscape = layout.orientation == .landscape
-            let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
-        
             switch recognizer.state {
                 case .began:
-                    let point = recognizer.location(in: self.view)
-                    let currentHitView = self.hitTest(point, with: nil)
-                    
-                    var scrollViewAndListNode = self.findScrollView(view: currentHitView)
-                    if scrollViewAndListNode?.0.frame.height == self.frame.width {
-                        scrollViewAndListNode = nil
-                    }
-                    let scrollView = scrollViewAndListNode?.0
-                    let listNode = scrollViewAndListNode?.1
-                                
-                    let topInset: CGFloat
-                    if self.isExpanded {
-                        topInset = 0.0
-                    } else {
-                        topInset = edgeTopInset
-                    }
-                
-                    self.panGestureArguments = (topInset, 0.0, scrollView, listNode)
+                    break
                 case .changed:
-                    guard let (topInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
-                        return
-                    }
-                    let visibleContentOffset = listNode?.visibleContentOffset()
-                    let contentOffset = scrollView?.contentOffset.y ?? 0.0
-                
-                    var translation = recognizer.translation(in: self.view).y
-
-                    var currentOffset = topInset + translation
-                
-                    let epsilon = 1.0
-                    if case let .known(value) = visibleContentOffset, value <= epsilon {
-                        if let scrollView = scrollView {
-                            scrollView.bounces = false
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: false)
-                        }
-                    } else if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
-                        scrollView.bounces = false
-                        scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
-                    } else if let scrollView = scrollView {
-                        translation = panOffset
-                        currentOffset = topInset + translation
-                        if self.isExpanded {
-                            recognizer.setTranslation(CGPoint(), in: self.view)
-                        } else if currentOffset > 0.0 {
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
-                        }
-                    }
-                    
-                    self.panGestureArguments = (topInset, translation, scrollView, listNode)
-                    
-                    if !self.isExpanded {
-                        if currentOffset > 0.0, let scrollView = scrollView {
-                            scrollView.panGestureRecognizer.setTranslation(CGPoint(), in: scrollView)
-                        }
-                    }
+                    let translation = recognizer.translation(in: self.view).y
                 
                     var bounds = self.bounds
-                    if self.isExpanded {
-                        bounds.origin.y = -max(0.0, translation - edgeTopInset)
-                    } else {
-                        bounds.origin.y = -translation
-                    }
+                    bounds.origin.y = -translation
                     bounds.origin.y = min(0.0, bounds.origin.y)
                     self.bounds = bounds
-                
-                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
                 case .ended:
-                    guard let (currentTopInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
-                        return
-                    }
-                    self.panGestureArguments = nil
-                
-                    let visibleContentOffset = listNode?.visibleContentOffset()
-                    let contentOffset = scrollView?.contentOffset.y ?? 0.0
-                
                     let translation = recognizer.translation(in: self.view).y
-                    var velocity = recognizer.velocity(in: self.view)
+                    let velocity = recognizer.velocity(in: self.view)
                     
-                    if self.isExpanded {
-                        if case let .known(value) = visibleContentOffset, value > 0.1 {
-                            velocity = CGPoint()
-                        } else if case .unknown = visibleContentOffset {
-                            velocity = CGPoint()
-                        } else if contentOffset > 0.1 {
-                            velocity = CGPoint()
-                        }
-                    }
-                
                     var bounds = self.bounds
-                    if self.isExpanded {
-                        bounds.origin.y = -max(0.0, translation - edgeTopInset)
-                    } else {
-                        bounds.origin.y = -translation
-                    }
+                    bounds.origin.y = -translation
                     bounds.origin.y = min(0.0, bounds.origin.y)
-                
-                    scrollView?.bounces = true
-                
-                    let offset = currentTopInset + panOffset
-                    let topInset: CGFloat = edgeTopInset
-
-                    var dismissing = false
-                    if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
+                                    
+                    if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) {
                         self.controller?.dismiss(animated: true, completion: nil)
-                        dismissing = true
-                    } else if self.isExpanded {
-                        if velocity.y > 300.0 || offset > topInset / 2.0 {
-                            self.isExpanded = false
-                            if let listNode = listNode {
-                                listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                            } else if let scrollView = scrollView {
-                                scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
-                            }
-                            
-                            let distance = topInset - offset
-                            let initialVelocity: CGFloat = distance.isZero ? 0.0 : abs(velocity.y / distance)
-                            let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
-
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
-                        } else {
-                            self.isExpanded = true
-                            
-                            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
-                        }
-                    } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
-                        if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
-                            DispatchQueue.main.async {
-                                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                            }
-                        }
-                                                    
-                        let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
-                        let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
-                        self.isExpanded = true
-                       
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
                     } else {
-                        if let listNode = listNode {
-                            listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                        } else if let scrollView = scrollView {
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
-                        }
-                        
-                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
-                    }
-                    
-                    if !dismissing {
                         var bounds = self.bounds
                         let previousBounds = bounds
                         bounds.origin.y = 0.0
@@ -628,24 +522,14 @@ public class LimitScreen: ViewController {
                         self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     }
                 case .cancelled:
-                    self.panGestureArguments = nil
-                    
-                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                    var bounds = self.bounds
+                    let previousBounds = bounds
+                    bounds.origin.y = 0.0
+                    self.bounds = bounds
+                    self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                 default:
                     break
             }
-        }
-        
-        func update(isExpanded: Bool, transition: ContainedViewLayoutTransition) {
-            guard isExpanded != self.isExpanded else {
-                return
-            }
-            self.isExpanded = isExpanded
-            
-            guard let (layout, navigationHeight) = self.currentLayout else {
-                return
-            }
-            self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
         }
     }
     
@@ -667,6 +551,7 @@ public class LimitScreen: ViewController {
         case folders
         case chatsInFolder
         case pins
+        case files
     }
     
     public convenience init(context: AccountContext, subject: Subject) {
@@ -678,7 +563,7 @@ public class LimitScreen: ViewController {
         self.component = AnyComponent(component)
         self.theme = nil
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
+        super.init(navigationBarPresentationData: nil)
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -718,37 +603,12 @@ public class LimitScreen: ViewController {
         
         self.node.updateIsVisible(isVisible: false)
     }
-    
-    override public func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        var navigationLayout = self.navigationLayout(layout: layout)
-        var navigationFrame = navigationLayout.navigationFrame
         
-        var layout = layout
-        if case .regular = layout.metrics.widthClass {
-            let verticalInset: CGFloat = 44.0
-            let maxSide = max(layout.size.width, layout.size.height)
-            let minSide = min(layout.size.width, layout.size.height)
-            let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
-            let clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
-            navigationFrame.size.width = clipFrame.width
-            layout.size = clipFrame.size
-        }
-        
-        navigationFrame.size.height = 56.0
-        navigationLayout.navigationFrame = navigationFrame
-        navigationLayout.defaultContentHeight = 56.0
-        
-        layout.statusBarHeight = nil
-        
-        self.applyNavigationBarLayout(layout, navigationLayout: navigationLayout, additionalBackgroundHeight: 0.0, transition: transition)
-    }
-    
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         
         let navigationHeight: CGFloat = 56.0
-        
         self.node.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
     }
 }

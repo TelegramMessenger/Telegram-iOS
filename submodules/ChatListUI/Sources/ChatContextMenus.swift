@@ -331,7 +331,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                         return nil
                                     }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                                     
-                                    subItems.append(.action(ContextMenuActionItem(text: strings.DialogList_ExtendedPinLimitIncrease, icon: { _ in
+                                    subItems.append(.action(ContextMenuActionItem(text: strings.Premium_IncreaseLimit, icon: { _ in
                                         return nil
                                     }, action: { _, f in
                                         f(.default)
