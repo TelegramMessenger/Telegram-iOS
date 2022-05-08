@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "MultilineTextComponent",
-    module_name = "MultilineTextComponent",
+    name = "CreditCardInputComponent",
+    module_name = "CreditCardInputComponent",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -12,7 +12,7 @@ swift_library(
     deps = [
         "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
-        "//submodules/Markdown:Markdown",
+        "//submodules/Stripe:Stripe",
     ],
     visibility = [
         "//visibility:public",

@@ -2539,12 +2539,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.present(BotReceiptController(context: strongSelf.context, messageId: receiptMessageId), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                         } else {
                             let inputData = Promise<BotCheckoutController.InputData?>()
-                            inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, messageId: message.id)
+                            inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .message(message.id))
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                                 return .single(nil)
                             })
-                            strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, messageId: messageId, inputData: inputData, completed: { currencyValue, receiptMessageId in
+                            strongSelf.present(BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .message(messageId), inputData: inputData, completed: { currencyValue, receiptMessageId in
                                 guard let strongSelf = self else {
                                     return
                                 }

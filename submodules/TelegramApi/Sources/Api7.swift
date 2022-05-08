@@ -801,6 +801,68 @@ public extension Api {
     }
 }
 public extension Api {
+    enum InputInvoice: TypeConstructorDescription {
+        case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
+        case inputInvoiceSlug(slug: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputInvoiceMessage(let peer, let msgId):
+                    if boxed {
+                        buffer.appendInt32(-977967015)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+                case .inputInvoiceSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(-1020867857)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputInvoiceMessage(let peer, let msgId):
+                return ("inputInvoiceMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId))])
+                case .inputInvoiceSlug(let slug):
+                return ("inputInvoiceSlug", [("slug", String(describing: slug))])
+    }
+    }
+    
+        public static func parse_inputInvoiceMessage(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoiceMessage(peer: _1!, msgId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoiceSlug(_ reader: BufferReader) -> InputInvoice? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputInvoice.inputInvoiceSlug(slug: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum InputMedia: TypeConstructorDescription {
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaDice(emoticon: String)

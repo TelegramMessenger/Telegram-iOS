@@ -2,21 +2,27 @@ import Foundation
 import UIKit
 import ComponentFlow
 import Display
+import Markdown
 
 public final class MultilineTextComponent: Component {
-    public let text: NSAttributedString
+    public enum TextContent: Equatable {
+        case plain(NSAttributedString)
+        case markdown(text: String, attributes: MarkdownAttributes)
+    }
+    
+    public let text: TextContent
     public let horizontalAlignment: NSTextAlignment
     public let verticalAlignment: TextVerticalAlignment
-    public var truncationType: CTLineTruncationType
-    public var maximumNumberOfLines: Int
-    public var lineSpacing: CGFloat
-    public var cutout: TextNodeCutout?
-    public var insets: UIEdgeInsets
-    public var textShadowColor: UIColor?
-    public var textStroke: (UIColor, CGFloat)?
+    public let truncationType: CTLineTruncationType
+    public let maximumNumberOfLines: Int
+    public let lineSpacing: CGFloat
+    public let cutout: TextNodeCutout?
+    public let insets: UIEdgeInsets
+    public let textShadowColor: UIColor?
+    public let textStroke: (UIColor, CGFloat)?
     
     public init(
-        text: NSAttributedString,
+        text: TextContent,
         horizontalAlignment: NSTextAlignment = .natural,
         verticalAlignment: TextVerticalAlignment = .top,
         truncationType: CTLineTruncationType = .end,
@@ -40,7 +46,7 @@ public final class MultilineTextComponent: Component {
     }
     
     public static func ==(lhs: MultilineTextComponent, rhs: MultilineTextComponent) -> Bool {
-        if !lhs.text.isEqual(to: rhs.text) {
+        if lhs.text != rhs.text {
             return false
         }
         if lhs.horizontalAlignment != rhs.horizontalAlignment {
@@ -89,9 +95,17 @@ public final class MultilineTextComponent: Component {
     
     public final class View: TextView {
         public func update(component: MultilineTextComponent, availableSize: CGSize) -> CGSize {
+            let attributedString: NSAttributedString
+            switch component.text {
+            case let .plain(string):
+                attributedString = string
+            case let .markdown(text, attributes):
+                attributedString = parseMarkdownIntoAttributedString(text, attributes: attributes)
+            }
+            
             let makeLayout = TextView.asyncLayout(self)
             let (layout, apply) = makeLayout(TextNodeLayoutArguments(
-                attributedString: component.text,
+                attributedString: attributedString,
                 backgroundColor: nil,
                 maximumNumberOfLines: component.maximumNumberOfLines,
                 truncationType: component.truncationType,

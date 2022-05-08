@@ -4,6 +4,10 @@ import MtProtoKit
 import SwiftSignalKit
 import TelegramApi
 
+public enum BotPaymentInvoiceSource {
+    case message(MessageId)
+    case slug(String)
+}
 
 public struct BotPaymentInvoiceFields: OptionSet {
     public var rawValue: Int32
@@ -173,15 +177,70 @@ extension BotPaymentRequestedInfo {
     }
 }
 
-func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, messageId: MessageId, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
-    return postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source: BotPaymentInvoiceSource) -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> {
+    return postbox.transaction { transaction -> Api.InputInvoice? in
+        switch source {
+        case let .message(messageId):
+            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+                return nil
+            }
+            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
+        case let .slug(slug):
+            return .inputInvoiceSlug(slug: slug)
+        }
     }
     |> castError(BotPaymentFormRequestError.self)
-    |> mapToSignal { inputPeer -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
-        guard let inputPeer = inputPeer else {
+    |> mapToSignal { invoice -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> in
+        guard let invoice = invoice else {
             return .fail(.generic)
         }
+        
+        let flags: Int32 = 0
+
+        return network.request(Api.functions.payments.getPaymentForm(flags: flags, invoice: invoice, themeParams: nil))
+        |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
+            return .fail(.generic)
+        }
+        |> mapToSignal { result -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> in
+            return postbox.transaction { transaction -> TelegramMediaInvoice in
+                switch result {
+                case let .paymentForm(_, _, _, title, description, photo, invoice, _, _, _, _, _, _, _):
+                    let parsedInvoice = BotPaymentInvoice(apiInvoice: invoice)
+                    
+                    var parsedFlags = TelegramMediaInvoiceFlags()
+                    if parsedInvoice.isTest {
+                        parsedFlags.insert(.isTest)
+                    }
+                    if parsedInvoice.requestedFields.contains(.shippingAddress) {
+                        parsedFlags.insert(.shippingAddressRequested)
+                    }
+                    
+                    return TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: 0, startParam: "", flags: parsedFlags)
+                }
+            }
+            |> mapError { _ -> BotPaymentFormRequestError in }
+        }
+    }
+}
+
+func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, source: BotPaymentInvoiceSource, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
+    return postbox.transaction { transaction -> Api.InputInvoice? in
+        switch source {
+        case let .message(messageId):
+            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+                return nil
+            }
+            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
+        case let .slug(slug):
+            return .inputInvoiceSlug(slug: slug)
+        }
+    }
+    |> castError(BotPaymentFormRequestError.self)
+    |> mapToSignal { invoice -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
+        guard let invoice = invoice else {
+            return .fail(.generic)
+        }
+        
         var flags: Int32 = 0
         var serializedThemeParams: Api.DataJSON?
         if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
@@ -191,14 +250,18 @@ func _internal_fetchBotPaymentForm(postbox: Postbox, network: Network, messageId
             flags |= 1 << 0
         }
 
-        return network.request(Api.functions.payments.getPaymentForm(flags: flags, peer: inputPeer, msgId: messageId.id, themeParams: serializedThemeParams))
+        return network.request(Api.functions.payments.getPaymentForm(flags: flags, invoice: invoice, themeParams: serializedThemeParams))
         |> `catch` { _ -> Signal<Api.payments.PaymentForm, BotPaymentFormRequestError> in
             return .fail(.generic)
         }
         |> mapToSignal { result -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
             return postbox.transaction { transaction -> BotPaymentForm in
                 switch result {
-                    case let .paymentForm(flags, id, botId, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                    case let .paymentForm(flags, id, botId, title, description, photo, invoice, providerId, url, nativeProvider, nativeParams, savedInfo, savedCredentials, apiUsers):
+                        let _ = title
+                        let _ = description
+                        let _ = photo
+                    
                         var peers: [Peer] = []
                         for user in apiUsers {
                             let parsed = TelegramUser(user: user)
@@ -268,13 +331,21 @@ extension BotPaymentShippingOption {
     }
 }
 
-func _internal_validateBotPaymentForm(account: Account, saveInfo: Bool, messageId: MessageId, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+func _internal_validateBotPaymentForm(account: Account, saveInfo: Bool, source: BotPaymentInvoiceSource, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
+    return account.postbox.transaction { transaction -> Api.InputInvoice? in
+        switch source {
+        case let .message(messageId):
+            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+                return nil
+            }
+            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
+        case let .slug(slug):
+            return .inputInvoiceSlug(slug: slug)
+        }
     }
     |> castError(ValidateBotPaymentFormError.self)
-    |> mapToSignal { inputPeer -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> in
-        guard let inputPeer = inputPeer else {
+    |> mapToSignal { invoice -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> in
+        guard let invoice = invoice else {
             return .fail(.generic)
         }
 
@@ -297,7 +368,7 @@ func _internal_validateBotPaymentForm(account: Account, saveInfo: Bool, messageI
             infoFlags |= (1 << 3)
             apiShippingAddress = .postAddress(streetLine1: address.streetLine1, streetLine2: address.streetLine2, city: address.city, state: address.state, countryIso2: address.countryIso2, postCode: address.postCode)
         }
-        return account.network.request(Api.functions.payments.validateRequestedInfo(flags: flags, peer: inputPeer, msgId: messageId.id, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
+        return account.network.request(Api.functions.payments.validateRequestedInfo(flags: flags, invoice: invoice, info: .paymentRequestedInfo(flags: infoFlags, name: formInfo.name, phone: formInfo.phone, email: formInfo.email, shippingAddress: apiShippingAddress)))
         |> mapError { error -> ValidateBotPaymentFormError in
             if error.errorDescription == "SHIPPING_NOT_AVAILABLE" {
                 return .shippingNotAvailable
@@ -346,16 +417,24 @@ public enum SendBotPaymentResult {
     case externalVerificationRequired(url: String)
 }
 
-func _internal_sendBotPaymentForm(account: Account, messageId: MessageId, formId: Int64, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPaymentInvoiceSource, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
+    return account.postbox.transaction { transaction -> Api.InputInvoice? in
+        switch source {
+        case let .message(messageId):
+            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+                return nil
+            }
+            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
+        case let .slug(slug):
+            return .inputInvoiceSlug(slug: slug)
+        }
     }
     |> castError(SendBotPaymentFormError.self)
-    |> mapToSignal { inputPeer -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
-        guard let inputPeer = inputPeer else {
+    |> mapToSignal { invoice -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
+        guard let invoice = invoice else {
             return .fail(.generic)
         }
-
+        
         let apiCredentials: Api.InputPaymentCredentials
         switch credentials {
             case let .generic(data, saveOnServer):
@@ -379,7 +458,8 @@ func _internal_sendBotPaymentForm(account: Account, messageId: MessageId, formId
         if tipAmount != nil {
             flags |= (1 << 2)
         }
-        return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, formId: formId, peer: inputPeer, msgId: messageId.id, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials, tipAmount: tipAmount))
+        
+        return account.network.request(Api.functions.payments.sendPaymentForm(flags: flags, formId: formId, invoice: invoice, requestedInfoId: validatedInfoId, shippingOptionId: shippingOptionId, credentials: apiCredentials, tipAmount: tipAmount))
         |> map { result -> SendBotPaymentResult in
             switch result {
                 case let .paymentResult(updates):
@@ -392,10 +472,15 @@ func _internal_sendBotPaymentForm(account: Account, messageId: MessageId, formId
                                     if case .paymentSent = action.action {
                                         for attribute in message.attributes {
                                             if let reply = attribute as? ReplyMessageAttribute {
-                                                if reply.messageId == messageId {
-                                                    if case let .Id(id) = message.id {
-                                                        receiptMessageId = id
+                                                switch source {
+                                                case let .message(messageId):
+                                                    if reply.messageId == messageId {
+                                                        if case let .Id(id) = message.id {
+                                                            receiptMessageId = id
+                                                        }
                                                     }
+                                                case .slug:
+                                                    break
                                                 }
                                             }
                                         }

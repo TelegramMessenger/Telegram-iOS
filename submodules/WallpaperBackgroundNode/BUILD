@@ -22,6 +22,9 @@ swift_library(
         "//submodules/Svg:Svg",
         "//submodules/GZip:GZip",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

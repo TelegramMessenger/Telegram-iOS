@@ -66,6 +66,7 @@ import QrCodeUI
 import TranslateUI
 import ChatPresentationInterfaceState
 import CreateExternalMediaStreamScreen
+import PaymentMethodUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -463,6 +464,7 @@ private final class PeerInfoInteraction {
     let requestLayout: (Bool) -> Void
     let openEncryptionKey: () -> Void
     let openSettings: (PeerInfoSettingsSection) -> Void
+    let openPaymentMethod: () -> Void
     let switchToAccount: (AccountRecordId) -> Void
     let logoutAccount: (AccountRecordId) -> Void
     let accountContextMenu: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
@@ -505,6 +507,7 @@ private final class PeerInfoInteraction {
         requestLayout: @escaping (Bool) -> Void,
         openEncryptionKey: @escaping () -> Void,
         openSettings: @escaping (PeerInfoSettingsSection) -> Void,
+        openPaymentMethod: @escaping () -> Void,
         switchToAccount: @escaping (AccountRecordId) -> Void,
         logoutAccount: @escaping (AccountRecordId) -> Void,
         accountContextMenu: @escaping (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void,
@@ -546,6 +549,7 @@ private final class PeerInfoInteraction {
         self.requestLayout = requestLayout
         self.openEncryptionKey = openEncryptionKey
         self.openSettings = openSettings
+        self.openPaymentMethod = openPaymentMethod
         self.switchToAccount = switchToAccount
         self.logoutAccount = logoutAccount
         self.accountContextMenu = accountContextMenu
@@ -568,6 +572,7 @@ private enum SettingsSection: Int, CaseIterable {
     case proxy
     case shortcuts
     case advanced
+    case payment
     case extra
     case support
 }
@@ -716,6 +721,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 4, label: .text(languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName), text: presentationData.strings.Settings_AppLanguage, icon: PresentationResourcesSettings.language, action: {
         interaction.openSettings(.language)
     }))
+    
+    /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Payment Method", icon: PresentationResourcesSettings.language, action: {
+        interaction.openPaymentMethod()
+    }))*/
     
     let stickersLabel: String
     if let settings = data.globalSettings {
@@ -1784,6 +1793,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             },
             openSettings: { [weak self] section in
                 self?.openSettings(section: section)
+            },
+            openPaymentMethod: { [weak self] in
+                self?.openPaymentMethod()
             },
             switchToAccount: { [weak self] accountId in
                 self?.switchToAccount(id: accountId)
@@ -6223,6 +6235,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 self.controller?.push(controller)
         }
+    }
+    
+    fileprivate func openPaymentMethod() {
+        self.controller?.push(AddPaymentMethodSheetScreen(context: self.context, action: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.controller?.push(PaymentCardEntryScreen(context: strongSelf.context, completion: { result in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.controller?.push(paymentMethodListScreen(context: strongSelf.context, items: [result]))
+            }))
+        }))
     }
     
     private func openFaq(anchor: String? = nil) {
