@@ -17,6 +17,7 @@ import TelegramAnimatedStickerNode
 import HierarchyTrackingLayer
 import MetalKit
 import HierarchyTrackingLayer
+import simd
 
 private final class NullActionClass: NSObject, CAAction {
     static let shared = NullActionClass()
@@ -247,13 +248,19 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
         var vertices: [Float] = [
             -1.0, -1.0,
             1.0, -1.0,
-            -1.0, animationOffset * 1.0,
-            1.0, animationOffset * 1.0
+            -1.0, 1.0,
+            1.0, 1.0
         ]
         
         renderEncoder.setRenderPipelineState(self.renderPipelineState)
 
         renderEncoder.setVertexBytes(&vertices, length: 4 * vertices.count, index: 0)
+        
+        var resolution = simd_uint2(UInt32(drawable.texture.width), UInt32(drawable.texture.height))
+        renderEncoder.setFragmentBytes(&resolution, length: MemoryLayout<simd_uint2>.size * 2, index: 0)
+        
+        var time = Float(timestamp) * 0.25
+        renderEncoder.setFragmentBytes(&time, length: 4, index: 1)
 
         renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: 1)
         
