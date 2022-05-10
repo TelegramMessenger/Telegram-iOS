@@ -96,6 +96,9 @@ objc_library(
         "GLKit",
         "AVFoundation",
     ],
+    sdk_dylibs = [
+        "libz",
+    ],
     visibility = [
         "//visibility:public",
     ],

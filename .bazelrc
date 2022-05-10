@@ -2,11 +2,11 @@ build --action_env=ZERO_AR_DATE=1
 
 build --apple_platform_type=ios
 
-build --cxxopt='-std=c++14'
-build --per_file_copt="third-party/webrtc/.*\.cpp$","@-std=c++14"
-build --per_file_copt="third-party/webrtc/.*\.cc$","@-std=c++14"
-build --per_file_copt="third-party/webrtc/.*\.mm$","@-std=c++14"
-build --per_file_copt="submodules/LottieMeshSwift/LottieMeshBinding/Sources/.*\.mm$","@-std=c++14"
+build --cxxopt='-std=c++17'
+build --per_file_copt="third-party/webrtc/.*\.cpp$","@-std=c++17"
+build --per_file_copt="third-party/webrtc/.*\.cc$","@-std=c++17"
+build --per_file_copt="third-party/webrtc/.*\.mm$","@-std=c++17"
+build --per_file_copt="submodules/LottieMeshSwift/LottieMeshBinding/Sources/.*\.mm$","@-std=c++17"
 
 build --swiftcopt=-whole-module-optimization
 
