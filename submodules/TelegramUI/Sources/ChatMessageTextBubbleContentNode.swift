@@ -73,6 +73,7 @@ private final class InlineStickerItemLayer: SimpleLayer {
     private let source: AnimatedStickerNodeSource
     private var frameSource: QueueLocalObject<AnimatedStickerDirectFrameSource>?
     private var disposable: Disposable?
+    private var fetchDisposable: Disposable?
     
     private var isInHierarchy: Bool = false
     var isVisibleForAnimations: Bool = false {
@@ -106,6 +107,8 @@ private final class InlineStickerItemLayer: SimpleLayer {
                 strongSelf.updatePlayback()
             }
         })
+        
+        self.fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
     }
     
     override init(layer: Any) {
@@ -124,6 +127,7 @@ private final class InlineStickerItemLayer: SimpleLayer {
     
     deinit {
         self.disposable?.dispose()
+        self.fetchDisposable?.dispose()
     }
     
     override func action(forKey event: String) -> CAAction? {
@@ -457,7 +461,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                if item.context.sharedContext.immediateExperimentalUISettings.inlineStickers {
+                /*if item.context.sharedContext.immediateExperimentalUISettings.inlineStickers*/ do {
                     var currentCount = 0
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
                     while true {
@@ -473,7 +477,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 
                                 if let emojiFile = emojiFile {
-                                    updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: NSAttributedString(string: "[...]", attributes: [NSAttributedString.Key("Attribute__EmbeddedItem"): InlineStickerItem(file: emojiFile), NSAttributedString.Key.foregroundColor: UIColor.clear.cgColor]))
+                                    updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}\u{00a0}\u{00a0}]", attributes: [NSAttributedString.Key("Attribute__EmbeddedItem"): InlineStickerItem(file: emojiFile), NSAttributedString.Key.foregroundColor: UIColor.clear.cgColor]))
+                                    currentCount += 1
                                     hadUpdates = true
                                     stop = true
                                 }
@@ -696,7 +701,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         itemLayer.isVisibleForAnimations = self.isVisibleForAnimations
                     }
                     
-                    itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -12.0, dy: -12.0)
+                    itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -11.0, dy: -11.0)
                 }
             }
         }
