@@ -468,6 +468,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             previousItemNode.listNode.activateSearch = nil
             previousItemNode.listNode.presentAlert = nil
             previousItemNode.listNode.present = nil
+            previousItemNode.listNode.push = nil
             previousItemNode.listNode.toggleArchivedFolderHiddenByDefault = nil
             previousItemNode.listNode.hidePsa = nil
             previousItemNode.listNode.deletePeerChat = nil
@@ -493,6 +494,9 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         itemNode.listNode.present = { [weak self] c in
             self?.present?(c)
+        }
+        itemNode.listNode.push = { [weak self] c in
+            self?.push?(c)
         }
         itemNode.listNode.toggleArchivedFolderHiddenByDefault = { [weak self] in
             self?.toggleArchivedFolderHiddenByDefault?()
@@ -557,6 +561,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var activateSearch: (() -> Void)?
     var presentAlert: ((String) -> Void)?
     var present: ((ViewController) -> Void)?
+    var push: ((ViewController) -> Void)?
     var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     var hidePsa: ((EnginePeer.Id) -> Void)?
     var deletePeerChat: ((EnginePeer.Id, Bool) -> Void)?

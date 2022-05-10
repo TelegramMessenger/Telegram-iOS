@@ -15,6 +15,7 @@ import AppBundle
 import DatePickerNode
 import DebugSettingsUI
 import TabBarUI
+import PremiumUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -129,8 +130,12 @@ public final class TelegramRootController: NavigationController {
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-        let _ = getUserLimits(postbox: self.context.account.postbox).start()
+    
+        Queue.mainQueue().after(1.0) {
+//            let screen = PremiumLimitScreen(context: self.context, subject: .pins, action: {})
+            let screen = PremiumIntroScreen(context: self.context, action: {})
+            self.chatListController?.push(screen)
+        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {

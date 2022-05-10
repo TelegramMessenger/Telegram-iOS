@@ -11,6 +11,7 @@ import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
 import UndoUI
+import PremiumUI
 
 func archiveContextMenuItems(context: AccountContext, groupId: PeerGroupId, chatListController: ChatListControllerImpl?) -> Signal<[ContextMenuItem], NoError> {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
@@ -318,29 +319,16 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 case .done:
                                     f(.default)
                                 case .limitExceeded:
-                                    var subItems: [ContextMenuItem] = []
+                                    f(.default)
                                     
-                                    subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
-                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                                    }, action: { c, _ in
-                                        c.popItems()
-                                    })))
-                                    subItems.append(.separator)
-                                    
-                                    subItems.append(.action(ContextMenuActionItem(text: strings.DialogList_ExtendedPinLimitError("5", "10").string, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
-                                        return nil
-                                    }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
-                                    
-                                    subItems.append(.action(ContextMenuActionItem(text: strings.Premium_IncreaseLimit, icon: { _ in
-                                        return nil
-                                    }, action: { _, f in
-                                        f(.default)
-                                        
-                                    })))
-                                    
-                                    c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                                    let limitScreen = PremiumLimitScreen(context: context, subject: .pins, action: {
+                                        let premiumScreen = PremiumIntroScreen(context: context, action: {
+                                            
+                                        })
+                                        chatListController?.push(premiumScreen)
+                                    })
+                                    chatListController?.push(limitScreen)
                                 }
-
                             })
                         })))
                     }

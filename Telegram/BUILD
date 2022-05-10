@@ -337,6 +337,7 @@ swift_library(
         "//submodules/OverlayStatusController:OverlayStatusControllerResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIResources",
         "//submodules/PasswordSetupUI:PasswordSetupUIAssets",
+        "//submodules/PremiumUI:PremiumUIResources",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
         ":GeneratedPresentationStrings/Resources/PresentationStrings.data",

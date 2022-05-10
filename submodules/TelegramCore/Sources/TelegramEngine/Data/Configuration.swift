@@ -55,7 +55,8 @@ public enum EngineConfiguration {
         public let maxFavedStickerCount: Int32
         public let maxFoldersCount: Int32
         public let maxFolderChatsCount: Int32
-        public let maxTextLengthCount: Int32
+        public let maxCaptionLengthCount: Int32
+        public let maxUploadFileParts: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -69,7 +70,8 @@ public enum EngineConfiguration {
             maxFavedStickerCount: Int32,
             maxFoldersCount: Int32,
             maxFolderChatsCount: Int32,
-            maxTextLengthCount: Int32
+            maxCaptionLengthCount: Int32,
+            maxUploadFileParts: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxChannelsCount = maxChannelsCount
@@ -78,7 +80,8 @@ public enum EngineConfiguration {
             self.maxFavedStickerCount = maxFavedStickerCount
             self.maxFoldersCount = maxFoldersCount
             self.maxFolderChatsCount = maxFolderChatsCount
-            self.maxTextLengthCount = maxTextLengthCount
+            self.maxCaptionLengthCount = maxCaptionLengthCount
+            self.maxUploadFileParts = maxUploadFileParts
         }
     }
 }
@@ -112,7 +115,8 @@ extension EngineConfiguration.UserLimits {
             maxFavedStickerCount: userLimitsConfiguration.maxFavedStickerCount,
             maxFoldersCount: userLimitsConfiguration.maxFoldersCount,
             maxFolderChatsCount: userLimitsConfiguration.maxFolderChatsCount,
-            maxTextLengthCount: userLimitsConfiguration.maxTextLengthCount
+            maxCaptionLengthCount: userLimitsConfiguration.maxCaptionLengthCount,
+            maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts
         )
     }
 }

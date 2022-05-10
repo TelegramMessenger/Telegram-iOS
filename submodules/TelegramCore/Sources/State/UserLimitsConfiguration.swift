@@ -9,7 +9,8 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxFavedStickerCount: Int32
     public let maxFoldersCount: Int32
     public let maxFolderChatsCount: Int32
-    public let maxTextLengthCount: Int32
+    public let maxCaptionLengthCount: Int32
+    public let maxUploadFileParts: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -20,7 +21,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxFavedStickerCount: 5,
             maxFoldersCount: 10,
             maxFolderChatsCount: 100,
-            maxTextLengthCount: 4096
+            maxCaptionLengthCount: 1024,
+            maxUploadFileParts: 4000
         )
     }
 
@@ -32,7 +34,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxFavedStickerCount: Int32,
         maxFoldersCount: Int32,
         maxFolderChatsCount: Int32,
-        maxTextLengthCount: Int32
+        maxCaptionLengthCount: Int32,
+        maxUploadFileParts: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxChannelsCount = maxChannelsCount
@@ -41,7 +44,8 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxFavedStickerCount = maxFavedStickerCount
         self.maxFoldersCount = maxFoldersCount
         self.maxFolderChatsCount = maxFolderChatsCount
-        self.maxTextLengthCount = maxTextLengthCount
+        self.maxCaptionLengthCount = maxCaptionLengthCount
+        self.maxUploadFileParts = maxUploadFileParts
     }
 }
 
@@ -65,16 +69,7 @@ extension UserLimitsConfiguration {
         self.maxFavedStickerCount = getValue("stickers_faved_limit", orElse: defaultValue.maxPinnedChatCount)
         self.maxFoldersCount = getValue("dialog_filters_limit", orElse: defaultValue.maxPinnedChatCount)
         self.maxFolderChatsCount = getValue("dialog_filters_chats_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxTextLengthCount = getValue("message_text_length_limit", orElse: defaultValue.maxPinnedChatCount)
-    }
-}
-
-public func getUserLimits(postbox: Postbox) -> Signal<Never, NoError> {
-    return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-    |> mapToSignal { preferencesView -> Signal<Never, NoError> in
-        let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
-        let configuration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
-        print(configuration)
-        return .never()
+        self.maxCaptionLengthCount = getValue("caption_length_limit", orElse: defaultValue.maxCaptionLengthCount)
+        self.maxUploadFileParts = getValue("upload_max_fileparts", orElse: defaultValue.maxUploadFileParts)
     }
 }
