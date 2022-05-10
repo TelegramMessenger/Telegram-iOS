@@ -9,6 +9,12 @@ import UrlEscaping
 import TelegramUniversalVideoContent
 import TextSelectionNode
 import InvisibleInkDustNode
+import Emoji
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
+import SwiftSignalKit
+import AccountContext
+import YuvConversion
 
 private final class CachedChatMessageText {
     let text: String
@@ -36,6 +42,154 @@ private final class CachedChatMessageText {
     }
 }
 
+private final class InlineStickerItem: Hashable {
+    let file: TelegramMediaFile
+    
+    init(file: TelegramMediaFile) {
+        self.file = file
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(self.file.fileId)
+    }
+    
+    static func ==(lhs: InlineStickerItem, rhs: InlineStickerItem) -> Bool {
+        if lhs.file.fileId != rhs.file.fileId {
+            return false
+        }
+        return true
+    }
+}
+
+private final class InlineStickerItemLayer: SimpleLayer {
+    static let queue = Queue()
+    
+    struct Key: Hashable {
+        var id: MediaId
+        var index: Int
+    }
+    
+    private let file: TelegramMediaFile
+    private let source: AnimatedStickerNodeSource
+    private var frameSource: QueueLocalObject<AnimatedStickerDirectFrameSource>?
+    private var disposable: Disposable?
+    
+    private var isInHierarchy: Bool = false
+    private var displayLink: ConstantDisplayLinkAnimator?
+    
+    init(context: AccountContext, file: TelegramMediaFile) {
+        self.source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+        self.file = file
+        
+        super.init()
+        
+        let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+        
+        self.disposable = (self.source.directDataPath()
+        |> take(1)
+        |> deliverOn(InlineStickerItemLayer.queue)).start(next: { [weak self] path in
+            guard let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) else {
+                return
+            }
+            Queue.mainQueue().async {
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.frameSource = QueueLocalObject(queue: InlineStickerItemLayer.queue, generate: {
+                    return AnimatedStickerDirectFrameSource(queue: InlineStickerItemLayer.queue, data: directData, width: Int(24 * UIScreenScale), height: Int(24 * UIScreenScale), cachePathPrefix: pathPrefix, useMetalCache: false, fitzModifier: nil)!
+                })
+                strongSelf.updatePlayback()
+            }
+        })
+    }
+    
+    override init(layer: Any) {
+        guard let layer = layer as? InlineStickerItemLayer else {
+            preconditionFailure()
+        }
+        self.source = layer.source
+        self.file = layer.file
+        
+        super.init(layer: layer)
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+    
+    override func action(forKey event: String) -> CAAction? {
+        if event == kCAOnOrderIn {
+            self.isInHierarchy = true
+        } else if event == kCAOnOrderOut {
+            self.isInHierarchy = false
+        }
+        self.updatePlayback()
+        return nullAction
+    }
+    
+    private func updatePlayback() {
+        let shouldBePlaying = self.isInHierarchy && self.frameSource != nil
+        if shouldBePlaying != (self.displayLink != nil) {
+            if shouldBePlaying {
+                self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
+                    self?.loadNextFrame()
+                })
+                self.displayLink?.isPaused = false
+            } else {
+                self.displayLink?.invalidate()
+                self.displayLink = nil
+            }
+        }
+    }
+    
+    private func loadNextFrame() {
+        guard let frameSource = self.frameSource else {
+            return
+        }
+        frameSource.with { [weak self] impl in
+            if let animationFrame = impl.takeFrame(draw: true) {
+                var image: UIImage?
+                
+                autoreleasepool {
+                    image = generateImagePixel(CGSize(width: CGFloat(animationFrame.width), height: CGFloat(animationFrame.height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
+                        var data = animationFrame.data
+                        data.withUnsafeMutableBytes { bytes -> Void in
+                            guard let baseAddress = bytes.baseAddress else {
+                                return
+                            }
+                            switch animationFrame.type {
+                            case .argb:
+                                memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
+                            case .yuva:
+                                if animationFrame.bytesPerRow <= 0 || animationFrame.height <= 0 || animationFrame.width <= 0 || animationFrame.bytesPerRow * animationFrame.height > bytes.count {
+                                    assert(false)
+                                    return
+                                }
+                                decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(animationFrame.width), Int32(animationFrame.height), Int32(contextBytesPerRow))
+                            default:
+                                break
+                            }
+                        }
+                    })
+                }
+                
+                if let image = image {
+                    Queue.mainQueue().async {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.contents = image.cgImage
+                    }
+                }
+            }
+        }
+    }
+}
+
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
     private var spoilerTextNode: TextNode?
@@ -47,6 +201,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var textSelectionNode: TextSelectionNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
+    private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
     
     private var cachedChatMessageText: CachedChatMessageText?
     
@@ -179,7 +334,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let rawText: String
-                let attributedText: NSAttributedString
+                var attributedText: NSAttributedString
                 var messageEntities: [MessageTextEntity]?
                 
                 var mediaDuration: Double? = nil
@@ -280,6 +435,34 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
+                
+                #if DEBUG
+                let updatedString = NSMutableAttributedString(attributedString: attributedText)
+                while true {
+                    var hadUpdates = false
+                    updatedString.string.enumerateSubstrings(in: updatedString.string.startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
+                        if let substring = substring {
+                            let emoji = substring.basicEmoji.0
+                            
+                            var emojiFile: TelegramMediaFile?
+                            emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                            if emojiFile == nil {
+                                emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                            }
+                            
+                            if let emojiFile = emojiFile {
+                                updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: NSAttributedString(string: "[..]", attributes: [NSAttributedString.Key("Attribute__EmbeddedItem"): InlineStickerItem(file: emojiFile), NSAttributedString.Key.foregroundColor: UIColor.clear.cgColor]))
+                                hadUpdates = true
+                                stop = true
+                            }
+                        }
+                    }
+                    if !hadUpdates {
+                        break
+                    }
+                }
+                attributedText = updatedString
+                #endif
                 
                 let cutout: TextNodeCutout? = nil
                 
@@ -386,7 +569,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             let _ = textApply()
                             animation.animator.updateFrame(layer: strongSelf.textNode.layer, frame: textFrame, completion: nil)
-                            //strongSelf.textNode.frame = textFrame
                             
                             if let (_, spoilerTextApply) = spoilerTextLayoutAndApply {
                                 let spoilerTextNode = spoilerTextApply()
@@ -434,6 +616,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                             
+                            strongSelf.updateInlineStickers(context: item.context, textLayout: textLayout)
+                            
                             if let statusSizeAndApply = statusSizeAndApply {
                                 animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
                                 if strongSelf.statusNode.supernode == nil {
@@ -460,6 +644,49 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     })
                 })
             })
+        }
+    }
+    
+    private func updateInlineStickers(context: AccountContext, textLayout: TextNodeLayout?) {
+        var nextIndexById: [MediaId: Int] = [:]
+        var validIds: [InlineStickerItemLayer.Key] = []
+        
+        if let textLayout = textLayout {
+            for item in textLayout.embeddedItems {
+                if let stickerItem = item.value as? InlineStickerItem {
+                    let index: Int
+                    if let currentNext = nextIndexById[stickerItem.file.fileId] {
+                        index = currentNext
+                    } else {
+                        index = 0
+                    }
+                    nextIndexById[stickerItem.file.fileId] = index + 1
+                    let id = InlineStickerItemLayer.Key(id: stickerItem.file.fileId, index: index)
+                    validIds.append(id)
+                    
+                    let itemLayer: InlineStickerItemLayer
+                    if let current = self.inlineStickerItemLayers[id] {
+                        itemLayer = current
+                    } else {
+                        itemLayer = InlineStickerItemLayer(context: context, file: stickerItem.file)
+                        self.inlineStickerItemLayers[id] = itemLayer
+                        self.textNode.layer.addSublayer(itemLayer)
+                    }
+                    
+                    itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -12.0, dy: -12.0)
+                }
+            }
+        }
+        
+        var removeKeys: [InlineStickerItemLayer.Key] = []
+        for (key, itemLayer) in self.inlineStickerItemLayers {
+            if !validIds.contains(key) {
+                removeKeys.append(key)
+                itemLayer.removeFromSuperlayer()
+            }
+        }
+        for key in removeKeys {
+            self.inlineStickerItemLayers.removeValue(forKey: key)
         }
     }
     
