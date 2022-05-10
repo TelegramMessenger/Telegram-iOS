@@ -131,11 +131,11 @@ public final class TelegramRootController: NavigationController {
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
     
-        Queue.mainQueue().after(1.0) {
-//            let screen = PremiumLimitScreen(context: self.context, subject: .pins, action: {})
-            let screen = PremiumIntroScreen(context: self.context, action: {})
-            self.chatListController?.push(screen)
-        }
+//        Queue.mainQueue().after(1.0) {
+////            let screen = PremiumLimitScreen(context: self.context, subject: .pins, action: {})
+//            let screen = PremiumIntroScreen(context: self.context, action: {})
+//            self.chatListController?.push(screen)
+//        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {

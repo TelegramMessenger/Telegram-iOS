@@ -10,6 +10,7 @@ import ItemListUI
 import AccountContext
 import ItemListPeerActionItem
 import ChatListFilterSettingsHeaderItem
+import PremiumUI
 
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext
@@ -246,6 +247,17 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     
+    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
+    |> distinctUntilChanged
+    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
+        return .single(filters.map { filter -> (ChatListFilter, Int) in
+            return (filter, 0)
+        })
+    }
+    
+    let filtersWithCounts = Promise<[(ChatListFilter, Int)]>()
+    filtersWithCounts.set(filtersWithCountsSignal)
+    
     let arguments = ChatListFilterPresetListControllerArguments(context: context,
     addSuggestedPresed: { title, data in
         let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
@@ -259,7 +271,42 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     }, openPreset: { preset in
         pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: preset, updated: { _ in }))
     }, addNew: {
-        pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: { _ in }))
+        let _ = combineLatest(
+            queue: Queue.mainQueue(),
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+            ),
+            filtersWithCounts.get() |> take(1)
+        ).start(next: { result, filters in
+            let (accountPeer, limits, premiumLimits) = result
+            let limit = limits.maxFoldersCount
+            let premiumLimit = premiumLimits.maxFoldersCount
+            if let accountPeer = accountPeer, accountPeer.isPremium {
+                if filters.count >= premiumLimit {
+                    //printPremiumError
+                    return
+                }
+            } else {
+                if filters.count >= limit {
+                    var dismissImpl: (() -> Void)?
+                    let controller = PremiumLimitScreen(context: context, subject: .folders, action: {
+                        dismissImpl?()
+                        let controller = PremiumIntroScreen(context: context, action: {
+                            
+                        })
+                        pushControllerImpl?(controller)
+                    })
+                    pushControllerImpl?(controller)
+                    dismissImpl = { [weak controller] in
+                        controller?.dismiss()
+                    }
+                    return
+                }
+            }
+            pushControllerImpl?(chatListFilterPresetController(context: context, currentPreset: nil, updated: { _ in }))
+        })
     }, setItemWithRevealedOptions: { preset, fromPreset in
         updateState { state in
             var state = state
@@ -296,15 +343,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         ])
         presentControllerImpl?(actionSheet)
     })
-    
-    let filtersWithCountsSignal = context.engine.peers.updatedChatListFilters()
-    |> distinctUntilChanged
-    |> mapToSignal { filters -> Signal<[(ChatListFilter, Int)], NoError> in
-        return .single(filters.map { filter -> (ChatListFilter, Int) in
-            return (filter, 0)
-        })
-    }
-    
+        
     let featuredFilters = context.account.postbox.preferencesView(keys: [PreferencesKeys.chatListFiltersFeaturedState])
     |> map { preferences -> [ChatListFeaturedFilter] in
         guard let state = preferences.values[PreferencesKeys.chatListFiltersFeaturedState]?.get(ChatListFiltersFeaturedState.self) else {
@@ -313,10 +352,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         return state.filters
     }
     |> distinctUntilChanged
-    
-    let filtersWithCounts = Promise<[(ChatListFilter, Int)]>()
-    filtersWithCounts.set(filtersWithCountsSignal)
-    
+        
     let updatedFilterOrder = Promise<[Int32]?>(nil)
     
     let preferences = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatListFilterSettings])

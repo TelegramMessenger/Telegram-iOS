@@ -645,9 +645,7 @@ public final class SolidRoundedButtonView: UIView {
             let previousValue = buttonBackgroundAnimationView.center.x
             var newValue: CGFloat = offset
             if offset - previousValue < buttonBackgroundAnimationView.frame.width * 0.25 {
-                newValue -= CGFloat.random(in: buttonBackgroundAnimationView.frame.width * 0.3 ..< buttonBackgroundAnimationView.frame.width * 0.4)
-            } else {
-//                newValue -= CGFloat.random(in: 0.0 ..< buttonBackgroundAnimationView.frame.width * 0.1)
+                newValue -= buttonBackgroundAnimationView.frame.width * 0.35
             }
             buttonBackgroundAnimationView.center = CGPoint(x: newValue, y: buttonBackgroundAnimationView.bounds.size.height / 2.0)
             
@@ -794,7 +792,10 @@ public final class SolidRoundedButtonView: UIView {
         }
         
         if let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView {
-            transition.updateFrame(view: buttonBackgroundAnimationView, frame: CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width * 2.4, height: buttonSize.height)))
+            if buttonBackgroundAnimationView.layer.animation(forKey: "movement") == nil {
+                buttonBackgroundAnimationView.center = CGPoint(x: buttonSize.width * 2.4 / 2.0, y: buttonSize.height / 2.0)
+            }
+            buttonBackgroundAnimationView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width * 2.4, height: buttonSize.height))
             self.setupGradientAnimations()
         }
 

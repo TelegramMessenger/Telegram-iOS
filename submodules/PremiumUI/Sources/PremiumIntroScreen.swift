@@ -14,6 +14,14 @@ import SolidRoundedButtonComponent
 import Markdown
 import SceneKit
 
+private func deg2rad(_ number: Float) -> Float {
+    return number * .pi / 180
+}
+
+private func rad2deg(_ number: Float) -> Float {
+    return number * 180.0 / .pi
+}
+
 private class StarComponent: Component {
     static func ==(lhs: StarComponent, rhs: StarComponent) -> Bool {
         return true
@@ -41,16 +49,95 @@ private class StarComponent: Component {
             self.sceneView = SCNView(frame: frame)
             self.sceneView.backgroundColor = .clear
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+            self.sceneView.isUserInteractionEnabled = false
             
             super.init(frame: frame)
             
             self.addSubview(self.sceneView)
             
             self.setup()
+            
+            let panGestureRecoginzer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+            self.addGestureRecognizer(panGestureRecoginzer)
+            
+            let tapGestureRecoginzer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
+            self.addGestureRecognizer(tapGestureRecoginzer)
+            
+            self.disablesInteractiveModalDismiss = true
+            self.disablesInteractiveTransitionGestureRecognizer = true
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+            
+            var left = true
+            if let view = gesture.view {
+                let point = gesture.location(in: view)
+                if point.x > view.frame.width / 2.0 {
+                    left = false
+                }
+            }
+            
+            let initial = node.rotation
+            let target = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: left ? -0.6 : 0.6)
+                        
+            let animation = CABasicAnimation(keyPath: "rotation")
+            animation.fromValue = NSValue(scnVector4: initial)
+            animation.toValue = NSValue(scnVector4: target)
+            animation.duration = 0.25
+            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            animation.fillMode = .forwards
+            node.addAnimation(animation, forKey: "rotate")
+            
+            node.rotation = target
+            
+            Queue.mainQueue().after(0.25) {
+                node.rotation = initial
+                let springAnimation = CASpringAnimation(keyPath: "rotation")
+                springAnimation.fromValue = NSValue(scnVector4: target)
+                springAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0))
+                springAnimation.mass = 1.0
+                springAnimation.stiffness = 21.0
+                springAnimation.damping = 5.8
+                springAnimation.duration = springAnimation.settlingDuration * 0.8
+                node.addAnimation(springAnimation, forKey: "rotate")
+            }
+        }
+        
+        private var previousAngle: Float = 0.0
+        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
+                return
+            }
+            
+            switch gesture.state {
+                case .began:
+                    self.previousAngle = 0.0
+                case .changed:
+                    let translation = gesture.translation(in: gesture.view)
+                    let anglePan = deg2rad(Float(translation.x))
+                
+                    self.previousAngle = anglePan
+                    node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: self.previousAngle)
+                case .ended:
+                    let velocity = gesture.velocity(in: gesture.view)
+                    
+                    var small = false
+                    if (self.previousAngle < .pi / 2 && self.previousAngle > -.pi / 2) && abs(velocity.x) < 200 {
+                        small = true
+                    }
+                
+                    self.playAppearanceAnimation(velocity: velocity.x, small: small)
+                    node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0)
+                default:
+                    break
+            }
         }
         
         private func setup() {
@@ -77,11 +164,11 @@ private class StarComponent: Component {
             self.setupGradientAnimation()
             self.setupShineAnimation()
             
-            self.playAppearanceAnimation()
+            self.playAppearanceAnimation(boom: true)
         }
         
         private func setupGradientAnimation() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: true) else {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
             guard let initial = node.geometry?.materials.first?.diffuse.contentsTransform else {
@@ -124,21 +211,37 @@ private class StarComponent: Component {
             node.geometry?.materials.first?.emission.addAnimation(group, forKey: "shimmer")
         }
         
-        private func playAppearanceAnimation() {
-            guard let scene = self.sceneView.scene, let starNode = scene.rootNode.childNode(withName: "star", recursively: false) else {
+        private func playAppearanceAnimation(velocity: CGFloat? = nil, small: Bool = false, boom: Bool = false) {
+            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
+            
+            if boom, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
+                node.physicsField?.isActive = true
+                Queue.mainQueue().after(1.0) {
+                    node.physicsField?.isActive = false
+                    particles.particleSystems?.first?.birthRate = 0.8
+                }
+            }
         
+            let from = node.rotation
+            var toValue: Float = small ? 0.0 : .pi * 2.0
+            if let velocity = velocity, !small && abs(velocity) > 200 && velocity < 0.0 {
+                toValue *= -1
+            }
+            let to = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: toValue)
+            let distance = rad2deg(to.w - from.w)
+            
             let springAnimation = CASpringAnimation(keyPath: "rotation")
-            springAnimation.fromValue = NSValue(scnVector4: SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0))
-            springAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: .pi * 2.0))
+            springAnimation.fromValue = NSValue(scnVector4: from)
+            springAnimation.toValue = NSValue(scnVector4: to)
             springAnimation.mass = 1.0
             springAnimation.stiffness = 21.0
             springAnimation.damping = 5.8
-            springAnimation.duration = 1.5
-            springAnimation.initialVelocity = 1.7
+            springAnimation.duration = springAnimation.settlingDuration * 0.75
+            springAnimation.initialVelocity = velocity.flatMap { abs($0 / CGFloat(distance)) } ?? 1.7
             
-            starNode.addAnimation(springAnimation, forKey: "rotate")
+            node.addAnimation(springAnimation, forKey: "rotate")
         }
         
         func update(component: StarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
@@ -631,7 +734,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 .position(CGPoint(x: fade.size.width / 2.0, y: fade.size.height / 2.0))
             )
             
-            size.height += 183.0
+            size.height += 183.0 + 10.0
             
             let textColor = theme.list.itemPrimaryTextColor
             let titleColor = theme.list.itemPrimaryTextColor
@@ -1053,7 +1156,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let topPanelAlpha: CGFloat
             let titleOffset: CGFloat
             let titleScale: CGFloat
-            let titleOffsetDelta = 150.0 - environment.navigationHeight / 2.0
+            let titleOffsetDelta = 160.0 - environment.navigationHeight / 2.0
             
             if let topContentOffset = state.topContentOffset {
                 topPanelAlpha = min(30.0, max(0.0, topContentOffset - 64.0)) / 30.0
@@ -1066,7 +1169,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
             
             context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 18.0 - titleOffset * titleScale))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 10.0 - titleOffset * titleScale))
                 .scale(titleScale)
             )
             
@@ -1080,7 +1183,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(150.0 - titleOffset, environment.navigationHeight / 2.0)))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(160.0 - titleOffset, environment.navigationHeight / 2.0)))
                 .scale(titleScale)
             )
             
