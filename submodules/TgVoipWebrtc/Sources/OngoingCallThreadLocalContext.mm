@@ -41,12 +41,13 @@
 
 @implementation OngoingCallConnectionDescriptionWebrtc
 
-- (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
+- (instancetype _Nonnull)initWithReflectorId:(uint8_t)reflectorId hasStun:(bool)hasStun hasTurn:(bool)hasTurn hasTcp:(bool)hasTcp ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password {
     self = [super init];
     if (self != nil) {
-        _connectionId = connectionId;
+        _reflectorId = reflectorId;
         _hasStun = hasStun;
         _hasTurn = hasTurn;
+        _hasTcp = hasTcp;
         _ip = ip;
         _port = port;
         _username = username;
@@ -433,10 +434,10 @@ private:
                     }
                 }
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kNV12) {
-                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer = (webrtc::NV12BufferInterface *)videoFrame.video_frame_buffer().get();
+                rtc::scoped_refptr<webrtc::NV12BufferInterface> nv12Buffer(static_cast<webrtc::NV12BufferInterface *>(videoFrame.video_frame_buffer().get()));
                 mappedBuffer = [[CallVideoFrameNV12Buffer alloc] initWithBuffer:nv12Buffer];
             } else if (videoFrame.video_frame_buffer()->type() == webrtc::VideoFrameBuffer::Type::kI420) {
-                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer = (webrtc::I420BufferInterface *)videoFrame.video_frame_buffer().get();
+                rtc::scoped_refptr<webrtc::I420BufferInterface> i420Buffer(static_cast<webrtc::I420BufferInterface *>(videoFrame.video_frame_buffer().get()));
                 mappedBuffer = [[CallVideoFrameI420Buffer alloc] initWithBuffer:i420Buffer];
             }
 
@@ -536,7 +537,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     }
     _isProcessingCustomSampleBuffer.value = true;
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask([interface = _interface, pixelBuffer = CFRetain(pixelBuffer), croppingBuffer = _croppingBuffer, videoRotation = videoRotation, isProcessingCustomSampleBuffer = _isProcessingCustomSampleBuffer]() {
         auto capture = GetVideoCaptureAssumingSameThread(interface.get());
         auto source = capture->source();
         if (source) {
@@ -558,7 +559,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
 
     auto sinkReference = [storedSink sink];
 
-    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask(RTC_FROM_HERE, [interface = _interface, sinkReference]() {
+    tgcalls::StaticThreads::getThreads()->getMediaThread()->PostTask([interface = _interface, sinkReference]() {
         interface->setOutput(sinkReference);
     });
 
@@ -882,20 +883,24 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         for (OngoingCallConnectionDescriptionWebrtc *connection in connections) {
             if (connection.hasStun) {
                 parsedRtcServers.push_back((tgcalls::RtcServer){
+                    .id = 0,
                     .host = connection.ip.UTF8String,
                     .port = (uint16_t)connection.port,
                     .login = "",
                     .password = "",
-                    .isTurn = false
+                    .isTurn = false,
+                    .isTcp = false
                 });
             }
-            if (connection.hasTurn) {
+            if (connection.hasTurn || connection.hasTcp) {
                 parsedRtcServers.push_back((tgcalls::RtcServer){
+                    .id = connection.reflectorId,
                     .host = connection.ip.UTF8String,
                     .port = (uint16_t)connection.port,
                     .login = connection.username.UTF8String,
                     .password = connection.password.UTF8String,
-                    .isTurn = true
+                    .isTurn = true,
+                    .isTcp = connection.hasTcp
                 });
             }
         }

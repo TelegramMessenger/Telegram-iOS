@@ -13,15 +13,16 @@
 
 @interface OngoingCallConnectionDescriptionWebrtc : NSObject
 
-@property (nonatomic, readonly) int64_t connectionId;
+@property (nonatomic, readonly) uint8_t reflectorId;
 @property (nonatomic, readonly) bool hasStun;
 @property (nonatomic, readonly) bool hasTurn;
+@property (nonatomic, readonly) bool hasTcp;
 @property (nonatomic, strong, readonly) NSString * _Nonnull ip;
 @property (nonatomic, readonly) int32_t port;
 @property (nonatomic, strong, readonly) NSString * _Nonnull username;
 @property (nonatomic, strong, readonly) NSString * _Nonnull password;
 
-- (instancetype _Nonnull)initWithConnectionId:(int64_t)connectionId hasStun:(bool)hasStun hasTurn:(bool)hasTurn ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password;
+- (instancetype _Nonnull)initWithReflectorId:(uint8_t)reflectorId hasStun:(bool)hasStun hasTurn:(bool)hasTurn hasTcp:(bool)hasTcp ip:(NSString * _Nonnull)ip port:(int32_t)port username:(NSString * _Nonnull)username password:(NSString * _Nonnull)password;
 
 @end
 
