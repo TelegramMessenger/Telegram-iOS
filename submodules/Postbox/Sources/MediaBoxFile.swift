@@ -21,74 +21,146 @@ private final class MediaBoxFileMap {
             return nil
         }
         
-        var crc: UInt32 = 0
-        var count: Int32 = 0
-        var sum: Int32 = 0
-        var ranges: IndexSet = IndexSet()
-        
-        guard fd.read(&crc, 4) == 4 else {
-            return nil
-        }
-        guard fd.read(&count, 4) == 4 else {
+        var firstUInt32: UInt32 = 0
+        guard fd.read(&firstUInt32, 4) == 4 else {
             return nil
         }
         
-        if count < 0 {
-            return nil
-        }
-        
-        if count < 0 || length < 4 + 4 + count * 2 * 4 {
-            return nil
-        }
-        
-        var truncationSizeValue: Int32 = 0
-        
-        var data = Data(count: Int(4 + count * 2 * 4))
-        let dataCount = data.count
-        if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
-            let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+        if firstUInt32 == 0x7bac1487 {
+            var crc: UInt32 = 0
+            guard fd.read(&crc, 4) == 4 else {
+                return nil
+            }
+            
+            var count: Int32 = 0
+            var sum: Int64 = 0
+            var ranges: IndexSet = IndexSet()
+            
+            guard fd.read(&count, 4) == 4 else {
+                return nil
+            }
+            
+            if count < 0 {
+                return nil
+            }
+            
+            if count < 0 || length < 4 + 4 + 8 + count * 2 * 8 {
+                return nil
+            }
+            
+            var truncationSizeValue: Int32 = 0
+            
+            var data = Data(count: Int(8 + count * 2 * 8))
+            let dataCount = data.count
+            if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
 
-            guard fd.read(bytes, dataCount) == dataCount else {
-                return false
-            }
-            
-            memcpy(&truncationSizeValue, bytes, 4)
-            
-            let calculatedCrc = Crc32(bytes, Int32(dataCount))
-            if calculatedCrc != crc {
-                return false
-            }
-            
-            var offset = 4
-            for _ in 0 ..< count {
-                var intervalOffset: Int32 = 0
-                var intervalLength: Int32 = 0
-                memcpy(&intervalOffset, bytes.advanced(by: offset), 4)
-                memcpy(&intervalLength, bytes.advanced(by: offset + 4), 4)
-                offset += 8
+                guard fd.read(bytes, dataCount) == dataCount else {
+                    return false
+                }
                 
-                ranges.insert(integersIn: Int(intervalOffset) ..< Int(intervalOffset + intervalLength))
+                memcpy(&truncationSizeValue, bytes, 8)
                 
-                sum += intervalLength
+                let calculatedCrc = Crc32(bytes, Int32(dataCount))
+                if calculatedCrc != crc {
+                    return false
+                }
+                
+                var offset = 8
+                for _ in 0 ..< count {
+                    var intervalOffset: Int64 = 0
+                    var intervalLength: Int64 = 0
+                    memcpy(&intervalOffset, bytes.advanced(by: offset), 8)
+                    memcpy(&intervalLength, bytes.advanced(by: offset + 8), 8)
+                    offset += 8 * 2
+                    
+                    ranges.insert(integersIn: Int(intervalOffset) ..< Int(intervalOffset + intervalLength))
+                    
+                    sum += intervalLength
+                }
+                
+                return true
+            }) {
+                return nil
             }
-            
-            return true
-        }) {
-            return nil
-        }
 
-        self.sum = Int64(sum)
-        self.ranges = ranges
-        if truncationSizeValue == -1 {
-            self.truncationSize = nil
+            self.sum = sum
+            self.ranges = ranges
+            if truncationSizeValue == -1 {
+                self.truncationSize = nil
+            } else {
+                self.truncationSize = Int64(truncationSizeValue)
+            }
         } else {
-            self.truncationSize = Int64(truncationSizeValue)
+            let crc: UInt32 = firstUInt32
+            var count: Int32 = 0
+            var sum: Int32 = 0
+            var ranges: IndexSet = IndexSet()
+            
+            guard fd.read(&count, 4) == 4 else {
+                return nil
+            }
+            
+            if count < 0 {
+                return nil
+            }
+            
+            if count < 0 || length < 4 + 4 + count * 2 * 4 {
+                return nil
+            }
+            
+            var truncationSizeValue: Int32 = 0
+            
+            var data = Data(count: Int(4 + count * 2 * 4))
+            let dataCount = data.count
+            if !(data.withUnsafeMutableBytes { rawBytes -> Bool in
+                let bytes = rawBytes.baseAddress!.assumingMemoryBound(to: UInt8.self)
+
+                guard fd.read(bytes, dataCount) == dataCount else {
+                    return false
+                }
+                
+                memcpy(&truncationSizeValue, bytes, 4)
+                
+                let calculatedCrc = Crc32(bytes, Int32(dataCount))
+                if calculatedCrc != crc {
+                    return false
+                }
+                
+                var offset = 4
+                for _ in 0 ..< count {
+                    var intervalOffset: Int32 = 0
+                    var intervalLength: Int32 = 0
+                    memcpy(&intervalOffset, bytes.advanced(by: offset), 4)
+                    memcpy(&intervalLength, bytes.advanced(by: offset + 4), 4)
+                    offset += 8
+                    
+                    ranges.insert(integersIn: Int(intervalOffset) ..< Int(intervalOffset + intervalLength))
+                    
+                    sum += intervalLength
+                }
+                
+                return true
+            }) {
+                return nil
+            }
+
+            self.sum = Int64(sum)
+            self.ranges = ranges
+            if truncationSizeValue == -1 {
+                self.truncationSize = nil
+            } else {
+                self.truncationSize = Int64(truncationSizeValue)
+            }
         }
     }
     
     func serialize(to file: ManagedFile) {
         file.seek(position: 0)
         let buffer = WriteBuffer()
+        var magic: UInt32 = 0x7bac1487
+        buffer.write(&magic, offset: 0, length: 4)
+        
         var zero: Int32 = 0
         buffer.write(&zero, offset: 0, length: 4)
         
@@ -96,16 +168,16 @@ private final class MediaBoxFileMap {
         var count: Int32 = Int32(rangeView.count)
         buffer.write(&count, offset: 0, length: 4)
         
-        var truncationSizeValue: Int32 = Int32(self.truncationSize ?? -1)
-        buffer.write(&truncationSizeValue, offset: 0, length: 4)
+        var truncationSizeValue: Int64 = self.truncationSize ?? -1
+        buffer.write(&truncationSizeValue, offset: 0, length: 8)
         
         for range in rangeView {
             var intervalOffset = Int32(range.lowerBound)
             var intervalLength = Int32(range.count)
-            buffer.write(&intervalOffset, offset: 0, length: 4)
-            buffer.write(&intervalLength, offset: 0, length: 4)
+            buffer.write(&intervalOffset, offset: 0, length: 8)
+            buffer.write(&intervalLength, offset: 0, length: 8)
         }
-        var crc: UInt32 = Crc32(buffer.memory.advanced(by: 4 * 2), Int32(buffer.length - 4 * 2))
+        var crc: UInt32 = Crc32(buffer.memory.advanced(by: 4 + 4 + 4), Int32(buffer.length - (4 + 4 + 4)))
         memcpy(buffer.memory, &crc, 4)
         let written = file.write(buffer.memory, count: buffer.length)
         assert(written == buffer.length)
