@@ -458,6 +458,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if item.context.sharedContext.immediateExperimentalUISettings.inlineStickers {
+                    var currentCount = 0
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
                     while true {
                         var hadUpdates = false
@@ -478,7 +479,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                         }
-                        if !hadUpdates {
+                        if !hadUpdates || currentCount >= 10 {
                             break
                         }
                     }
