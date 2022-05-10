@@ -75,6 +75,11 @@ private final class InlineStickerItemLayer: SimpleLayer {
     private var disposable: Disposable?
     
     private var isInHierarchy: Bool = false
+    var isVisibleForAnimations: Bool = false {
+        didSet {
+            self.updatePlayback()
+        }
+    }
     private var displayLink: ConstantDisplayLinkAnimator?
     
     init(context: AccountContext, file: TelegramMediaFile) {
@@ -132,7 +137,7 @@ private final class InlineStickerItemLayer: SimpleLayer {
     }
     
     private func updatePlayback() {
-        let shouldBePlaying = self.isInHierarchy && self.frameSource != nil
+        let shouldBePlaying = self.isInHierarchy && self.isVisibleForAnimations && self.frameSource != nil
         if shouldBePlaying != (self.displayLink != nil) {
             if shouldBePlaying {
                 self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
@@ -204,6 +209,22 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var inlineStickerItemLayers: [InlineStickerItemLayer.Key: InlineStickerItemLayer] = [:]
     
     private var cachedChatMessageText: CachedChatMessageText?
+    
+    private var isVisibleForAnimations: Bool {
+        return self.visibility != .none
+    }
+    
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            if wasVisible != isVisible {
+                for (_, itemLayer) in self.inlineStickerItemLayers {
+                    itemLayer.isVisibleForAnimations = isVisible
+                }
+            }
+        }
+    }
     
     required init() {
         self.textNode = TextNode()
@@ -436,33 +457,33 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                #if DEBUG
-                let updatedString = NSMutableAttributedString(attributedString: attributedText)
-                while true {
-                    var hadUpdates = false
-                    updatedString.string.enumerateSubstrings(in: updatedString.string.startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-                        if let substring = substring {
-                            let emoji = substring.basicEmoji.0
-                            
-                            var emojiFile: TelegramMediaFile?
-                            emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
-                            if emojiFile == nil {
-                                emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
-                            }
-                            
-                            if let emojiFile = emojiFile {
-                                updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: NSAttributedString(string: "[..]", attributes: [NSAttributedString.Key("Attribute__EmbeddedItem"): InlineStickerItem(file: emojiFile), NSAttributedString.Key.foregroundColor: UIColor.clear.cgColor]))
-                                hadUpdates = true
-                                stop = true
+                if item.context.sharedContext.immediateExperimentalUISettings.inlineStickers {
+                    let updatedString = NSMutableAttributedString(attributedString: attributedText)
+                    while true {
+                        var hadUpdates = false
+                        updatedString.string.enumerateSubstrings(in: updatedString.string.startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
+                            if let substring = substring {
+                                let emoji = substring.basicEmoji.0
+                                
+                                var emojiFile: TelegramMediaFile?
+                                emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                                if emojiFile == nil {
+                                    emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                                }
+                                
+                                if let emojiFile = emojiFile {
+                                    updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: NSAttributedString(string: "[...]", attributes: [NSAttributedString.Key("Attribute__EmbeddedItem"): InlineStickerItem(file: emojiFile), NSAttributedString.Key.foregroundColor: UIColor.clear.cgColor]))
+                                    hadUpdates = true
+                                    stop = true
+                                }
                             }
                         }
+                        if !hadUpdates {
+                            break
+                        }
                     }
-                    if !hadUpdates {
-                        break
-                    }
+                    attributedText = updatedString
                 }
-                attributedText = updatedString
-                #endif
                 
                 let cutout: TextNodeCutout? = nil
                 
@@ -671,6 +692,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         itemLayer = InlineStickerItemLayer(context: context, file: stickerItem.file)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
+                        itemLayer.isVisibleForAnimations = self.isVisibleForAnimations
                     }
                     
                     itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -12.0, dy: -12.0)
