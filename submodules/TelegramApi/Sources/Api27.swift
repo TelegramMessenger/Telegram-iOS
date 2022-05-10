@@ -565,11 +565,11 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
-                static func initTakeoutSession(flags: Int32, fileMaxSize: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.Takeout>) {
+                static func initTakeoutSession(flags: Int32, fileMaxSize: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.account.Takeout>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-262453244)
+                    buffer.appendInt32(-1896617296)
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 5) != 0 {serializeInt32(fileMaxSize!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 5) != 0 {serializeInt64(fileMaxSize!, buffer: buffer, boxed: false)}
                     return (FunctionDescription(name: "account.initTakeoutSession", parameters: [("flags", String(describing: flags)), ("fileMaxSize", String(describing: fileMaxSize))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.account.Takeout? in
                         let reader = BufferReader(buffer)
                         var result: Api.account.Takeout?
@@ -4032,11 +4032,11 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getDocumentByHash(sha256: Buffer, size: Int32, mimeType: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Document>) {
+                static func getDocumentByHash(sha256: Buffer, size: Int64, mimeType: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Document>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(864953444)
+                    buffer.appendInt32(-1309538785)
                     serializeBytes(sha256, buffer: buffer, boxed: false)
-                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
                     serializeString(mimeType, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "messages.getDocumentByHash", parameters: [("sha256", String(describing: sha256)), ("size", String(describing: size)), ("mimeType", String(describing: mimeType))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Document? in
                         let reader = BufferReader(buffer)
@@ -7171,11 +7171,11 @@ public extension Api.functions.updates {
                 }
 }
 public extension Api.functions.upload {
-                static func getCdnFile(fileToken: Buffer, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.CdnFile>) {
+                static func getCdnFile(fileToken: Buffer, offset: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.CdnFile>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(536919235)
+                    buffer.appendInt32(962554330)
                     serializeBytes(fileToken, buffer: buffer, boxed: false)
-                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt64(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "upload.getCdnFile", parameters: [("fileToken", String(describing: fileToken)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.upload.CdnFile? in
                         let reader = BufferReader(buffer)
@@ -7188,11 +7188,11 @@ public extension Api.functions.upload {
                 }
 }
 public extension Api.functions.upload {
-                static func getCdnFileHashes(fileToken: Buffer, offset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
+                static func getCdnFileHashes(fileToken: Buffer, offset: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1302676017)
+                    buffer.appendInt32(-1847836879)
                     serializeBytes(fileToken, buffer: buffer, boxed: false)
-                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt64(offset, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "upload.getCdnFileHashes", parameters: [("fileToken", String(describing: fileToken)), ("offset", String(describing: offset))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.FileHash]? in
                         let reader = BufferReader(buffer)
                         var result: [Api.FileHash]?
@@ -7204,12 +7204,12 @@ public extension Api.functions.upload {
                 }
 }
 public extension Api.functions.upload {
-                static func getFile(flags: Int32, location: Api.InputFileLocation, offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.File>) {
+                static func getFile(flags: Int32, location: Api.InputFileLocation, offset: Int64, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.upload.File>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1319462148)
+                    buffer.appendInt32(-1101843010)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     location.serialize(buffer, true)
-                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt64(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "upload.getFile", parameters: [("flags", String(describing: flags)), ("location", String(describing: location)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.upload.File? in
                         let reader = BufferReader(buffer)

@@ -96,6 +96,10 @@ public final class VideoLibraryMediaResource: TelegramMediaResource {
     public let localIdentifier: String
     public let conversion: VideoLibraryMediaResourceConversion
     
+    public var size: Int64? {
+        return nil
+    }
+    
     public var headerSize: Int32 {
         return 32 * 1024
     }
@@ -148,6 +152,10 @@ public struct LocalFileVideoMediaResourceId {
 }
 
 public final class LocalFileVideoMediaResource: TelegramMediaResource {
+    public var size: Int64? {
+        return nil
+    }
+    
     public let randomId: Int64
     public let path: String
     public let adjustments: VideoMediaResourceAdjustments?
@@ -209,6 +217,10 @@ public struct PhotoLibraryMediaResourceId {
 }
 
 public class PhotoLibraryMediaResource: TelegramMediaResource {
+    public var size: Int64? {
+        return nil
+    }
+    
     public let localIdentifier: String
     public let uniqueId: Int64
     
@@ -253,6 +265,10 @@ public struct LocalFileGifMediaResourceId {
 }
 
 public final class LocalFileGifMediaResource: TelegramMediaResource {
+    public var size: Int64? {
+        return nil
+    }
+    
     public let randomId: Int64
     public let path: String
     
@@ -302,6 +318,10 @@ public struct BundleResourceId {
 }
 
 public class BundleResource: TelegramMediaResource {
+    public var size: Int64? {
+        return nil
+    }
+    
     public let nameHash: Int64
     public let path: String
     

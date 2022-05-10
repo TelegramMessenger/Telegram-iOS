@@ -9,7 +9,7 @@ enum PendingMessageUploadedContent {
     case media(Api.InputMedia, String)
     case forward(ForwardSourceInfoAttribute)
     case chatContextResult(OutgoingChatContextResultMessageAttribute)
-    case secretMedia(Api.InputEncryptedFile, Int32, SecretFileEncryptionKey)
+    case secretMedia(Api.InputEncryptedFile, Int64, SecretFileEncryptionKey)
     case messageScreenshot
 }
 
@@ -610,11 +610,11 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
         }
         
         var hintFileIsLarge = false
-        var hintSize: Int?
+        var hintSize: Int64?
         if let size = file.size {
             hintSize = size
         } else if let resource = file.resource as? LocalFileReferenceMediaResource, let size = resource.size {
-            hintSize = Int(size)
+            hintSize = size
         }
         
         loop: for attribute in file.attributes {

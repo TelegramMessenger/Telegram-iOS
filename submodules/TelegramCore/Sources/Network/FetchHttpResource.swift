@@ -10,7 +10,7 @@ public func fetchHttpResource(url: String) -> Signal<MediaResourceDataFetchResul
             subscriber.putNext(.reset)
             let disposable = signal.start(next: { next in
                 if let response = next as? MTHttpResponse {
-                    let fetchResult: MediaResourceDataFetchResult = .dataPart(resourceOffset: 0, data: response.data, range: 0 ..< response.data.count, complete: true)
+                    let fetchResult: MediaResourceDataFetchResult = .dataPart(resourceOffset: 0, data: response.data, range: 0 ..< Int64(response.data.count), complete: true)
                     subscriber.putNext(fetchResult)
                     subscriber.putCompletion()
                 } else {
