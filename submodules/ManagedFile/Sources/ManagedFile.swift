@@ -97,13 +97,13 @@ public final class ManagedFile {
         ftruncate(self.fd, count)
     }
     
-    public func getSize() -> Int? {
+    public func getSize() -> Int64? {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
         var value = stat()
         if fstat(self.fd, &value) == 0 {
-            return Int(value.st_size)
+            return value.st_size
         } else {
             return nil
         }

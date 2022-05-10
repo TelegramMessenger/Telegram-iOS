@@ -134,7 +134,7 @@ public func fetchPhotoLibraryResource(localIdentifier: String) -> Signal<MediaRe
                                 #if DEBUG
                                 print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
                                 #endif
-                                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
+                                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< Int64(data.count), complete: true))
                                 subscriber.putCompletion()
                             } else {
                                 subscriber.putCompletion()

@@ -218,7 +218,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
     private let containerNode: ASDisplayNode
     private let foregroundNode: ASImageNode
     
-    private var ranges: (IndexSet, Int)?
+    private var ranges: (IndexSet, Int64)?
     
     init(color: UIColor, lineCap: MediaPlayerScrubbingNodeCap, lineHeight: CGFloat) {
         self.color = color
@@ -239,7 +239,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
         self.addSubnode(self.containerNode)
     }
     
-    func updateStatus(_ ranges: IndexSet, _ size: Int) {
+    func updateStatus(_ ranges: IndexSet, _ size: Int64) {
         self.ranges = (ranges, size)
         if !self.bounds.width.isZero {
             self.updateLayout(size: self.bounds.size, transition: .animated(duration: 0.15, curve: .easeInOut))
@@ -358,9 +358,9 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     private var bufferingStatusDisposable: Disposable?
-    private var bufferingStatusValuePromise = Promise<(IndexSet, Int)?>()
+    private var bufferingStatusValuePromise = Promise<(IndexSet, Int64)?>()
     
-    public var bufferingStatus: Signal<(IndexSet, Int)?, NoError>? {
+    public var bufferingStatus: Signal<(IndexSet, Int64)?, NoError>? {
         didSet {
             if let bufferingStatus = self.bufferingStatus {
                 self.bufferingStatusValuePromise.set(bufferingStatus)

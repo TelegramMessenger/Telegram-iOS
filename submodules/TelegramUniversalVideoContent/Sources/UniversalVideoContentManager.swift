@@ -28,11 +28,11 @@ private final class UniversalVideoContentHolder {
     var statusValue: MediaPlayerStatus?
     
     var bufferingStatusDisposable: Disposable?
-    var bufferingStatusValue: (IndexSet, Int)?
+    var bufferingStatusValue: (IndexSet, Int64)?
     
     var playbackCompletedIndex: Int?
     
-    init(content: UniversalVideoContent, contentNode: UniversalVideoContentNode & ASDisplayNode, statusUpdated: @escaping (MediaPlayerStatus?) -> Void, bufferingStatusUpdated: @escaping ((IndexSet, Int)?) -> Void, playbackCompleted: @escaping () -> Void) {
+    init(content: UniversalVideoContent, contentNode: UniversalVideoContentNode & ASDisplayNode, statusUpdated: @escaping (MediaPlayerStatus?) -> Void, bufferingStatusUpdated: @escaping ((IndexSet, Int64)?) -> Void, playbackCompleted: @escaping () -> Void) {
         self.content = content
         self.contentNode = contentNode
         
@@ -131,7 +131,7 @@ private final class UniversalVideoContentHolder {
 private final class UniversalVideoContentHolderCallbacks {
     let playbackCompleted = Bag<() -> Void>()
     let status = Bag<(MediaPlayerStatus?) -> Void>()
-    let bufferingStatus = Bag<((IndexSet, Int)?) -> Void>()
+    let bufferingStatus = Bag<((IndexSet, Int64)?) -> Void>()
     
     var isEmpty: Bool {
         return self.playbackCompleted.isEmpty && self.status.isEmpty && self.bufferingStatus.isEmpty
@@ -278,7 +278,7 @@ public final class UniversalVideoManagerImpl: UniversalVideoManager {
         } |> runOn(Queue.mainQueue())
     }
     
-    public func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(IndexSet, Int)?, NoError> {
+    public func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(IndexSet, Int64)?, NoError> {
         return Signal { subscriber in
             var callbacks: UniversalVideoContentHolderCallbacks
             if let current = self.holderCallbacks[content.id] {

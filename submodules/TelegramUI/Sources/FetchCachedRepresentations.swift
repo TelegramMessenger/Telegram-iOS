@@ -83,7 +83,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                     |> `catch` { error -> Signal<CachedMediaResourceRepresentationResult, NoError> in
                         switch error {
                             case let .moreDataNeeded(targetSize):
-                                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, targetSize))
+                                return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, Int64(targetSize)))
                                 |> mapToSignal { result ->
                                     Signal<CachedMediaResourceRepresentationResult, NoError> in
                                     let (data, _) = result
@@ -149,7 +149,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
     return .never()
 }
 
-private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
+private func videoFirstFrameData(account: Account, resource: MediaResource, chunkSize: Int64) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let size = resource.size {
         return account.postbox.mediaBox.resourceData(resource, size: size, in: 0 ..< min(size, chunkSize))
         |> mapToSignal { _ -> Signal<CachedMediaResourceRepresentationResult, NoError> in

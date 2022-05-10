@@ -83,9 +83,9 @@ public final class RenderedRecentDownloadItem: Equatable {
     public let timestamp: Int32
     public let isSeen: Bool
     public let resourceId: String
-    public let size: Int
+    public let size: Int64
     
-    public init(message: Message, timestamp: Int32, isSeen: Bool, resourceId: String, size: Int) {
+    public init(message: Message, timestamp: Int32, isSeen: Bool, resourceId: String, size: Int64) {
         self.message = message
         self.timestamp = timestamp
         self.isSeen = isSeen
@@ -135,7 +135,7 @@ public func recentDownloadItems(postbox: Postbox) -> Signal<[RenderedRecentDownl
                     continue
                 }
                 
-                var size: Int?
+                var size: Int64?
                 for media in message.media {
                     if let result = findMediaResourceById(media: media, resourceId: MediaResourceId(item.resourceId)) {
                         size = result.size

@@ -38,11 +38,11 @@ private let progressiveRangeMap: [(Int, [Int])] = [
     (Int(Int32.max), [2, 3, 4])
 ]
 
-public func representationFetchRangeForDisplayAtSize(representation: TelegramMediaImageRepresentation, dimension: Int?) -> Range<Int>? {
+public func representationFetchRangeForDisplayAtSize(representation: TelegramMediaImageRepresentation, dimension: Int?) -> Range<Int64>? {
     if representation.progressiveSizes.count > 1, let dimension = dimension {
-        var largestByteSize = Int(representation.progressiveSizes[0])
+        var largestByteSize = Int64(representation.progressiveSizes[0])
         for (maxDimension, byteSizes) in progressiveRangeMap {
-            largestByteSize = Int(representation.progressiveSizes[min(representation.progressiveSizes.count - 1, byteSizes.last!)])
+            largestByteSize = Int64(representation.progressiveSizes[min(representation.progressiveSizes.count - 1, byteSizes.last!)])
             if maxDimension >= dimension {
                 break
             }
@@ -56,7 +56,7 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
     if let progressiveRepresentation = progressiveImageRepresentation(photoReference.media.representations), progressiveRepresentation.progressiveSizes.count > 1 {
         enum SizeSource {
             case miniThumbnail(data: Data)
-            case image(size: Int)
+            case image(size: Int64)
         }
         
         var sources: [SizeSource] = []
@@ -70,7 +70,7 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
                 if progressiveRepresentation.progressiveSizes.count - 1 < sizeIndex {
                     return nil
                 }
-                return .image(size: Int(progressiveRepresentation.progressiveSizes[sizeIndex]))
+                return .image(size: Int64(progressiveRepresentation.progressiveSizes[sizeIndex]))
             })
             largestByteSize = Int(progressiveRepresentation.progressiveSizes[min(progressiveRepresentation.progressiveSizes.count - 1, byteSizes.last!)])
             if maxDimension >= Int(fullRepresentationSize.width) {
@@ -78,7 +78,7 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
             }
         }
         if sources.isEmpty {
-            sources.append(.image(size: largestByteSize))
+            sources.append(.image(size: Int64(largestByteSize)))
         }
         if let miniThumbnail = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
             sources.insert(.miniThumbnail(data: miniThumbnail), at: 0)
@@ -90,7 +90,7 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
                 case let .miniThumbnail(data):
                     return .single((source, data))
                 case let .image(size):
-                    return postbox.mediaBox.resourceData(progressiveRepresentation.resource, size: Int(progressiveRepresentation.progressiveSizes.last!), in: 0 ..< size, mode: .incremental, notifyAboutIncomplete: true, attemptSynchronously: synchronousLoad)
+                    return postbox.mediaBox.resourceData(progressiveRepresentation.resource, size: Int64(progressiveRepresentation.progressiveSizes.last!), in: 0 ..< size, mode: .incremental, notifyAboutIncomplete: true, attemptSynchronously: synchronousLoad)
                     |> map { (data, _) -> (SizeSource, Data?) in
                         return (source, data)
                     }
@@ -127,9 +127,9 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
             })
             var fetchDisposable: Disposable?
             if autoFetchFullSize {
-                fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(progressiveRepresentation.resource), range: (0 ..< largestByteSize, .default), statsCategory: .image).start()
+                fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(progressiveRepresentation.resource), range: (0 ..< Int64(largestByteSize), .default), statsCategory: .image).start()
             } else if useMiniThumbnailIfAvailable {
-                fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(progressiveRepresentation.resource), range: (0 ..< thumbnailByteSize, .default), statsCategory: .image).start()
+                fetchDisposable = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: photoReference.resourceReference(progressiveRepresentation.resource), range: (0 ..< Int64(thumbnailByteSize), .default), statsCategory: .image).start()
             }
             
             return ActionDisposable {
@@ -1671,7 +1671,7 @@ public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId
                 context.account.postbox.mediaBox.resourceRangesStatus(largestRepresentation.resource)
             )
             |> map { status, rangeStatus -> MediaResourceStatus in
-                if rangeStatus.contains(integersIn: range) {
+                if rangeStatus.contains(integersIn: Int(range.lowerBound) ..< Int(range.upperBound)) {
                     return .Local
                 }
                 
@@ -1708,38 +1708,10 @@ public func standaloneChatMessagePhotoInteractiveFetched(account: Account, photo
 
 public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoReference: ImageMediaReference, displayAtSize: Int?, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Never, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
-        var fetchRange: (Range<Int>, MediaBoxFetchPriority)?
+        var fetchRange: (Range<Int64>, MediaBoxFetchPriority)?
         if let displayAtSize = displayAtSize, let range = representationFetchRangeForDisplayAtSize(representation: largestRepresentation, dimension: displayAtSize) {
             fetchRange = (range, .default)
         }
-
-        /*switch photoReference {
-        case let .message(message, _):
-            if let id = message.id {
-                let ranges: IndexSet
-                if let (range, _) = fetchRange {
-                    ranges = IndexSet(integersIn: range)
-                } else {
-                    ranges = IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>)
-                }
-                return context.fetchManager.interactivelyFetched(
-                    category: .image,
-                    location: .chat(id.peerId),
-                    locationKey: .messageId(id),
-                    mediaReference: photoReference.abstract,
-                    resourceReference: photoReference.resourceReference(largestRepresentation.resource),
-                    ranges: ranges,
-                    statsCategory: .image,
-                    elevatedPriority: false,
-                    userInitiated: false,
-                    priority: .userInitiated,
-                    storeToDownloadsPeerType: nil
-                )
-                |> ignoreValues
-            }
-        default:
-            break
-        }*/
 
         return fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: photoReference.resourceReference(largestRepresentation.resource), range: fetchRange, statsCategory: .image, reportResultStatus: true)
         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
@@ -2294,7 +2266,7 @@ public func svgIconImageFile(account: Account, fileReference: FileMediaReference
     } else {
         data = Signal { subscriber in
             if let url = getAppBundle().url(forResource: "durgerking", withExtension: "placeholder"), let data = try? Data(contentsOf: url, options: .mappedRead) {
-                subscriber.putNext(MediaResourceData(path: url.path, offset: 0, size: data.count, complete: true))
+                subscriber.putNext(MediaResourceData(path: url.path, offset: 0, size: Int64(data.count), complete: true))
                 subscriber.putCompletion()
             }
             return EmptyDisposable

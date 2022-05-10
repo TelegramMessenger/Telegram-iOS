@@ -1070,7 +1070,7 @@ private final class NotificationServiceHandler {
                                             if let resource = fetchResource {
                                                 if let _ = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource) {
                                                 } else {
-                                                    let intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int(Int32.max), MediaBoxFetchPriority.maximum)])
+                                                    let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
                                                     fetchMediaSignal = Signal { subscriber in
                                                         let collectedData = Atomic<Data>(value: Data())
                                                         return standaloneMultipartFetch(
@@ -1121,7 +1121,7 @@ private final class NotificationServiceHandler {
                                                 if let path = strongSelf.stateManager?.postbox.mediaBox.completedResourcePath(resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
                                                     fetchNotificationSoundSignal = .single(data)
                                                 } else {
-                                                    let intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int(Int32.max), MediaBoxFetchPriority.maximum)])
+                                                    let intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError> = .single([(0 ..< Int64.max, MediaBoxFetchPriority.maximum)])
                                                     fetchNotificationSoundSignal = Signal { subscriber in
                                                         let collectedData = Atomic<Data>(value: Data())
                                                         return standaloneMultipartFetch(

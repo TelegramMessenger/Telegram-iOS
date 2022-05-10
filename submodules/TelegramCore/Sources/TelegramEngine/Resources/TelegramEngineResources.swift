@@ -45,12 +45,12 @@ public final class EngineMediaResource: Equatable {
 
     public final class ResourceData {
         public let path: String
-        public let availableSize: Int
+        public let availableSize: Int64
         public let isComplete: Bool
 
         public init(
             path: String,
-            availableSize: Int,
+            availableSize: Int64,
             isComplete: Bool
         ) {
             self.path = path

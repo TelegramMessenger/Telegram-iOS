@@ -49,7 +49,7 @@ private final class FetchManagerLocationEntry {
     var combinedRanges: IndexSet {
         var result = IndexSet()
         if self.userInitiated {
-            result.insert(integersIn: 0 ..< Int(Int32.max))
+            result.insert(integersIn: 0 ..< Int(Int64.max))
         } else {
             for range in self.ranges.copyItems() {
                 result.formUnion(range)
@@ -220,13 +220,13 @@ private final class FetchManagerCategoryContext {
                     activeContext.ranges = ranges
                     let entryCompleted = self.entryCompleted
                     let storeManager = self.storeManager
-                    let parsedRanges: [(Range<Int>, MediaBoxFetchPriority)]?
-                    if ranges.count == 1 && ranges.min() == 0 && ranges.max() == Int(Int32.max) {
+                    let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
+                    if ranges.count == 1 && ranges.min() == 0 && ranges.max() == Int(Int64.max) {
                         parsedRanges = nil
                     } else {
-                        var resultRanges: [(Range<Int>, MediaBoxFetchPriority)] = []
+                        var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
                         for range in ranges.rangeView {
-                            resultRanges.append((range, .default))
+                            resultRanges.append((Int64(range.lowerBound) ..< Int64(range.upperBound), .default))
                         }
                         parsedRanges = resultRanges
                     }
@@ -302,14 +302,14 @@ private final class FetchManagerCategoryContext {
             if let entry = self.entries[topEntryId] {
                 let ranges = entry.combinedRanges
                 
-                let parsedRanges: [(Range<Int>, MediaBoxFetchPriority)]?
+                let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
                 
                 var count = 0
                 var isCompleteRange = false
                 var isVideoPreload = false
                 for range in ranges.rangeView {
                     count += 1
-                    if range.lowerBound == 0 && range.upperBound == Int(Int32.max) {
+                    if range.lowerBound == 0 && range.upperBound == Int(Int64.max) {
                         isCompleteRange = true
                     }
                 }
@@ -321,9 +321,9 @@ private final class FetchManagerCategoryContext {
                 if count == 1 && isCompleteRange {
                     parsedRanges = nil
                 } else {
-                    var resultRanges: [(Range<Int>, MediaBoxFetchPriority)] = []
+                    var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
                     for range in ranges.rangeView {
-                        resultRanges.append((range, .default))
+                        resultRanges.append((Int64(range.lowerBound) ..< Int64(range.upperBound), .default))
                     }
                     parsedRanges = resultRanges
                 }

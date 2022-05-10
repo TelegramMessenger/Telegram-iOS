@@ -401,7 +401,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                             strongSelf.currentFileReference = fileReference
                             if let size = fileReference.media.size {
                                 strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
-                                |> map { ranges -> (IndexSet, Int) in
+                                |> map { ranges -> (IndexSet, Int64) in
                                     return (ranges, size)
                                 }
                             } else {

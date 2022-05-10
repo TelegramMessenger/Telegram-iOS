@@ -390,18 +390,18 @@ public extension Api {
 }
 public extension Api {
     enum EncryptedFile: TypeConstructorDescription {
-        case encryptedFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, keyFingerprint: Int32)
+        case encryptedFile(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, keyFingerprint: Int32)
         case encryptedFileEmpty
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .encryptedFile(let id, let accessHash, let size, let dcId, let keyFingerprint):
                     if boxed {
-                        buffer.appendInt32(1248893260)
+                        buffer.appendInt32(-1476358952)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     serializeInt32(keyFingerprint, buffer: buffer, boxed: false)
                     break
@@ -428,8 +428,8 @@ public extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
@@ -664,15 +664,15 @@ public extension Api {
 }
 public extension Api {
     enum FileHash: TypeConstructorDescription {
-        case fileHash(offset: Int32, limit: Int32, hash: Buffer)
+        case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileHash(let offset, let limit, let hash):
                     if boxed {
-                        buffer.appendInt32(1648543603)
+                        buffer.appendInt32(-207944868)
                     }
-                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt64(offset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeBytes(hash, buffer: buffer, boxed: false)
                     break
@@ -687,8 +687,8 @@ public extension Api {
     }
     
         public static func parse_fileHash(_ reader: BufferReader) -> FileHash? {
-            var _1: Int32?
-            _1 = reader.readInt32()
+            var _1: Int64?
+            _1 = reader.readInt64()
             var _2: Int32?
             _2 = reader.readInt32()
             var _3: Buffer?
