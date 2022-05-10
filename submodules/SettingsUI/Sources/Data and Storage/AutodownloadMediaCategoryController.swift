@@ -47,10 +47,10 @@ private enum AutomaticDownloadPeerType {
 
 private final class AutodownloadMediaCategoryControllerArguments {
     let togglePeer: (AutomaticDownloadPeerType) -> Void
-    let adjustSize: (Int32) -> Void
+    let adjustSize: (Int64) -> Void
     let toggleVideoPreload: () -> Void
     
-    init(togglePeer: @escaping (AutomaticDownloadPeerType) -> Void, adjustSize: @escaping (Int32) -> Void, toggleVideoPreload: @escaping () -> Void) {
+    init(togglePeer: @escaping (AutomaticDownloadPeerType) -> Void, adjustSize: @escaping (Int64) -> Void, toggleVideoPreload: @escaping () -> Void) {
         self.togglePeer = togglePeer
         self.adjustSize = adjustSize
         self.toggleVideoPreload = toggleVideoPreload
@@ -70,7 +70,7 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case peerChannels(PresentationTheme, String, Bool)
     
     case sizeHeader(PresentationTheme, String)
-    case sizeItem(PresentationTheme, PresentationStrings, String, String, Int32)
+    case sizeItem(PresentationTheme, PresentationStrings, String, String, Int64)
     case sizePreload(PresentationTheme, String, Bool, Bool)
     case sizePreloadInfo(PresentationTheme, String)
     
@@ -226,7 +226,7 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
     let categories = effectiveAutodownloadCategories(settings: settings, networkType: connectionType.automaticDownloadNetworkType)
     
     let peers: AutomaticDownloadPeers
-    let size: Int32
+    let size: Int64
     let predownload: Bool
     
     switch category {
@@ -270,7 +270,7 @@ private func autodownloadMediaCategoryControllerEntries(presentationData: Presen
             }
             
             let sizeText: String
-            if size == Int32.max {
+            if size == Int64.max {
                 sizeText = autodownloadDataSizeString(1536 * 1024 * 1024, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             } else {
                 sizeText = autodownloadDataSizeString(Int64(size), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)

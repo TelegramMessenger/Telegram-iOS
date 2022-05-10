@@ -130,8 +130,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
     }
     
-    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
-    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+    private let _bufferingStatus = Promise<(IndexSet, Int64)?>()
+    var bufferingStatus: Signal<(IndexSet, Int64)?, NoError> {
         return self._bufferingStatus.get()
     }
     

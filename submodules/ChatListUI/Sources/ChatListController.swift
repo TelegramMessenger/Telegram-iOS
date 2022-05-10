@@ -614,7 +614,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     var totalBytes = 0.0
                     var totalProgressInBytes = 0.0
                     for (entry, progress) in entries {
-                        var size = 1024 * 1024 * 1024
+                        var size: Int64 = 1024 * 1024 * 1024
                         if let sizeValue = entry.resourceReference.resource.size {
                             size = sizeValue
                         }

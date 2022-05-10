@@ -1130,15 +1130,16 @@ public extension Api {
 }
 public extension Api {
     enum PhoneConnection: TypeConstructorDescription {
-        case phoneConnection(id: Int64, ip: String, ipv6: String, port: Int32, peerTag: Buffer)
+        case phoneConnection(flags: Int32, id: Int64, ip: String, ipv6: String, port: Int32, peerTag: Buffer)
         case phoneConnectionWebrtc(flags: Int32, id: Int64, ip: String, ipv6: String, port: Int32, username: String, password: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .phoneConnection(let id, let ip, let ipv6, let port, let peerTag):
+                case .phoneConnection(let flags, let id, let ip, let ipv6, let port, let peerTag):
                     if boxed {
-                        buffer.appendInt32(-1655957568)
+                        buffer.appendInt32(-1665063993)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeString(ip, buffer: buffer, boxed: false)
                     serializeString(ipv6, buffer: buffer, boxed: false)
@@ -1162,31 +1163,34 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .phoneConnection(let id, let ip, let ipv6, let port, let peerTag):
-                return ("phoneConnection", [("id", String(describing: id)), ("ip", String(describing: ip)), ("ipv6", String(describing: ipv6)), ("port", String(describing: port)), ("peerTag", String(describing: peerTag))])
+                case .phoneConnection(let flags, let id, let ip, let ipv6, let port, let peerTag):
+                return ("phoneConnection", [("flags", String(describing: flags)), ("id", String(describing: id)), ("ip", String(describing: ip)), ("ipv6", String(describing: ipv6)), ("port", String(describing: port)), ("peerTag", String(describing: peerTag))])
                 case .phoneConnectionWebrtc(let flags, let id, let ip, let ipv6, let port, let username, let password):
                 return ("phoneConnectionWebrtc", [("flags", String(describing: flags)), ("id", String(describing: id)), ("ip", String(describing: ip)), ("ipv6", String(describing: ipv6)), ("port", String(describing: port)), ("username", String(describing: username)), ("password", String(describing: password))])
     }
     }
     
         public static func parse_phoneConnection(_ reader: BufferReader) -> PhoneConnection? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: String?
-            _2 = parseString(reader)
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
             var _3: String?
             _3 = parseString(reader)
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Buffer?
-            _5 = parseBytes(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: Buffer?
+            _6 = parseBytes(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.PhoneConnection.phoneConnection(id: _1!, ip: _2!, ipv6: _3!, port: _4!, peerTag: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.PhoneConnection.phoneConnection(flags: _1!, id: _2!, ip: _3!, ipv6: _4!, port: _5!, peerTag: _6!)
             }
             else {
                 return nil

@@ -426,20 +426,20 @@ private func stringForUseLessDataSetting(_ dataSaving: VoiceCallDataSaving, stri
     }
 }
 
-private func stringForAutoDownloadTypes(strings: PresentationStrings, decimalSeparator: String, photo: Bool, videoSize: Int32?, fileSize: Int32?) -> String {
+private func stringForAutoDownloadTypes(strings: PresentationStrings, decimalSeparator: String, photo: Bool, videoSize: Int64?, fileSize: Int64?) -> String {
     var types: [String] = []
     if photo && videoSize == nil {
         types.append(strings.ChatSettings_AutoDownloadSettings_TypePhoto)
     }
     if let videoSize = videoSize {
         if photo {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypeMedia(autodownloadDataSizeString(Int64(videoSize), decimalSeparator: decimalSeparator)).string)
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeMedia(autodownloadDataSizeString(videoSize, decimalSeparator: decimalSeparator)).string)
         } else {
-            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo(autodownloadDataSizeString(Int64(videoSize), decimalSeparator: decimalSeparator)).string)
+            types.append(strings.ChatSettings_AutoDownloadSettings_TypeVideo(autodownloadDataSizeString(videoSize, decimalSeparator: decimalSeparator)).string)
         }
     }
     if let fileSize = fileSize {
-        types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile(autodownloadDataSizeString(Int64(fileSize), decimalSeparator: decimalSeparator)).string)
+        types.append(strings.ChatSettings_AutoDownloadSettings_TypeFile(autodownloadDataSizeString(fileSize, decimalSeparator: decimalSeparator)).string)
     }
 
     if types.isEmpty {

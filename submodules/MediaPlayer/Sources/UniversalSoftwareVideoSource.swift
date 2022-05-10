@@ -14,8 +14,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     let data: Signal<(Data, Bool), NoError>
     
-    let readCount = min(256 * 1024, Int(bufferSize))
-    let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
+    let readCount = min(256 * 1024, Int64(bufferSize))
+    let requestRange: Range<Int64> = context.readingOffset ..< (context.readingOffset + readCount)
     
     context.currentNumberOfReads += 1
     context.currentReadBytes += readCount
@@ -59,7 +59,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             memcpy(buffer, bytes, fetchedData.count)
         }
         let fetchedCount = Int32(fetchedData.count)
-        context.readingOffset += Int(fetchedCount)
+        context.readingOffset += Int64(fetchedCount)
         return fetchedCount
     } else {
         return 0
@@ -71,7 +71,7 @@ private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whe
     if (whence & FFMPEG_AVSEEK_SIZE) != 0 {
         return Int64(context.size)
     } else {
-        context.readingOffset = Int(offset)
+        context.readingOffset = offset
         return offset
     }
 }
@@ -99,7 +99,7 @@ private final class SoftwareVideoStream {
 private final class UniversalSoftwareVideoSourceImpl {
     fileprivate let mediaBox: MediaBox
     fileprivate let fileReference: FileMediaReference
-    fileprivate let size: Int
+    fileprivate let size: Int64
     fileprivate let automaticallyFetchHeader: Bool
     
     fileprivate let state: ValuePromise<UniversalSoftwareVideoSourceState>
@@ -108,12 +108,12 @@ private final class UniversalSoftwareVideoSourceImpl {
     fileprivate var avFormatContext: FFMpegAVFormatContext!
     fileprivate var videoStream: SoftwareVideoStream!
     
-    fileprivate var readingOffset: Int = 0
+    fileprivate var readingOffset: Int64 = 0
     
     fileprivate var cancelRead: Signal<Bool, NoError>
     fileprivate var requiredDataIsNotLocallyAvailable: (() -> Void)?
     fileprivate var currentNumberOfReads: Int = 0
-    fileprivate var currentReadBytes: Int = 0
+    fileprivate var currentReadBytes: Int64 = 0
     
     init?(mediaBox: MediaBox, fileReference: FileMediaReference, state: ValuePromise<UniversalSoftwareVideoSourceState>, cancelInitialization: Signal<Bool, NoError>, automaticallyFetchHeader: Bool, hintVP9: Bool = false) {
         guard let size = fileReference.media.size else {

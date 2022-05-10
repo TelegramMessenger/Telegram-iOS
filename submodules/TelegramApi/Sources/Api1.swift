@@ -472,18 +472,18 @@ public extension Api {
 }
 public extension Api {
     enum AutoDownloadSettings: TypeConstructorDescription {
-        case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int32, fileSizeMax: Int32, videoUploadMaxbitrate: Int32)
+        case autoDownloadSettings(flags: Int32, photoSizeMax: Int32, videoSizeMax: Int64, fileSizeMax: Int64, videoUploadMaxbitrate: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .autoDownloadSettings(let flags, let photoSizeMax, let videoSizeMax, let fileSizeMax, let videoUploadMaxbitrate):
                     if boxed {
-                        buffer.appendInt32(-532532493)
+                        buffer.appendInt32(-1896171181)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(photoSizeMax, buffer: buffer, boxed: false)
-                    serializeInt32(videoSizeMax, buffer: buffer, boxed: false)
-                    serializeInt32(fileSizeMax, buffer: buffer, boxed: false)
+                    serializeInt64(videoSizeMax, buffer: buffer, boxed: false)
+                    serializeInt64(fileSizeMax, buffer: buffer, boxed: false)
                     serializeInt32(videoUploadMaxbitrate, buffer: buffer, boxed: false)
                     break
     }
@@ -501,10 +501,10 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: Int64?
+            _4 = reader.readInt64()
             var _5: Int32?
             _5 = reader.readInt32()
             let _c1 = _1 != nil

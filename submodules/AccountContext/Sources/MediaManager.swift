@@ -200,7 +200,7 @@ public protocol UniversalVideoManager: AnyObject {
     func addPlaybackCompleted(id: AnyHashable, _ f: @escaping () -> Void) -> Int
     func removePlaybackCompleted(id: AnyHashable, index: Int)
     func statusSignal(content: UniversalVideoContent) -> Signal<MediaPlayerStatus?, NoError>
-    func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(IndexSet, Int)?, NoError>
+    func bufferingStatusSignal(content: UniversalVideoContent) -> Signal<(IndexSet, Int64)?, NoError>
 }
 
 public enum AudioRecordingState: Equatable {

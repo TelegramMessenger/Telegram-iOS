@@ -307,7 +307,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     public let videoThumbnails: [TelegramMediaFile.VideoThumbnail]
     public let immediateThumbnailData: Data?
     public let mimeType: String
-    public let size: Int?
+    public let size: Int64?
     public let attributes: [TelegramMediaFileAttribute]
     public let peerIds: [PeerId] = []
     
@@ -328,7 +328,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return result.isEmpty ? nil : result
     }
     
-    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int?, attributes: [TelegramMediaFileAttribute]) {
+    public init(fileId: MediaId, partialReference: PartialMediaReference?, resource: TelegramMediaResource, previewRepresentations: [TelegramMediaImageRepresentation], videoThumbnails: [TelegramMediaFile.VideoThumbnail], immediateThumbnailData: Data?, mimeType: String, size: Int64?, attributes: [TelegramMediaFileAttribute]) {
         self.fileId = fileId
         self.partialReference = partialReference
         self.resource = resource
@@ -348,8 +348,10 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         self.videoThumbnails = decoder.decodeObjectArrayForKey("vr")
         self.immediateThumbnailData = decoder.decodeDataForKey("itd")
         self.mimeType = decoder.decodeStringForKey("mt", orElse: "")
-        if let size = decoder.decodeOptionalInt32ForKey("s") {
-            self.size = Int(size)
+        if let size = decoder.decodeOptionalInt64ForKey("s64") {
+            self.size = size
+        } else if let size = decoder.decodeOptionalInt32ForKey("s") {
+            self.size = Int64(size)
         } else {
             self.size = nil
         }
@@ -375,9 +377,9 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         }
         encoder.encodeString(self.mimeType, forKey: "mt")
         if let size = self.size {
-            encoder.encodeInt32(Int32(size), forKey: "s")
+            encoder.encodeInt64(size, forKey: "s64")
         } else {
-            encoder.encodeNil(forKey: "s")
+            encoder.encodeNil(forKey: "s64")
         }
         encoder.encodeObjectArray(self.attributes, forKey: "at")
     }
@@ -622,7 +624,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: self.size, attributes: self.attributes)
     }
     
-    public func withUpdatedSize(_ size: Int?) -> TelegramMediaFile {
+    public func withUpdatedSize(_ size: Int64?) -> TelegramMediaFile {
         return TelegramMediaFile(fileId: self.fileId, partialReference: self.partialReference, resource: self.resource, previewRepresentations: self.previewRepresentations, videoThumbnails: self.videoThumbnails, immediateThumbnailData: self.immediateThumbnailData, mimeType: self.mimeType, size: size, attributes: self.attributes)
     }
     

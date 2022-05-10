@@ -28,8 +28,8 @@ public final class SecureFileMediaResource: TelegramMediaResource {
         return Int(self.file.datacenterId)
     }
     
-    public var size: Int? {
-        return Int(self.file.size)
+    public var size: Int64? {
+        return self.file.size
     }
     
     public init(file: SecureIdFileReference) {
@@ -37,13 +37,19 @@ public final class SecureFileMediaResource: TelegramMediaResource {
     }
     
     public required init(decoder: PostboxDecoder) {
-        self.file = SecureIdFileReference(id: decoder.decodeInt64ForKey("f", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0), size: decoder.decodeInt32ForKey("n", orElse: 0), datacenterId: decoder.decodeInt32ForKey("d", orElse: 0), timestamp: decoder.decodeInt32ForKey("t", orElse: 0), fileHash: decoder.decodeBytesForKey("h")?.makeData() ?? Data(), encryptedSecret: decoder.decodeBytesForKey("s")?.makeData() ?? Data())
+        let size: Int64
+        if let value = decoder.decodeOptionalInt64ForKey("n64") {
+            size = value
+        } else {
+            size = Int64(decoder.decodeInt32ForKey("n", orElse: 0))
+        }
+        self.file = SecureIdFileReference(id: decoder.decodeInt64ForKey("f", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0), size: size, datacenterId: decoder.decodeInt32ForKey("d", orElse: 0), timestamp: decoder.decodeInt32ForKey("t", orElse: 0), fileHash: decoder.decodeBytesForKey("h")?.makeData() ?? Data(), encryptedSecret: decoder.decodeBytesForKey("s")?.makeData() ?? Data())
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt64(self.file.id, forKey: "f")
         encoder.encodeInt64(self.file.accessHash, forKey: "a")
-        encoder.encodeInt32(self.file.size, forKey: "n")
+        encoder.encodeInt64(self.file.size, forKey: "n64")
         encoder.encodeInt32(self.file.datacenterId, forKey: "d")
         encoder.encodeInt32(self.file.timestamp, forKey: "t")
         encoder.encodeBytes(MemoryBuffer(data: self.file.fileHash), forKey: "h")

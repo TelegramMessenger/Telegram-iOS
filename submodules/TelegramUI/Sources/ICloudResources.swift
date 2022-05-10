@@ -28,6 +28,10 @@ public class ICloudFileResource: TelegramMediaResource {
     public let urlData: String
     public let thumbnail: Bool
     
+    public var size: Int64? {
+        return nil
+    }
+    
     public init(urlData: String, thumbnail: Bool) {
         self.urlData = urlData
         self.thumbnail = thumbnail

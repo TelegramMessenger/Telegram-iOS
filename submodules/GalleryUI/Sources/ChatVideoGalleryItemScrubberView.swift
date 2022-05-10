@@ -255,11 +255,11 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }))
     }
     
-    func setBufferingStatusSignal(_ status: Signal<(IndexSet, Int)?, NoError>?) {
+    func setBufferingStatusSignal(_ status: Signal<(IndexSet, Int64)?, NoError>?) {
         self.scrubberNode.bufferingStatus = status
     }
     
-    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int?) {
+    func setFetchStatusSignal(_ fetchStatus: Signal<MediaResourceStatus, NoError>?, strings: PresentationStrings, decimalSeparator: String, fileSize: Int64?) {
         let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
         if let fileSize = fileSize {
             if let fetchStatus = fetchStatus {
