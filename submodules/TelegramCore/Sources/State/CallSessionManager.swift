@@ -217,6 +217,7 @@ public enum CallSessionConnection: Equatable {
         public let id: Int64
         public let ip: String
         public let ipv6: String
+        public let isTcp: Bool
         public let port: Int32
         public let peerTag: Data
         
@@ -224,12 +225,14 @@ public enum CallSessionConnection: Equatable {
             id: Int64,
             ip: String,
             ipv6: String,
+            isTcp: Bool,
             port: Int32,
             peerTag: Data
         ) {
             self.id = id
             self.ip = ip
             self.ipv6 = ipv6
+            self.isTcp = isTcp
             self.port = port
             self.peerTag = peerTag
         }
@@ -272,8 +275,9 @@ public enum CallSessionConnection: Equatable {
 
 private func parseConnection(_ apiConnection: Api.PhoneConnection) -> CallSessionConnection {
     switch apiConnection {
-    case let .phoneConnection(id, ip, ipv6, port, peerTag):
-        return .reflector(CallSessionConnection.Reflector(id: id, ip: ip, ipv6: ipv6, port: port, peerTag: peerTag.makeData()))
+    case let .phoneConnection(flags, id, ip, ipv6, port, peerTag):
+        let isTcp = (flags & (1 << 0)) != 0
+        return .reflector(CallSessionConnection.Reflector(id: id, ip: ip, ipv6: ipv6, isTcp: isTcp, port: port, peerTag: peerTag.makeData()))
     case let .phoneConnectionWebrtc(flags, id, ip, ipv6, port, username, password):
         return .webRtcReflector(CallSessionConnection.WebRtcReflector(
             id: id,
