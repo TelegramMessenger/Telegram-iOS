@@ -44,7 +44,7 @@ private final class MediaBoxFileMap {
                 return nil
             }
             
-            if count < 0 || length < 4 + 4 + 8 + count * 2 * 8 {
+            if count < 0 || length < 4 + 4 + 4 + 8 + count * 2 * 8 {
                 return nil
             }
             
@@ -178,7 +178,7 @@ private final class MediaBoxFileMap {
             buffer.write(&intervalLength, offset: 0, length: 8)
         }
         var crc: UInt32 = Crc32(buffer.memory.advanced(by: 4 + 4 + 4), Int32(buffer.length - (4 + 4 + 4)))
-        memcpy(buffer.memory, &crc, 4)
+        memcpy(buffer.memory.advanced(by: 4), &crc, 4)
         let written = file.write(buffer.memory, count: buffer.length)
         assert(written == buffer.length)
     }
