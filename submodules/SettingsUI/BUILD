@@ -99,6 +99,7 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/FetchManagerImpl:FetchManagerImpl",
         "//submodules/ListMessageItem:ListMessageItem",
+        "//submodules/PaymentMethodUI:PaymentMethodUI",
     ],
     visibility = [
         "//visibility:public",

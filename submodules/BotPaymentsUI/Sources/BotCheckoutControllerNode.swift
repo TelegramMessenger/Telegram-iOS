@@ -493,7 +493,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private weak var controller: BotCheckoutController?
     private let navigationBar: NavigationBar
     private let context: AccountContext
-    private let messageId: EngineMessage.Id
+    private let source: BotPaymentInvoiceSource
     private let present: (ViewController, Any?) -> Void
     private let dismissAnimated: () -> Void
     private let completed: (String, EngineMessage.Id?) -> Void
@@ -527,11 +527,11 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private var passwordTip: String?
     private var passwordTipDisposable: Disposable?
     
-    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, messageId: EngineMessage.Id, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, EngineMessage.Id?) -> Void) {
+    init(controller: BotCheckoutController?, navigationBar: NavigationBar, context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Promise<BotCheckoutController.InputData?>, present: @escaping (ViewController, Any?) -> Void, dismissAnimated: @escaping () -> Void, completed: @escaping (String, EngineMessage.Id?) -> Void) {
         self.controller = controller
         self.navigationBar = navigationBar
         self.context = context
-        self.messageId = messageId
+        self.source = source
         self.present = present
         self.dismissAnimated = dismissAnimated
         self.completed = completed
@@ -603,7 +603,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
         openInfoImpl = { [weak self] focus in
             if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue, let currentFormInfo = strongSelf.currentFormInfo {
                 strongSelf.controller?.view.endEditing(true)
-                strongSelf.present(BotCheckoutInfoController(context: context, invoice: paymentFormValue.invoice, messageId: messageId, initialFormInfo: currentFormInfo, focus: focus, formInfoUpdated: { formInfo, validatedInfo in
+                strongSelf.present(BotCheckoutInfoController(context: context, invoice: paymentFormValue.invoice, source: source, initialFormInfo: currentFormInfo, focus: focus, formInfoUpdated: { formInfo, validatedInfo in
                     if let strongSelf = self, let paymentFormValue = strongSelf.paymentFormValue {
                         strongSelf.currentFormInfo = formInfo
                         strongSelf.currentValidatedFormInfo = validatedInfo
@@ -1125,7 +1125,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                         countryCode = paramsCountryCode
                     }
                     
-                    let botPeerId = self.messageId.peerId
+                    let botPeerId = paymentForm.paymentBotId
                     let _ = (context.engine.data.get(
                         TelegramEngine.EngineData.Item.Peer.Peer(id: botPeerId)
                     )
@@ -1239,7 +1239,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
             let totalAmount = currentTotalPrice(paymentForm: paymentForm, validatedFormInfo: self.currentValidatedFormInfo, currentShippingOptionId: self.currentShippingOptionId, currentTip: self.currentTipAmount)
             let currencyValue = formatCurrencyAmount(totalAmount, currency: paymentForm.invoice.currency)
 
-            self.payDisposable.set((self.context.engine.payments.sendBotPaymentForm(messageId: self.messageId, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.payDisposable.set((self.context.engine.payments.sendBotPaymentForm(source: self.source, formId: paymentForm.id, validatedInfoId: self.currentValidatedFormInfo?.id, shippingOptionId: self.currentShippingOptionId, tipAmount: tipAmount, credentials: credentials) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     strongSelf.inProgressDimNode.isUserInteractionEnabled = false
                     strongSelf.inProgressDimNode.alpha = 0.0

@@ -81,7 +81,7 @@ private final class LimitScreenComponent: CombinedComponent {
             
             let title = title.update(
                 component: MultilineTextComponent(
-                    text: NSAttributedString(string: "Limit Reached", font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center),
+                    text: .plain(NSAttributedString(string: "Limit Reached", font: Font.semibold(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 1
                 ),
@@ -108,7 +108,7 @@ private final class LimitScreenComponent: CombinedComponent {
                         
             let text = text.update(
                 component: MultilineTextComponent(
-                    text: attributedText,
+                    text: .plain(attributedText),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.1

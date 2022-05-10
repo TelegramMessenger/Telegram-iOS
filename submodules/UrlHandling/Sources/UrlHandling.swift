@@ -77,6 +77,7 @@ public enum ParsedInternalUrl {
     case peerId(PeerId)
     case privateMessage(messageId: MessageId, threadId: Int32?, timecode: Double?)
     case stickerPack(String)
+    case invoice(String)
     case join(String)
     case localization(String)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
@@ -246,6 +247,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
             } else if pathComponents.count == 2 || pathComponents.count == 3 {
                 if pathComponents[0] == "addstickers" {
                     return .stickerPack(pathComponents[1])
+                } else if pathComponents[0] == "invoice" {
+                    return .invoice(pathComponents[1])
                 } else if pathComponents[0] == "joinchat" || pathComponents[0] == "joinchannel" {
                     return .join(pathComponents[1])
                 } else if pathComponents[0] == "setlanguage" {
@@ -558,6 +561,18 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             }
         case let .stickerPack(name):
             return .single(.stickerPack(name: name))
+        case let .invoice(slug):
+            return context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<TelegramMediaInvoice?, NoError> in
+                return .single(nil)
+            }
+            |> map { invoice -> ResolvedUrl? in
+                guard let invoice = invoice else {
+                    return nil
+                }
+                return .invoice(slug: slug, invoice: invoice)
+            }
         case let .join(link):
             return .single(.join(link))
         case let .localization(identifier):

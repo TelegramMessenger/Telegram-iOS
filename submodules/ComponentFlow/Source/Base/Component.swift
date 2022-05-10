@@ -26,7 +26,11 @@ class AnyComponentContext<EnvironmentType>: _TypeErasedComponentContext {
         preconditionFailure()
     }
     var erasedEnvironment: _Environment {
-        return self.environment
+        get {
+            return self.environment
+        } set(value) {
+            self.environment = value as! Environment<EnvironmentType>
+        }
     }
 
     let layoutResult: ComponentLayoutResult
