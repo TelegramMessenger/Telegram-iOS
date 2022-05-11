@@ -505,7 +505,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                         }
-                        if !hadUpdates || currentCount >= 1000 {
+                        if !hadUpdates || currentCount >= 10 {
                             break
                         }
                     }
