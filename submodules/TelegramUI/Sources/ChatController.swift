@@ -15232,7 +15232,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let (_, latestStatusNode) = latestNode {
             let bounds = latestStatusNode.view.convert(latestStatusNode.view.bounds, to: self.chatDisplayNode.view)
-            let location = CGPoint(x: bounds.maxX - 7.0, y: bounds.minY + 2.0)
+            let location = CGPoint(x: bounds.maxX - 7.0, y: bounds.minY - 11.0)
             
             let contentNode = ChatStatusChecksTooltipContentNode(presentationData: self.presentationData)
             let tooltipController = TooltipController(content: .custom(contentNode), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
