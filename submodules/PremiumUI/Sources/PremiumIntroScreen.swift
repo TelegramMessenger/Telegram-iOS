@@ -85,7 +85,7 @@ private class StarComponent: Component {
             }
             
             if node.animationKeys.contains("tapRotate") {
-                self.playAppearanceAnimation(velocity: nil, mirror: left, boom: true)
+                self.playAppearanceAnimation(velocity: nil, mirror: left, explode: true)
                 return
             }
             
@@ -176,7 +176,7 @@ private class StarComponent: Component {
             self.setupGradientAnimation()
             self.setupShineAnimation()
             
-            self.playAppearanceAnimation(boom: true)
+            self.playAppearanceAnimation(explode: true)
         }
         
         private func setupGradientAnimation() {
