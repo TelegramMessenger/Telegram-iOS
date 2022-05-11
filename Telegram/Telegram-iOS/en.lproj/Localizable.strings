@@ -6861,6 +6861,7 @@ Sorry for the inconvenience.";
 "Chat.NavigationNoChannels" = "You have no unread channels";
 
 "Message.SponsoredLabel" = "sponsored";
+"Message.RecommendedLabel" = "recommended";
 
 "Stickers.Favorites" = "Favorites";
 "Stickers.Recent" = "Recent";

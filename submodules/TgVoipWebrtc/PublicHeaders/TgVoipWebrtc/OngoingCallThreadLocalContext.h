@@ -195,6 +195,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @interface OngoingCallThreadLocalContextWebrtc : NSObject
 
++ (void)logMessage:(NSString * _Nonnull)string;
+
 + (void)setupLoggingFunction:(void (* _Nullable)(NSString * _Nullable))loggingFunction;
 + (void)applyServerConfig:(NSString * _Nullable)data;
 + (int32_t)maxLayer;

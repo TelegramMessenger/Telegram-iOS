@@ -29,8 +29,13 @@ private func dateStringForDay(strings: PresentationStrings, dateTimeFormat: Pres
 }
 
 func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
-    if message.adAttribute != nil {
-        return strings.Message_SponsoredLabel
+    if let adAttribute = message.adAttribute {
+        switch adAttribute.messageType {
+        case .sponsored:
+            return strings.Message_SponsoredLabel
+        case .recommended:
+            return strings.Message_RecommendedLabel
+        }
     }
 
     let timestamp: Int32
