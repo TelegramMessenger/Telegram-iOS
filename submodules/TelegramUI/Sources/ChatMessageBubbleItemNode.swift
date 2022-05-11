@@ -271,7 +271,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     return (result, needSeparateContainers, needReactions)
 }
 
-private let chatMessagePeerIdColors: [UIColor] = [
+let chatMessagePeerIdColors: [UIColor] = [
     UIColor(rgb: 0xfc5c51),
     UIColor(rgb: 0xfa790f),
     UIColor(rgb: 0x895dd5),
