@@ -73,7 +73,7 @@ open class RollingLabel: UILabel {
                 self.text = fullText
             }
             let w = UILabel.textWidth(font: self.font, text: self.text ?? "")
-            self.text = ""          // 초기화
+            self.text = ""
             x = -(w / 2)
         } else if self.textAlignment == .right {
             if showSymbol {
@@ -82,7 +82,7 @@ open class RollingLabel: UILabel {
                 self.text = fullText
             }
             let w = UILabel.textWidth(font: self.font, text: self.text ?? "")
-            self.text = ""          // 초기화
+            self.text = ""
             x = -w
         }
         

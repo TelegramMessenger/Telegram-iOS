@@ -843,15 +843,15 @@ public final class ChatListNode: ListView {
                     case .done:
                         break
                     case .limitExceeded:
-                        var dismissImpl: (() -> Void)?
-                        let controller = PremiumLimitScreen(context: context, subject: .pins, action: { [weak self] in
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumLimitScreen(context: context, subject: .pins, action: {
                             let premiumScreen = PremiumIntroScreen(context: context, action: {
-                                dismissImpl?()
+                                
                             })
-                            self?.push?(premiumScreen)
+                            replaceImpl?(premiumScreen)
                         })
-                        dismissImpl = { [weak controller] in
-                            controller?.dismiss()
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
                         }
                         strongSelf.push?(controller)
                     }

@@ -21,17 +21,20 @@ private class PremiumLimitAnimationComponent: Component {
     private let inactiveColor: UIColor
     private let activeColors: [UIColor]
     private let textColor: UIColor
+    private let badgeText: String?
     
     init(
         iconName: String,
         inactiveColor: UIColor,
         activeColors: [UIColor],
-        textColor: UIColor
+        textColor: UIColor,
+        badgeText: String?
     ) {
         self.iconName = iconName
         self.inactiveColor = inactiveColor
         self.activeColors = activeColors
         self.textColor = textColor
+        self.badgeText = badgeText
     }
     
     static func ==(lhs: PremiumLimitAnimationComponent, rhs: PremiumLimitAnimationComponent) -> Bool {
@@ -45,6 +48,9 @@ private class PremiumLimitAnimationComponent: Component {
             return false
         }
         if lhs.textColor != rhs.textColor {
+            return false
+        }
+        if lhs.badgeText != rhs.badgeText {
             return false
         }
         return true
@@ -128,7 +134,7 @@ private class PremiumLimitAnimationComponent: Component {
         }
         
         private var didPlayAppearanceAnimation = false
-        func playAppearanceAnimation(availableSize: CGSize) {
+        func playAppearanceAnimation(component: PremiumLimitAnimationComponent, availableSize: CGSize) {
             self.badgeView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
             
             let now = self.badgeView.layer.convertTime(CACurrentMediaTime(), from: nil)
@@ -163,7 +169,9 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
             self.badgeView.layer.add(returnAnimation, forKey: "appearance3")
             
-            self.badgeCountLabel.text(num: 4)
+            if let badgeText = component.badgeText, let num = Int(badgeText) {
+                self.badgeCountLabel.text(num: num)
+            }
         }
         
         var previousAvailableSize: CGSize?
@@ -186,7 +194,25 @@ private class PremiumLimitAnimationComponent: Component {
                 self.activeBackground.position = CGPoint(x: containerFrame.width * 3.0 / 4.0, y: lineHeight / 2.0)
             }
             
-            let badgeSize = CGSize(width: 82.0, height: 48.0 + 12.0)
+            
+            let countWidth: CGFloat
+            if let badgeText = component.badgeText {
+                switch badgeText.count {
+                    case 1:
+                        countWidth = 20.0
+                    case 2:
+                        countWidth = 35.0
+                    case 3:
+                        countWidth = 51.0
+                    default:
+                        countWidth = 51.0
+                }
+            } else {
+                countWidth = 51.0
+            }
+            let badgeWidth: CGFloat = countWidth + 62.0
+            
+            let badgeSize = CGSize(width: badgeWidth, height: 48.0 + 12.0)
             self.badgeMaskView.frame = CGRect(origin: .zero, size: badgeSize)
             self.badgeMaskBackgroundView.frame = CGRect(origin: .zero, size: CGSize(width: badgeSize.width, height: 48.0))
             self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0), size: CGSize(width: 44.0, height: 12.0))
@@ -197,14 +223,13 @@ private class PremiumLimitAnimationComponent: Component {
                 self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0, y: badgeSize.height / 2.0)
             }
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
-            
+    
             self.badgeIcon.frame = CGRect(x: 15.0, y: 9.0, width: 30.0, height: 30.0)
-            
-            self.badgeCountLabel.frame = CGRect(x: badgeSize.width - 36.0, y: 10.0, width: 30.0, height: 48.0)
+            self.badgeCountLabel.frame = CGRect(x: badgeSize.width - countWidth - 11.0, y: 10.0, width: countWidth, height: 48.0)
             
             if !self.didPlayAppearanceAnimation {
                 self.didPlayAppearanceAnimation = true
-                self.playAppearanceAnimation(availableSize: availableSize)
+                self.playAppearanceAnimation(component: component, availableSize: availableSize)
             }
             
             if self.previousAvailableSize != availableSize {
@@ -291,7 +316,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
     public let activeValue: String
     public let activeTitleColor: UIColor
     public let badgeIconName: String
-    public let badgeValue: String
+    public let badgeText: String?
     
     public init(
         inactiveColor: UIColor,
@@ -302,7 +327,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         activeValue: String,
         activeTitleColor: UIColor,
         badgeIconName: String,
-        badgeValue: String
+        badgeText: String?
     ) {
         self.inactiveColor = inactiveColor
         self.activeColors = activeColors
@@ -312,7 +337,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         self.activeValue = activeValue
         self.activeTitleColor = activeTitleColor
         self.badgeIconName = badgeIconName
-        self.badgeValue = badgeValue
+        self.badgeText = badgeText
     }
     
     public static func ==(lhs: PremiumLimitDisplayComponent, rhs: PremiumLimitDisplayComponent) -> Bool {
@@ -340,16 +365,16 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         if lhs.badgeIconName != rhs.badgeIconName {
             return false
         }
-        if lhs.badgeValue != rhs.badgeValue {
+        if lhs.badgeText != rhs.badgeText {
             return false
         }
         return true
     }
     
     public static var body: Body {
-        let inactiveTitle = Child(Text.self)
-        let activeTitle = Child(Text.self)
-        let activeValue = Child(Text.self)
+        let inactiveTitle = Child(MultilineTextComponent.self)
+        let activeTitle = Child(MultilineTextComponent.self)
+        let activeValue = Child(MultilineTextComponent.self)
         let animation = Child(PremiumLimitAnimationComponent.self)
 
         return { context in
@@ -359,30 +384,42 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
             let lineHeight: CGFloat = 30.0
             
             let inactiveTitle = inactiveTitle.update(
-                component: Text(
-                    text: component.inactiveTitle,
-                    font: Font.semibold(15.0),
-                    color: component.inactiveTitleColor
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.inactiveTitle,
+                            font: Font.semibold(15.0),
+                            textColor: component.inactiveTitleColor
+                        )
+                    )
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
             )
             
             let activeTitle = activeTitle.update(
-                component: Text(
-                    text: component.activeTitle,
-                    font: Font.semibold(15.0),
-                    color: component.activeTitleColor
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.activeTitle,
+                            font: Font.semibold(15.0),
+                            textColor: component.activeTitleColor
+                        )
+                    )
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
             )
             
             let activeValue = activeValue.update(
-                component: Text(
-                    text: component.activeValue,
-                    font: Font.semibold(15.0),
-                    color: component.activeTitleColor
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.activeValue,
+                            font: Font.semibold(15.0),
+                            textColor: component.activeTitleColor
+                        )
+                    )
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
@@ -393,7 +430,8 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     iconName: component.badgeIconName,
                     inactiveColor: component.inactiveColor,
                     activeColors: component.activeColors,
-                    textColor: component.activeTitleColor
+                    textColor: component.activeTitleColor,
+                    badgeText: component.badgeText
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: height),
                 transition: context.transition
@@ -449,6 +487,7 @@ private final class LimitSheetContent: CombinedComponent {
         private let context: AccountContext
         
         private var disposable: Disposable?
+        var initialized = false
         var limits: EngineConfiguration.UserLimits
         var premiumLimits: EngineConfiguration.UserLimits
         
@@ -465,6 +504,7 @@ private final class LimitSheetContent: CombinedComponent {
             ) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
                     let (limits, premiumLimits) = result
+                    strongSelf.initialized = true
                     strongSelf.limits = limits
                     strongSelf.premiumLimits = premiumLimits
                     strongSelf.updated(transition: .immediate)
@@ -500,7 +540,7 @@ private final class LimitSheetContent: CombinedComponent {
             let textSideInset: CGFloat = 24.0 + environment.safeInsets.left
             
             let iconName: String
-            let badgeValue: String
+            let badgeText: String
             let string: String
             let premiumValue: String
             switch subject {
@@ -508,28 +548,28 @@ private final class LimitSheetContent: CombinedComponent {
                     let limit = state.limits.maxFoldersCount
                     let premiumLimit = state.premiumLimits.maxFoldersCount
                     iconName = "Premium/Folder"
-                    badgeValue = "\(limit)"
+                    badgeText = "\(limit)"
                     string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
                     premiumValue = "\(premiumLimit)"
                 case .chatsInFolder:
                     let limit = state.limits.maxFolderChatsCount
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
-                    badgeValue = "\(limit)"
+                    badgeText = "\(limit)"
                     string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
                     premiumValue = "\(premiumLimit)"
                 case .pins:
-                    let limit = 4//state.limits.maxPinnedChatCount
-                    let premiumLimit = 6//state.premiumLimits.maxPinnedChatCount
+                    let limit = state.limits.maxPinnedChatCount
+                    let premiumLimit = state.premiumLimits.maxPinnedChatCount
                     iconName = "Premium/Pin"
-                    badgeValue = "\(limit)"
+                    badgeText = "\(limit)"
                     string = strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
                     premiumValue = "\(premiumLimit)"
                 case .files:
-                    let limit = 2048 * 1024 * 1024 //state.limits.maxPinnedChatCount
-                    let premiumLimit = 4096 * 1024 * 1024 //state.premiumLimits.maxPinnedChatCount
+                    let limit: Int64 = 2048 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
+                    let premiumLimit: Int64 = 4096 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
                     iconName = "Premium/File"
-                    badgeValue = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                    badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
                     premiumValue = dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
             }
@@ -567,26 +607,31 @@ private final class LimitSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let limit = limit.update(
-                component: PremiumLimitDisplayComponent(
-                    inactiveColor: UIColor(rgb: 0xE9E9EA),
-                    activeColors: [
-                        UIColor(rgb: 0x0077ff),
-                        UIColor(rgb: 0x6b93ff),
-                        UIColor(rgb: 0x8878ff),
-                        UIColor(rgb: 0xe46ace)
-                    ],
-                    inactiveTitle: "Free",
-                    inactiveTitleColor: .black,
-                    activeTitle: "Premium",
-                    activeValue: premiumValue,
-                    activeTitleColor: .white,
-                    badgeIconName: iconName,
-                    badgeValue: badgeValue
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
-                transition: .immediate
-            )
+            if state.initialized {
+                let limit = limit.update(
+                    component: PremiumLimitDisplayComponent(
+                        inactiveColor: UIColor(rgb: 0xE9E9EA),
+                        activeColors: [
+                            UIColor(rgb: 0x0077ff),
+                            UIColor(rgb: 0x6b93ff),
+                            UIColor(rgb: 0x8878ff),
+                            UIColor(rgb: 0xe46ace)
+                        ],
+                        inactiveTitle: strings.Premium_Free,
+                        inactiveTitleColor: .black,
+                        activeTitle: strings.Premium_Premium,
+                        activeValue: premiumValue,
+                        activeTitleColor: .white,
+                        badgeIconName: iconName,
+                        badgeText: badgeText
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                    transition: .immediate
+                )
+                context.add(limit
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: limit.size.height / 2.0 + 44.0))
+                )
+            }
             
             let button = button.update(
                 component: SolidRoundedButtonComponent(
@@ -620,17 +665,11 @@ private final class LimitSheetContent: CombinedComponent {
                 transition: context.transition
             )
             
-            let width = context.availableSize.width
-            
-            context.add(limit
-                .position(CGPoint(x: width / 2.0, y: limit.size.height / 2.0 + 44.0))
-            )
-            
             context.add(title
-                .position(CGPoint(x: width / 2.0, y: 28.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 28.0))
             )
             context.add(text
-                .position(CGPoint(x: width / 2.0, y: 228.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: 228.0))
             )
             
             let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: 228.0 + ceil(text.size.height / 2.0) + 38.0), size: button.size)

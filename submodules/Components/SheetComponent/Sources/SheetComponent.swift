@@ -155,6 +155,8 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             if environment[SheetComponentEnvironment.self].value.isDisplaying, !self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateInTransition.self) {
                 self.dimView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 self.scrollView.layer.animatePosition(from: CGPoint(x: 0.0, y: availableSize.height - self.scrollView.contentInset.top), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, additive: true, completion: nil)
+            } else if !environment[SheetComponentEnvironment.self].value.isDisplaying, self.previousIsDisplaying, let _ = transition.userData(ViewControllerComponentContainer.AnimateOutTransition.self) {
+                self.animateOut(completion: {})
             }
             self.previousIsDisplaying = environment[SheetComponentEnvironment.self].value.isDisplaying
             

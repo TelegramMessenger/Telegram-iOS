@@ -123,6 +123,9 @@ open class ViewControllerComponentContainer: ViewController {
     public final class AnimateInTransition {
     }
     
+    public final class AnimateOutTransition {
+    }
+    
     public final class Node: ViewControllerTracingNode {
         private var presentationData: PresentationData
         private weak var controller: ViewControllerComponentContainer?
@@ -183,7 +186,7 @@ open class ViewControllerComponentContainer: ViewController {
             guard let currentLayout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(AnimateInTransition()) : .immediate)
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(isVisible ? AnimateInTransition() : AnimateOutTransition()) : .immediate)
         }
         
         func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
@@ -240,7 +243,11 @@ open class ViewControllerComponentContainer: ViewController {
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        self.node.updateIsVisible(isVisible: false, animated: false)
+        self.node.updateIsVisible(isVisible: false, animated: animated)
+    }
+    
+    open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        super.dismiss(animated: flag, completion: completion)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

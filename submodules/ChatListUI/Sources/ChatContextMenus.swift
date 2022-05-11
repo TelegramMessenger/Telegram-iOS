@@ -321,17 +321,16 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 case .limitExceeded:
                                     f(.default)
                                     
-                                    var dismissImpl: (() -> Void)?
+                                    var replaceImpl: ((ViewController) -> Void)?
                                     let controller = PremiumLimitScreen(context: context, subject: .pins, action: {
-                                        dismissImpl?()
                                         let premiumScreen = PremiumIntroScreen(context: context, action: {
                                             
                                         })
-                                        chatListController?.push(premiumScreen)
+                                        replaceImpl?(premiumScreen)
                                     })
                                     chatListController?.push(controller)
-                                    dismissImpl = { [weak controller] in
-                                        controller?.dismiss()
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
                                     }
                                 }
                             })

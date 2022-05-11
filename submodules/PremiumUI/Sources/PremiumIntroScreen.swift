@@ -84,6 +84,11 @@ private class StarComponent: Component {
                 }
             }
             
+            if node.animationKeys.contains("tapRotate") {
+                self.playAppearanceAnimation(velocity: nil, mirror: left, boom: true)
+                return
+            }
+            
             let initial = node.rotation
             let target = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: left ? -0.6 : 0.6)
                         
@@ -93,7 +98,7 @@ private class StarComponent: Component {
             animation.duration = 0.25
             animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
             animation.fillMode = .forwards
-            node.addAnimation(animation, forKey: "rotate")
+            node.addAnimation(animation, forKey: "tapRotate")
             
             node.rotation = target
             
@@ -106,7 +111,7 @@ private class StarComponent: Component {
                 springAnimation.stiffness = 21.0
                 springAnimation.damping = 5.8
                 springAnimation.duration = springAnimation.settlingDuration * 0.8
-                node.addAnimation(springAnimation, forKey: "rotate")
+                node.addAnimation(springAnimation, forKey: "tapRotate")
             }
         }
         
@@ -114,6 +119,13 @@ private class StarComponent: Component {
         @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
+            }
+            
+            if #available(iOS 11.0, *) {
+                node.removeAnimation(forKey: "rotate", blendOutDuration: 0.1)
+                node.removeAnimation(forKey: "tapRotate", blendOutDuration: 0.1)
+            } else {
+                node.removeAllAnimations()
             }
             
             switch gesture.state {
@@ -128,12 +140,12 @@ private class StarComponent: Component {
                 case .ended:
                     let velocity = gesture.velocity(in: gesture.view)
                     
-                    var small = false
+                    var smallAngle = false
                     if (self.previousAngle < .pi / 2 && self.previousAngle > -.pi / 2) && abs(velocity.x) < 200 {
-                        small = true
+                        smallAngle = true
                     }
                 
-                    self.playAppearanceAnimation(velocity: velocity.x, small: small)
+                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle)
                     node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0)
                 default:
                     break
@@ -211,12 +223,12 @@ private class StarComponent: Component {
             node.geometry?.materials.first?.emission.addAnimation(group, forKey: "shimmer")
         }
         
-        private func playAppearanceAnimation(velocity: CGFloat? = nil, small: Bool = false, boom: Bool = false) {
+        private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
             
-            if boom, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
+            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
                 node.physicsField?.isActive = true
                 Queue.mainQueue().after(1.0) {
                     node.physicsField?.isActive = false
@@ -224,9 +236,14 @@ private class StarComponent: Component {
                 }
             }
         
-            let from = node.rotation
-            var toValue: Float = small ? 0.0 : .pi * 2.0
-            if let velocity = velocity, !small && abs(velocity) > 200 && velocity < 0.0 {
+            let from = node.presentation.rotation
+            node.removeAnimation(forKey: "tapRotate")
+            
+            var toValue: Float = smallAngle ? 0.0 : .pi * 2.0
+            if let velocity = velocity, !smallAngle && abs(velocity) > 200 && velocity < 0.0 {
+                toValue *= -1
+            }
+            if mirror {
                 toValue *= -1
             }
             let to = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: toValue)
