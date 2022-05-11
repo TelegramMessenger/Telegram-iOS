@@ -326,6 +326,17 @@ private enum MultipartFetchSource {
                             case .revalidate:
                                 return .fail(.revalidateMediaReference)
                             case let .location(parsedLocation):
+                                #if DEBUG
+                            switch parsedLocation {
+                            case let .inputDocumentFileLocation(id, _, _, _):
+                                if id == 5467475273110788326 {
+                                    return Signal<Data, MultipartFetchDownloadError>.single(Data(count: Int(limit))) |> delay(0.01, queue: .concurrentDefaultQueue())
+                                }
+                            default:
+                                break
+                            }
+                                #endif
+                            
                                 return download.request(Api.functions.upload.getFile(flags: 0, location: parsedLocation, offset: offset, limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground)
                                 |> mapError { error -> MultipartFetchDownloadError in
                                     if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
