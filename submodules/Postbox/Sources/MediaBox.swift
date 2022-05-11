@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import ManagedFile
+import RangeSet
 
 private final class ResourceStatusContext {
     var status: MediaResourceStatus?
@@ -685,7 +686,7 @@ public final class MediaBox {
         }
     }
     
-    public func resourceRangesStatus(_ resource: MediaResource) -> Signal<IndexSet, NoError> {
+    public func resourceRangesStatus(_ resource: MediaResource) -> Signal<RangeSet<Int64>, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             

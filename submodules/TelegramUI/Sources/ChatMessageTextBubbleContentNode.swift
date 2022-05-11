@@ -155,10 +155,19 @@ private final class InlineStickerItemLayer: SimpleLayer {
         }
     }
     
+    private var didRequestFrame = false
+    
     private func loadNextFrame() {
         guard let frameSource = self.frameSource else {
             return
         }
+        if self.contents != nil {
+            return
+        }
+        if self.didRequestFrame {
+            return
+        }
+        self.didRequestFrame = true
         frameSource.with { [weak self] impl in
             if let animationFrame = impl.takeFrame(draw: true) {
                 var image: UIImage?
@@ -189,6 +198,9 @@ private final class InlineStickerItemLayer: SimpleLayer {
                 if let image = image {
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.contents != nil {
                             return
                         }
                         strongSelf.contents = image.cgImage
@@ -464,9 +476,10 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 /*if item.context.sharedContext.immediateExperimentalUISettings.inlineStickers*/ do {
                     var currentCount = 0
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
+                    var startIndex = updatedString.string.startIndex
                     while true {
                         var hadUpdates = false
-                        updatedString.string.enumerateSubstrings(in: updatedString.string.startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
+                        updatedString.string.enumerateSubstrings(in: startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
                             if let substring = substring {
                                 let emoji = substring.basicEmoji.0
                                 
@@ -477,14 +490,22 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 
                                 if let emojiFile = emojiFile {
-                                    updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}\u{00a0}\u{00a0}]", attributes: [NSAttributedString.Key("Attribute__EmbeddedItem"): InlineStickerItem(file: emojiFile), NSAttributedString.Key.foregroundColor: UIColor.clear.cgColor]))
+                                    let currentDict = updatedString.attributes(at: NSRange(substringRange, in: updatedString.string).lowerBound, effectiveRange: nil)
+                                    var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
+                                    updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
+                                    updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
+                                    
+                                    let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                                    //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
+                                    updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: insertString)
+                                    startIndex = substringRange.lowerBound
                                     currentCount += 1
                                     hadUpdates = true
                                     stop = true
                                 }
                             }
                         }
-                        if !hadUpdates || currentCount >= 10 {
+                        if !hadUpdates || currentCount >= 1000 {
                             break
                         }
                     }
@@ -701,7 +722,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         itemLayer.isVisibleForAnimations = self.isVisibleForAnimations
                     }
                     
-                    itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 1.0).center, size: CGSize()).insetBy(dx: -11.0, dy: -11.0)
+                    itemLayer.frame = CGRect(origin: item.rect.offsetBy(dx: textLayout.insets.left, dy: textLayout.insets.top + 0.0).center, size: CGSize()).insetBy(dx: -12.0, dy: -12.0)
                 }
             }
         }
