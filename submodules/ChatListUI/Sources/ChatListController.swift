@@ -29,6 +29,7 @@ import FetchManagerImpl
 import ComponentFlow
 import LottieAnimationComponent
 import ProgressIndicatorComponent
+import PremiumUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -614,7 +615,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     var totalBytes = 0.0
                     var totalProgressInBytes = 0.0
                     for (entry, progress) in entries {
-                        var size = 1024 * 1024 * 1024
+                        var size: Int64 = 1024 * 1024 * 1024
                         if let sizeValue = entry.resourceReference.resource.size {
                             size = sizeValue
                         }
@@ -863,6 +864,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.chatListDisplayNode.containerNode.present = { [weak self] c in
             if let strongSelf = self {
                 strongSelf.present(c, in: .window(.root))
+            }
+        }
+        
+        self.chatListDisplayNode.containerNode.push = { [weak self] c in
+            if let strongSelf = self {
+                strongSelf.push(c)
             }
         }
         
@@ -1306,14 +1313,49 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let _ = (strongSelf.context.engine.peers.currentChatListFilters()
-                                |> deliverOnMainQueue).start(next: { presetList in
+                                
+                                let _ = combineLatest(
+                                    queue: Queue.mainQueue(),
+                                    context.engine.data.get(
+                                        TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                                        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                                        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+                                    ),
+                                    strongSelf.context.engine.peers.currentChatListFilters()
+                                ).start(next: { result, presetList in
                                     guard let strongSelf = self else {
                                         return
                                     }
                                     var found = false
                                     for filter in presetList {
                                         if filter.id == id {
+                                            let (accountPeer, limits, premiumLimits) = result
+                                            let limit = limits.maxFolderChatsCount
+                                            let premiumLimit = premiumLimits.maxFolderChatsCount
+                                            
+                                            if let accountPeer = accountPeer, accountPeer.isPremium {
+                                                if filter.data.includePeers.peers.count >= premiumLimit {
+                                                    //printPremiumError
+                                                    return
+                                                }
+                                            } else {
+                                                if filter.data.includePeers.peers.count >= limit {
+                                                    var replaceImpl: ((ViewController) -> Void)?
+                                                    let controller = PremiumLimitScreen(context: context, subject: .chatsInFolder, action: {
+                                                        let controller = PremiumIntroScreen(context: context, action: {
+                                                            
+                                                        })
+                                                        replaceImpl?(controller)
+                                                    })
+                                                    replaceImpl = { [weak controller] c in
+                                                        controller?.replace(with: c)
+                                                    }
+                                                    strongSelf.push(controller)
+                                                    f(.dismissWithoutContent)
+                                                    return
+                                                }
+                                            }
+                                            
                                             let _ = (strongSelf.context.engine.peers.currentChatListFilters()
                                             |> deliverOnMainQueue).start(next: { filters in
                                                 guard let strongSelf = self else {

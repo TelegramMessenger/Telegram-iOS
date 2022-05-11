@@ -66,6 +66,7 @@ open class ViewControllerComponentContainer: ViewController {
         public let isVisible: Bool
         public let theme: PresentationTheme
         public let strings: PresentationStrings
+        public let dateTimeFormat: PresentationDateTimeFormat
         public let controller: () -> ViewController?
         
         public init(
@@ -75,6 +76,7 @@ open class ViewControllerComponentContainer: ViewController {
             isVisible: Bool,
             theme: PresentationTheme,
             strings: PresentationStrings,
+            dateTimeFormat: PresentationDateTimeFormat,
             controller: @escaping () -> ViewController?
         ) {
             self.statusBarHeight = statusBarHeight
@@ -83,6 +85,7 @@ open class ViewControllerComponentContainer: ViewController {
             self.isVisible = isVisible
             self.theme = theme
             self.strings = strings
+            self.dateTimeFormat = dateTimeFormat
             self.controller = controller
         }
         
@@ -109,12 +112,18 @@ open class ViewControllerComponentContainer: ViewController {
             if lhs.strings !== rhs.strings {
                 return false
             }
+            if lhs.dateTimeFormat != rhs.dateTimeFormat {
+                return false
+            }
             
             return true
         }
     }
     
     public final class AnimateInTransition {
+    }
+    
+    public final class AnimateOutTransition {
     }
     
     public final class Node: ViewControllerTracingNode {
@@ -152,6 +161,7 @@ open class ViewControllerComponentContainer: ViewController {
                 isVisible: self.currentIsVisible,
                 theme: self.theme ?? self.presentationData.theme,
                 strings: self.presentationData.strings,
+                dateTimeFormat: self.presentationData.dateTimeFormat,
                 controller: { [weak self] in
                     return self?.controller
                 }
@@ -176,7 +186,7 @@ open class ViewControllerComponentContainer: ViewController {
             guard let currentLayout = self.currentLayout else {
                 return
             }
-            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(AnimateInTransition()) : .immediate)
+            self.containerLayoutUpdated(layout: currentLayout.layout, navigationHeight: currentLayout.navigationHeight, transition: animated ? Transition(animation: .none).withUserData(isVisible ? AnimateInTransition() : AnimateOutTransition()) : .immediate)
         }
         
         func updateComponent(component: AnyComponent<ViewControllerComponentContainer.Environment>, transition: Transition) {
@@ -233,7 +243,11 @@ open class ViewControllerComponentContainer: ViewController {
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
-        self.node.updateIsVisible(isVisible: false, animated: false)
+        self.node.updateIsVisible(isVisible: false, animated: animated)
+    }
+    
+    open override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        super.dismiss(animated: flag, completion: completion)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

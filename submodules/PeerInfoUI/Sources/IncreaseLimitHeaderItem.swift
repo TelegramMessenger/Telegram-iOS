@@ -7,6 +7,8 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import Markdown
+import PremiumUI
+import ComponentFlow
 
 class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
     enum Icon {
@@ -15,17 +17,19 @@ class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
     }
     
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let icon: Icon
-    let count: Int
-    let title: String
+    let count: Int32
+    let premiumCount: Int32
     let text: String
     let sectionId: ItemListSectionId
     
-    init(theme: PresentationTheme, icon: Icon, count: Int, title: String, text: String, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, icon: Icon, count: Int32, premiumCount: Int32, text: String, sectionId: ItemListSectionId) {
         self.theme = theme
+        self.strings = strings
         self.icon = icon
         self.count = count
-        self.title = title
+        self.premiumCount = premiumCount
         self.text = text
         self.sectionId = sectionId
     }
@@ -68,13 +72,11 @@ class IncreaseLimitHeaderItem: ListViewItem, ItemListItem {
 }
 
 private let titleFont = Font.semibold(17.0)
-private let textFont = Font.regular(14.0)
-private let boldTextFont = Font.semibold(13.0)
+private let textFont = Font.regular(15.0)
+private let boldTextFont = Font.semibold(15.0)
 
 class IncreaseLimitHeaderItemNode: ListViewItemNode {
-    private var backgroundNode: ASImageNode
-    private var iconNode: ASImageNode
-    private var countNode: TextNode
+    private var hostView: ComponentHostView<Empty>
     private let titleNode: TextNode
     private let textNode: TextNode
     
@@ -91,25 +93,10 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
                         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.clipsToBounds = true
-        self.backgroundNode.displaysAsynchronously = false
-        self.backgroundNode.image = generateGradientImage(size: CGSize(width: 100.0, height: 47.0), colors: [UIColor(rgb: 0xa44ece), UIColor(rgb: 0xff7924)], locations: [0.0, 1.0], direction: .horizontal)
-        self.backgroundNode.cornerRadius = 23.5
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        
-        self.countNode = TextNode()
-        self.countNode.isUserInteractionEnabled = false
-        self.countNode.contentMode = .left
-        self.countNode.contentsScale = UIScreen.main.scale
+        self.hostView = ComponentHostView<Empty>()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.countNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
     }
@@ -117,39 +104,27 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
-        if #available(iOS 13.0, *) {
-            self.backgroundNode.layer.cornerCurve = .continuous
-        }
+        self.view.addSubview(self.hostView)
     }
     
     func asyncLayout() -> (_ item: IncreaseLimitHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeCountLayout = TextNode.asyncLayout(self.countNode)
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         return { item, params, neighbors in
-            let leftInset: CGFloat = 32.0 + params.leftInset
             let topInset: CGFloat = 2.0
             
-            let badgeHeight: CGFloat = 47.0
-            let titleSpacing: CGFloat = 19.0
-            let textSpacing: CGFloat = 15.0
-            let bottomInset: CGFloat = 2.0
-            
-            let countAttributedText = NSAttributedString(string: "\(item.count)", font: Font.with(size: 24.0, design: .round, weight: .semibold, traits: []), textColor: .white)
-            let (countLayout, countApply) = makeCountLayout(TextNodeLayoutArguments(attributedString: countAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
-            
-            let titleAttributedText = NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor)
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let badgeHeight: CGFloat = 200.0
+            let textSpacing: CGFloat = -6.0
+            let bottomInset: CGFloat = -86.0
             
             let textColor = item.theme.list.freeTextColor
             let attributedText = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: titleFont, textColor: textColor), linkAttribute: { _ in
                 return nil
             }))
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
             
-            let contentSize = CGSize(width: params.width, height: topInset + badgeHeight + titleSpacing + titleLayout.size.height + textSpacing + textLayout.size.height + bottomInset)
+            let contentSize = CGSize(width: params.width, height: topInset + badgeHeight + textSpacing + textLayout.size.height + bottomInset)
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -159,33 +134,39 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                     strongSelf.item = item
                     strongSelf.accessibilityLabel = attributedText.string
                     
-                    if strongSelf.iconNode.image == nil {
-                        let image: UIImage?
-                        switch item.icon {
-                            case .group:
-                                image = UIImage(bundleImageName: "Premium/Group")
-                            case .link:
-                                image = UIImage(bundleImageName: "Premium/Link")
-                        }
-                        strongSelf.iconNode.image = generateTintedImage(image: image, color: .white)
-                    }
-                                        
-                    let countBackgroundWidth: CGFloat = countLayout.size.width + 67.0
-                    let countBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - countBackgroundWidth) / 2.0), y: topInset), size: CGSize(width: countBackgroundWidth, height: badgeHeight))
-                    strongSelf.backgroundNode.frame = countBackgroundFrame
-                    
-                    let _ = countApply()
-                    strongSelf.countNode.frame = CGRect(origin: CGPoint(x: countBackgroundFrame.maxX - countLayout.size.width - 15.0, y: countBackgroundFrame.minY + floorToScreenPixels((countBackgroundFrame.height - countLayout.size.height) / 2.0)), size: countLayout.size)
-                    
-                    if let image = strongSelf.iconNode.image {
-                        strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: countBackgroundFrame.minX + 18.0, y: countBackgroundFrame.minY + floorToScreenPixels((countBackgroundFrame.height - image.size.height) / 2.0)), size: image.size)
+                    let badgeIconName: String
+                    switch item.icon {
+                    case .group:
+                        badgeIconName = "Premium/Group"
+                    case .link:
+                        badgeIconName = "Premium/Link"
                     }
                     
-                    let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - titleLayout.size.width) / 2.0), y: countBackgroundFrame.maxY + titleSpacing), size: titleLayout.size)
+                    let size = strongSelf.hostView.update(
+                        transition: .immediate,
+                        component: AnyComponent(PremiumLimitDisplayComponent(
+                            inactiveColor: UIColor(rgb: 0xE9E9EA),
+                            activeColors: [
+                                UIColor(rgb: 0x0077ff),
+                                UIColor(rgb: 0x6b93ff),
+                                UIColor(rgb: 0x8878ff),
+                                UIColor(rgb: 0xe46ace)
+                            ],
+                            inactiveTitle: item.strings.Premium_Free,
+                            inactiveTitleColor: .black,
+                            activeTitle: item.strings.Premium_Premium,
+                            activeValue: "\(item.premiumCount)",
+                            activeTitleColor: .white,
+                            badgeIconName: badgeIconName,
+                            badgeText: "\(item.count)"
+                        )),
+                        environment: {},
+                        containerSize: CGSize(width: layout.size.width - params.leftInset - params.rightInset, height: 200.0)
+                    )
+                    strongSelf.hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -30.0), size: size)
                     
                     let _ = textApply()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textLayout.size.width) / 2.0), y: countBackgroundFrame.maxY + titleSpacing + titleLayout.size.height + textSpacing), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - textLayout.size.width) / 2.0), y: size.height + textSpacing), size: textLayout.size)
                 }
             })
         }

@@ -619,6 +619,7 @@ public final class ChatListNode: ListView {
     public var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
+    public var push: ((ViewController) -> Void)?
     public var toggleArchivedFolderHiddenByDefault: (() -> Void)?
     public var hidePsa: ((EnginePeer.Id) -> Void)?
     public var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
@@ -842,15 +843,17 @@ public final class ChatListNode: ListView {
                     case .done:
                         break
                     case .limitExceeded:
-                        let controller = LimitScreen(context: strongSelf.context, subject: .pins)
-                        strongSelf.present?(controller)
-//                        let text: String
-//                        if chatListFilter != nil {
-//                            text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
-//                        } else {
-//                            text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(maxCount)").string
-//                        }
-//                        strongSelf.presentAlert?(text)
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumLimitScreen(context: context, subject: .pins, action: {
+                            let premiumScreen = PremiumIntroScreen(context: context, action: {
+                                
+                            })
+                            replaceImpl?(premiumScreen)
+                        })
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        strongSelf.push?(controller)
                     }
                 }
             })

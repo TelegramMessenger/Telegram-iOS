@@ -11,7 +11,7 @@ import TelegramIntents
 import ContextUI
 
 enum ShareState {
-    case preparing
+    case preparing(Bool)
     case progress(Float)
     case done
 }
@@ -672,9 +672,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     })
                 })
             }
-            if self.fromForeignApp {
-                self.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, forceNativeAppearance: true), fastOut: true)
-            } else {
+            
+            //
+            if !self.fromForeignApp {
                 self.animateOut(shared: true, completion: {
                 })
                 self.completed?(peerIds)
@@ -686,6 +686,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     self.hapticFeedback?.success()
                 }
             }
+            var transitioned = false
             let fromForeignApp = self.fromForeignApp
             self.shareDisposable.set((signal
             |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -693,11 +694,20 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     return
                 }
                 
+                if fromForeignApp, case let .preparing(long) = status, !transitioned {
+                    transitioned = true
+                    if long {
+                        strongSelf.transitionToContentNode(ShareProlongedLoadingContainerNode(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, forceNativeAppearance: true), fastOut: true)
+                    } else {
+                        strongSelf.transitionToContentNode(ShareLoadingContainerNode(theme: strongSelf.presentationData.theme, forceNativeAppearance: true), fastOut: true)
+                    }
+                }
+                
                 if case .done = status, !fromForeignApp {
                     strongSelf.dismiss?(true)
                     return
                 }
-                
+                                
                 guard let contentNode = strongSelf.contentNode as? ShareLoadingContainer else {
                     return
                 }

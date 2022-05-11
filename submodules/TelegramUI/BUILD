@@ -269,6 +269,7 @@ swift_library(
         "//submodules/BrowserUI:BrowserUI",
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/Utils/RangeSet:RangeSet",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

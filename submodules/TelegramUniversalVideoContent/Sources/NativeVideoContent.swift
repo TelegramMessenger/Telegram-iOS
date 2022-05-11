@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 import AccountContext
 import PhotoResources
 import UIKitRuntimeUtils
+import RangeSet
 
 public enum NativeVideoContentId: Hashable {
     case message(UInt32, MediaId)
@@ -130,8 +131,8 @@ private final class NativeVideoContentNode: ASDisplayNode, UniversalVideoContent
         }
     }
     
-    private let _bufferingStatus = Promise<(IndexSet, Int)?>()
-    var bufferingStatus: Signal<(IndexSet, Int)?, NoError> {
+    private let _bufferingStatus = Promise<(RangeSet<Int64>, Int64)?>()
+    var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError> {
         return self._bufferingStatus.get()
     }
     

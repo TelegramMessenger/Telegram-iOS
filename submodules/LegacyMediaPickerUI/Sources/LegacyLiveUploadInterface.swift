@@ -71,9 +71,9 @@ public final class LegacyLiveUploadInterface: VideoConversionWatcher, TGLiveUplo
                 
                 let result = strongSelf.dataValue.modify { dataValue in
                     if let dataValue = dataValue, dataValue.complete {
-                        return MediaResourceData(path: path, offset: 0, size: size, complete: true)
+                        return MediaResourceData(path: path, offset: 0, size: Int64(size), complete: true)
                     } else {
-                        return MediaResourceData(path: path, offset: 0, size: size, complete: false)
+                        return MediaResourceData(path: path, offset: 0, size: Int64(size), complete: false)
                     }
                 }
                 if let result = result {

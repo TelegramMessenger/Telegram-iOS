@@ -84,10 +84,10 @@ private func extractTextFileHeader(path: String) -> String? {
         return nil
     }
     
-    let limit = 3000
+    let limit: Int64 = 3000
     
-    var data = file.readData(count: min(size, limit))
-    let additionalCapacity = min(10, max(0, size - data.count))
+    var data = file.readData(count: Int(min(size, limit)))
+    let additionalCapacity = min(10, max(0, Int(size) - data.count))
     
     for alignment in 0 ... additionalCapacity {
         if alignment != 0 {
@@ -375,8 +375,8 @@ public class ShareRootControllerImpl {
                                         return .single(.done)
                                     }
                                     switch state {
-                                        case .preparing:
-                                            return .single(.preparing)
+                                        case let .preparing(long):
+                                            return .single(.preparing(long))
                                         case let .progress(value):
                                             return .single(.progress(value))
                                         case let .userInteractionRequired(value):

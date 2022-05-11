@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSignalKit
 import ManagedFile
+import RangeSet
 
 private final class ResourceStatusContext {
     var status: MediaResourceStatus?
@@ -48,11 +49,11 @@ private struct ResourceStorePaths {
 
 public struct MediaResourceData {
     public let path: String
-    public let offset: Int
-    public let size: Int
+    public let offset: Int64
+    public let size: Int64
     public let complete: Bool
     
-    public init(path: String, offset: Int, size: Int, complete: Bool) {
+    public init(path: String, offset: Int64, size: Int64, complete: Bool) {
         self.path = path
         self.offset = offset
         self.size = size
@@ -71,10 +72,10 @@ public enum MediaBoxFetchPriority: Int32 {
 }
 
 public enum MediaResourceDataFetchResult {
-    case dataPart(resourceOffset: Int, data: Data, range: Range<Int>, complete: Bool)
-    case resourceSizeUpdated(Int)
+    case dataPart(resourceOffset: Int64, data: Data, range: Range<Int64>, complete: Bool)
+    case resourceSizeUpdated(Int64)
     case progressUpdated(Float)
-    case replaceHeader(data: Data, range: Range<Int>)
+    case replaceHeader(data: Data, range: Range<Int64>)
     case moveLocalFile(path: String)
     case moveTempFile(file: TempBoxFile)
     case copyLocalItem(MediaResourceDataFetchCopyLocalItem)
@@ -153,9 +154,9 @@ public final class MediaBox {
     private var fileContexts: [MediaResourceId: MediaBoxFileContext] = [:]
     private var keepResourceContexts: [MediaResourceId: MediaBoxKeepResourceContext] = [:]
     
-    private var wrappedFetchResource = Promise<(MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
+    private var wrappedFetchResource = Promise<(MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>>()
 
-    public var fetchResource: ((MediaResource, Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)? {
+    public var fetchResource: ((MediaResource, Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>)? {
         didSet {
             if let fetchResource = self.fetchResource {
                 wrappedFetchResource.set(.single(fetchResource))
@@ -318,7 +319,7 @@ public final class MediaBox {
         return self.resourceStatus(resource.id, resourceSize: resource.size, approximateSynchronousValue: approximateSynchronousValue)
     }
     
-    public func resourceStatus(_ resourceId: MediaResourceId, resourceSize: Int?, approximateSynchronousValue: Bool = false) -> Signal<MediaResourceStatus, NoError> {
+    public func resourceStatus(_ resourceId: MediaResourceId, resourceSize: Int64?, approximateSynchronousValue: Bool = false) -> Signal<MediaResourceStatus, NoError> {
         let signal = Signal<MediaResourceStatus, NoError> { subscriber in
             let disposable = MetaDisposable()
             
@@ -375,7 +376,7 @@ public final class MediaBox {
                                                 }
                                             }
                                         }
-                                    }, size: resourceSize.flatMap(Int32.init))
+                                    }, size: resourceSize)
                                     statusUpdateDisposable.set(ActionDisposable {
                                         statusDisposable.dispose()
                                         releaseContext()
@@ -487,7 +488,7 @@ public final class MediaBox {
                                 case let .incremental(waitUntilFetchStatus):
                                     waitUntilAfterInitialFetch = waitUntilFetchStatus
                             }
-                            let dataDisposable = fileContext.data(range: 0 ..< Int32.max, waitUntilAfterInitialFetch: waitUntilAfterInitialFetch, next: { value in
+                            let dataDisposable = fileContext.data(range: 0 ..< Int64.max, waitUntilAfterInitialFetch: waitUntilAfterInitialFetch, next: { value in
                                 self.dataQueue.async {
                                     if value.complete {
                                         if let pathExtension = pathExtension {
@@ -564,7 +565,7 @@ public final class MediaBox {
         }
     }
     
-    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int>, priority: MediaBoxFetchPriority = .default, parameters: MediaResourceFetchParameters?) -> Signal<Void, FetchResourceError> {
+    public func fetchedResourceData(_ resource: MediaResource, in range: Range<Int64>, priority: MediaBoxFetchPriority = .default, parameters: MediaResourceFetchParameters?) -> Signal<Void, FetchResourceError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -580,7 +581,7 @@ public final class MediaBox {
                 }
                 
                 let fetchResource = self.wrappedFetchResource.get()
-                let fetchedDisposable = fileContext.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), priority: priority, fetch: { intervals in
+                let fetchedDisposable = fileContext.fetched(range: range.lowerBound ..< range.upperBound, priority: priority, fetch: { intervals in
                     return fetchResource
                     |> castError(MediaResourceDataFetchError.self)
                     |> mapToSignal { fetch in
@@ -602,11 +603,11 @@ public final class MediaBox {
         }
     }
 
-    public func resourceData(_ resource: MediaResource, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
+    public func resourceData(_ resource: MediaResource, size: Int64, in range: Range<Int64>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
         return self.resourceData(id: resource.id, size: size, in: range, mode: mode, notifyAboutIncomplete: notifyAboutIncomplete, attemptSynchronously: attemptSynchronously)
     }
     
-    public func resourceData(id: MediaResourceId, size: Int, in range: Range<Int>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
+    public func resourceData(id: MediaResourceId, size: Int64, in range: Range<Int64>, mode: ResourceDataRangeMode = .complete, notifyAboutIncomplete: Bool = false, attemptSynchronously: Bool = false) -> Signal<(Data, Bool), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -622,8 +623,8 @@ public final class MediaBox {
                         let clippedLowerBound = min(completeSize, max(0, range.lowerBound))
                         let clippedUpperBound = min(completeSize, max(0, range.upperBound))
                         if clippedLowerBound < clippedUpperBound {
-                            file.seek(position: Int64(clippedLowerBound))
-                            let data = file.readData(count: clippedUpperBound)
+                            file.seek(position: clippedLowerBound)
+                            let data = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                             subscriber.putNext((data, true))
                         } else {
                             subscriber.putNext((Data(), isComplete: true))
@@ -631,7 +632,7 @@ public final class MediaBox {
                         subscriber.putCompletion()
                         return EmptyDisposable
                     } else {
-                        if let data = MediaBoxPartialFile.extractPartialData(path: paths.partial, metaPath: paths.partial + ".meta", range: Int32(range.lowerBound) ..< Int32(range.upperBound)) {
+                        if let data = MediaBoxPartialFile.extractPartialData(path: paths.partial, metaPath: paths.partial + ".meta", range: range) {
                             subscriber.putNext((data, true))
                             subscriber.putCompletion()
                             return EmptyDisposable
@@ -646,8 +647,6 @@ public final class MediaBox {
                     return
                 }
                 
-                let range = Int32(range.lowerBound) ..< Int32(range.upperBound)
-                
                 let dataDisposable = fileContext.data(range: range, waitUntilAfterInitialFetch: false, next: { result in
                     if let file = ManagedFile(queue: self.dataQueue, path: result.path, mode: .read), let fileSize = file.getSize() {
                         if result.complete {
@@ -658,7 +657,7 @@ public final class MediaBox {
                                 subscriber.putCompletion()
                             } else if clippedUpperBound <= fileSize {
                                 file.seek(position: Int64(clippedLowerBound))
-                                let resultData = file.readData(count: clippedUpperBound - clippedLowerBound)
+                                let resultData = file.readData(count: Int(clippedUpperBound - clippedLowerBound))
                                 subscriber.putNext((resultData, true))
                                 subscriber.putCompletion()
                             } else {
@@ -687,7 +686,7 @@ public final class MediaBox {
         }
     }
     
-    public func resourceRangesStatus(_ resource: MediaResource) -> Signal<IndexSet, NoError> {
+    public func resourceRangesStatus(_ resource: MediaResource) -> Signal<RangeSet<Int64>, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             

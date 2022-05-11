@@ -22,6 +22,7 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

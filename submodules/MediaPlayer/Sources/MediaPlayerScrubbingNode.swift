@@ -2,6 +2,7 @@ import Foundation
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
+import RangeSet
 
 public enum MediaPlayerScrubbingNodeCap {
     case square
@@ -218,7 +219,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
     private let containerNode: ASDisplayNode
     private let foregroundNode: ASImageNode
     
-    private var ranges: (IndexSet, Int)?
+    private var ranges: (RangeSet<Int64>, Int64)?
     
     init(color: UIColor, lineCap: MediaPlayerScrubbingNodeCap, lineHeight: CGFloat) {
         self.color = color
@@ -239,7 +240,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
         self.addSubnode(self.containerNode)
     }
     
-    func updateStatus(_ ranges: IndexSet, _ size: Int) {
+    func updateStatus(_ ranges: RangeSet<Int64>, _ size: Int64) {
         self.ranges = (ranges, size)
         if !self.bounds.width.isZero {
             self.updateLayout(size: self.bounds.size, transition: .animated(duration: 0.15, curve: .easeInOut))
@@ -249,7 +250,7 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         transition.updateFrame(node: self.foregroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
         if let ranges = self.ranges, !ranges.0.isEmpty, ranges.1 != 0 {
-            for range in ranges.0.rangeView {
+            for range in ranges.0.ranges {
                 let rangeWidth = min(size.width, (CGFloat(range.count) / CGFloat(ranges.1)) * size.width)
                 transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: rangeWidth, height: size.height)))
                 transition.updateAlpha(node: self.foregroundNode, alpha: abs(size.width - rangeWidth) < 1.0 ? 0.0 : 1.0)
@@ -358,9 +359,9 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     private var bufferingStatusDisposable: Disposable?
-    private var bufferingStatusValuePromise = Promise<(IndexSet, Int)?>()
+    private var bufferingStatusValuePromise = Promise<(RangeSet<Int64>, Int64)?>()
     
-    public var bufferingStatus: Signal<(IndexSet, Int)?, NoError>? {
+    public var bufferingStatus: Signal<(RangeSet<Int64>, Int64)?, NoError>? {
         didSet {
             if let bufferingStatus = self.bufferingStatus {
                 self.bufferingStatusValuePromise.set(bufferingStatus)

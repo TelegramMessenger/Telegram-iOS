@@ -20,7 +20,8 @@ swift_library(
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
-        "//submodules/MeshAnimationCache:MeshAnimationCache"
+        "//submodules/MeshAnimationCache:MeshAnimationCache",
+        "//submodules/Utils/RangeSet:RangeSet",
     ],
     visibility = [
         "//visibility:public",

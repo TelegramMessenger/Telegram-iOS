@@ -180,18 +180,18 @@ public extension Api {
 }
 public extension Api {
     enum SecureFile: TypeConstructorDescription {
-        case secureFile(id: Int64, accessHash: Int64, size: Int32, dcId: Int32, date: Int32, fileHash: Buffer, secret: Buffer)
+        case secureFile(id: Int64, accessHash: Int64, size: Int64, dcId: Int32, date: Int32, fileHash: Buffer, secret: Buffer)
         case secureFileEmpty
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .secureFile(let id, let accessHash, let size, let dcId, let date, let fileHash, let secret):
                     if boxed {
-                        buffer.appendInt32(-534283678)
+                        buffer.appendInt32(2097791614)
                     }
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    serializeInt32(size, buffer: buffer, boxed: false)
+                    serializeInt64(size, buffer: buffer, boxed: false)
                     serializeInt32(dcId, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
                     serializeBytes(fileHash, buffer: buffer, boxed: false)
@@ -220,8 +220,8 @@ public extension Api {
             _1 = reader.readInt64()
             var _2: Int64?
             _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _3: Int64?
+            _3 = reader.readInt64()
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
