@@ -79,6 +79,10 @@ private class StarComponent: Component {
             var left = true
             if let view = gesture.view {
                 let point = gesture.location(in: view)
+                let distanceFromCenter = abs(point.x - view.frame.size.width / 2.0)
+                if distanceFromCenter > 60.0 {
+                    return
+                }
                 if point.x > view.frame.width / 2.0 {
                     left = false
                 }
@@ -145,7 +149,7 @@ private class StarComponent: Component {
                         smallAngle = true
                     }
                 
-                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle)
+                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle, explode: !smallAngle && velocity.x > 600)
                     node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0)
                 default:
                     break
@@ -229,10 +233,16 @@ private class StarComponent: Component {
             }
             
             if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
+                let particleSystem = particles.particleSystems?.first
+                particleSystem?.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
+                particleSystem?.particleVelocity = 2.2
+                particleSystem?.birthRate = 4.5
+                
                 node.physicsField?.isActive = true
                 Queue.mainQueue().after(1.0) {
                     node.physicsField?.isActive = false
-                    particles.particleSystems?.first?.birthRate = 0.8
+                    particles.particleSystems?.first?.birthRate = 1.2
+                    particleSystem?.particleVelocity = 1.65
                 }
             }
         
@@ -1075,7 +1085,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             let star = star.update(
                 component: StarComponent(),
-                availableSize: CGSize(width: 260.0, height: 180.0),
+                availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 180.0),
                 transition: context.transition
             )
             
@@ -1176,7 +1186,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let titleOffsetDelta = 160.0 - environment.navigationHeight / 2.0
             
             if let topContentOffset = state.topContentOffset {
-                topPanelAlpha = min(30.0, max(0.0, topContentOffset - 64.0)) / 30.0
+                topPanelAlpha = min(30.0, max(0.0, topContentOffset - 80.0)) / 30.0
                 titleOffset = topContentOffset
                 titleScale = 1.0 - max(0.0, min(1.0, titleOffset / titleOffsetDelta)) * 0.36
             } else {
