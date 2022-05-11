@@ -100,6 +100,10 @@ public struct PresentationResourcesChat {
         }) as! PrincipalThemeAdditionalGraphics
     }
     
+    public static func chatBubbleVerticalLineImage(color: UIColor) -> UIImage? {
+        return generateLineImage(color: color)
+    }
+    
     public static func chatBubbleVerticalLineIncomingImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleVerticalLineIncomingImage.rawValue, { theme in
             return generateLineImage(color: theme.chat.message.incoming.accentTextColor)

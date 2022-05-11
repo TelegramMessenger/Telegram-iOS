@@ -248,8 +248,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             compositingFilter = nil
         }
         
-        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, duration: 2.4, horizontal: true)
-        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, duration: 2.4, horizontal: true)
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
         
         shimmerView.layer.compositingFilter = compositingFilter
         borderShimmerView.layer.compositingFilter = compositingFilter
@@ -259,14 +259,41 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         guard theme !== self.theme else {
             return
         }
+        let previousTheme = self.theme
         self.theme = theme
         
-        if animated {
+        let animateTransition = previousTheme.backgroundColors.count != theme.backgroundColors.count
+        
+        if animated && animateTransition {
             if let snapshotView = self.buttonBackgroundNode.view.snapshotView(afterScreenUpdates: false) {
                 self.view.insertSubview(snapshotView, aboveSubview: self.buttonBackgroundNode.view)
                 snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                     snapshotView?.removeFromSuperview()
                 })
+            }
+            
+            if let snapshotView = self.titleNode.view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = self.titleNode.frame
+                
+                self.view.insertSubview(snapshotView, aboveSubview: self.titleNode.view)
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 15.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                self.titleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -15.0), to: CGPoint(), duration: 0.2, additive: true)
+                self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+            
+            if let snapshotView = self.iconNode.view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = self.iconNode.frame
+                
+                self.view.insertSubview(snapshotView, aboveSubview: self.iconNode.view)
+                snapshotView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 15.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                self.iconNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -15.0), to: CGPoint(), duration: 0.2, additive: true)
+                self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
         }
         if theme.backgroundColors.count > 1 {
@@ -317,8 +344,8 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             transition.updateFrame(view: borderMaskView, frame: buttonFrame)
             transition.updateFrame(view: borderShimmerView, frame: buttonFrame)
             
-            shimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 3.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 7.0, height: buttonHeight))
-            borderShimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 3.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 7.0, height: buttonHeight))
+            shimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 4.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 9.0, height: buttonHeight))
+            borderShimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 4.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 9.0, height: buttonHeight))
         }
         
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
@@ -434,7 +461,13 @@ public final class SolidRoundedButtonView: UIView {
     private var fontSize: CGFloat
     
     private let buttonBackgroundNode: UIImageView
-    private let buttonGlossView: SolidRoundedButtonGlossView?
+    private var buttonBackgroundAnimationView: UIImageView?
+    
+    private var shimmerView: ShimmerEffectForegroundView?
+    private var borderView: UIView?
+    private var borderMaskView: UIView?
+    private var borderShimmerView: ShimmerEffectForegroundView?
+    
     private let buttonNode: HighlightTrackingButton
     private let titleNode: ImmediateTextView
     private let subtitleNode: ImmediateTextView
@@ -506,16 +539,15 @@ public final class SolidRoundedButtonView: UIView {
                 locations.append(delta * CGFloat(i))
             }
             self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            
+            let buttonBackgroundAnimationView = UIImageView()
+            buttonBackgroundAnimationView.image = generateGradientImage(size: CGSize(width: 200.0, height: height), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+            self.buttonBackgroundNode.addSubview(buttonBackgroundAnimationView)
+            self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
         } else {
             self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
         }
-        
-        if gloss {
-            self.buttonGlossView = SolidRoundedButtonGlossView(color: theme.foregroundColor, cornerRadius: cornerRadius)
-        } else {
-            self.buttonGlossView = nil
-        }
-        
+                
         self.buttonNode = HighlightTrackingButton()
         
         self.titleNode = ImmediateTextView()
@@ -530,9 +562,6 @@ public final class SolidRoundedButtonView: UIView {
         super.init(frame: CGRect())
         
         self.addSubview(self.buttonBackgroundNode)
-        if let buttonGlossView = self.buttonGlossView {
-            self.addSubview(buttonGlossView)
-        }
         self.addSubview(self.buttonNode)
         self.addSubview(self.titleNode)
         self.addSubview(self.subtitleNode)
@@ -569,10 +598,74 @@ public final class SolidRoundedButtonView: UIView {
         if #available(iOS 13.0, *) {
             self.buttonBackgroundNode.layer.cornerCurve = .continuous
         }
+        
+        if gloss {
+            let shimmerView = ShimmerEffectForegroundView()
+            self.shimmerView = shimmerView
+            
+            if #available(iOS 13.0, *) {
+                shimmerView.layer.cornerCurve = .continuous
+                shimmerView.layer.cornerRadius = self.buttonCornerRadius
+            }
+            
+            let borderView = UIView()
+            borderView.isUserInteractionEnabled = false
+            self.borderView = borderView
+            
+            let borderMaskView = UIView()
+            borderMaskView.layer.borderWidth = 1.0 + UIScreenPixel
+            borderMaskView.layer.borderColor = UIColor.white.cgColor
+            borderMaskView.layer.cornerRadius = self.buttonCornerRadius
+            borderView.mask = borderMaskView
+            self.borderMaskView = borderMaskView
+            
+            let borderShimmerView = ShimmerEffectForegroundView()
+            self.borderShimmerView = borderShimmerView
+            borderView.addSubview(borderShimmerView)
+            
+            self.insertSubview(shimmerView, belowSubview: self.buttonNode)
+            self.insertSubview(borderView, belowSubview: self.buttonNode)
+            
+            self.updateShimmerParameters()
+        }
     }
     
     required public init(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupGradientAnimations() {
+        guard let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView else {
+            return
+        }
+
+        if let _ = buttonBackgroundAnimationView.layer.animation(forKey: "movement") {
+        } else {
+            let offset = (buttonBackgroundAnimationView.frame.width - self.frame.width) / 2.0
+            let previousValue = buttonBackgroundAnimationView.center.x
+            var newValue: CGFloat = offset
+            if offset - previousValue < buttonBackgroundAnimationView.frame.width * 0.25 {
+                newValue -= buttonBackgroundAnimationView.frame.width * 0.35
+            }
+            buttonBackgroundAnimationView.center = CGPoint(x: newValue, y: buttonBackgroundAnimationView.bounds.size.height / 2.0)
+            
+            CATransaction.begin()
+            
+            let animation = CABasicAnimation(keyPath: "position.x")
+            animation.duration = 4.5
+            animation.fromValue = previousValue
+            animation.toValue = newValue
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            
+            CATransaction.setCompletionBlock { [weak self] in
+//                if let isCurrentlyInHierarchy = self?.isCurrentlyInHierarchy, isCurrentlyInHierarchy {
+                    self?.setupGradientAnimations()
+//                }
+            }
+
+            buttonBackgroundAnimationView.layer.add(animation, forKey: "movement")
+            CATransaction.commit()
+        }
     }
     
     public func transitionToProgress() {
@@ -618,6 +711,33 @@ public final class SolidRoundedButtonView: UIView {
         self.subtitleNode.layer.animateAlpha(from: 0.55, to: 0.0, duration: 0.2)
     }
     
+    func updateShimmerParameters() {
+        guard let shimmerView = self.shimmerView, let borderShimmerView = self.borderShimmerView else {
+            return
+        }
+        
+        let color = self.theme.foregroundColor
+        let alpha: CGFloat
+        let borderAlpha: CGFloat
+        let compositingFilter: String?
+        if color.lightness > 0.5 {
+            alpha = 0.5
+            borderAlpha = 0.75
+            compositingFilter = "overlayBlendMode"
+        } else {
+            alpha = 0.2
+            borderAlpha = 0.3
+            compositingFilter = nil
+        }
+        
+        shimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(alpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
+        borderShimmerView.update(backgroundColor: .clear, foregroundColor: color.withAlphaComponent(borderAlpha), gradientSize: 70.0, duration: 3.0, horizontal: true)
+        
+        shimmerView.layer.compositingFilter = compositingFilter
+        borderShimmerView.layer.compositingFilter = compositingFilter
+    }
+    
+    
     public func updateTheme(_ theme: SolidRoundedButtonTheme) {
         guard theme !== self.theme else {
             return
@@ -638,7 +758,6 @@ public final class SolidRoundedButtonView: UIView {
             self.buttonBackgroundNode.image = nil
         }
         
-        self.buttonGlossView?.color = theme.foregroundColor
         self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
         self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
         
@@ -647,6 +766,8 @@ public final class SolidRoundedButtonView: UIView {
         if let width = self.validLayout {
             _ = self.updateLayout(width: width, transition: .immediate)
         }
+        
+        self.updateShimmerParameters()
     }
     
     public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -659,9 +780,25 @@ public final class SolidRoundedButtonView: UIView {
         let buttonSize = CGSize(width: width, height: self.buttonHeight)
         let buttonFrame = CGRect(origin: CGPoint(), size: buttonSize)
         transition.updateFrame(view: self.buttonBackgroundNode, frame: buttonFrame)
-        if let buttonGlossView = self.buttonGlossView {
-            transition.updateFrame(view: buttonGlossView, frame: buttonFrame)
+        
+        if let shimmerView = self.shimmerView, let borderView = self.borderView, let borderMaskView = self.borderMaskView, let borderShimmerView = self.borderShimmerView {
+            transition.updateFrame(view: shimmerView, frame: buttonFrame)
+            transition.updateFrame(view: borderView, frame: buttonFrame)
+            transition.updateFrame(view: borderMaskView, frame: buttonFrame)
+            transition.updateFrame(view: borderShimmerView, frame: buttonFrame)
+            
+            shimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 4.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 9.0, height: buttonHeight))
+            borderShimmerView.updateAbsoluteRect(CGRect(origin: CGPoint(x: width * 4.0, y: 0.0), size: buttonSize), within: CGSize(width: width * 9.0, height: buttonHeight))
         }
+        
+        if let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView {
+            if buttonBackgroundAnimationView.layer.animation(forKey: "movement") == nil {
+                buttonBackgroundAnimationView.center = CGPoint(x: buttonSize.width * 2.4 / 2.0, y: buttonSize.height / 2.0)
+            }
+            buttonBackgroundAnimationView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width * 2.4, height: buttonSize.height))
+            self.setupGradientAnimations()
+        }
+
         transition.updateFrame(view: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.titleNode.attributedText?.string {
@@ -720,114 +857,5 @@ public final class SolidRoundedButtonView: UIView {
     
     @objc private func buttonPressed() {
         self.pressed?()
-    }
-}
-
-private final class SolidRoundedButtonGlossViewParameters: NSObject {
-    let gradientColors: NSArray?
-    let cornerRadius: CGFloat
-    let progress: CGFloat
-    
-    init(gradientColors: NSArray?, cornerRadius: CGFloat, progress: CGFloat) {
-        self.gradientColors = gradientColors
-        self.cornerRadius = cornerRadius
-        self.progress = progress
-    }
-}
-
-public final class SolidRoundedButtonGlossView: UIView {
-    public var color: UIColor {
-        didSet {
-            self.updateGradientColors()
-            self.setNeedsDisplay()
-        }
-    }
-    private var progress: CGFloat = 0.0
-    private var animator: ConstantDisplayLinkAnimator?
-    private let buttonCornerRadius: CGFloat
-    private var gradientColors: NSArray?
-    
-    private let trackingLayer: HierarchyTrackingLayer
-    
-    public init(color: UIColor, cornerRadius: CGFloat) {
-        self.color = color
-        self.buttonCornerRadius = cornerRadius
-        
-        self.trackingLayer = HierarchyTrackingLayer()
-        
-        super.init(frame: CGRect())
-        
-        self.layer.addSublayer(self.trackingLayer)
-        
-        self.isOpaque = false
-        
-        var previousTime: CFAbsoluteTime?
-        self.animator = ConstantDisplayLinkAnimator(update: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            let currentTime = CFAbsoluteTimeGetCurrent()
-            if let previousTime = previousTime {
-                var delta: CGFloat
-                if strongSelf.progress < 0.05 || strongSelf.progress > 0.95 {
-                    delta = 0.001
-                } else {
-                    delta = 0.009
-                }
-                delta *= CGFloat(currentTime - previousTime) * 60.0
-                var newProgress = strongSelf.progress + delta
-                if newProgress > 1.0 {
-                    newProgress = 0.0
-                }
-                strongSelf.progress = newProgress
-                strongSelf.setNeedsDisplay()
-            }
-            previousTime = currentTime
-        })
-        
-        self.updateGradientColors()
-        
-        self.trackingLayer.didEnterHierarchy = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.animator?.isPaused = false
-        }
-        
-        self.trackingLayer.didExitHierarchy = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.animator?.isPaused = true
-        }
-    }
-    
-    required public init(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    private func updateGradientColors() {
-        let transparentColor = self.color.withAlphaComponent(0.0).cgColor
-        self.gradientColors = [transparentColor, transparentColor, self.color.withAlphaComponent(0.12).cgColor, transparentColor, transparentColor]
-    }
-
-    override public func draw(_ rect: CGRect) {
-        let parameters = SolidRoundedButtonGlossViewParameters(gradientColors: self.gradientColors, cornerRadius: self.buttonCornerRadius, progress: self.progress)
-        guard let gradientColors = parameters.gradientColors else {
-            return
-        }
-        
-        let context = UIGraphicsGetCurrentContext()!
-        
-        let path = UIBezierPath(roundedRect: bounds, cornerRadius: parameters.cornerRadius)
-        context.addPath(path.cgPath)
-        context.clip()
-        
-        var locations: [CGFloat] = [0.0, 0.15, 0.5, 0.85, 1.0]
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-        
-        let x = -4.0 * bounds.size.width + 8.0 * bounds.size.width * parameters.progress
-        context.drawLinearGradient(gradient, start: CGPoint(x: x, y: 0.0), end: CGPoint(x: x + bounds.size.width, y: 0.0), options: CGGradientDrawingOptions())
     }
 }

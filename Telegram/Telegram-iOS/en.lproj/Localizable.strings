@@ -7549,19 +7549,56 @@ Sorry for the inconvenience.";
 "Chat.MultipleTypingPair" = "%@ and %@";
 "Chat.MultipleTypingMore" = "%@ and %@ others";
 
-"DialogList.ExtendedPinLimitError" = "Sorry, you can pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
-"DialogList.ExtendedPinLimitIncrease" = "Increase Limit";
+"DialogList.ExtendedPinLimitError" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
 
-"Group.Username.RemoveExistingUsernamesTitle" = "Too Many Public Links";
 "Group.Username.RemoveExistingUsernamesOrExtendInfo" = "You have reserved too many public links. Try revoking a link from an older group or channel, or upgrade to **Telegram Premium** to double the limit to **%@** public links.";
-"Group.Username.IncreaseLimit" = "Increase Limit";
 
-"OldChannels.TooManyCommunitiesTitle" = "Too Many Communities";
 "OldChannels.TooManyCommunitiesText" = "You are a member of **%@** groups and channels. Please leave some before joining a new one or upgrade to **Telegram Premium** to double the limit to **%@** groups and channels.";
-"OldChannels.IncreaseLimit" = "Increase Limit";
 "OldChannels.LeaveCommunities_1" = "Leave %@ Community";
 "OldChannels.LeaveCommunities_any" = "Leave %@ Communities";
 
-"Stickers.FaveLimitReachedInfo" = "Sorry, you can't add more than **%@** stickers to favorites. Replace an older saved sticker or subscribe to **Telegram Premium** to double the limit to **%@** favorites stickers.";
-"Stickers.FaveLimitReplaceOlder" = "Replace Older Sticker";
-"Stickers.FaveLimitIncrease" = "Increase Limit";
+"Premium.LimitReached" = "Limit Reached";
+"Premium.IncreaseLimit" = "Increase Limit";
+
+"Premium.MaxFoldersCountText" = "You have reached the limit of **%@** folders. You can double the limit to **%@** folders by subscribing to **Telegram Premium**.";
+"Premium.MaxChatsInFolderCountText" = "Sorry, you can't add more than **%@** chats to a folder. You can increase this limit to **%@** by upgrading to **Telegram Premium**.";
+"Premium.MaxFileSizeText" = "Double this limit to %@ per file by subscribing to **Telegram Premium**.";
+"Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
+"Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
+"Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
+
+"Premium.Free" = "Free";
+"Premium.Premium" = "Premium";
+
+"Premium.Title" = "Telegram Premium";
+"Premium.Description" = "Go **beyond the limits**, get **exclusive features** and support us by subscribing to **Telegram Premium**.";
+
+"Premium.DoubledLimits" = "Doubled Limits";
+"Premium.DoubledLimitsInfo" = "Up to 1000 channels, 20 folders, 10 pins, 20 public links, 4 accounts and more.";
+
+"Premium.UploadSize" = "4 GB Upload Size";
+"Premium.UploadSizeInfo" = "Increased upload size from 2 GB to 4 GB per document, unlimited storage overall.";
+
+"Premium.FasterSpeed" = "Faster Download Speed";
+"Premium.FasterSpeedInfo" = "No more limits on the speed with which media and documents are downloaded.";
+
+"Premium.NoAds" = "No Ads";
+"Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
+
+"Premium.Reactions" = "Unique Reactions";
+"Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
+
+"Premium.Stickers" = "Premium Stickers";
+"Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
+
+"Premium.Badge" = "Profile Badge";
+"Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
+
+"Premium.Avatar" = "Animated Profile Pictures";
+"Premium.AvatarInfo" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
+
+"Premium.HelpUs" = "Help us maintain Premium Features while keeping Telegram free for everyone.";
+
+"Premium.SubscribeFor" = "Subscribe for %@ per month";
+
+

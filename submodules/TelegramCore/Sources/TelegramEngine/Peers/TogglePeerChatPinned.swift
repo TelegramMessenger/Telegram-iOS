@@ -13,8 +13,10 @@ public enum TogglePeerChatPinnedResult {
     case limitExceeded(Int)
 }
 
-func _internal_toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
+func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
     return postbox.transaction { transaction -> TogglePeerChatPinnedResult in
+        let isPremium = transaction.getPeer(accountPeerId)?.isPremium ?? false
+        
         switch location {
         case let .group(groupId):
             var itemIds = transaction.getPinnedItemIds(groupId: groupId)
@@ -37,10 +39,13 @@ func _internal_toggleItemPinned(postbox: Postbox, location: TogglePeerChatPinned
                 additionalCount = 1
             }
             
+            let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
             let limitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration)?.get(LimitsConfiguration.self) ?? LimitsConfiguration.defaultValue
+            let userLimitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: isPremium)
+            
             let limitCount: Int
             if case .root = groupId {
-                limitCount = Int(limitsConfiguration.maxPinnedChatCount)
+                limitCount = Int(userLimitsConfiguration.maxPinnedChatCount)
             } else {
                 limitCount = Int(limitsConfiguration.maxArchivedPinnedChatCount)
             }

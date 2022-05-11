@@ -46,6 +46,44 @@ public enum EngineConfiguration {
             self.maxMessageRevokeIntervalInPrivateChats = maxMessageRevokeIntervalInPrivateChats
         }
     }
+    
+    public struct UserLimits: Equatable {
+        public let maxPinnedChatCount: Int32
+        public let maxChannelsCount: Int32
+        public let maxPublicLinksCount: Int32
+        public let maxSavedGifCount: Int32
+        public let maxFavedStickerCount: Int32
+        public let maxFoldersCount: Int32
+        public let maxFolderChatsCount: Int32
+        public let maxCaptionLengthCount: Int32
+        public let maxUploadFileParts: Int32
+        
+        public static var defaultValue: UserLimits {
+            return UserLimits(UserLimitsConfiguration.defaultValue)
+        }
+
+        public init(
+            maxPinnedChatCount: Int32,
+            maxChannelsCount: Int32,
+            maxPublicLinksCount: Int32,
+            maxSavedGifCount: Int32,
+            maxFavedStickerCount: Int32,
+            maxFoldersCount: Int32,
+            maxFolderChatsCount: Int32,
+            maxCaptionLengthCount: Int32,
+            maxUploadFileParts: Int32
+        ) {
+            self.maxPinnedChatCount = maxPinnedChatCount
+            self.maxChannelsCount = maxChannelsCount
+            self.maxPublicLinksCount = maxPublicLinksCount
+            self.maxSavedGifCount = maxSavedGifCount
+            self.maxFavedStickerCount = maxFavedStickerCount
+            self.maxFoldersCount = maxFoldersCount
+            self.maxFolderChatsCount = maxFolderChatsCount
+            self.maxCaptionLengthCount = maxCaptionLengthCount
+            self.maxUploadFileParts = maxUploadFileParts
+        }
+    }
 }
 
 extension EngineConfiguration.Limits {
@@ -63,6 +101,22 @@ extension EngineConfiguration.Limits {
             canRemoveIncomingMessagesInPrivateChats: limitsConfiguration.canRemoveIncomingMessagesInPrivateChats,
             maxMessageRevokeInterval: limitsConfiguration.maxMessageRevokeInterval,
             maxMessageRevokeIntervalInPrivateChats: limitsConfiguration.maxMessageRevokeIntervalInPrivateChats
+        )
+    }
+}
+
+extension EngineConfiguration.UserLimits {
+    init(_ userLimitsConfiguration: UserLimitsConfiguration) {
+        self.init(
+            maxPinnedChatCount: userLimitsConfiguration.maxPinnedChatCount,
+            maxChannelsCount: userLimitsConfiguration.maxChannelsCount,
+            maxPublicLinksCount: userLimitsConfiguration.maxPublicLinksCount,
+            maxSavedGifCount: userLimitsConfiguration.maxSavedGifCount,
+            maxFavedStickerCount: userLimitsConfiguration.maxFavedStickerCount,
+            maxFoldersCount: userLimitsConfiguration.maxFoldersCount,
+            maxFolderChatsCount: userLimitsConfiguration.maxFolderChatsCount,
+            maxCaptionLengthCount: userLimitsConfiguration.maxCaptionLengthCount,
+            maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts
         )
     }
 }
@@ -87,6 +141,29 @@ public extension TelegramEngine.EngineData.Item {
                     return EngineConfiguration.Limits(LimitsConfiguration.defaultValue)
                 }
                 return EngineConfiguration.Limits(limitsConfiguration)
+            }
+        }
+        
+        public struct UserLimits: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineConfiguration.UserLimits
+            
+            fileprivate let isPremium: Bool
+            public init(isPremium: Bool) {
+                self.isPremium = isPremium
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.appConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let appConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) else {
+                    return EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
+                }
+                return EngineConfiguration.UserLimits(UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: self.isPremium))
             }
         }
     }

@@ -375,8 +375,8 @@ public class ShareRootControllerImpl {
                                         return .single(.done)
                                     }
                                     switch state {
-                                        case .preparing:
-                                            return .single(.preparing)
+                                        case let .preparing(long):
+                                            return .single(.preparing(long))
                                         case let .progress(value):
                                             return .single(.progress(value))
                                         case let .userInteractionRequired(value):
