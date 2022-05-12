@@ -7949,9 +7949,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("5").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("10").string), elevatedLayout: true, action: { [weak self] action in
                                         if let strongSelf = self {
                                             if case .info = action {
-                                                let controller = PremiumIntroScreen(context: strongSelf.context, action: {
-                                                    
-                                                })
+                                                let controller = PremiumIntroScreen(context: strongSelf.context)
                                                 strongSelf.push(controller)
                                                 return true
                                             }

@@ -12,6 +12,7 @@ import AccountContext
 import ContactsPeerItem
 import SearchUI
 import SolidRoundedButtonNode
+import PremiumUI
 
 func localizedOldChannelDate(peer: InactiveChannel, strings: PresentationStrings) -> String {
     let timestamp = peer.lastActivityDate
@@ -216,6 +217,7 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
     }
         
     var dismissImpl: (() -> Void)?
+    var pushImpl: ((ViewController) -> Void)?
     var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     
     var ensurePeerVisibleImpl: ((PeerId) -> Void)?
@@ -321,7 +323,12 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
             colorful = true
         }
         let footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {
-            leaveActionImpl?()
+            if state.selectedPeers.count > 0 {
+                leaveActionImpl?()
+            } else {
+                let controller = PremiumIntroScreen(context: context)
+                pushImpl?(controller)
+            }
         })
         
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: oldChannelsEntries(presentationData: presentationData, state: state, limit: limits.maxChannelsCount, premiumLimit: premiumLimits.maxChannelsCount, peers: peers, intent: intent), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, footerItem: footerItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), crossfadeState: peersAreEmptyUpdated, animateChanges: false)
@@ -363,6 +370,9 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
     
     dismissImpl = { [weak controller] in
         controller?.dismiss()
+    }
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
     }
     setDisplayNavigationBarImpl = { [weak controller] display in
         controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))

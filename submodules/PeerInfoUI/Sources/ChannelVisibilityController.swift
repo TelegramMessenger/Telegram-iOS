@@ -22,6 +22,7 @@ import InviteLinksUI
 import ContextUI
 import UndoUI
 import QrCodeUI
+import PremiumUI
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -1628,7 +1629,10 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             }
             
             if hasNamesToRevoke && selectedType == .publicChannel {
-                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {})
+                footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {
+                    let controller = PremiumIntroScreen(context: context)
+                    pushControllerImpl?(controller)
+                })
             }
             
             if let hadNamesToRevoke = hadNamesToRevoke {

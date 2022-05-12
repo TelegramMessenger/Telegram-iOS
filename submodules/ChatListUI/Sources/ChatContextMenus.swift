@@ -323,9 +323,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                     
                                     var replaceImpl: ((ViewController) -> Void)?
                                     let controller = PremiumLimitScreen(context: context, subject: .pins, action: {
-                                        let premiumScreen = PremiumIntroScreen(context: context, action: {
-                                            
-                                        })
+                                        let premiumScreen = PremiumIntroScreen(context: context)
                                         replaceImpl?(premiumScreen)
                                     })
                                     chatListController?.push(controller)

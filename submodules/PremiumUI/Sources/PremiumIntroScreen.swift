@@ -23,8 +23,14 @@ private func rad2deg(_ number: Float) -> Float {
 }
 
 private class StarComponent: Component {
+    let isVisible: Bool
+    
+    init(isVisible: Bool) {
+        self.isVisible = isVisible
+    }
+    
     static func ==(lhs: StarComponent, rhs: StarComponent) -> Bool {
-        return true
+        return lhs.isVisible == rhs.isVisible
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -149,7 +155,7 @@ private class StarComponent: Component {
                         smallAngle = true
                     }
                 
-                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle, explode: !smallAngle && velocity.x > 600)
+                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle, explode: !smallAngle && abs(velocity.x) > 600)
                     node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0)
                 default:
                     break
@@ -237,12 +243,14 @@ private class StarComponent: Component {
                 particleSystem?.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
                 particleSystem?.particleVelocity = 2.2
                 particleSystem?.birthRate = 4.5
+                particleSystem?.particleLifeSpan = 2.0
                 
                 node.physicsField?.isActive = true
                 Queue.mainQueue().after(1.0) {
                     node.physicsField?.isActive = false
                     particles.particleSystems?.first?.birthRate = 1.2
                     particleSystem?.particleVelocity = 1.65
+                    particleSystem?.particleLifeSpan = 4.0
                 }
             }
         
@@ -459,15 +467,18 @@ private final class ScrollComponent<ChildEnvironment: Equatable>: Component {
     public let content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>
     public let contentInsets: UIEdgeInsets
     public let contentOffsetUpdated: (_ top: CGFloat, _ bottom: CGFloat) -> Void
+    public let contentOffsetWillCommit: (UnsafeMutablePointer<CGPoint>) -> Void
     
     public init(
         content: AnyComponent<(ChildEnvironment, ScrollChildEnvironment)>,
         contentInsets: UIEdgeInsets,
-        contentOffsetUpdated: @escaping (_ top: CGFloat, _ bottom: CGFloat) -> Void
+        contentOffsetUpdated: @escaping (_ top: CGFloat, _ bottom: CGFloat) -> Void,
+        contentOffsetWillCommit:  @escaping (UnsafeMutablePointer<CGPoint>) -> Void
     ) {
         self.content = content
         self.contentInsets = contentInsets
         self.contentOffsetUpdated = contentOffsetUpdated
+        self.contentOffsetWillCommit = contentOffsetWillCommit
     }
     
     public static func ==(lhs: ScrollComponent, rhs: ScrollComponent) -> Bool {
@@ -504,10 +515,16 @@ private final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             guard let component = self.component, !self.ignoreDidScroll else {
                 return
             }
-            
             let topOffset = scrollView.contentOffset.y
             let bottomOffset = max(0.0, scrollView.contentSize.height - scrollView.contentOffset.y - scrollView.frame.height)
             component.contentOffsetUpdated(topOffset, bottomOffset)
+        }
+        
+        public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+            guard let component = self.component, !self.ignoreDidScroll else {
+                return
+            }
+            component.contentOffsetWillCommit(targetContentOffset)
         }
         
         required init?(coder: NSCoder) {
@@ -1043,11 +1060,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let action: () -> Void
     
-    init(context: AccountContext, action: @escaping () -> Void) {
+    init(context: AccountContext) {
         self.context = context
-        self.action = action
     }
     
     static func ==(lhs: PremiumIntroScreenComponent, rhs: PremiumIntroScreenComponent) -> Bool {
@@ -1083,9 +1098,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             let background = background.update(component: Rectangle(color: environment.theme.list.blocksBackgroundColor), environment: {}, availableSize: context.availableSize, transition: context.transition)
             
+            var starIsVisible = true
+            if let topContentOffset = state.topContentOffset, topContentOffset >= 123.0 {
+                starIsVisible = false
+            }
+                
             let star = star.update(
-                component: StarComponent(),
-                availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 180.0),
+                component: StarComponent(isVisible: starIsVisible),
+                availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )
             
@@ -1132,7 +1152,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 10.0,
                     gloss: true,
-                    action: context.component.action
+                    action: {}
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 50.0),
                 transition: context.transition)
@@ -1165,6 +1185,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         state?.topContentOffset = topContentOffset
                         state?.bottomContentOffset = bottomContentOffset
                         state?.updated(transition: .immediate)
+                    },
+                    contentOffsetWillCommit: { targetContentOffset in
+                        if targetContentOffset.pointee.y < 100.0 {
+                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 0.0)
+                        } else if targetContentOffset.pointee.y < 123.0 {
+                            targetContentOffset.pointee = CGPoint(x: 0.0, y: 123.0)
+                        }
                     }
                 ),
                 environment: { environment },
@@ -1184,19 +1211,21 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let titleOffset: CGFloat
             let titleScale: CGFloat
             let titleOffsetDelta = 160.0 - environment.navigationHeight / 2.0
-            
+ 
             if let topContentOffset = state.topContentOffset {
-                topPanelAlpha = min(30.0, max(0.0, topContentOffset - 80.0)) / 30.0
+                topPanelAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
+                let topContentOffset = topContentOffset + max(0.0, min(1.0, topContentOffset / titleOffsetDelta)) * 10.0
                 titleOffset = topContentOffset
-                titleScale = 1.0 - max(0.0, min(1.0, titleOffset / titleOffsetDelta)) * 0.36
+                let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
+                titleScale = 1.0 - fraction * 0.36
             } else {
                 topPanelAlpha = 0.0
-                titleOffset = 0.0
                 titleScale = 1.0
+                titleOffset = 0.0
             }
             
             context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 10.0 - titleOffset * titleScale))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 30.0 - titleOffset * titleScale))
                 .scale(titleScale)
             )
             
@@ -1240,7 +1269,6 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
 
 public final class PremiumIntroScreen: ViewControllerComponentContainer {
     private let context: AccountContext
-    private let action: () -> Void
     
     private var didSetReady = false
     private let _ready = Promise<Bool>()
@@ -1248,11 +1276,10 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         return self._ready
     }
     
-    public init(context: AccountContext, action: @escaping () -> Void) {
+    public init(context: AccountContext) {
         self.context = context
-        self.action = action
                                 
-        super.init(context: context, component: PremiumIntroScreenComponent(context: context, action: action), navigationBarAppearance: .transparent)
+        super.init(context: context, component: PremiumIntroScreenComponent(context: context), navigationBarAppearance: .transparent)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

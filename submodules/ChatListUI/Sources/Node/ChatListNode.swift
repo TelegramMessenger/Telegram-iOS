@@ -845,9 +845,7 @@ public final class ChatListNode: ListView {
                     case .limitExceeded:
                         var replaceImpl: ((ViewController) -> Void)?
                         let controller = PremiumLimitScreen(context: context, subject: .pins, action: {
-                            let premiumScreen = PremiumIntroScreen(context: context, action: {
-                                
-                            })
+                            let premiumScreen = PremiumIntroScreen(context: context)
                             replaceImpl?(premiumScreen)
                         })
                         replaceImpl = { [weak controller] c in

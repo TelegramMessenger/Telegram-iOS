@@ -145,7 +145,7 @@ class IncreaseLimitHeaderItemNode: ListViewItemNode {
                     let size = strongSelf.hostView.update(
                         transition: .immediate,
                         component: AnyComponent(PremiumLimitDisplayComponent(
-                            inactiveColor: UIColor(rgb: 0xE9E9EA),
+                            inactiveColor: UIColor(rgb: 0xe3e3e9),
                             activeColors: [
                                 UIColor(rgb: 0x0077ff),
                                 UIColor(rgb: 0x6b93ff),

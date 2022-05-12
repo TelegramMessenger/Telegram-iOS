@@ -1342,9 +1342,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                 if filter.data.includePeers.peers.count >= limit {
                                                     var replaceImpl: ((ViewController) -> Void)?
                                                     let controller = PremiumLimitScreen(context: context, subject: .chatsInFolder, action: {
-                                                        let controller = PremiumIntroScreen(context: context, action: {
-                                                            
-                                                        })
+                                                        let controller = PremiumIntroScreen(context: context)
                                                         replaceImpl?(controller)
                                                     })
                                                     replaceImpl = { [weak controller] c in
