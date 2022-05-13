@@ -59,7 +59,7 @@ BUILD_CONFIGURATION="$1"
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ]; then
 	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
-elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+elif [ "$BUILD_CONFIGURATION" == "appstore" ] || [ "$BUILD_CONFIGURATION" == "appstore-development" ]; then
 	CODESIGNING_SUBPATH="$BUILDBOX_DIR/transient-data/telegram-codesigning/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	CODESIGNING_SUBPATH="build-system/fake-codesigning"
@@ -88,7 +88,7 @@ fi
 
 BASE_DIR=$(pwd)
 
-if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ]; then
+if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental" ] || [ "$BUILD_CONFIGURATION" == "appcenter-experimental-2" ] || [ "$BUILD_CONFIGURATION" == "appstore" ] || [ "$BUILD_CONFIGURATION" == "appstore-development" ]; then
 	if [ ! `which generate-configuration.sh` ]; then
 		echo "generate-configuration.sh not found in PATH $PATH"
 		exit 1
@@ -104,6 +104,10 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 
 		"appstore")
 			generate-configuration.sh appstore release "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
+			;;
+
+		"appstore-development")
+			generate-configuration.sh appstore development "$BASE_DIR/$BUILDBOX_DIR/transient-data/telegram-codesigning" "$BASE_DIR/$BUILDBOX_DIR/transient-data/build-configuration"
 			;;
 
 		*)
