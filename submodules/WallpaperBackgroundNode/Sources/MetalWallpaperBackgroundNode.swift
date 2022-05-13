@@ -170,7 +170,11 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
                 }, selector: #selector(DisplayLinkTarget.event))
                 self.displayLink = displayLink
                 if #available(iOS 15.0, iOSApplicationExtension 15.0, *) {
-                    displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                    if "".isEmpty {
+                        displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60.0, maximum: 60.0, preferred: 60.0)
+                    } else {
+                        displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: Float(UIScreen.main.maximumFramesPerSecond), maximum: Float(UIScreen.main.maximumFramesPerSecond), preferred: Float(UIScreen.main.maximumFramesPerSecond))
+                    }
                 }
                 displayLink.isPaused = false
                 

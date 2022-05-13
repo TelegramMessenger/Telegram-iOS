@@ -710,6 +710,10 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
+    public func update(size: CGSize, animator: ControlledTransitionAnimator) {
+        self.updateProgressAnimations(animator: animator)
+    }
+    
     public func updateColors(backgroundColor: UIColor, foregroundColor: UIColor) {
         switch self.contentNodes {
             case let .standard(node):
@@ -736,8 +740,8 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         }
     }
     
-    private func updateProgressAnimations() {
-        self.updateProgress()
+    private func updateProgressAnimations(animator: ControlledTransitionAnimator? = nil) {
+        self.updateProgress(animator: animator)
         
         let needsAnimation: Bool
         
@@ -794,7 +798,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         })
     }
     
-    private func updateProgress() {
+    private func updateProgress(animator: ControlledTransitionAnimator? = nil) {
         let bounds = self.bounds
         
         var isPlaying = false
@@ -832,10 +836,11 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 node.containerNode.frame = CGRect(origin: CGPoint(), size: bounds.size)
             
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((bounds.size.height - node.lineHeight) / 2.0)), size: CGSize(width: bounds.size.width, height: node.lineHeight))
+                let foregroundContentFrame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
+            
                 node.backgroundNode.position = backgroundFrame.center
                 node.backgroundNode.bounds = CGRect(origin: CGPoint(), size: backgroundFrame.size)
                 
-                let foregroundContentFrame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
                 node.foregroundContentNode.position = foregroundContentFrame.center
                 node.foregroundContentNode.bounds = CGRect(origin: CGPoint(), size: foregroundContentFrame.size)
                 
@@ -963,8 +968,14 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                 }
                 
                 let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: bounds.size.width, height: bounds.size.height))
-                node.backgroundNode.frame = backgroundFrame
-                node.foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
+            
+                if let animator = animator {
+                    animator.updateFrame(layer: node.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                    animator.updateFrame(layer: node.foregroundContentNode.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height)), completion: nil)
+                } else {
+                    node.backgroundNode.frame = backgroundFrame
+                    node.foregroundContentNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: backgroundFrame.size.width, height: backgroundFrame.size.height))
+                }
                 
                 let timestampAndDuration: (timestamp: Double, duration: Double)?
                 if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {

@@ -470,17 +470,23 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                             for media in message.media {
                                 if let action = media as? TelegramMediaAction {
                                     if case .paymentSent = action.action {
-                                        for attribute in message.attributes {
-                                            if let reply = attribute as? ReplyMessageAttribute {
-                                                switch source {
-                                                case let .message(messageId):
+                                        switch source {
+                                        case let .slug(slug):
+                                            for media in message.media {
+                                                if let action = media as? TelegramMediaAction, case let .paymentSent(_, _, invoiceSlug?) = action.action, invoiceSlug == slug {
+                                                    if case let .Id(id) = message.id {
+                                                        receiptMessageId = id
+                                                    }
+                                                }
+                                            }
+                                        case let .message(messageId):
+                                            for attribute in message.attributes {
+                                                if let reply = attribute as? ReplyMessageAttribute {
                                                     if reply.messageId == messageId {
                                                         if case let .Id(id) = message.id {
                                                             receiptMessageId = id
                                                         }
                                                     }
-                                                case .slug:
-                                                    break
                                                 }
                                             }
                                         }

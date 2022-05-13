@@ -6025,6 +6025,22 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func transcribeAudio(peer: Api.InputPeer, msgId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranscribedAudio>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(647928393)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.transcribeAudio", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.TranscribedAudio? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.TranscribedAudio?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.TranscribedAudio
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func translateText(flags: Int32, peer: Api.InputPeer?, msgId: Int32?, text: String?, fromLang: String?, toLang: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.TranslatedText>) {
                     let buffer = Buffer()
                     buffer.appendInt32(617508334)
@@ -7222,11 +7238,11 @@ public extension Api.functions.upload {
                 }
 }
 public extension Api.functions.upload {
-                static func getFileHashes(location: Api.InputFileLocation, offset: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
+                static func getFileHashes(location: Api.InputFileLocation, offset: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.FileHash]>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-956147407)
+                    buffer.appendInt32(-1856595926)
                     location.serialize(buffer, true)
-                    serializeInt32(offset, buffer: buffer, boxed: false)
+                    serializeInt64(offset, buffer: buffer, boxed: false)
                     return (FunctionDescription(name: "upload.getFileHashes", parameters: [("location", String(describing: location)), ("offset", String(describing: offset))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.FileHash]? in
                         let reader = BufferReader(buffer)
                         var result: [Api.FileHash]?

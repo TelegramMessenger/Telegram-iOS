@@ -81,7 +81,7 @@ public class StickerShimmerEffectNode: ASDisplayNode {
         
         self.backgroundNode.backgroundColor = foregroundColor
         
-        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true)
+        self.effectNode.update(backgroundColor: backgroundColor == nil ? .clear : foregroundColor, foregroundColor: shimmeringColor, horizontal: true, effectSize: nil, globalTimeOffset: true, duration: nil)
         
         let bounds = CGRect(origin: CGPoint(), size: size)
         let image = generateImage(size, rotatedContext: { size, context in
