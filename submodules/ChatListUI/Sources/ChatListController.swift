@@ -661,7 +661,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
                             "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
                         ],
-                        loop: true
+                        mode: .animating(loop: true)
                     )
                     progressValue = progress
                     
@@ -682,7 +682,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
                             "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
                         ],
-                        loop: false
+                        mode: .animating(loop: false)
                     )
                     progressValue = 1.0
                     

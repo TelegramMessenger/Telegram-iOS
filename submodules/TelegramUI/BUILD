@@ -271,6 +271,10 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
+        "//submodules/TelegramUI/Components/AudioTranscriptionButtonComponent:AudioTranscriptionButtonComponent",
+        "//submodules/TelegramUI/Components/AudioWaveformComponent:AudioWaveformComponent",
+        "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
+        "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

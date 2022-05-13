@@ -191,7 +191,9 @@ public class ItemListCheckboxItemNode: ItemListRevealOptionsItemNode {
             case .left:
                 leftInset += 62.0
             case .right:
-                leftInset += 0.0
+                if item.icon == nil {
+                    leftInset += 16.0
+                }
             }
             
             let iconInset: CGFloat = 62.0

@@ -836,7 +836,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 + (tgcalls::ProtocolVersion)protocolVersionFromLibraryVersion:(NSString *)version {
     if ([version isEqualToString:@"2.7.7"]) {
         return tgcalls::ProtocolVersion::V0;
-    } else if ([version isEqualToString:@"3.0.0"]) {
+    } else if ([version isEqualToString:@"5.0.0"]) {
         return tgcalls::ProtocolVersion::V1;
     } else {
         return tgcalls::ProtocolVersion::V0;

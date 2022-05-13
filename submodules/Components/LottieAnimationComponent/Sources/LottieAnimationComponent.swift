@@ -6,16 +6,20 @@ import HierarchyTrackingLayer
 
 public final class LottieAnimationComponent: Component {
     public struct Animation: Equatable {
+        public enum Mode: Equatable {
+            case still
+            case animating(loop: Bool)
+            case animateTransitionFromPrevious
+        }
+        
         public var name: String
-        public var loop: Bool
-        public var isAnimating: Bool
+        public var mode: Mode
         public var colors: [String: UIColor]
         
-        public init(name: String, colors: [String: UIColor], loop: Bool, isAnimating: Bool = true) {
+        public init(name: String, colors: [String: UIColor], mode: Mode) {
             self.name = name
             self.colors = colors
-            self.loop = loop
-            self.isAnimating = isAnimating
+            self.mode = mode
         }
     }
     
@@ -55,6 +59,7 @@ public final class LottieAnimationComponent: Component {
         
         private var colorCallbacks: [LOTColorValueCallback] = []
         private var animationView: LOTAnimationView?
+        private var didPlayToCompletion: Bool = false
         
         private let hierarchyTrackingLayer: HierarchyTrackingLayer
         
@@ -100,12 +105,22 @@ public final class LottieAnimationComponent: Component {
         }
         
         func update(component: LottieAnimationComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            var updatePlayback = false
+            
             if self.component?.animation != component.animation {
+                if let animationView = self.animationView {
+                    if case .animateTransitionFromPrevious = component.animation.mode, !animationView.isAnimationPlaying, !self.didPlayToCompletion {
+                        animationView.play { _ in
+                        }
+                    }
+                }
+                
                 if let animationView = self.animationView, animationView.isAnimationPlaying {
                     animationView.completionBlock = { [weak self] _ in
                         guard let strongSelf = self else {
                             return
                         }
+                        strongSelf.didPlayToCompletion = true
                         let _ = strongSelf.update(component: component, availableSize: availableSize, transition: transition)
                     }
                     animationView.loopAnimation = false
@@ -113,13 +128,21 @@ public final class LottieAnimationComponent: Component {
                     self.component = component
                     
                     self.animationView?.removeFromSuperview()
+                    self.didPlayToCompletion = false
                     
                     if let url = getAppBundle().url(forResource: component.animation.name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
                         let view = LOTAnimationView(model: composition, in: getAppBundle())
-                        view.loopAnimation = component.animation.loop
+                        switch component.animation.mode {
+                        case .still, .animateTransitionFromPrevious:
+                            view.loopAnimation = false
+                        case let .animating(loop):
+                            view.loopAnimation = loop
+                        }
                         view.animationSpeed = 1.0
                         view.backgroundColor = .clear
                         view.isOpaque = false
+                        
+                        //view.logHierarchyKeypaths()
                         
                         for (key, value) in component.animation.colors {
                             let colorCallback = LOTColorValueCallback(color: value.cgColor)
@@ -129,6 +152,8 @@ public final class LottieAnimationComponent: Component {
                         
                         self.animationView = view
                         self.addSubview(view)
+                        
+                        updatePlayback = true
                     }
                 }
             }
@@ -146,14 +171,16 @@ public final class LottieAnimationComponent: Component {
             if let animationView = self.animationView {
                 animationView.frame = CGRect(origin: CGPoint(x: floor((size.width - animationSize.width) / 2.0), y: floor((size.height - animationSize.height) / 2.0)), size: animationSize)
                 
-                if component.animation.isAnimating {
-                    if !animationView.isAnimationPlaying {
-                        animationView.play { _ in
+                if updatePlayback {
+                    if case .animating = component.animation.mode {
+                        if !animationView.isAnimationPlaying {
+                            animationView.play { _ in
+                            }
                         }
-                    }
-                } else {
-                    if animationView.isAnimationPlaying {
-                        animationView.stop()
+                    } else {
+                        if animationView.isAnimationPlaying {
+                            animationView.stop()
+                        }
                     }
                 }
             }
