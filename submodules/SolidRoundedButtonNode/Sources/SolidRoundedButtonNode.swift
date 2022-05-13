@@ -792,10 +792,10 @@ public final class SolidRoundedButtonView: UIView {
         }
         
         if let buttonBackgroundAnimationView = self.buttonBackgroundAnimationView {
-            if buttonBackgroundAnimationView.layer.animation(forKey: "movement") == nil {
-                buttonBackgroundAnimationView.center = CGPoint(x: buttonSize.width * 2.4 / 2.0, y: buttonSize.height / 2.0)
-            }
             buttonBackgroundAnimationView.bounds = CGRect(origin: CGPoint(), size: CGSize(width: buttonSize.width * 2.4, height: buttonSize.height))
+            if buttonBackgroundAnimationView.layer.animation(forKey: "movement") == nil {
+                buttonBackgroundAnimationView.center = CGPoint(x: buttonSize.width * 2.4 / 2.0 - buttonBackgroundAnimationView.frame.width * 0.35, y: buttonSize.height / 2.0)
+            }
             self.setupGradientAnimations()
         }
 

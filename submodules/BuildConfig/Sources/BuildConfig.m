@@ -185,6 +185,10 @@ API_AVAILABLE(ios(10))
     return @(APP_SPECIFIC_URL_SCHEME);
 }
 
+- (NSString *)premiumIAPProductId {
+    return @(APP_CONFIG_PREMIUM_IAP_PRODUCT_ID);
+}
+
 + (NSString * _Nullable)bundleSeedId {
     NSDictionary *query = [NSDictionary dictionaryWithObjectsAndKeys:
        (__bridge NSString *)kSecClassGenericPassword, (__bridge NSString *)kSecClass,

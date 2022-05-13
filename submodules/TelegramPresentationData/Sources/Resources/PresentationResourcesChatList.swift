@@ -238,12 +238,13 @@ public struct PresentationResourcesChatList {
                         context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
                         
                         let colorsArray: [CGColor] = [
-                            UIColor(rgb: 0xa34ecf).cgColor,
-                            UIColor(rgb: 0xa34ecf).cgColor,
-                            UIColor(rgb: 0xff7923).cgColor,
-                            UIColor(rgb: 0xff7923).cgColor
+                            UIColor(rgb: 0x6B93FF).cgColor,
+                            UIColor(rgb: 0x6B93FF).cgColor,
+                            UIColor(rgb: 0x976FFF).cgColor,
+                            UIColor(rgb: 0xE46ACE).cgColor,
+                            UIColor(rgb: 0xE46ACE).cgColor
                         ]
-                        var locations: [CGFloat] = [0.0, 0.35, 0.65, 1.0]
+                        var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
                         let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
 
                         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())

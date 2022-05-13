@@ -22,6 +22,7 @@ swift_library(
         "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
         "//submodules/MeshAnimationCache:MeshAnimationCache",
         "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/InAppPurchaseManager:InAppPurchaseManager",
     ],
     visibility = [
         "//visibility:public",

@@ -40,6 +40,8 @@ swift_library(
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
         "//submodules/Components/Forms/PrefixSectionGroupComponent:PrefixSectionGroupComponent",
+        "//submodules/InAppPurchaseManager:InAppPurchaseManager",
+        "//submodules/ConfettiEffect:ConfettiEffect",
     ],
     visibility = [
         "//visibility:public",

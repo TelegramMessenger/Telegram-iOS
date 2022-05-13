@@ -11,6 +11,7 @@ import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
 import MeshAnimationCache
+import InAppPurchaseManager
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -654,6 +655,7 @@ public protocol SharedAccountContext: AnyObject {
     var locationManager: DeviceLocationManager? { get }
     var callManager: PresentationCallManager? { get }
     var contactDataManager: DeviceContactDataManager? { get }
+    var inAppPurchaseManager: InAppPurchaseManager? { get }
     
     var activeAccountContexts: Signal<(primary: AccountContext?, accounts: [(AccountRecordId, AccountContext, Int32)], currentAuth: UnauthorizedAccount?), NoError> { get }
     var activeAccountsWithInfo: Signal<(primary: AccountRecordId?, accounts: [AccountWithInfo]), NoError> { get }

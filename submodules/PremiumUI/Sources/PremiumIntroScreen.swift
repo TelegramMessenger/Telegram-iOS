@@ -13,6 +13,8 @@ import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
 import SceneKit
+import InAppPurchaseManager
+import ConfettiEffect
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -750,7 +752,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let strings = environment.strings
             
             let availableWidth = context.availableSize.width
-            let sideInsets = sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right
+            let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
             var size = CGSize(width: context.availableSize.width, height: 0.0)
             
             let overscroll = overscroll.update(
@@ -1060,11 +1062,15 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let updateInProgress: (Bool) -> Void
+    let completion: () -> Void
     
-    init(context: AccountContext) {
+    init(context: AccountContext, updateInProgress: @escaping (Bool) -> Void, completion: @escaping () -> Void) {
         self.context = context
+        self.updateInProgress = updateInProgress
+        self.completion = completion
     }
-    
+        
     static func ==(lhs: PremiumIntroScreenComponent, rhs: PremiumIntroScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
@@ -1073,12 +1079,68 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     }
     
     final class State: ComponentState {
+        private let context: AccountContext
+        private let updateInProgress: (Bool) -> Void
+        private let completion: () -> Void
+        
         var topContentOffset: CGFloat?
         var bottomContentOffset: CGFloat?
+        
+        var inProgress = false
+        var premiumProduct: InAppPurchaseManager.Product?
+        private var disposable: Disposable?
+        private var actionDisposable = MetaDisposable()
+        
+        init(context: AccountContext, updateInProgress: @escaping (Bool) -> Void, completion: @escaping () -> Void) {
+            self.context = context
+            self.updateInProgress = updateInProgress
+            self.completion = completion
+            
+            super.init()
+            
+            if let inAppPurchaseManager = context.sharedContext.inAppPurchaseManager {
+                self.disposable = (inAppPurchaseManager.availableProducts
+                |> deliverOnMainQueue).start(next: { [weak self] products in
+                    if let strongSelf = self {
+                        strongSelf.premiumProduct = products.first
+                        strongSelf.updated(transition: .immediate)
+                    }
+                })
+            }
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+            self.actionDisposable.dispose()
+        }
+        
+        func buy() {
+            guard let inAppPurchaseManager = self.context.sharedContext.inAppPurchaseManager,
+                  let premiumProduct = self.premiumProduct, !self.inProgress else {
+                return
+            }
+            
+            self.inProgress = true
+            self.updateInProgress(true)
+            self.updated(transition: .immediate)
+            
+            self.actionDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: self.context.account)
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.completion()
+                }
+            }, error: { [weak self] _ in
+                if let strongSelf = self {
+                    strongSelf.inProgress = false
+                    strongSelf.updateInProgress(false)
+                    strongSelf.updated(transition: .immediate)
+                }
+            }))
+        }
     }
     
     func makeState() -> State {
-        return State()
+        return State(context: self.context, updateInProgress: self.updateInProgress, completion: self.completion)
     }
     
     static var body: Body {
@@ -1138,7 +1200,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let sideInset: CGFloat = 16.0
             let button = button.update(
                 component: SolidRoundedButtonComponent(
-                    title: environment.strings.Premium_SubscribeFor("$5").string,
+                    title: environment.strings.Premium_SubscribeFor(state.premiumProduct?.price ?? "—").string,
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: .black,
                         backgroundColors: [
@@ -1152,7 +1214,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 10.0,
                     gloss: true,
-                    action: {}
+                    action: {
+                        state.buy()
+                    }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 50.0),
                 transition: context.transition)
@@ -1278,8 +1342,18 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     
     public init(context: AccountContext) {
         self.context = context
-                                
-        super.init(context: context, component: PremiumIntroScreenComponent(context: context), navigationBarAppearance: .transparent)
+            
+        var updateInProgressImpl: ((Bool) -> Void)?
+        var completionImpl: (() -> Void)?
+        super.init(context: context, component: PremiumIntroScreenComponent(
+            context: context,
+            updateInProgress: { inProgress in
+                updateInProgressImpl?(inProgress)
+            },
+            completion: {
+                completionImpl?()
+            }
+        ), navigationBarAppearance: .transparent)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -1287,6 +1361,23 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         self.navigationItem.setLeftBarButton(cancelItem, animated: false)
         
         self.navigationPresentation = .modal
+        
+        updateInProgressImpl = { [weak self] inProgress in
+            if let strongSelf = self {
+                strongSelf.navigationItem.leftBarButtonItem?.isEnabled = !inProgress
+                strongSelf.view.disablesInteractiveTransitionGestureRecognizer = inProgress
+                strongSelf.view.disablesInteractiveModalDismiss = inProgress
+            }
+        }
+        
+        completionImpl = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.view.addSubview(ConfettiView(frame: strongSelf.view.bounds))
+                Queue.mainQueue().after(2.0, {
+                    self?.dismiss()
+                })
+            }
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

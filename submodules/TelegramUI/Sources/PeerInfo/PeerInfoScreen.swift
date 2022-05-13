@@ -67,6 +67,7 @@ import TranslateUI
 import ChatPresentationInterfaceState
 import CreateExternalMediaStreamScreen
 import PaymentMethodUI
+import PremiumUI
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -420,6 +421,7 @@ private enum PeerInfoSettingsSection {
     case appearance
     case language
     case stickers
+    case premium
     case passport
     case watch
     case support
@@ -720,6 +722,10 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     let languageName = presentationData.strings.primaryComponent.localizedName
     items[.advanced]!.append(PeerInfoScreenDisclosureItem(id: 4, label: .text(languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName), text: presentationData.strings.Settings_AppLanguage, icon: PresentationResourcesSettings.language, action: {
         interaction.openSettings(.language)
+    }))
+    
+    items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Telegram Premium", icon: PresentationResourcesSettings.premium, action: {
+        interaction.openSettings(.premium)
     }))
     
     /*items[.payment]!.append(PeerInfoScreenDisclosureItem(id: 100, label: .text(""), text: "Payment Method", icon: PresentationResourcesSettings.language, action: {
@@ -6176,6 +6182,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.controller?.push(themeSettingsController(context: self.context))
             case .language:
                 self.controller?.push(LocalizationListController(context: self.context))
+            case .premium:
+                self.controller?.push(PremiumIntroScreen(context: self.context))
             case .stickers:
                 if let settings = self.data?.globalSettings {
                     self.controller?.push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in

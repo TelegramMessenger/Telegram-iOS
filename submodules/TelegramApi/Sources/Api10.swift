@@ -1009,7 +1009,7 @@ public extension Api {
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
         case messageActionInviteToGroupCall(call: Api.InputGroupCall, users: [Int64])
-        case messageActionPaymentSent(currency: String, totalAmount: Int64)
+        case messageActionPaymentSent(flags: Int32, currency: String, totalAmount: Int64, invoiceSlug: String?)
         case messageActionPaymentSentMe(flags: Int32, currency: String, totalAmount: Int64, payload: Buffer, info: Api.PaymentRequestedInfo?, shippingOptionId: String?, charge: Api.PaymentCharge)
         case messageActionPhoneCall(flags: Int32, callId: Int64, reason: Api.PhoneCallDiscardReason?, duration: Int32?)
         case messageActionPinMessage
@@ -1170,12 +1170,14 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .messageActionPaymentSent(let currency, let totalAmount):
+                case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
                     if boxed {
-                        buffer.appendInt32(1080663248)
+                        buffer.appendInt32(-1776926890)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(totalAmount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(invoiceSlug!, buffer: buffer, boxed: false)}
                     break
                 case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
                     if boxed {
@@ -1303,8 +1305,8 @@ public extension Api {
                 return ("messageActionHistoryClear", [])
                 case .messageActionInviteToGroupCall(let call, let users):
                 return ("messageActionInviteToGroupCall", [("call", String(describing: call)), ("users", String(describing: users))])
-                case .messageActionPaymentSent(let currency, let totalAmount):
-                return ("messageActionPaymentSent", [("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount))])
+                case .messageActionPaymentSent(let flags, let currency, let totalAmount, let invoiceSlug):
+                return ("messageActionPaymentSent", [("flags", String(describing: flags)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("invoiceSlug", String(describing: invoiceSlug))])
                 case .messageActionPaymentSentMe(let flags, let currency, let totalAmount, let payload, let info, let shippingOptionId, let charge):
                 return ("messageActionPaymentSentMe", [("flags", String(describing: flags)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("payload", String(describing: payload)), ("info", String(describing: info)), ("shippingOptionId", String(describing: shippingOptionId)), ("charge", String(describing: charge))])
                 case .messageActionPhoneCall(let flags, let callId, let reason, let duration):
@@ -1565,14 +1567,20 @@ public extension Api {
             }
         }
         public static func parse_messageActionPaymentSent(_ reader: BufferReader) -> MessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: Int64?
-            _2 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            _2 = parseString(reader)
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.MessageAction.messageActionPaymentSent(currency: _1!, totalAmount: _2!)
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageAction.messageActionPaymentSent(flags: _1!, currency: _2!, totalAmount: _3!, invoiceSlug: _4)
             }
             else {
                 return nil

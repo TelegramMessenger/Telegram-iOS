@@ -36,5 +36,9 @@ public extension TelegramEngine {
         public func clearBotPaymentInfo(info: BotPaymentInfo) -> Signal<Void, NoError> {
             return _internal_clearBotPaymentInfo(network: self.account.network, info: info)
         }
+        
+        public func assignAppStoreTransaction(transactionId: String) -> Signal<Never, AssignAppStoreTransactionError> {
+            return _internal_assignAppStoreTransaction(account: self.account, transactionId: transactionId)
+        }
     }
 }

@@ -186,14 +186,13 @@ private class PremiumLimitAnimationComponent: Component {
             let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - lineHeight), size: CGSize(width: availableSize.width, height: lineHeight))
             self.container.frame = containerFrame
             
-            self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: containerFrame.width / 2.0 - 1.0, height: lineHeight))
-            self.activeContainer.frame = CGRect(origin: CGPoint(x: containerFrame.width / 2.0 + 1.0, y: 0.0), size: CGSize(width: containerFrame.width / 2.0 - 1.0, height: lineHeight))
+            self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
+            self.activeContainer.frame = CGRect(origin: CGPoint(x: containerFrame.width / 2.0, y: 0.0), size: CGSize(width: containerFrame.width / 2.0, height: lineHeight))
             
             self.activeBackground.bounds = CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 3.0 / 2.0, height: lineHeight))
             if self.activeBackground.animation(forKey: "movement") == nil {
-                self.activeBackground.position = CGPoint(x: containerFrame.width * 3.0 / 4.0, y: lineHeight / 2.0)
+                self.activeBackground.position = CGPoint(x: containerFrame.width * 3.0 / 4.0 - self.activeBackground.frame.width * 0.35, y: lineHeight / 2.0)
             }
-            
             
             let countWidth: CGFloat
             if let badgeText = component.badgeText {
@@ -219,10 +218,10 @@ private class PremiumLimitAnimationComponent: Component {
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
             self.badgeView.center = CGPoint(x: availableSize.width / 2.0, y: 82.0)
-            if self.badgeForeground.animation(forKey: "movement") == nil {
-                self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0, y: badgeSize.height / 2.0)
-            }
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
+            if self.badgeForeground.animation(forKey: "movement") == nil {
+                self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeSize.height / 2.0)
+            }
     
             self.badgeIcon.frame = CGRect(x: 15.0, y: 9.0, width: 30.0, height: 30.0)
             self.badgeCountLabel.frame = CGRect(x: badgeSize.width - countWidth - 11.0, y: 10.0, width: countWidth, height: 48.0)
