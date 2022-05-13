@@ -81,7 +81,7 @@ security import "build-system/AppleWWDRCAG3.cer" -k "$MY_KEYCHAIN" -P "" -T /usr
 
 security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
-if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "appcenter-experimental" ] || [ "$1" == "appcenter-experimental-2" ] || [ "$1" == "App Store-development" ]; then
 	APP_CONFIGURATION="release_arm64"
 elif [ "$1" == "appstore" ]; then
 	APP_CONFIGURATION="release_universal"
