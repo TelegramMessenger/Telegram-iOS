@@ -97,7 +97,11 @@ private class AdMessagesHistoryContextImpl {
 
             self.opaqueId = try container.decode(Data.self, forKey: .opaqueId)
             
-            self.messageType = (try container.decodeIfPresent(MessageType.self, forKey: .messageType)) ?? .sponsored
+            if let messageType = try container.decodeIfPresent(Int32.self, forKey: .messageType) {
+                self.messageType = MessageType(rawValue: messageType) ?? .sponsored
+            } else {
+                self.messageType = .sponsored
+            }
             
             self.text = try container.decode(String.self, forKey: .text)
             self.textEntities = try container.decode([MessageTextEntity].self, forKey: .textEntities)
@@ -116,7 +120,7 @@ private class AdMessagesHistoryContextImpl {
             var container = encoder.container(keyedBy: CodingKeys.self)
 
             try container.encode(self.opaqueId, forKey: .opaqueId)
-            try container.encode(self.messageType, forKey: .messageType)
+            try container.encode(self.messageType.rawValue, forKey: .messageType)
             try container.encode(self.text, forKey: .text)
             try container.encode(self.textEntities, forKey: .textEntities)
 
