@@ -53,6 +53,9 @@ private class StarComponent: Component {
         
         private let sceneView: SCNView
                 
+        private var previousInteractionTimestamp: Double = 0.0
+        private var timer: SwiftSignalKit.Timer?
+        
         override init(frame: CGRect) {
             self.sceneView = SCNView(frame: frame)
             self.sceneView.backgroundColor = .clear
@@ -79,10 +82,16 @@ private class StarComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.timer?.invalidate()
+        }
+        
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
+            
+            self.previousInteractionTimestamp = CACurrentMediaTime()
             
             var left = true
             if let view = gesture.view {
@@ -132,6 +141,8 @@ private class StarComponent: Component {
             guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
                 return
             }
+            
+            self.previousInteractionTimestamp = CACurrentMediaTime()
             
             if #available(iOS 11.0, *) {
                 node.removeAnimation(forKey: "rotate", blendOutDuration: 0.1)
@@ -189,6 +200,17 @@ private class StarComponent: Component {
             self.setupShineAnimation()
             
             self.playAppearanceAnimation(explode: true)
+            
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                if let strongSelf = self {
+                    let currentTimestamp = CACurrentMediaTime()
+                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 5.0 {
+                        strongSelf.playAppearanceAnimation()
+                    }
+                }
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
         }
         
         private func setupGradientAnimation() {
@@ -240,6 +262,8 @@ private class StarComponent: Component {
                 return
             }
             
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+            
             if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
                 let particleSystem = particles.particleSystems?.first
                 particleSystem?.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
@@ -251,7 +275,7 @@ private class StarComponent: Component {
                 Queue.mainQueue().after(1.0) {
                     node.physicsField?.isActive = false
                     particles.particleSystems?.first?.birthRate = 1.2
-                    particleSystem?.particleVelocity = 1.65
+                    particleSystem?.particleVelocity = 1.0
                     particleSystem?.particleLifeSpan = 4.0
                 }
             }
@@ -268,6 +292,10 @@ private class StarComponent: Component {
             }
             let to = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: toValue)
             let distance = rad2deg(to.w - from.w)
+            
+            guard !distance.isZero else {
+                return
+            }
             
             let springAnimation = CASpringAnimation(keyPath: "rotation")
             springAnimation.fromValue = NSValue(scnVector4: from)
@@ -302,9 +330,11 @@ private class StarComponent: Component {
 private final class SectionGroupComponent: Component {
     public final class Item: Equatable {
         public let content: AnyComponentWithIdentity<Empty>
+        public let action: () -> Void
         
-        public init(_ content: AnyComponentWithIdentity<Empty>) {
+        public init(_ content: AnyComponentWithIdentity<Empty>, action: @escaping () -> Void) {
             self.content = content
+            self.action = action
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -318,15 +348,18 @@ private final class SectionGroupComponent: Component {
     
     public let items: [Item]
     public let backgroundColor: UIColor
+    public let selectionColor: UIColor
     public let separatorColor: UIColor
     
     public init(
         items: [Item],
         backgroundColor: UIColor,
+        selectionColor: UIColor,
         separatorColor: UIColor
     ) {
         self.items = items
         self.backgroundColor = backgroundColor
+        self.selectionColor = selectionColor
         self.separatorColor = separatorColor
     }
     
@@ -337,6 +370,9 @@ private final class SectionGroupComponent: Component {
         if lhs.backgroundColor != rhs.backgroundColor {
             return false
         }
+        if lhs.selectionColor != rhs.selectionColor {
+            return false
+        }
         if lhs.separatorColor != rhs.separatorColor {
             return false
         }
@@ -344,28 +380,34 @@ private final class SectionGroupComponent: Component {
     }
     
     public final class View: UIView {
-        private let backgroundView: UIView
+        private var buttonViews: [AnyHashable: HighlightTrackingButton] = [:]
         private var itemViews: [AnyHashable: ComponentHostView<Empty>] = [:]
         private var separatorViews: [UIView] = []
         
+        private var component: SectionGroupComponent?
+        
         override init(frame: CGRect) {
-            self.backgroundView = UIView()
-            
             super.init(frame: frame)
-            
-            self.addSubview(self.backgroundView)
-            self.backgroundView.layer.cornerRadius = 10.0
-            self.backgroundView.layer.masksToBounds = true
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
+        @objc private func buttonPressed(_ sender: HighlightTrackingButton) {
+            guard let component = self.component else {
+                return
+            }
+            
+            if let (id, _) = self.buttonViews.first(where: { $0.value === sender }), let item = component.items.first(where: { $0.content.id == id }) {
+                item.action()
+            }
+        }
+        
         func update(component: SectionGroupComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let sideInset: CGFloat = 16.0
             
-            self.backgroundView.backgroundColor = component.backgroundColor
+            self.backgroundColor = component.backgroundColor
             
             var size = CGSize(width: availableSize.width, height: 0.0)
             
@@ -375,8 +417,19 @@ private final class SectionGroupComponent: Component {
             for item in component.items {
                 validIds.append(item.content.id)
                 
+                let buttonView: HighlightTrackingButton
                 let itemView: ComponentHostView<Empty>
                 var itemTransition = transition
+                
+                if let current = self.buttonViews[item.content.id] {
+                    buttonView = current
+                } else {
+                    buttonView = HighlightTrackingButton()
+                    buttonView.addTarget(self, action: #selector(self.buttonPressed(_:)), for: .touchUpInside)
+                    self.buttonViews[item.content.id] = buttonView
+                    self.addSubview(buttonView)
+                }
+                
                 if let current = self.itemViews[item.content.id] {
                     itemView = current
                 } else {
@@ -393,7 +446,19 @@ private final class SectionGroupComponent: Component {
                 )
                 
                 let itemFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height), size: itemSize)
+                buttonView.frame = CGRect(origin: itemFrame.origin, size: CGSize(width: availableSize.width, height: itemSize.height + UIScreenPixel))
                 itemView.frame = CGRect(origin: CGPoint(x: itemFrame.minX + sideInset, y: itemFrame.minY + floor((itemFrame.height - itemSize.height) / 2.0)), size: itemSize)
+                itemView.isUserInteractionEnabled = false
+                
+                buttonView.highligthedChanged = { [weak buttonView] highlighted in
+                    if highlighted {
+                        buttonView?.backgroundColor = component.selectionColor
+                    } else {
+                        UIView.animate(withDuration: 0.3, animations: {
+                            buttonView?.backgroundColor = nil
+                        })
+                    }
+                }
                 
                 size.height += itemSize.height
                 
@@ -431,7 +496,7 @@ private final class SectionGroupComponent: Component {
                 self.separatorViews.removeSubrange((component.items.count - 1) ..< self.separatorViews.count)
             }
             
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(), size: size), completion: nil)
+            self.component = component
             
             return size
         }
@@ -508,8 +573,13 @@ private final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             }
             self.delegate = self
             self.showsVerticalScrollIndicator = false
+            self.canCancelContentTouches = true
                         
             self.addSubview(self.contentView)
+        }
+        
+        public override func touchesShouldCancel(in view: UIView) -> Bool {
+            return true
         }
         
         private var ignoreDidScroll = false
@@ -740,6 +810,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         let fade = Child(RoundedRectangle.self)
         let text = Child(MultilineTextComponent.self)
         let section = Child(SectionGroupComponent.self)
+        let infoBackground = Child(RoundedRectangle.self)
+        let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
         
         return { context in
@@ -780,7 +852,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 .position(CGPoint(x: fade.size.width / 2.0, y: fade.size.height / 2.0))
             )
             
-            size.height += 183.0 + 10.0
+            size.height += 183.0 + 10.0 + environment.navigationHeight - 56.0
             
             let textColor = theme.list.itemPrimaryTextColor
             let titleColor = theme.list.itemPrimaryTextColor
@@ -833,7 +905,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -852,7 +927,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -871,7 +949,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -890,7 +971,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -909,7 +993,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -928,7 +1015,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -947,7 +1037,10 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
@@ -966,10 +1059,14 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         arrowColor: arrowColor
                                     )
                                 )
-                            )
+                            ),
+                            action: {
+                                
+                            }
                         ),
                     ],
                     backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
+                    selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
                     separatorColor: environment.theme.list.itemBlocksSeparatorColor
                 ),
                 environment: {},
@@ -978,31 +1075,65 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             )
             context.add(section
                 .position(CGPoint(x: availableWidth / 2.0, y: size.height + section.size.height / 2.0))
+                .clipsToBounds(true)
+                .cornerRadius(10.0)
             )
             size.height += section.size.height
-            size.height += 17.0
+            size.height += 23.0
             
-            let infoText = infoText.update(
+            let textSideInset: CGFloat = 16.0
+            let textPadding: CGFloat = 13.0
+            
+            let infoTitle = infoTitle.update(
                 component: MultilineTextComponent(
                     text: .plain(
-                        NSAttributedString(
-                            string: strings.Premium_HelpUs,
-                            font: Font.regular(15.0),
-                            textColor: environment.theme.list.freeTextColor
-                        )
+                        NSAttributedString(string: strings.Premium_AboutTitle.uppercased(), font: Font.regular(14.0), textColor: environment.theme.list.freeTextColor)
                     ),
-                    horizontalAlignment: .center,
+                    horizontalAlignment: .natural,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
                 ),
                 environment: {},
-                availableSize: CGSize(width: availableWidth - sideInsets, height: 120.0),
+                availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
-            context.add(infoText
-                .position(CGPoint(x: size.width / 2.0, y: size.height + infoText.size.height / 2.0))
+            context.add(infoTitle
+                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + infoTitle.size.width / 2.0, y: size.height + infoTitle.size.height / 2.0))
             )
-            size.height += text.size.height
+            size.height += infoTitle.size.height
+            size.height += 3.0
+            
+            let infoText = infoText.update(
+                component: MultilineTextComponent(
+                    text: .markdown(
+                        text: strings.Premium_AboutText,
+                        attributes: markdownAttributes
+                    ),
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                ),
+                environment: {},
+                availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
+                transition: context.transition
+            )
+            
+            let infoBackground = infoBackground.update(
+                component: RoundedRectangle(
+                    color: environment.theme.list.itemBlocksBackgroundColor,
+                    cornerRadius: 10.0
+                ),
+                environment: {},
+                availableSize: CGSize(width: availableWidth - sideInsets, height: infoText.size.height + textPadding * 2.0),
+                transition: context.transition
+            )
+            context.add(infoBackground
+                .position(CGPoint(x: size.width / 2.0, y: size.height + infoBackground.size.height / 2.0))
+            )
+            context.add(infoText
+                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + infoText.size.width / 2.0, y: size.height + textPadding + infoText.size.height / 2.0))
+            )
+            size.height += infoBackground.size.height
             size.height += 3.0
             size.height += scrollEnvironment.insets.bottom
             
@@ -1089,7 +1220,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         var inProgress = false
         var premiumProduct: InAppPurchaseManager.Product?
         private var disposable: Disposable?
-        private var actionDisposable = MetaDisposable()
+        private var paymentDisposable = MetaDisposable()
+        private var activationDisposable = MetaDisposable()
         
         init(context: AccountContext, updateInProgress: @escaping (Bool) -> Void, completion: @escaping () -> Void) {
             self.context = context
@@ -1111,7 +1243,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         deinit {
             self.disposable?.dispose()
-            self.actionDisposable.dispose()
+            self.paymentDisposable.dispose()
+            self.activationDisposable.dispose()
         }
         
         func buy() {
@@ -1124,10 +1257,17 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
             
-            self.actionDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: self.context.account)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.completion()
+            self.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct, account: self.context.account)
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                if let strongSelf = self, case let .purchased(transactionId) = status {
+                    strongSelf.activationDisposable.set((strongSelf.context.engine.payments.assignAppStoreTransaction(transactionId: transactionId)
+                    |> deliverOnMainQueue).start(error: { _ in
+                        
+                    }, completed: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.completion()
+                        }
+                    }))
                 }
             }, error: { [weak self] _ in
                 if let strongSelf = self {
@@ -1202,7 +1342,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 component: SolidRoundedButtonComponent(
                     title: environment.strings.Premium_SubscribeFor(state.premiumProduct?.price ?? "—").string,
                     theme: SolidRoundedButtonComponent.Theme(
-                        backgroundColor: .black,
+                        backgroundColor: UIColor(rgb: 0x8878ff),
                         backgroundColors: [
                             UIColor(rgb: 0x0077ff),
                             UIColor(rgb: 0x6b93ff),
@@ -1214,6 +1354,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     height: 50.0,
                     cornerRadius: 10.0,
                     gloss: true,
+                    isLoading: state.inProgress,
                     action: {
                         state.buy()
                     }
@@ -1263,6 +1404,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             
+            let topInset: CGFloat = environment.navigationHeight - 56.0
+            
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
@@ -1274,7 +1417,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let topPanelAlpha: CGFloat
             let titleOffset: CGFloat
             let titleScale: CGFloat
-            let titleOffsetDelta = 160.0 - environment.navigationHeight / 2.0
+            let titleOffsetDelta = (topInset + 160.0) - (environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)
  
             if let topContentOffset = state.topContentOffset {
                 topPanelAlpha = min(20.0, max(0.0, topContentOffset - 95.0)) / 20.0
@@ -1289,7 +1432,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
             
             context.add(star
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: star.size.height / 2.0 - 30.0 - titleOffset * titleScale))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: topInset + star.size.height / 2.0 - 30.0 - titleOffset * titleScale))
                 .scale(titleScale)
             )
             
@@ -1303,7 +1446,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             context.add(title
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(160.0 - titleOffset, environment.navigationHeight / 2.0)))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: max(topInset + 160.0 - titleOffset, environment.statusBarHeight + (environment.navigationHeight - environment.statusBarHeight) / 2.0)))
                 .scale(titleScale)
             )
             
@@ -1340,7 +1483,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         return self._ready
     }
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, modal: Bool = true) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
@@ -1357,10 +1500,13 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
-        self.navigationItem.setLeftBarButton(cancelItem, animated: false)
-        
-        self.navigationPresentation = .modal
+        if modal {
+            let cancelItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+            self.navigationItem.setLeftBarButton(cancelItem, animated: false)
+            self.navigationPresentation = .modal
+        } else {
+            self.navigationPresentation = .modalInLargeLayout
+        }
         
         updateInProgressImpl = { [weak self] inProgress in
             if let strongSelf = self {

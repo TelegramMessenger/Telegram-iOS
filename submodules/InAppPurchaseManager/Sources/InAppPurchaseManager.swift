@@ -5,15 +5,6 @@ import StoreKit
 import Postbox
 import TelegramCore
 
-private final class PaymentTransactionContext {
-    var state: SKPaymentTransactionState?
-    let subscriber: (SKPaymentTransactionState) -> Void
-    
-    init(subscriber: @escaping (SKPaymentTransactionState) -> Void) {
-        self.subscriber = subscriber
-    }
-}
-
 public final class InAppPurchaseManager: NSObject {
     public final class Product {
         let skProduct: SKProduct
@@ -30,14 +21,31 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public enum PurchaseResult {
-        case success
+    public enum PurchaseState {
+        case purchased(transactionId: String)
     }
     
     public enum PurchaseError {
         case generic
     }
+    
+    private final class PaymentTransactionContext {
+        var state: SKPaymentTransactionState?
+        let subscriber: (TransactionState) -> Void
         
+        init(subscriber: @escaping (TransactionState) -> Void) {
+            self.subscriber = subscriber
+        }
+    }
+    
+    private enum TransactionState {
+        case purchased(transactionId: String?)
+        case restored(transactionId: String?)
+        case purchasing
+        case failed
+        case deferred
+    }
+    
     private let premiumProductId: String
     
     private var products: [Product] = []
@@ -57,7 +65,7 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     deinit {
-        
+        SKPaymentQueue.default().remove(self)
     }
     
     private func requestProducts() {
@@ -79,26 +87,27 @@ public final class InAppPurchaseManager: NSObject {
         return self.productsPromise.get()
     }
     
-    public func buyProduct(_ product: Product, account: Account) -> Signal<PurchaseResult, PurchaseError> {
+    public func buyProduct(_ product: Product, account: Account) -> Signal<PurchaseState, PurchaseError> {
         let payment = SKMutablePayment(product: product.skProduct)
-        payment.applicationUsername = "\(account.peerId.id._internalGetInt64Value())"
         SKPaymentQueue.default().add(payment)
         
         let productIdentifier = payment.productIdentifier
-        let signal = Signal<PurchaseResult, PurchaseError> { subscriber in
+        let signal = Signal<PurchaseState, PurchaseError> { subscriber in
             let disposable = MetaDisposable()
             
             self.stateQueue.async {
                 let paymentContext = PaymentTransactionContext(subscriber: { state in
                     switch state {
-                        case .purchased, .restored:
-                            subscriber.putNext(.success)
-                            subscriber.putCompletion()
+                        case let .purchased(transactionId), let .restored(transactionId):
+                            if let transactionId = transactionId {
+                                subscriber.putNext(.purchased(transactionId: transactionId))
+                                subscriber.putCompletion()
+                            } else {
+                                subscriber.putError(.generic)
+                            }
                         case .failed:
                             subscriber.putError(.generic)
                         case .deferred, .purchasing:
-                            break
-                        default:
                             break
                     }
                 })
@@ -135,7 +144,24 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
             let productIdentifier = transaction.payment.productIdentifier
             self.stateQueue.async {
                 if let context = self.paymentContexts[productIdentifier] {
-                    context.subscriber(transaction.transactionState)
+                    let transactionState: TransactionState?
+                    switch transaction.transactionState {
+                        case .purchased:
+                            transactionState = .purchased(transactionId: transaction.transactionIdentifier)
+                        case .restored:
+                            transactionState = .restored(transactionId: transaction.transactionIdentifier)
+                        case .failed:
+                            transactionState = .failed
+                        case .purchasing:
+                            transactionState = .purchasing
+                        case .deferred:
+                            transactionState = .deferred
+                        default:
+                            transactionState = nil
+                    }
+                    if let transactionState = transactionState {
+                        context.subscriber(transactionState)
+                    }
                 }
             }
         }

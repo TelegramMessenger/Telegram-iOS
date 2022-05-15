@@ -71,6 +71,8 @@ private class PremiumLimitAnimationComponent: Component {
         private let badgeIcon: UIImageView
         private let badgeCountLabel: RollingLabel
         
+        private let hapticFeedback = HapticFeedback()
+        
         override init(frame: CGRect) {
             self.container = SimpleLayer()
             self.container.masksToBounds = true
@@ -102,6 +104,8 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskView = UIView()
             self.badgeMaskView.addSubview(self.badgeMaskBackgroundView)
             self.badgeMaskView.addSubview(self.badgeMaskArrowView)
+            self.badgeMaskView.layer.rasterizationScale = UIScreenScale
+            self.badgeMaskView.layer.shouldRasterize = true
             self.badgeView.mask = self.badgeMaskView
             
             self.badgeForeground = SimpleLayer()
@@ -155,6 +159,10 @@ private class PremiumLimitAnimationComponent: Component {
             rotateAnimation.beginTime = now + 0.5
             rotateAnimation.fillMode = .forwards
             rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            
+            Queue.mainQueue().after(0.5, {
+                self.hapticFeedback.impact(.light)
+            })
             
             let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
             returnAnimation.fromValue = 0.2 as NSNumber

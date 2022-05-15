@@ -9374,6 +9374,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
+        UIView.performWithoutAnimation {
+            self.view.endEditing(true)
+        }
+        
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         self.saveInterfaceState()
         
