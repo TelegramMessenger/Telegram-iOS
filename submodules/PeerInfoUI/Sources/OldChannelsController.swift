@@ -12,6 +12,7 @@ import AccountContext
 import ContactsPeerItem
 import SearchUI
 import SolidRoundedButtonNode
+import PremiumUI
 
 func localizedOldChannelDate(peer: InactiveChannel, strings: PresentationStrings) -> String {
     let timestamp = peer.lastActivityDate
@@ -83,7 +84,7 @@ private enum OldChannelsEntryId: Hashable {
 }
 
 private enum OldChannelsEntry: ItemListNodeEntry {
-    case info(Int, String, String)
+    case info(Int32, Int32, String)
     case peersHeader(String)
     case peer(Int, InactiveChannel, Bool)
     
@@ -109,8 +110,8 @@ private enum OldChannelsEntry: ItemListNodeEntry {
     
     static func ==(lhs: OldChannelsEntry, rhs: OldChannelsEntry) -> Bool {
         switch lhs {
-        case let .info(count, title, text):
-            if case .info(count, title, text) = rhs {
+        case let .info(count, premiumCount, text):
+            if case .info(count, premiumCount, text) = rhs {
                 return true
             } else {
                 return false
@@ -167,8 +168,8 @@ private enum OldChannelsEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! OldChannelsItemArguments
         switch self {
-        case let .info(count, title, text):
-            return IncreaseLimitHeaderItem(theme: presentationData.theme, icon: .group, count: count, title: title, text: text, sectionId: self.section)
+        case let .info(count, premiumCount, text):
+            return IncreaseLimitHeaderItem(theme: presentationData.theme, strings: presentationData.strings, icon: .group, count: count, premiumCount: premiumCount, text: text, sectionId: self.section)
         case let .peersHeader(title):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
         case let .peer(_, peer, selected):
@@ -184,10 +185,10 @@ private struct OldChannelsState: Equatable {
     var isSearching: Bool = false
 }
 
-private func oldChannelsEntries(presentationData: PresentationData, state: OldChannelsState, limit: Int, peers: [InactiveChannel]?, intent: OldChannelsControllerIntent) -> [OldChannelsEntry] {
+private func oldChannelsEntries(presentationData: PresentationData, state: OldChannelsState, limit: Int32, premiumLimit: Int32, peers: [InactiveChannel]?, intent: OldChannelsControllerIntent) -> [OldChannelsEntry] {
     var entries: [OldChannelsEntry] = []
 
-    entries.append(.info(limit, presentationData.strings.OldChannels_TooManyCommunitiesTitle, presentationData.strings.OldChannels_TooManyCommunitiesText("\(limit)", "\(limit * 2)").string))
+    entries.append(.info(limit, premiumLimit, presentationData.strings.OldChannels_TooManyCommunitiesText("\(limit)", "\(premiumLimit)").string))
     
     if let peers = peers, !peers.isEmpty {
         entries.append(.peersHeader(presentationData.strings.OldChannels_ChannelsHeader))
@@ -216,6 +217,7 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
     }
         
     var dismissImpl: (() -> Void)?
+    var pushImpl: ((ViewController) -> Void)?
     var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     
     var ensurePeerVisibleImpl: ((PeerId) -> Void)?
@@ -263,17 +265,25 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
     
     var previousPeersWereEmpty = true
     
+    
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(
         queue: Queue.mainQueue(),
         presentationData,
         statePromise.get(),
-        peersPromise.get()
+        peersPromise.get(),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+        )
     )
-    |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, peers, limits -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
+        let (_, limits, premiumLimits) = limits
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.OldChannels_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         
@@ -309,14 +319,19 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
             buttonText = presentationData.strings.OldChannels_LeaveCommunities(Int32(state.selectedPeers.count))
             colorful = false
         } else {
-            buttonText = presentationData.strings.OldChannels_IncreaseLimit
+            buttonText = presentationData.strings.Premium_IncreaseLimit
             colorful = true
         }
         let footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: buttonText, colorful: colorful, action: {
-            leaveActionImpl?()
+            if state.selectedPeers.count > 0 {
+                leaveActionImpl?()
+            } else {
+                let controller = PremiumIntroScreen(context: context)
+                pushImpl?(controller)
+            }
         })
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: oldChannelsEntries(presentationData: presentationData, state: state, limit: 500, peers: peers, intent: intent), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, footerItem: footerItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), crossfadeState: peersAreEmptyUpdated, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: oldChannelsEntries(presentationData: presentationData, state: state, limit: limits.maxChannelsCount, premiumLimit: premiumLimits.maxChannelsCount, peers: peers, intent: intent), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, footerItem: footerItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up), crossfadeState: peersAreEmptyUpdated, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -355,6 +370,9 @@ public func oldChannelsController(context: AccountContext, updatedPresentationDa
     
     dismissImpl = { [weak controller] in
         controller?.dismiss()
+    }
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
     }
     setDisplayNavigationBarImpl = { [weak controller] display in
         controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))

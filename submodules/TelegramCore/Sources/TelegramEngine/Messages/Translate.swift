@@ -28,3 +28,28 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
         }
     }
 }
+
+func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<String?, NoError> {    
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<String?, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .single(nil)
+        }
+        return network.request(Api.functions.messages.transcribeAudio(peer: inputPeer, msgId: messageId.id))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.messages.TranscribedAudio?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { result -> Signal<String?, NoError> in
+            guard let result = result else {
+                return .single(nil)
+            }
+            switch result {
+            case let .transcribedAudio(string):
+                return .single(string)
+            }
+        }
+    }
+}

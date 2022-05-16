@@ -7925,28 +7925,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 if let stickerFile = stickerFile {
-                    let postbox = strongSelf.context.account.postbox
-                    let network = strongSelf.context.account.network
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Signal<Bool, NoError> in
+                    let context = strongSelf.context
+                    let _ = (context.account.postbox.transaction { transaction -> Signal<(SavedStickerResult, Bool), AddSavedStickerError> in
+                        let isSaved: Bool
                         if getIsStickerSaved(transaction: transaction, fileId: stickerFile.fileId) {
-                            removeSavedSticker(transaction: transaction, mediaId: stickerFile.fileId)
-                            return .single(false)
+                            isSaved = true
                         } else {
-                            return addSavedSticker(postbox: postbox, network: network, file: stickerFile)
-                            |> `catch` { _ -> Signal<Void, NoError> in
-                                return .complete()
-                            }
-                            |> map { _ -> Bool in
-                                return true
-                            }
-                            |> then(.single(true))
+                            isSaved = false
+                        }
+                        return context.engine.stickers.toggleStickerSaved(file: stickerFile, saved: !isSaved)
+                        |> map { result -> (SavedStickerResult, Bool) in
+                            return (result, !isSaved)
                         }
                     }
+                    |> castError(AddSavedStickerError.self)
                     |> switchToLatest
-                    |> deliverOnMainQueue).start(next: { [weak self] added in
+                    |> deliverOnMainQueue).start(next: { [weak self] result, added in
                         if let strongSelf = self {
-//                            strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: added ? "The Limit of 5 Stickers Reached" : nil, text: added ? "An older sticker was replaced with this one. You can [increase the limit]() to 10 stickers." : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
-                            strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
+                            switch result {
+                                case .generic:
+                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
+                                case .limitExceeded:
+                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("5").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("10").string), elevatedLayout: true, action: { [weak self] action in
+                                        if let strongSelf = self {
+                                            if case .info = action {
+                                                let controller = PremiumIntroScreen(context: strongSelf.context)
+                                                strongSelf.push(controller)
+                                                return true
+                                            }
+                                        }
+                                        return false
+                                    }), with: nil)
+                            }
                         }
                     })
                 }
@@ -9363,6 +9373,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
+        UIView.performWithoutAnimation {
+            self.view.endEditing(true)
+        }
         
         self.chatDisplayNode.historyNode.canReadHistory.set(.single(false))
         self.saveInterfaceState()
@@ -15220,7 +15234,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if let (_, latestStatusNode) = latestNode {
             let bounds = latestStatusNode.view.convert(latestStatusNode.view.bounds, to: self.chatDisplayNode.view)
-            let location = CGPoint(x: bounds.maxX - 7.0, y: bounds.minY + 2.0)
+            let location = CGPoint(x: bounds.maxX - 7.0, y: bounds.minY - 11.0)
             
             let contentNode = ChatStatusChecksTooltipContentNode(presentationData: self.presentationData)
             let tooltipController = TooltipController(content: .custom(contentNode), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)

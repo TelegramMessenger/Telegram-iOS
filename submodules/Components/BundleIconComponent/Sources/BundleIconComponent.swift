@@ -20,7 +20,7 @@ public final class BundleIconComponent: Component {
         if lhs.tintColor != rhs.tintColor {
             return false
         }
-        return false
+        return true
     }
     
     public final class View: UIImageView {

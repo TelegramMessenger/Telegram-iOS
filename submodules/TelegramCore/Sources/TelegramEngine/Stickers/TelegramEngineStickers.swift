@@ -81,6 +81,10 @@ public extension TelegramEngine {
             return _internal_getStickerSetShortNameSuggestion(account: self.account, title: title)
         }
         
+        public func toggleStickerSaved(file: TelegramMediaFile, saved: Bool) -> Signal<SavedStickerResult, AddSavedStickerError> {
+            return _internal_toggleStickerSaved(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, file: file, saved: saved)
+        }
+        
         public func validateStickerSetShortNameInteractive(shortName: String) -> Signal<AddressNameValidationStatus, NoError> {
             if let error = _internal_checkAddressNameFormat(shortName) {
                 return .single(.invalidFormat(error))

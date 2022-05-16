@@ -34,7 +34,7 @@ public enum ShareControllerPreferredAction {
 }
 
 public enum ShareControllerExternalStatus {
-    case preparing
+    case preparing(Bool)
     case progress(Float)
     case done
 }
@@ -638,8 +638,8 @@ public final class ShareController: ViewController {
                 return f(peerIds, text, strongSelf.currentAccount, silently)
                 |> map { state -> ShareState in
                     switch state {
-                        case .preparing:
-                            return .preparing
+                        case let .preparing(long):
+                            return .preparing(long)
                         case let .progress(value):
                             return .progress(value)
                         case .done:

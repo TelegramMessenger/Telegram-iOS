@@ -414,7 +414,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
     dict[-1615153660] = { return Api.MessageAction.parse_messageActionHistoryClear($0) }
     dict[1345295095] = { return Api.MessageAction.parse_messageActionInviteToGroupCall($0) }
-    dict[1080663248] = { return Api.MessageAction.parse_messageActionPaymentSent($0) }
+    dict[-1776926890] = { return Api.MessageAction.parse_messageActionPaymentSent($0) }
     dict[-1892568281] = { return Api.MessageAction.parse_messageActionPaymentSentMe($0) }
     dict[-2132731265] = { return Api.MessageAction.parse_messageActionPhoneCall($0) }
     dict[-1799538451] = { return Api.MessageAction.parse_messageActionPinMessage($0) }
@@ -985,6 +985,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[816245886] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
+    dict[-1442723025] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
     dict[1741309751] = { return Api.messages.TranslatedText.parse_translateNoResult($0) }
     dict[-1575684144] = { return Api.messages.TranslatedText.parse_translateResultText($0) }
     dict[136574537] = { return Api.messages.VotesList.parse_votesList($0) }
@@ -1738,6 +1739,8 @@ public extension Api {
             case let _1 as Api.messages.StickerSetInstallResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Stickers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.TranscribedAudio:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.TranslatedText:
                 _1.serialize(buffer, boxed)

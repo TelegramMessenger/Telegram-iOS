@@ -9,6 +9,8 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
     private let audioFrame: FFMpegAVFrame
     private var resetDecoderOnNextFrame = true
     
+    private let formatDescription: CMAudioFormatDescription
+    
     private var delayedFrames: [MediaTrackFrame] = []
     
     init(codecContext: FFMpegAVCodecContext, sampleRate: Int = 44100, channelCount: Int = 2) {
@@ -16,6 +18,27 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
         self.audioFrame = FFMpegAVFrame()
         
         self.swrContext = FFMpegSWResample(sourceChannelCount: Int(codecContext.channels()), sourceSampleRate: Int(codecContext.sampleRate()), sourceSampleFormat: codecContext.sampleFormat(), destinationChannelCount: channelCount, destinationSampleRate: sampleRate, destinationSampleFormat: FFMPEG_AV_SAMPLE_FMT_S16)
+        
+        var outputDescription = AudioStreamBasicDescription(
+            mSampleRate: Float64(sampleRate),
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagsNativeEndian | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: UInt32(2 * channelCount),
+            mFramesPerPacket: 1,
+            mBytesPerFrame: UInt32(2 * channelCount),
+            mChannelsPerFrame: UInt32(channelCount),
+            mBitsPerChannel: 16,
+            mReserved: 0
+        )
+        
+        var channelLayout = AudioChannelLayout()
+        memset(&channelLayout, 0, MemoryLayout<AudioChannelLayout>.size)
+        channelLayout.mChannelLayoutTag = kAudioChannelLayoutTag_Mono
+        
+        var formatDescription: CMAudioFormatDescription?
+        CMAudioFormatDescriptionCreate(allocator: nil, asbd: &outputDescription, layoutSize: MemoryLayout<AudioChannelLayout>.size, layout: &channelLayout, magicCookieSize: 0, magicCookie: nil, extensions: nil, formatDescriptionOut: &formatDescription)
+        
+        self.formatDescription = formatDescription!
     }
     
     func decodeRaw(frame: MediaTrackDecodableFrame) -> Data? {
@@ -112,12 +135,17 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
         
-        var timingInfo = CMSampleTimingInfo(duration: duration, presentationTimeStamp: pts, decodeTimeStamp: pts)
+        //var timingInfo = CMSampleTimingInfo(duration: duration, presentationTimeStamp: pts, decodeTimeStamp: pts)
         var sampleBuffer: CMSampleBuffer?
-        var sampleSize = data.count
-        guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
+        //var sampleSize = data.count
+        
+        guard CMAudioSampleBufferCreateReadyWithPacketDescriptions(allocator: nil, dataBuffer: blockBuffer!, formatDescription: self.formatDescription, sampleCount: Int(data.count / 2), presentationTimeStamp: pts, packetDescriptions: nil, sampleBufferOut: &sampleBuffer) == noErr else {
             return nil
         }
+        
+        /*guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: self.formatDescription, sampleCount: Int(frame.duration), sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
+            return nil
+        }*/
         
         let resetDecoder = self.resetDecoderOnNextFrame
         self.resetDecoderOnNextFrame = false

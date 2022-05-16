@@ -446,6 +446,19 @@ public final class SoftwareAudioSource {
         }
     }
     
+    public func readSampleBuffer() -> CMSampleBuffer? {
+        guard let audioStream = self.audioStream, let _ = self.avFormatContext else {
+            return nil
+        }
+        
+        let (decodableFrame, _) = self.readDecodableFrame()
+        if let decodableFrame = decodableFrame {
+            return audioStream.decoder.decode(frame: decodableFrame)?.sampleBuffer
+        } else {
+            return nil
+        }
+    }
+    
     public func readEncodedFrame() -> (Data, Int)? {
         guard let _ = self.audioStream, let _ = self.avFormatContext else {
             return nil

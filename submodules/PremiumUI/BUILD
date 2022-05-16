@@ -1,5 +1,13 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+filegroup(
+    name = "PremiumUIResources",
+    srcs = glob([
+        "Resources/**/*",
+    ], exclude = ["Resources/**/.*"]),
+    visibility = ["//visibility:public"],
+)
+
 swift_library(
     name = "PremiumUI",
     module_name = "PremiumUI",
@@ -28,8 +36,12 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
+        "//submodules/Components/SheetComponent:SheetComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",
         "//submodules/Components/SolidRoundedButtonComponent:SolidRoundedButtonComponent",
+        "//submodules/Components/Forms/PrefixSectionGroupComponent:PrefixSectionGroupComponent",
+        "//submodules/InAppPurchaseManager:InAppPurchaseManager",
+        "//submodules/ConfettiEffect:ConfettiEffect",
     ],
     visibility = [
         "//visibility:public",

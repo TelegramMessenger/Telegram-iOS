@@ -1775,7 +1775,13 @@ private let sharedStorage = WallpaperBackgroundNodeMergedImpl.SharedStorage()
 
 public func createWallpaperBackgroundNode(context: AccountContext, forChatDisplay: Bool, useSharedAnimationPhase: Bool = false, useExperimentalImplementation: Bool = false) -> WallpaperBackgroundNode {
     if forChatDisplay && useExperimentalImplementation {
+        #if DEBUG
+        if #available(iOS 13.0, iOSApplicationExtension 13.0, *) {
+            return MetalWallpaperBackgroundNode()
+        }
+        #else
         return WallpaperBackgroundNodeMergedImpl(context: context, storage: useSharedAnimationPhase ? sharedStorage : nil)
+        #endif
     }
 
     return WallpaperBackgroundNodeImpl(context: context, useSharedAnimationPhase: useSharedAnimationPhase)

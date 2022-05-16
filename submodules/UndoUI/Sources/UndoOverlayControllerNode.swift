@@ -87,6 +87,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.animationBackgroundColor = UIColor(rgb: 0x474747)
         }
         
+        var isUserInteractionEnabled = false
         switch content {
             case let .removedChat(text):
                 self.avatarNode = nil
@@ -696,7 +697,11 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 2
-                
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
+            
                 displayUndo = false
                 self.originalRemainingSeconds = 3
             
@@ -878,6 +883,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             } else {
                 self.isUserInteractionEnabled = false
             }
+        }
+        if isUserInteractionEnabled {
+            self.isUserInteractionEnabled = true
         }
         
         self.titleNode.isUserInteractionEnabled = false

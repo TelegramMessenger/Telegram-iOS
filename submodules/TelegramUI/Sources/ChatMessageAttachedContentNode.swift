@@ -583,6 +583,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             dateAndStatusType: statusType,
                             displayReactions: false,
                             messageSelection: nil,
+                            layoutConstants: layoutConstants,
                             constrainedSize: CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)
                         ))
                         refineContentFileLayout = refineLayout

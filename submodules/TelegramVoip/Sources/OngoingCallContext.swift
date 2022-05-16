@@ -162,11 +162,6 @@ private let setupLogs: Bool = {
             Logger.shared.log("TGVOIP", value)
         }
     })
-    /*OngoingCallThreadLocalContextWebrtcCustom.setupLoggingFunction({ value in
-        if let value = value {
-            Logger.shared.log("TGVOIP", value)
-        }
-    })*/
     return true
 }()
 
@@ -1241,7 +1236,7 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
     private func stateUpdated(state: NWConnection.State) {
         switch state {
         case .ready:
-            Logger.shared.log("CallSignaling", "Connection state is ready")
+            OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection state is ready")
             
             var headerData = Data(count: 4)
             headerData.withUnsafeMutableBytes { bytes in
@@ -1249,7 +1244,7 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
             }
             self.connection.send(content: headerData, completion: .contentProcessed({ error in
                 if let error = error {
-                    Logger.shared.log("CallSignaling", "Connection send header error: \(error)")
+                    OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection send header error: \(error)")
                 }
             }))
             
@@ -1257,7 +1252,7 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
             
             self.sendPacket(payload: Data())
         case let .failed(error):
-            Logger.shared.log("CallSignaling", "Connection error: \(error)")
+            OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection error: \(error)")
             self.onIsClosed()
         default:
             break
@@ -1293,10 +1288,10 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
                 if payloadSize < 2 * 1024 * 1024 {
                     strongSelf.receivePacketPayload(size: Int(payloadSize))
                 } else {
-                    Logger.shared.log("CallSignaling", "Connection received invalid packet size: \(payloadSize)")
+                    OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection received invalid packet size: \(payloadSize)")
                 }
             } else {
-                Logger.shared.log("CallSignaling", "Connection receive packet header error: \(String(describing: error))")
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection receive packet header error: \(String(describing: error))")
                 strongSelf.onIsClosed()
             }
         })
@@ -1308,15 +1303,15 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
                 return
             }
             if let data = data, data.count == size {
-                Logger.shared.log("CallSignaling", "Connection receive packet payload: \(data.count) bytes")
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection receive packet payload: \(data.count) bytes")
                 
                 if data.count < 16 + 4 {
-                    Logger.shared.log("CallSignaling", "Connection invalid payload size: \(data.count)")
+                    OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection invalid payload size: \(data.count)")
                     strongSelf.onIsClosed()
                 } else {
                     let readPeerTag = data.subdata(in: 0 ..< 16)
                     if readPeerTag != strongSelf.peerTag {
-                        Logger.shared.log("CallSignaling", "Peer tag mismatch: \(hexString(readPeerTag))")
+                        OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Peer tag mismatch: \(hexString(readPeerTag))")
                         strongSelf.onIsClosed()
                     } else {
                         let actualPayloadSize = data.withUnsafeBytes { bytes -> UInt32 in
@@ -1326,7 +1321,7 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
                         }
                         
                         if Int(actualPayloadSize) > data.count - 16 - 4 {
-                            Logger.shared.log("CallSignaling", "Connection invalid actual payload size: \(actualPayloadSize)")
+                            OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection invalid actual payload size: \(actualPayloadSize)")
                             strongSelf.onIsClosed()
                         } else {
                             if !strongSelf.isConnected {
@@ -1348,7 +1343,7 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
                     }
                 }
             } else {
-                Logger.shared.log("CallSignaling", "Connection receive packet payload error: \(String(describing: error))")
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection receive packet payload error: \(String(describing: error))")
                 strongSelf.onIsClosed()
             }
         })
@@ -1397,11 +1392,11 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
             }
         }
         
-        Logger.shared.log("CallSignaling", "Send packet payload: \(totalSize) bytes")
+        OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Send packet payload: \(totalSize) bytes")
         
         self.connection.send(content: sendBuffer, isComplete: true, completion: .contentProcessed({ error in
             if let error = error {
-                Logger.shared.log("CallSignaling", "Connection send payload error: \(error)")
+                OngoingCallThreadLocalContextWebrtc.logMessage("CallSignaling: Connection send payload error: \(error)")
             }
         }))
     }

@@ -14,6 +14,7 @@ swift_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
+        "//submodules/Components/SheetComponent:SheetComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/Components/AnimatedStickerComponent:AnimatedStickerComponent",
         "//submodules/Components/BundleIconComponent:BundleIconComponent",

@@ -80,16 +80,18 @@ final class IncreaseLimitFooterItemNode: ItemListControllerFooterItemNode {
         
         let backgroundColor = self.item.theme.list.itemCheckColors.fillColor
         let backgroundColors: [UIColor]
+        let icon: UIImage?
         if self.item.colorful {
             backgroundColors = [UIColor(rgb: 0x407af0), UIColor(rgb: 0x9551e8), UIColor(rgb: 0xbf499a), UIColor(rgb: 0xf17b30)]
-            self.buttonNode.icon = UIImage(bundleImageName: "Premium/X2")
+            icon = UIImage(bundleImageName: "Premium/X2")
         } else {
             backgroundColors = []
-            self.buttonNode.icon = nil
+            icon = nil
         }
         
         self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: backgroundColor, backgroundColors: backgroundColors, foregroundColor: self.item.theme.list.itemCheckColors.foregroundColor), animated: true)
         self.buttonNode.title = self.item.title
+        self.buttonNode.icon = icon
         
         self.buttonNode.pressed = { [weak self] in
             self?.item.action()

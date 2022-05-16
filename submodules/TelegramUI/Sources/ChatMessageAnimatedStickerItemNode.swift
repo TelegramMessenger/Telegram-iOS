@@ -721,7 +721,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
-        let displaySize = CGSize(width: 180.0, height: 180.0)
+        var displaySize = CGSize(width: 180.0, height: 180.0)
         let telegramFile = self.telegramFile
         let emojiFile = self.emojiFile
         let telegramDice = self.telegramDice
@@ -742,7 +742,16 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
+                        
             var imageSize: CGSize = CGSize(width: 200.0, height: 200.0)
+            var imageVerticalInset: CGFloat = 0.0
+            var imageHorizontalOffset: CGFloat = 0.0
+            if !(telegramFile?.videoThumbnails.isEmpty ?? true) {
+                displaySize = CGSize(width: 240.0, height: 240.0)
+                imageVerticalInset = -30.0
+                imageHorizontalOffset = 12.0
+            }
+            
             var isEmoji = false
             if let _ = telegramDice {
                 imageSize = displaySize
@@ -879,7 +888,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let imageInset: CGFloat = 10.0
             var innerImageSize = imageSize
             imageSize = CGSize(width: imageSize.width + imageInset * 2.0, height: imageSize.height + imageInset * 2.0)
-            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: CGSize(width: imageSize.width, height: imageSize.height))
+            let imageFrame = CGRect(origin: CGPoint(x: 0.0 + (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - imageSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset - imageHorizontalOffset)), y: imageVerticalInset), size: CGSize(width: imageSize.width, height: imageSize.height))
             if isEmoji {
                 innerImageSize = imageSize
             }
@@ -1017,7 +1026,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let contentHeight = max(imageSize.height, layoutConstants.image.minDimensions.height)
+            let contentHeight = max(imageSize.height + imageVerticalInset * 2.0, layoutConstants.image.minDimensions.height)
             
             var forwardSource: Peer?
             var forwardAuthorSignature: String?
@@ -1632,7 +1641,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             additionalAnimationNode.setup(source: source, width: Int(animationSize.width * 2), height: Int(animationSize.height * 2), playbackMode: .once, mode: .direct(cachePathPrefix: pathPrefix))
             var animationFrame: CGRect
             if isStickerEffect {
-                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * 0.5 : -animationNode.frame.width * 0.5, dy: 35.0).insetBy(dx: -animationNode.frame.width * 0.5, dy: -animationNode.frame.height * 0.5)
+                let scale: CGFloat = 0.245
+                animationFrame = animationNode.frame.offsetBy(dx: incomingMessage ? animationNode.frame.width * scale : -animationNode.frame.width * scale + 21.0, dy: -1.0).insetBy(dx: -animationNode.frame.width * scale, dy: -animationNode.frame.height * scale)
                 if incomingMessage {
                     animationNode.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 }

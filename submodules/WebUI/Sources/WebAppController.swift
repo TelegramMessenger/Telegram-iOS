@@ -437,6 +437,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             
+            let eventData = (body["eventData"] as? String)?.data(using: .utf8)
+            let json = try? JSONSerialization.jsonObject(with: eventData ?? Data(), options: []) as? [String: Any]
+            
             switch eventName {
                 case "web_app_ready":
                     self.animateTransitionIn()
@@ -447,7 +450,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_setup_main_button":
                     if let webView = self.webView, !webView.didTouchOnce && controller.url == nil {
                         self.delayedScriptMessage = message
-                    } else if let eventData = (body["eventData"] as? String)?.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: eventData, options: []) as? [String: Any] {
+                    } else if let json = json {
                         if var isVisible = json["is_visible"] as? Bool {
                             let text = json["text"] as? String
                             if (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -475,6 +478,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     self.controller?.requestAttachmentMenuExpansion()
                 case "web_app_close":
                     self.controller?.dismiss()
+                case "web_app_open_tg_link":
+                    if let json = json, let path = json["path_full"] as? String {
+                        print(path)
+                    }
+                case "web_app_open_invoice":
+                    if let json = json, let slug = json["slug"] as? String {
+                        print(slug)
+                    }
                 default:
                     break
             }
@@ -526,6 +537,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             themeParamsString.append("}}")
             self.webView?.sendEvent(name: "theme_changed", data: themeParamsString)
+        }
+        
+        private func sendInvoiceClosedEvent(slug: String, status: String) {
+            let paramsString = "{slug: \"\(slug)\", status: \"\(status)\"}"
+            self.webView?.sendEvent(name: "invoice_closed", data: paramsString)
         }
     }
     

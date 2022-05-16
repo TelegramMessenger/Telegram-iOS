@@ -18,6 +18,7 @@ import ImageTransparency
 import AppBundle
 import MusicAlbumArtResources
 import Svg
+import RangeSet
 
 private enum ResourceFileData {
     case data(Data)
@@ -1671,7 +1672,7 @@ public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId
                 context.account.postbox.mediaBox.resourceRangesStatus(largestRepresentation.resource)
             )
             |> map { status, rangeStatus -> MediaResourceStatus in
-                if rangeStatus.contains(integersIn: Int(range.lowerBound) ..< Int(range.upperBound)) {
+                if rangeStatus.isSuperset(of: RangeSet<Int64>(range)) {
                     return .Local
                 }
                 

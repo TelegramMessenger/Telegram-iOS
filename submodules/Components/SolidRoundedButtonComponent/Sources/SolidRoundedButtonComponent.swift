@@ -18,6 +18,7 @@ public final class SolidRoundedButtonComponent: Component {
     public let gloss: Bool
     public let iconName: String?
     public let iconPosition: SolidRoundedButtonIconPosition
+    public let isLoading: Bool
     public let action: () -> Void
     
     public init(
@@ -31,6 +32,7 @@ public final class SolidRoundedButtonComponent: Component {
         gloss: Bool = false,
         iconName: String? = nil,
         iconPosition: SolidRoundedButtonIconPosition = .left,
+        isLoading: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -43,6 +45,7 @@ public final class SolidRoundedButtonComponent: Component {
         self.gloss = gloss
         self.iconName = iconName
         self.iconPosition = iconPosition
+        self.isLoading = isLoading
         self.action = action
     }
     
@@ -77,13 +80,17 @@ public final class SolidRoundedButtonComponent: Component {
         if lhs.iconPosition != rhs.iconPosition {
             return false
         }
-        
+        if lhs.isLoading != rhs.isLoading {
+            return false
+        }
         return true
     }
     
     public final class View: UIView {
         private var component: SolidRoundedButtonComponent?
         private var button: SolidRoundedButtonView?
+        
+        private var currentIsLoading = false
         
         public func update(component: SolidRoundedButtonComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             if self.button == nil {
@@ -98,6 +105,7 @@ public final class SolidRoundedButtonComponent: Component {
                     gloss: component.gloss
                 )
                 button.iconPosition = component.iconPosition
+                button.progressType = .embedded
                 button.icon = component.iconName.flatMap { UIImage(bundleImageName: $0) }
                 self.button = button
                 self.addSubview(button)
@@ -111,6 +119,15 @@ public final class SolidRoundedButtonComponent: Component {
                 button.updateTheme(component.theme)
                 let height = button.updateLayout(width: availableSize.width, transition: .immediate)
                 transition.setFrame(view: button, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height)), completion: nil)
+                
+                if self.currentIsLoading != component.isLoading {
+                    self.currentIsLoading = component.isLoading
+                    if component.isLoading {
+                        button.transitionToProgress()
+                    } else {
+                        button.transitionFromProgress()
+                    }
+                }
             }
             
             self.component = component
