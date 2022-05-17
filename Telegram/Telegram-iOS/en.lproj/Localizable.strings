@@ -7601,3 +7601,6 @@ Sorry for the inconvenience.";
 
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
+
+"Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
+"Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";

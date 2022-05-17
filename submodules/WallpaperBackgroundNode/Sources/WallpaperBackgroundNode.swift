@@ -431,9 +431,9 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     }
     private static var cachedSharedPattern: (PatternKey, UIImage)?
     
-    private var inlineAnimationNodes: [(AnimatedStickerNode, CGPoint)] = []
-    private let hierarchyTrackingLayer = HierarchyTrackingLayer()
-    private var activateInlineAnimationTimer: SwiftSignalKit.Timer?
+    //private var inlineAnimationNodes: [(AnimatedStickerNode, CGPoint)] = []
+    //private let hierarchyTrackingLayer = HierarchyTrackingLayer()
+    //private var activateInlineAnimationTimer: SwiftSignalKit.Timer?
 
     private let _isReady = ValuePromise<Bool>(false, ignoreRepeated: true)
     var isReady: Signal<Bool, NoError> {
@@ -460,7 +460,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.addSubnode(self.contentNode)
         self.addSubnode(self.patternImageNode)
         
-        let animationList: [(String, CGPoint)] = [
+        /*let animationList: [(String, CGPoint)] = [
             ("ptrnCAT_1162_1918", CGPoint(x: 1162 - 256, y: 1918 - 256)),
             ("ptrnDOG_0440_2284", CGPoint(x: 440 - 256, y: 2284 - 256)),
             ("ptrnGLOB_0438_1553", CGPoint(x: 438 - 256, y: 1553 - 256)),
@@ -470,7 +470,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             let animationNode = AnimatedStickerNode()
             animationNode.automaticallyLoadFirstFrame = true
             animationNode.autoplay = true
-            self.inlineAnimationNodes.append((animationNode, relativePosition))
+            //self.inlineAnimationNodes.append((animationNode, relativePosition))
             self.patternImageNode.addSubnode(animationNode)
             animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animation), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         }
@@ -500,7 +500,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 animationNode.visibility = false
             }
             strongSelf.activateInlineAnimationTimer?.invalidate()
-        }
+        }*/
     }
 
     deinit {
@@ -725,8 +725,8 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                             return
                         }
                         
-                        if var generator = generator {
-                            generator = { arguments in
+                        if let generator = generator {
+                            /*generator = { arguments in
                                 let scale = arguments.scale ?? UIScreenScale
                                 let context = DrawingContext(size: arguments.drawingSize, scale: scale, clear: true)
                                 
@@ -739,7 +739,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                                 }
                                 
                                 return context
-                            }
+                            }*/
                             
                             strongSelf.validPatternImage = ValidPatternImage(wallpaper: wallpaper, generate: generator)
                             strongSelf.validPatternGeneratedImage = nil
@@ -860,12 +860,12 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         self.loadPatternForSizeIfNeeded(size: size, transition: transition)
         
-        for (animationNode, relativePosition) in self.inlineAnimationNodes {
+        /*for (animationNode, relativePosition) in self.inlineAnimationNodes {
             let sizeNorm = CGSize(width: 1440, height: 2960)
             let animationSize = CGSize(width: 512.0 / sizeNorm.width * size.width, height: 512.0 / sizeNorm.height * size.height)
             animationNode.frame = CGRect(origin: CGPoint(x: relativePosition.x / sizeNorm.width * size.width, y: relativePosition.y / sizeNorm.height * size.height), size: animationSize)
             animationNode.updateLayout(size: animationNode.frame.size)
-        }
+        }*/
                 
         if isFirstLayout && !self.frame.isEmpty {
             self.updateScale()
