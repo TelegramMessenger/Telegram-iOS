@@ -8,7 +8,6 @@ swift_library(
     ]),
     deps = [
         "//submodules/MonotonicTime:MonotonicTime",
-        "//submodules/TelegramCore:TelegramCore",
     ],
     visibility = [
         "//visibility:public",

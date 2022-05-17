@@ -27,6 +27,7 @@ swift_library(
         "//submodules/MonotonicTime:MonotonicTime",
         "//submodules/GradientBackground:GradientBackground",
         "//submodules/ItemListUI:ItemListUI",
+        "//submodules/FakePasscode:FakePasscode",
     ],
     visibility = [
         "//visibility:public",

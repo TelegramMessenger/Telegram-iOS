@@ -13,42 +13,24 @@ public struct AccessChallengeAttempts: Equatable {
     }
 }
 
-public enum UnlockMode: Codable, Equatable {
-    case full
-    case restricted(passcode: String)
-    case denied
-
-    public func succeed() -> Bool {
-        switch self {
-        case .full, .restricted(_):
-            return true
-        case .denied:
-            return false
-        }
-    }
-}
-
 public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
     enum CodingKeys: String, CodingKey {
         case numericalPassword
         case plaintextPassword
-        case fakePassword
     }
     
     case none
-    case numericalPassword(value: String, fakeValue: [String] = [])
-    case plaintextPassword(value: String, fakeValue: [String] = [])
-
+    case numericalPassword(value: String)
+    case plaintextPassword(value: String)
+    
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
             case 0:
                 self = .none
             case 1:
-                self = .numericalPassword(value: decoder.decodeStringForKey("t", orElse: ""),
-                                          fakeValue: decoder.decodeStringArrayForKey("f"))
+                self = .numericalPassword(value: decoder.decodeStringForKey("t", orElse: ""))
             case 2:
-                self = .plaintextPassword(value: decoder.decodeStringForKey("t", orElse: ""),
-                                          fakeValue: decoder.decodeStringArrayForKey("f"))
+                self = .plaintextPassword(value: decoder.decodeStringForKey("t", orElse: ""))
             default:
                 assertionFailure()
                 self = .none
@@ -59,24 +41,21 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
         switch self {
             case .none:
                 encoder.encodeInt32(0, forKey: "r")
-            case let .numericalPassword(text, fake):
+            case let .numericalPassword(text):
                 encoder.encodeInt32(1, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
-                encoder.encodeStringArray(fake, forKey: "f")
-            case let .plaintextPassword(text, fake):
+            case let .plaintextPassword(text):
                 encoder.encodeInt32(2, forKey: "r")
                 encoder.encodeString(text, forKey: "t")
-                encoder.encodeStringArray(fake, forKey: "f")
         }
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let fakeCodes = (try? container.decode(Array<String>.self, forKey: .fakePassword)) ?? []
         if let value = try? container.decode(String.self, forKey: .numericalPassword) {
-            self = .numericalPassword(value: value, fakeValue: fakeCodes)
+            self = .numericalPassword(value: value)
         } else if let value = try? container.decode(String.self, forKey: .plaintextPassword) {
-            self = .plaintextPassword(value: value, fakeValue: fakeCodes)
+            self = .plaintextPassword(value: value)
         } else {
             self = .none
         }
@@ -87,44 +66,10 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
         switch self {
         case .none:
             break
-        case let .numericalPassword(value, fake):
+        case let .numericalPassword(value):
             try container.encode(value, forKey: .numericalPassword)
-            try container.encode(fake, forKey: .fakePassword)
-        case let .plaintextPassword(value, fake):
+        case let .plaintextPassword(value):
             try container.encode(value, forKey: .plaintextPassword)
-            try container.encode(fake, forKey: .fakePassword)
-        }
-    }
-
-    public func check(passcode: String, numericalNormalizer: (String) -> String) -> UnlockMode {
-        switch self {
-            case .none:
-                return .full
-            case let .numericalPassword(code, fakeCodes):
-                if passcode == numericalNormalizer(code) {
-                    return .full
-                }
-                guard let fakeCode = fakeCodes.first(where: { passcode == numericalNormalizer($0) }) else { return .denied }
-                return .restricted(passcode: fakeCode)
-            case let .plaintextPassword(code, fakeCodes):
-                if passcode == code {
-                    return .full
-                }
-                guard let fakeCode = fakeCodes.first(where: { passcode == $0 }) else { return .denied }
-                return .restricted(passcode: fakeCode)
-        }
-    }
-
-    public func removeFakePasscode(at index: Int) -> PostboxAccessChallengeData {
-        switch self {
-            case .none:
-                return self
-            case .numericalPassword(let code, var fakeCodes):
-                fakeCodes.remove(at: index)
-                return .numericalPassword(value: code, fakeValue: fakeCodes)
-            case .plaintextPassword(let code, var fakeCodes):
-                fakeCodes.remove(at: index)
-                return .plaintextPassword(value: code, fakeValue: fakeCodes)
         }
     }
     
@@ -140,9 +85,9 @@ public enum PostboxAccessChallengeData: PostboxCoding, Equatable, Codable {
         switch self {
         case .none:
             return nil
-        case let .numericalPassword(value, _):
+        case let .numericalPassword(value):
             return "numericalPassword:\(value)"
-        case let .plaintextPassword(value, _):
+        case let .plaintextPassword(value):
             return "plaintextPassword:\(value)"
         }
     }

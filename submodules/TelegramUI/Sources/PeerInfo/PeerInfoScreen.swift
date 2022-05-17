@@ -66,6 +66,7 @@ import QrCodeUI
 import TranslateUI
 import ChatPresentationInterfaceState
 import CreateExternalMediaStreamScreen
+import FakePasscode
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -2337,7 +2338,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.scrollNode.view.delegate = self
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.paneContainerNode)
-
+        
         if !self.isMediaOnly {
             self.addSubnode(self.headerNode.buttonsContainerNode)
         }
@@ -7269,25 +7270,38 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 selectionPanelNode?.removeFromSupernode()
             })
         }
-
+        
         if self.isSettings {
             contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
 
-            if self.context.sharedContext.appLockContext.unlockMode == .full {
-                versionLabelNode.isHidden = false
-                let horizontalPadding = 20.0
-                var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
-                let size = self.versionLabelNode.updateLayout(frame.size)
-                frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
-                frame.size = size
-                transition.updateFrameAdditive(node: self.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
-                let bottomPadding = horizontalPadding
-                contentHeight += size.height + bottomPadding
-            } else {
-                versionLabelNode.isHidden = true
-            }
+            let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+                
+                if !fakePasscodeHolder.unlockedWithFakePasscode() {
+                    strongSelf.versionLabelNode.isHidden = false
+                    let horizontalPadding = 20.0
+                    var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
+                    let size = strongSelf.versionLabelNode.updateLayout(frame.size)
+                    frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
+                    frame.size = size
+                    transition.updateFrameAdditive(node: strongSelf.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
+                    let bottomPadding = horizontalPadding
+                    contentHeight += size.height + bottomPadding
+                } else {
+                    strongSelf.versionLabelNode.isHidden = true
+                }
+                
+                strongSelf.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
+                strongSelf.updateNavigation(transition: transition, additive: additive)
+            })
         }
-        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
+//        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
         }
@@ -7302,7 +7316,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
                 
         self.ignoreScrolling = false
-        self.updateNavigation(transition: transition, additive: additive)
+//        self.updateNavigation(transition: transition, additive: additive)
         
         if !self.didSetReady && self.data != nil {
             self.didSetReady = true
@@ -7625,7 +7639,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     }
 }
 
-public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
+public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, ReactiveToPasscodeSwitch {
     private let context: AccountContext
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let peerId: PeerId
@@ -8143,6 +8157,10 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen {
         
         let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
         self.context.sharedContext.mainWindow?.presentInGlobalOverlay(controller)
+    }
+    
+    public func passcodeSwitched() {
+        self.requestLayout(transition: .immediate) // show/hide version
     }
 }
 

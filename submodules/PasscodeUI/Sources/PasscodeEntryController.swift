@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import LocalAuth
 import TelegramStringFormatting
+import FakePasscode
 
 public final class PasscodeEntryControllerPresentationArguments {
     let animated: Bool
@@ -118,7 +119,7 @@ public final class PasscodeEntryController: ViewController {
     override public func loadDisplayNode() {
         let passcodeType: PasscodeEntryFieldType
         switch self.challengeData {
-            case let .numericalPassword(value, _):
+            case let .numericalPassword(value):
                 passcodeType = value.count == 6 ? .digits6 : .digits4
             default:
                 passcodeType = .alphanumeric
@@ -157,29 +158,66 @@ public final class PasscodeEntryController: ViewController {
                 return
             }
     
-            let result = strongSelf.challengeData.check(passcode: passcode) { code in normalizeArabicNumeralString(code, type: .western) }
-            
-            if result.succeed() {
-                if let completed = strongSelf.completed {
-                    completed()
+            let _ = (strongSelf.accountManager.transaction { transaction -> (Bool, Bool, Bool) in
+                let fakePasscodeHolder = FakePasscodeSettingsHolder(transaction)
+                var passcodeSwitched = false // true -> fake, fake -> true, or fake -> another fake
+                var unlockedWithFakePasscode = false
+                
+                let succeed = ptgCheckPasscode(passcode: passcode, secondaryUnlock: false, accessChallenge: strongSelf.challengeData, fakePasscodeHolder: fakePasscodeHolder, updateAccessChallenge: { updatedAccessChallenge in
+                    transaction.setAccessChallengeData(updatedAccessChallenge)
+                }, updateFakePasscodeSettings: { updatedFakePasscodeSettingsHolder in
+                    updateFakePasscodeSettingsInternal(transaction: transaction) { _ in
+                        return updatedFakePasscodeSettingsHolder
+                    }
+                    passcodeSwitched = true
+                    unlockedWithFakePasscode = updatedFakePasscodeSettingsHolder.unlockedWithFakePasscode()
+                })
+                
+                if succeed {
+                    if unlockedWithFakePasscode {
+                        addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: true))
+                    }
                 } else {
-                    strongSelf.appLockContext.unlock(result)
+                    addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
                 }
                 
-                let isMainApp = strongSelf.applicationBindings.isMainApp
-                let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
-                    if isMainApp {
-                        return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
-                    } else {
-                        return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
-                    }
-                }).start()
-            } else {
-                strongSelf.appLockContext.failedUnlockAttempt()
-                strongSelf.controllerNode.animateError()
-                
-                addBadPasscodeAttempt(accountManager: strongSelf.accountManager, bpa: BadPasscodeAttempt(type: BadPasscodeAttempt.AppUnlockType, isFakePasscode: false))
+                return (succeed, passcodeSwitched, unlockedWithFakePasscode)
             }
+            |> deliverOnMainQueue).start(next: { succeed, passcodeSwitched, unlockedWithFakePasscode in
+                if succeed {
+                    if let completed = strongSelf.completed {
+                        completed()
+                    } else {
+                        strongSelf.appLockContext.unlock()
+                    }
+                    
+                    let isMainApp = strongSelf.applicationBindings.isMainApp
+                    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: strongSelf.accountManager, { settings in
+                        if isMainApp {
+                            return settings.withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                        } else {
+                            return settings.withUpdatedShareBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState)
+                        }
+                    }).start()
+                    
+                    if passcodeSwitched {
+                        strongSelf.window?.forEachController { controller in
+                            if let controller = controller as? ReactiveToPasscodeSwitch {
+                                controller.passcodeSwitched()
+                            }
+                            if let controller = (controller as? TabBarController)?.currentController as? ReactiveToPasscodeSwitch {
+                                controller.passcodeSwitched()
+                            }
+                            if let actionSheet = controller as? ActionSheetController {
+                                actionSheet.dismiss(animated: false)
+                            }
+                        }
+                    }
+                } else {
+                    strongSelf.appLockContext.failedUnlockAttempt()
+                    strongSelf.controllerNode.animateError()
+                }
+            })
         }
         self.controllerNode.requestBiometrics = { [weak self] in
             if let strongSelf = self {
@@ -261,7 +299,8 @@ public final class PasscodeEntryController: ViewController {
                     }
                     strongSelf.hasOngoingBiometricsRequest = false
                 } else {
-                    strongSelf.appLockContext.unlock(.full) // TODO revisit
+                    strongSelf.appLockContext.unlock()
+                    // PTG: currently biometric unlock preserves last unlock status
                     strongSelf.hasOngoingBiometricsRequest = false
                 }
             } else {
@@ -291,14 +330,4 @@ public final class PasscodeEntryController: ViewController {
             strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
         }
     }
-}
-
-public func addBadPasscodeAttempt(accountManager: AccountManager<TelegramAccountManagerTypes>, bpa: BadPasscodeAttempt) {
-    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: accountManager, { passcodeSettings in
-        var badPasscodeAttempts = passcodeSettings.badPasscodeAttempts
-        let removeBeforeDate = CFAbsoluteTimeGetCurrent() - 30 * 24 * 60 * 60 // remove records older than 30 days
-        badPasscodeAttempts.removeAll(where: { $0.date < removeBeforeDate })
-        badPasscodeAttempts.append(bpa)
-        return passcodeSettings.withUpdatedBadPasscodeAttempts(badPasscodeAttempts)
-    }).start()
 }

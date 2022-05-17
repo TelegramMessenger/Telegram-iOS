@@ -7,8 +7,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import AccountContext
+import FakePasscode
 
-public final class BadPasscodeAttemptsController: ViewController {
+public final class BadPasscodeAttemptsController: ViewController, ReactiveToPasscodeSwitch {
     private var controllerNode: BadPasscodeAttemptsControllerNode {
         return self.displayNode as! BadPasscodeAttemptsControllerNode
     }
@@ -130,7 +131,7 @@ public final class BadPasscodeAttemptsController: ViewController {
     @objc private func clearPressed() {
         let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_BadAttempts_ClearConfiramtion, color: .destructive, action: { [weak actionSheet, weak self] in
+            ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_BadAttempts_ClearConfirmation, color: .destructive, action: { [weak actionSheet, weak self] in
                 actionSheet?.dismissAnimated()
                 
                 if let strongSelf = self {
@@ -144,5 +145,9 @@ public final class BadPasscodeAttemptsController: ViewController {
             ])])
         
         self.present(actionSheet, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    }
+    
+    public func passcodeSwitched() {
+        self.dismiss(animated: false)
     }
 }
