@@ -125,7 +125,11 @@ public final class AppLockContextImpl: AppLockContext {
             
             let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
             
-            let correctedAutolockTimeout = fakePasscodeHolder.correctAutolockTimeout(passcodeSettings.autolockTimeout)
+            var correctedAutolockTimeout = fakePasscodeHolder.correctAutolockTimeout(passcodeSettings.autolockTimeout)
+            if correctedAutolockTimeout == 1 && appInForeground {
+                // prevent auto-lock when app in foreground because of 5-second precision in timeout calculation
+                correctedAutolockTimeout = 6
+            }
             if correctedAutolockTimeout != passcodeSettings.autolockTimeout {
                 passcodeSettings = passcodeSettings.withUpdatedAutolockTimeout(correctedAutolockTimeout)
             }

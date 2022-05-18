@@ -26,7 +26,6 @@ swift_library(
         "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
         "//submodules/MonotonicTime:MonotonicTime",
         "//submodules/GradientBackground:GradientBackground",
-        "//submodules/ItemListUI:ItemListUI",
         "//submodules/FakePasscode:FakePasscode",
     ],
     visibility = [

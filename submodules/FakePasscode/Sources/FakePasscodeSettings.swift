@@ -124,7 +124,7 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
     }
 
     public func correctAutolockTimeout(_ autolockTimeout: Int32?) -> Int32? {
-        if let autolockTimeout = autolockTimeout, autolockTimeout < 10 && unlockedWithFakePasscode() {
+        if autolockTimeout == 1 && unlockedWithFakePasscode() {
             return 1 * 60
         }
         return autolockTimeout
