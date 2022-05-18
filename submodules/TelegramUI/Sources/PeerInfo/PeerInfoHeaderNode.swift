@@ -2250,7 +2250,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarListNode.listContainerNode.updateEntryIsHidden(entry: entry)
     }
         
-    private var initializedCredibilityIcon = false
+    private enum CredibilityIcon {
+        case none
+        case premium
+        case verified
+        case fake
+        case scam
+    }
+    
+    private var currentCredibilityIcon: CredibilityIcon?
+    
     private var currentPanelStatusData: PeerInfoStatusData?
     func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition, additive: Bool) -> CGFloat {
         self.state = state
@@ -2276,65 +2285,80 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let themeUpdated = self.presentationData?.theme !== presentationData.theme
         self.presentationData = presentationData
         
-        if themeUpdated || !initializedCredibilityIcon {
+        let credibilityIcon: CredibilityIcon
+        if let peer = peer {
+            if peer.isFake {
+                credibilityIcon = .fake
+            } else if peer.isScam {
+                credibilityIcon = .scam
+            } else if peer.isVerified {
+                credibilityIcon = .verified
+            } else if peer.isPremium {
+                credibilityIcon = .premium
+            } else {
+                credibilityIcon = .none
+            }
+        } else {
+            credibilityIcon = .none
+        }
+        
+        if themeUpdated || self.currentCredibilityIcon != credibilityIcon {
+            self.currentCredibilityIcon = credibilityIcon
             let image: UIImage?
             var expandedImage: UIImage?
-            if let peer = peer {
-                self.initializedCredibilityIcon = true
-                if peer.isFake {
-                    image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-                } else if peer.isScam {
-                    image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
-                } else if peer.isVerified {
-                    if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
-                        image = generateImage(sourceImage.size, contextGenerator: { size, context in
+            
+            if case .fake = credibilityIcon {
+                image = PresentationResourcesChatList.fakeIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
+            } else if case .scam = credibilityIcon {
+                image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
+            } else if case .verified = credibilityIcon {
+                if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
+                    image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
+                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
+                        context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                        context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    })
+                } else {
+                    image = nil
+                }
+            } else if case .premium = credibilityIcon {
+                if let sourceImage = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
+                    image = generateImage(sourceImage.size, contextGenerator: { size, context in
+                        if let cgImage = sourceImage.cgImage {
                             context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
-                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                            context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
-                            context.fill(CGRect(origin: CGPoint(), size: size))
-                        })
-                    } else {
-                        image = nil
-                    }
-                } else if peer.isPremium {
-                    if let sourceImage = UIImage(bundleImageName: "Peer Info/PremiumIcon") {
-                        image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                            if let cgImage = sourceImage.cgImage {
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                                
-                                let colorsArray: [CGColor] = [
-                                    UIColor(rgb: 0x6B93FF).cgColor,
-                                    UIColor(rgb: 0x6B93FF).cgColor,
-                                    UIColor(rgb: 0x976FFF).cgColor,
-                                    UIColor(rgb: 0xE46ACE).cgColor,
-                                    UIColor(rgb: 0xE46ACE).cgColor
-                                ]
-                                var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
-                                let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+                            context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                            
+                            let colorsArray: [CGColor] = [
+                                UIColor(rgb: 0x6B93FF).cgColor,
+                                UIColor(rgb: 0x6B93FF).cgColor,
+                                UIColor(rgb: 0x976FFF).cgColor,
+                                UIColor(rgb: 0xE46ACE).cgColor,
+                                UIColor(rgb: 0xE46ACE).cgColor
+                            ]
+                            var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
+                            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
 
-                                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
-                            }
-                        }, opaque: false)
-                        expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in
-                            if let cgImage = sourceImage.cgImage {
-                                context.clear(CGRect(origin: CGPoint(), size: size))
-                                context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                                context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
-                                context.fill(CGRect(origin: CGPoint(), size: size))
-                            }
-                        }, opaque: false)
-                    } else {
-                        image = nil
-                    }
+                            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+                        }
+                    }, opaque: false)
+                    expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in
+                        if let cgImage = sourceImage.cgImage {
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
+                            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                        }
+                    }, opaque: false)
                 } else {
                     image = nil
                 }
             } else {
                 image = nil
             }
+            
             self.titleCredibilityIconNode.image = image
             self.titleExpandedCredibilityIconNode.image = expandedImage ?? image
         }
@@ -2409,6 +2433,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let buttonKeys: [PeerInfoHeaderButtonKey] = self.isSettings ? [] : peerInfoHeaderButtons(peer: peer, cachedData: cachedData, isOpenedFromChat: self.isOpenedFromChat, isExpanded: true, videoCallsEnabled: width > 320.0 && self.videoCallsEnabled, isSecretChat: isSecretChat, isContact: isContact)
         
+        var isPremium = false
         var isVerified = false
         var isFake = false
         let smallTitleString: NSAttributedString
@@ -2419,6 +2444,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var nextPanelSubtitleString: NSAttributedString?
         let usernameString: NSAttributedString
         if let peer = peer {
+            isPremium = peer.isPremium
             isVerified = peer.isVerified
             isFake = peer.isFake || peer.isScam
         }
@@ -2494,7 +2520,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let textSideInset: CGFloat = 36.0
         let expandedAvatarHeight: CGFloat = expandedAvatarListSize.height
         
-        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
+        let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
         
         let titleNodeLayout = self.titleNode.updateLayout(states: [
             TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),

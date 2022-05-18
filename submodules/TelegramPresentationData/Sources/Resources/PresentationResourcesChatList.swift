@@ -225,7 +225,25 @@ public struct PresentationResourcesChatList {
     
     public static func verifiedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListVerifiedIcon.rawValue, { theme in
-            return UIImage(bundleImageName: "Chat List/PeerVerifiedIcon")?.precomposed()
+            if let backgroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Chat List/PeerVerifiedIconForeground") {
+                return generateImage(backgroundImage.size, contextGenerator: { size, context in
+                    if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.saveGState()
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
+
+                        context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                        context.restoreGState()
+                        
+                        context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
+                        context.setFillColor(theme.chatList.unreadBadgeActiveTextColor.cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
+                    }
+                }, opaque: false)
+            } else {
+                return nil
+            }
         })
     }
     
@@ -236,18 +254,9 @@ public struct PresentationResourcesChatList {
                     if let cgImage = image.cgImage {
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
-                        
-                        let colorsArray: [CGColor] = [
-                            UIColor(rgb: 0x1d95fa).cgColor,
-                            UIColor(rgb: 0x1d95fa).cgColor,
-                            UIColor(rgb: 0x7c8cfe).cgColor,
-                            UIColor(rgb: 0xcb87f7).cgColor,
-                            UIColor(rgb: 0xcb87f7).cgColor
-                        ]
-                        var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
-                        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
 
-                        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+                        context.setFillColor(theme.chatList.unreadBadgeActiveBackgroundColor.cgColor)
+                        context.fill(CGRect(origin: CGPoint(), size: size))
                     }
                 }, opaque: false)
             } else {

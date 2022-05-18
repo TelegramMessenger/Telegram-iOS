@@ -7582,6 +7582,9 @@ Sorry for the inconvenience.";
 "Premium.FasterSpeed" = "Faster Download Speed";
 "Premium.FasterSpeedInfo" = "No more limits on the speed with which media and documents are downloaded.";
 
+"Premium.VoiceToText" = "Voice-to-Text Conversion";
+"Premium.VoiceToTextInfo" = "Ability to read the transcript of any incoming voice message.";
+
 "Premium.NoAds" = "No Ads";
 "Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
 
@@ -7591,13 +7594,17 @@ Sorry for the inconvenience.";
 "Premium.Stickers" = "Premium Stickers";
 "Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
 
+"Premium.ChatManagement" = "Advanced Chat Management";
+"Premium.ChatManagementInfo" = "Tools to set default folder, auto-archive and hide new chats.";
+
 "Premium.Badge" = "Profile Badge";
 "Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
 
 "Premium.Avatar" = "Animated Profile Pictures";
 "Premium.AvatarInfo" = "Video avatars animated in chat lists and chats to allow for additional self-expression.";
 
-"Premium.SubscribeFor" = "Subscribe for %@ per month";
+"Premium.SubscribeFor" = "Subscribe for %@ / month";
 
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
+"Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";

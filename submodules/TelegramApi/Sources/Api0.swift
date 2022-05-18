@@ -174,6 +174,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1460809483] = { return Api.Dialog.parse_dialog($0) }
     dict[1908216652] = { return Api.Dialog.parse_dialogFolder($0) }
     dict[1949890536] = { return Api.DialogFilter.parse_dialogFilter($0) }
+    dict[909284270] = { return Api.DialogFilter.parse_dialogFilterDefault($0) }
     dict[2004110666] = { return Api.DialogFilterSuggested.parse_dialogFilterSuggested($0) }
     dict[-445792507] = { return Api.DialogPeer.parse_dialogPeer($0) }
     dict[1363483106] = { return Api.DialogPeer.parse_dialogPeerFolder($0) }

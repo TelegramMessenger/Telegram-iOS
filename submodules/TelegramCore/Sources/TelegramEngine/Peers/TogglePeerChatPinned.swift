@@ -10,7 +10,7 @@ public enum TogglePeerChatPinnedLocation {
 
 public enum TogglePeerChatPinnedResult {
     case done
-    case limitExceeded(Int)
+    case limitExceeded(count: Int, limit: Int)
 }
 
 func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, location: TogglePeerChatPinnedLocation, itemId: PinnedItemId) -> Signal<TogglePeerChatPinnedResult, NoError> {
@@ -50,8 +50,9 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
                 limitCount = Int(limitsConfiguration.maxArchivedPinnedChatCount)
             }
             
-            if sameKind.count + additionalCount > limitCount {
-                return .limitExceeded(limitCount)
+            let count = sameKind.count + additionalCount
+            if count > limitCount {
+                return .limitExceeded(count: count, limit: limitCount)
             } else {
                 if let index = itemIds.firstIndex(of: itemId) {
                     itemIds.remove(at: index)
@@ -66,16 +67,18 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
             var result: TogglePeerChatPinnedResult = .done
             _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
                 var filters = filters
-                if let index = filters.firstIndex(where: { $0.id == filterId }) {
+                if let index = filters.firstIndex(where: { $0.id == filterId }), case let .filter(id, title, emoticon, data) = filters[index] {
                     switch itemId {
                     case let .peer(peerId):
-                        if filters[index].data.includePeers.pinnedPeers.contains(peerId) {
-                            filters[index].data.includePeers.removePinnedPeer(peerId)
+                        var updatedData = data
+                        if updatedData.includePeers.pinnedPeers.contains(peerId) {
+                            updatedData.includePeers.removePinnedPeer(peerId)
                         } else {
-                            if !filters[index].data.includePeers.addPinnedPeer(peerId) {
-                                result = .limitExceeded(100)
+                            if !updatedData.includePeers.addPinnedPeer(peerId) {
+                                result = .limitExceeded(count: updatedData.includePeers.pinnedPeers.count, limit: 100)
                             }
                         }
+                        filters[index] = .filter(id: id, title: title, emoticon: emoticon, data: updatedData)
                     }
                 }
                 return filters
@@ -92,8 +95,8 @@ func _internal_getPinnedItemIds(transaction: Transaction, location: TogglePeerCh
     case let .filter(filterId):
         var itemIds: [PinnedItemId] = []
         let _ = _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
-            if let index = filters.firstIndex(where: { $0.id == filterId }) {
-                itemIds = filters[index].data.includePeers.pinnedPeers.map { peerId in
+            if let index = filters.firstIndex(where: { $0.id == filterId }), case let .filter(_, _, _, data) = filters[index] {
+                itemIds = data.includePeers.pinnedPeers.map { peerId in
                     return .peer(peerId)
                 }
             }
@@ -117,7 +120,7 @@ func _internal_reorderPinnedItemIds(transaction: Transaction, location: TogglePe
         var result: Bool = false
         _internal_updateChatListFiltersInteractively(transaction: transaction, { filters in
             var filters = filters
-            if let index = filters.firstIndex(where: { $0.id == filterId }) {
+            if let index = filters.firstIndex(where: { $0.id == filterId }), case let .filter(id, title, emoticon, data) = filters[index] {
                 let peerIds: [PeerId] = itemIds.map { itemId -> PeerId in
                     switch itemId {
                     case let .peer(peerId):
@@ -125,8 +128,10 @@ func _internal_reorderPinnedItemIds(transaction: Transaction, location: TogglePe
                     }
                 }
                 
-                if filters[index].data.includePeers.pinnedPeers != peerIds {
-                    filters[index].data.includePeers.reorderPinnedPeers(peerIds)
+                var updatedData = data
+                if updatedData.includePeers.pinnedPeers != peerIds {
+                    updatedData.includePeers.reorderPinnedPeers(peerIds)
+                    filters[index] = .filter(id: id, title: title, emoticon: emoticon, data: updatedData)
                     result = true
                 }
             }

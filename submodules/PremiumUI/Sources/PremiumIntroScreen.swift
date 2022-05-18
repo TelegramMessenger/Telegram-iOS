@@ -12,320 +12,9 @@ import PrefixSectionGroupComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
-import SceneKit
 import InAppPurchaseManager
 import ConfettiEffect
-
-private func deg2rad(_ number: Float) -> Float {
-    return number * .pi / 180
-}
-
-private func rad2deg(_ number: Float) -> Float {
-    return number * 180.0 / .pi
-}
-
-private class StarComponent: Component {
-    let isVisible: Bool
-    
-    init(isVisible: Bool) {
-        self.isVisible = isVisible
-    }
-    
-    static func ==(lhs: StarComponent, rhs: StarComponent) -> Bool {
-        return lhs.isVisible == rhs.isVisible
-    }
-    
-    final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
-        final class Tag {
-        }
-        
-        func matches(tag: Any) -> Bool {
-            if let _ = tag as? Tag {
-                return true
-            }
-            return false
-        }
-        
-        private var _ready = Promise<Bool>()
-        var ready: Signal<Bool, NoError> {
-            return self._ready.get()
-        }
-        
-        private let sceneView: SCNView
-                
-        private var previousInteractionTimestamp: Double = 0.0
-        private var timer: SwiftSignalKit.Timer?
-        
-        override init(frame: CGRect) {
-            self.sceneView = SCNView(frame: frame)
-            self.sceneView.backgroundColor = .clear
-            self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
-            self.sceneView.isUserInteractionEnabled = false
-            
-            super.init(frame: frame)
-            
-            self.addSubview(self.sceneView)
-            
-            self.setup()
-            
-            let panGestureRecoginzer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-            self.addGestureRecognizer(panGestureRecoginzer)
-            
-            let tapGestureRecoginzer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
-            self.addGestureRecognizer(tapGestureRecoginzer)
-            
-            self.disablesInteractiveModalDismiss = true
-            self.disablesInteractiveTransitionGestureRecognizer = true
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        deinit {
-            self.timer?.invalidate()
-        }
-        
-        @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            
-            self.previousInteractionTimestamp = CACurrentMediaTime()
-            
-            var left = true
-            if let view = gesture.view {
-                let point = gesture.location(in: view)
-                let distanceFromCenter = abs(point.x - view.frame.size.width / 2.0)
-                if distanceFromCenter > 60.0 {
-                    return
-                }
-                if point.x > view.frame.width / 2.0 {
-                    left = false
-                }
-            }
-            
-            if node.animationKeys.contains("tapRotate") {
-                self.playAppearanceAnimation(velocity: nil, mirror: left, explode: true)
-                return
-            }
-            
-            let initial = node.rotation
-            let target = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: left ? -0.6 : 0.6)
-                        
-            let animation = CABasicAnimation(keyPath: "rotation")
-            animation.fromValue = NSValue(scnVector4: initial)
-            animation.toValue = NSValue(scnVector4: target)
-            animation.duration = 0.25
-            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animation.fillMode = .forwards
-            node.addAnimation(animation, forKey: "tapRotate")
-            
-            node.rotation = target
-            
-            Queue.mainQueue().after(0.25) {
-                node.rotation = initial
-                let springAnimation = CASpringAnimation(keyPath: "rotation")
-                springAnimation.fromValue = NSValue(scnVector4: target)
-                springAnimation.toValue = NSValue(scnVector4: SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0))
-                springAnimation.mass = 1.0
-                springAnimation.stiffness = 21.0
-                springAnimation.damping = 5.8
-                springAnimation.duration = springAnimation.settlingDuration * 0.8
-                node.addAnimation(springAnimation, forKey: "tapRotate")
-            }
-        }
-        
-        private var previousAngle: Float = 0.0
-        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            
-            self.previousInteractionTimestamp = CACurrentMediaTime()
-            
-            if #available(iOS 11.0, *) {
-                node.removeAnimation(forKey: "rotate", blendOutDuration: 0.1)
-                node.removeAnimation(forKey: "tapRotate", blendOutDuration: 0.1)
-            } else {
-                node.removeAllAnimations()
-            }
-            
-            switch gesture.state {
-                case .began:
-                    self.previousAngle = 0.0
-                case .changed:
-                    let translation = gesture.translation(in: gesture.view)
-                    let anglePan = deg2rad(Float(translation.x))
-                
-                    self.previousAngle = anglePan
-                    node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: self.previousAngle)
-                case .ended:
-                    let velocity = gesture.velocity(in: gesture.view)
-                    
-                    var smallAngle = false
-                    if (self.previousAngle < .pi / 2 && self.previousAngle > -.pi / 2) && abs(velocity.x) < 200 {
-                        smallAngle = true
-                    }
-                
-                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle, explode: !smallAngle && abs(velocity.x) > 600)
-                    node.rotation = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: 0.0)
-                default:
-                    break
-            }
-        }
-        
-        private func setup() {
-            guard let scene = SCNScene(named: "star.scn") else {
-                return
-            }
-            self.sceneView.scene = scene
-            self.sceneView.delegate = self
-            
-            let _ = self.sceneView.snapshot()
-        }
-        
-        private var didSetReady = false
-        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
-            if !self.didSetReady {
-                self.didSetReady = true
-                
-                self._ready.set(.single(true))
-                self.onReady()
-            }
-        }
-        
-        private func onReady() {
-            self.setupGradientAnimation()
-            self.setupShineAnimation()
-            
-            self.playAppearanceAnimation(explode: true)
-            
-            self.previousInteractionTimestamp = CACurrentMediaTime()
-            self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
-                if let strongSelf = self {
-                    let currentTimestamp = CACurrentMediaTime()
-                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 5.0 {
-                        strongSelf.playAppearanceAnimation()
-                    }
-                }
-            }, queue: Queue.mainQueue())
-            self.timer?.start()
-        }
-        
-        private func setupGradientAnimation() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            guard let initial = node.geometry?.materials.first?.diffuse.contentsTransform else {
-                return
-            }
-            
-            let animation = CABasicAnimation(keyPath: "contentsTransform")
-            animation.duration = 4.5
-            animation.fromValue = NSValue(scnMatrix4: initial)
-            animation.toValue = NSValue(scnMatrix4: SCNMatrix4Translate(initial, -0.35, 0.35, 0))
-            animation.timingFunction = CAMediaTimingFunction(name: .linear)
-            animation.autoreverses = true
-            animation.repeatCount = .infinity
-            
-            node.geometry?.materials.first?.diffuse.addAnimation(animation, forKey: "gradient")
-        }
-        
-        private func setupShineAnimation() {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            guard let initial = node.geometry?.materials.first?.emission.contentsTransform else {
-                return
-            }
-            
-            let animation = CABasicAnimation(keyPath: "contentsTransform")
-            animation.fillMode = .forwards
-            animation.fromValue = NSValue(scnMatrix4: initial)
-            animation.toValue = NSValue(scnMatrix4: SCNMatrix4Translate(initial, -1.6, 0.0, 0.0))
-            animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            animation.beginTime = 0.6
-            animation.duration = 0.9
-            
-            let group = CAAnimationGroup()
-            group.animations = [animation]
-            group.beginTime = 1.0
-            group.duration = 3.0
-            group.repeatCount = .infinity
-            
-            node.geometry?.materials.first?.emission.addAnimation(group, forKey: "shimmer")
-        }
-        
-        private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            
-            self.previousInteractionTimestamp = CACurrentMediaTime()
-            
-            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
-                let particleSystem = particles.particleSystems?.first
-                particleSystem?.particleColorVariation = SCNVector4(0.15, 0.2, 0.35, 0.3)
-                particleSystem?.particleVelocity = 2.2
-                particleSystem?.birthRate = 4.5
-                particleSystem?.particleLifeSpan = 2.0
-                
-                node.physicsField?.isActive = true
-                Queue.mainQueue().after(1.0) {
-                    node.physicsField?.isActive = false
-                    particles.particleSystems?.first?.birthRate = 1.2
-                    particleSystem?.particleVelocity = 1.0
-                    particleSystem?.particleLifeSpan = 4.0
-                }
-            }
-        
-            let from = node.presentation.rotation
-            node.removeAnimation(forKey: "tapRotate")
-            
-            var toValue: Float = smallAngle ? 0.0 : .pi * 2.0
-            if let velocity = velocity, !smallAngle && abs(velocity) > 200 && velocity < 0.0 {
-                toValue *= -1
-            }
-            if mirror {
-                toValue *= -1
-            }
-            let to = SCNVector4(x: 0.0, y: 1.0, z: 0.0, w: toValue)
-            let distance = rad2deg(to.w - from.w)
-            
-            guard !distance.isZero else {
-                return
-            }
-            
-            let springAnimation = CASpringAnimation(keyPath: "rotation")
-            springAnimation.fromValue = NSValue(scnVector4: from)
-            springAnimation.toValue = NSValue(scnVector4: to)
-            springAnimation.mass = 1.0
-            springAnimation.stiffness = 21.0
-            springAnimation.damping = 5.8
-            springAnimation.duration = springAnimation.settlingDuration * 0.75
-            springAnimation.initialVelocity = velocity.flatMap { abs($0 / CGFloat(distance)) } ?? 1.7
-            
-            node.addAnimation(springAnimation, forKey: "rotate")
-        }
-        
-        func update(component: StarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
-            self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
-            
-            return availableSize
-        }
-    }
-    
-    func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
-    }
-}
-
+import TextFormat
 
 private final class SectionGroupComponent: Component {
     public final class Item: Equatable {
@@ -813,6 +502,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         let infoBackground = Child(RoundedRectangle.self)
         let infoTitle = Child(MultilineTextComponent.self)
         let infoText = Child(MultilineTextComponent.self)
+        let termsText = Child(MultilineTextComponent.self)
         
         return { context in
             let sideInset: CGFloat = 16.0
@@ -956,6 +646,28 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         ),
                         SectionGroupComponent.Item(
                             AnyComponentWithIdentity(
+                                id: "voice",
+                                component: AnyComponent(
+                                    PerkComponent(
+                                        iconName: "Premium/Perk/Voice",
+                                        iconBackgroundColors: [
+                                            UIColor(rgb: 0xDE4768),
+                                            UIColor(rgb: 0xD54D82)
+                                        ],
+                                        title: strings.Premium_VoiceToText,
+                                        titleColor: titleColor,
+                                        subtitle: strings.Premium_VoiceToTextInfo,
+                                        subtitleColor: subtitleColor,
+                                        arrowColor: arrowColor
+                                    )
+                                )
+                            ),
+                            action: {
+                                
+                            }
+                        ),
+                        SectionGroupComponent.Item(
+                            AnyComponentWithIdentity(
                                 id: "noAds",
                                 component: AnyComponent(
                                     PerkComponent(
@@ -1011,6 +723,28 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                         title: strings.Premium_Stickers,
                                         titleColor: titleColor,
                                         subtitle: strings.Premium_StickersInfo,
+                                        subtitleColor: subtitleColor,
+                                        arrowColor: arrowColor
+                                    )
+                                )
+                            ),
+                            action: {
+                                
+                            }
+                        ),
+                        SectionGroupComponent.Item(
+                            AnyComponentWithIdentity(
+                                id: "chat",
+                                component: AnyComponent(
+                                    PerkComponent(
+                                        iconName: "Premium/Perk/Chat",
+                                        iconBackgroundColors: [
+                                            UIColor(rgb: 0x9674FF),
+                                            UIColor(rgb: 0x8C7DFF)
+                                        ],
+                                        title: strings.Premium_ChatManagement,
+                                        titleColor: titleColor,
+                                        subtitle: strings.Premium_ChatManagementInfo,
                                         subtitleColor: subtitleColor,
                                         arrowColor: arrowColor
                                     )
@@ -1134,7 +868,33 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + infoText.size.width / 2.0, y: size.height + textPadding + infoText.size.height / 2.0))
             )
             size.height += infoBackground.size.height
-            size.height += 3.0
+            size.height += 6.0
+            
+            let termsFont = Font.regular(13.0)
+            let termsTextColor = environment.theme.list.freeTextColor
+            let termsMarkdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), bold: MarkdownAttributeSet(font: termsFont, textColor: termsTextColor), link: MarkdownAttributeSet(font: termsFont, textColor: environment.theme.list.itemAccentColor), linkAttribute: { contents in
+                return (TelegramTextAttributes.URL, contents)
+            })
+                                                             
+            let termsText = termsText.update(
+                component: MultilineTextComponent(
+                    text: .markdown(
+                        text: strings.Premium_Terms,
+                        attributes: termsMarkdownAttributes
+                    ),
+                    horizontalAlignment: .natural,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.0
+                ),
+                environment: {},
+                availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
+                transition: context.transition
+            )
+            context.add(termsText
+                .position(CGPoint(x: sideInset + environment.safeInsets.left + textSideInset + termsText.size.width / 2.0, y: size.height + termsText.size.height / 2.0))
+            )
+            size.height += termsText.size.height
+            size.height += 10.0
             size.height += scrollEnvironment.insets.bottom
             
             return size
@@ -1286,7 +1046,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     static var body: Body {
         let background = Child(Rectangle.self)
         let scrollContent = Child(ScrollComponent<EnvironmentType>.self)
-        let star = Child(StarComponent.self)
+        let star = Child(PremiumStarComponent.self)
         let topPanel = Child(BlurredRectangle.self)
         let topSeparator = Child(Rectangle.self)
         let title = Child(Text.self)
@@ -1306,7 +1066,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
                 
             let star = star.update(
-                component: StarComponent(isVisible: starIsVisible),
+                component: PremiumStarComponent(isVisible: starIsVisible),
                 availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )
@@ -1538,7 +1298,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         super.containerLayoutUpdated(layout, transition: transition)
         
         if !self.didSetReady {
-            if let view = self.node.hostView.findTaggedView(tag: StarComponent.View.Tag()) as? StarComponent.View {
+            if let view = self.node.hostView.findTaggedView(tag: PremiumStarComponent.View.Tag()) as? PremiumStarComponent.View {
                 self.didSetReady = true
                 self._ready.set(view.ready)
             }

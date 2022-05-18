@@ -42,6 +42,8 @@ swift_library(
         "//submodules/Components/Forms/PrefixSectionGroupComponent:PrefixSectionGroupComponent",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
         "//submodules/ConfettiEffect:ConfettiEffect",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

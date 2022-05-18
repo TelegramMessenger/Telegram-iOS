@@ -897,6 +897,7 @@ public extension Api {
 public extension Api {
     enum DialogFilter: TypeConstructorDescription {
         case dialogFilter(flags: Int32, id: Int32, title: String, emoticon: String?, pinnedPeers: [Api.InputPeer], includePeers: [Api.InputPeer], excludePeers: [Api.InputPeer])
+        case dialogFilterDefault
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -924,6 +925,12 @@ public extension Api {
                         item.serialize(buffer, true)
                     }
                     break
+                case .dialogFilterDefault:
+                    if boxed {
+                        buffer.appendInt32(909284270)
+                    }
+                    
+                    break
     }
     }
     
@@ -931,6 +938,8 @@ public extension Api {
         switch self {
                 case .dialogFilter(let flags, let id, let title, let emoticon, let pinnedPeers, let includePeers, let excludePeers):
                 return ("dialogFilter", [("flags", String(describing: flags)), ("id", String(describing: id)), ("title", String(describing: title)), ("emoticon", String(describing: emoticon)), ("pinnedPeers", String(describing: pinnedPeers)), ("includePeers", String(describing: includePeers)), ("excludePeers", String(describing: excludePeers))])
+                case .dialogFilterDefault:
+                return ("dialogFilterDefault", [])
     }
     }
     
@@ -968,6 +977,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_dialogFilterDefault(_ reader: BufferReader) -> DialogFilter? {
+            return Api.DialogFilter.dialogFilterDefault
         }
     
     }

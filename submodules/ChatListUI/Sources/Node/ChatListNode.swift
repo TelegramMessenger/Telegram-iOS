@@ -844,7 +844,7 @@ public final class ChatListNode: ListView {
                         break
                     case .limitExceeded:
                         var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumLimitScreen(context: context, subject: .pins, action: {
+                        let controller = PremiumLimitScreen(context: context, subject: .pins, count: 0, action: {
                             let premiumScreen = PremiumIntroScreen(context: context)
                             replaceImpl?(premiumScreen)
                         })
@@ -1175,8 +1175,12 @@ public final class ChatListNode: ListView {
                 updatedScrollPosition = nil
             }
             
-            let filterData = filter.flatMap { filter -> ChatListItemFilterData in
-                return ChatListItemFilterData(excludesArchived: filter.data.excludeArchived)
+            let filterData = filter.flatMap { filter -> ChatListItemFilterData? in
+                if case let .filter(_, _, _, data) = filter {
+                    return ChatListItemFilterData(excludesArchived: data.excludeArchived)
+                } else {
+                    return nil
+                }
             }
             
             return preparedChatListNodeViewTransition(from: previousView, to: processedView, reason: reason, previewing: previewing, disableAnimations: disableAnimations, account: context.account, scrollPosition: updatedScrollPosition, searchMode: searchMode)
@@ -2265,13 +2269,13 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
     
     if let chatListFilters = chatListFilters {
         var result = ""
-        for filter in chatListFilters {
-            let predicate = chatListFilterPredicate(filter: filter.data)
+        for case let .filter(_, title, _, data) in chatListFilters {
+            let predicate = chatListFilterPredicate(filter: data)
             if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
                 if !result.isEmpty {
                     result.append(", ")
                 }
-                result.append(filter.title)
+                result.append(title)
             }
         }
         

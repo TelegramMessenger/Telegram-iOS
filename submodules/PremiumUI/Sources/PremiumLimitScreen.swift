@@ -22,19 +22,22 @@ private class PremiumLimitAnimationComponent: Component {
     private let activeColors: [UIColor]
     private let textColor: UIColor
     private let badgeText: String?
+    private let badgePosition: CGFloat
     
     init(
         iconName: String,
         inactiveColor: UIColor,
         activeColors: [UIColor],
         textColor: UIColor,
-        badgeText: String?
+        badgeText: String?,
+        badgePosition: CGFloat
     ) {
         self.iconName = iconName
         self.inactiveColor = inactiveColor
         self.activeColors = activeColors
         self.textColor = textColor
         self.badgeText = badgeText
+        self.badgePosition = badgePosition
     }
     
     static func ==(lhs: PremiumLimitAnimationComponent, rhs: PremiumLimitAnimationComponent) -> Bool {
@@ -51,6 +54,9 @@ private class PremiumLimitAnimationComponent: Component {
             return false
         }
         if lhs.badgeText != rhs.badgeText {
+            return false
+        }
+        if lhs.badgePosition != rhs.badgePosition {
             return false
         }
         return true
@@ -144,9 +150,8 @@ private class PremiumLimitAnimationComponent: Component {
             let now = self.badgeView.layer.convertTime(CACurrentMediaTime(), from: nil)
             
             let positionAnimation = CABasicAnimation(keyPath: "position.x")
-            positionAnimation.fromValue = NSValue(cgPoint: CGPoint(x: -availableSize.width / 2.0, y: 0.0))
-            positionAnimation.toValue = NSValue(cgPoint: CGPoint())
-            positionAnimation.isAdditive = true
+            positionAnimation.fromValue = NSValue(cgPoint: CGPoint(x: 0.0, y: 0.0))
+            positionAnimation.toValue = NSValue(cgPoint: self.badgeView.center)
             positionAnimation.duration = 0.5
             positionAnimation.fillMode = .forwards
             positionAnimation.beginTime = now
@@ -225,7 +230,7 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0), size: CGSize(width: 44.0, height: 12.0))
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
-            self.badgeView.center = CGPoint(x: availableSize.width / 2.0, y: 82.0)
+            self.badgeView.center = CGPoint(x: availableSize.width * component.badgePosition, y: 82.0)
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
                 self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeSize.height / 2.0)
@@ -318,33 +323,39 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
     public let inactiveColor: UIColor
     public let activeColors: [UIColor]
     public let inactiveTitle: String
+    public let inactiveValue: String
     public let inactiveTitleColor: UIColor
     public let activeTitle: String
     public let activeValue: String
     public let activeTitleColor: UIColor
     public let badgeIconName: String
     public let badgeText: String?
+    public let badgePosition: CGFloat
     
     public init(
         inactiveColor: UIColor,
         activeColors: [UIColor],
         inactiveTitle: String,
+        inactiveValue: String,
         inactiveTitleColor: UIColor,
         activeTitle: String,
         activeValue: String,
         activeTitleColor: UIColor,
         badgeIconName: String,
-        badgeText: String?
+        badgeText: String?,
+        badgePosition: CGFloat
     ) {
         self.inactiveColor = inactiveColor
         self.activeColors = activeColors
         self.inactiveTitle = inactiveTitle
+        self.inactiveValue = inactiveValue
         self.inactiveTitleColor = inactiveTitleColor
         self.activeTitle = activeTitle
         self.activeValue = activeValue
         self.activeTitleColor = activeTitleColor
         self.badgeIconName = badgeIconName
         self.badgeText = badgeText
+        self.badgePosition = badgePosition
     }
     
     public static func ==(lhs: PremiumLimitDisplayComponent, rhs: PremiumLimitDisplayComponent) -> Bool {
@@ -355,6 +366,9 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
             return false
         }
         if lhs.inactiveTitle != rhs.inactiveTitle {
+            return false
+        }
+        if lhs.inactiveValue != rhs.inactiveValue {
             return false
         }
         if lhs.inactiveTitleColor != rhs.inactiveTitleColor {
@@ -375,11 +389,15 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         if lhs.badgeText != rhs.badgeText {
             return false
         }
+        if lhs.badgePosition != rhs.badgePosition {
+            return false
+        }
         return true
     }
     
     public static var body: Body {
         let inactiveTitle = Child(MultilineTextComponent.self)
+        let inactiveValue = Child(MultilineTextComponent.self)
         let activeTitle = Child(MultilineTextComponent.self)
         let activeValue = Child(MultilineTextComponent.self)
         let animation = Child(PremiumLimitAnimationComponent.self)
@@ -395,6 +413,20 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     text: .plain(
                         NSAttributedString(
                             string: component.inactiveTitle,
+                            font: Font.semibold(15.0),
+                            textColor: component.inactiveTitleColor
+                        )
+                    )
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
+            let inactiveValue = inactiveValue.update(
+                component: MultilineTextComponent(
+                    text: .plain(
+                        NSAttributedString(
+                            string: component.inactiveValue,
                             font: Font.semibold(15.0),
                             textColor: component.inactiveTitleColor
                         )
@@ -438,7 +470,8 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     inactiveColor: component.inactiveColor,
                     activeColors: component.activeColors,
                     textColor: component.activeTitleColor,
-                    badgeText: component.badgeText
+                    badgeText: component.badgeText,
+                    badgePosition: component.badgePosition
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: height),
                 transition: context.transition
@@ -452,8 +485,12 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                 .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
             )
             
+            context.add(inactiveValue
+                .position(CGPoint(x: context.availableSize.width / 2.0 - activeValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
+            )
+            
             context.add(activeTitle
-                .position(CGPoint(x: context.availableSize.width / 2.0 + 1.0 + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0 + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
             )
             
             context.add(activeValue
@@ -470,12 +507,14 @@ private final class LimitSheetContent: CombinedComponent {
     
     let context: AccountContext
     let subject: PremiumLimitScreen.Subject
+    let count: Int32
     let action: () -> Void
     let dismiss: () -> Void
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
         self.context = context
         self.subject = subject
+        self.count = count
         self.action = action
         self.dismiss = dismiss
     }
@@ -485,6 +524,9 @@ private final class LimitSheetContent: CombinedComponent {
             return false
         }
         if lhs.subject != rhs.subject {
+            return false
+        }
+        if lhs.count != rhs.count {
             return false
         }
         return true
@@ -549,7 +591,9 @@ private final class LimitSheetContent: CombinedComponent {
             let iconName: String
             let badgeText: String
             let string: String
+            let defaultValue: String
             let premiumValue: String
+            let badgePosition: CGFloat
             switch subject {
                 case .folders:
                     let limit = state.limits.maxFoldersCount
@@ -557,28 +601,36 @@ private final class LimitSheetContent: CombinedComponent {
                     iconName = "Premium/Folder"
                     badgeText = "\(limit)"
                     string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = "\(premiumLimit)"
+                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .chatsInFolder:
                     let limit = state.limits.maxFolderChatsCount
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
                     badgeText = "\(limit)"
                     string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = "\(premiumLimit)"
+                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .pins:
                     let limit = state.limits.maxPinnedChatCount
                     let premiumLimit = state.premiumLimits.maxPinnedChatCount
                     iconName = "Premium/Pin"
                     badgeText = "\(limit)"
                     string = strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = "\(premiumLimit)"
+                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .files:
                     let limit: Int64 = 2048 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
                     let premiumLimit: Int64 = 4096 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
                     iconName = "Premium/File"
                     badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
+                    defaultValue = ""
                     premiumValue = dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
             }
             
             let title = title.update(
@@ -625,12 +677,14 @@ private final class LimitSheetContent: CombinedComponent {
                             UIColor(rgb: 0xe46ace)
                         ],
                         inactiveTitle: strings.Premium_Free,
+                        inactiveValue: defaultValue,
                         inactiveTitleColor: .black,
                         activeTitle: strings.Premium_Premium,
                         activeValue: premiumValue,
                         activeTitleColor: .white,
                         badgeIconName: iconName,
-                        badgeText: badgeText
+                        badgeText: badgeText,
+                        badgePosition: badgePosition
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
                     transition: .immediate
@@ -696,11 +750,13 @@ private final class LimitSheetComponent: CombinedComponent {
     
     let context: AccountContext
     let subject: PremiumLimitScreen.Subject
+    let count: Int32
     let action: () -> Void
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, action: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {
         self.context = context
         self.subject = subject
+        self.count = count
         self.action = action
     }
     
@@ -729,6 +785,7 @@ private final class LimitSheetComponent: CombinedComponent {
                     content: AnyComponent<EnvironmentType>(LimitSheetContent(
                         context: context.component.context,
                         subject: context.component.subject,
+                        count: context.component.count,
                         action: context.component.action,
                         dismiss: {
                             animateOut.invoke(Action { _ in
@@ -775,8 +832,8 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case files
     }
     
-    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, action: @escaping () -> Void) {
-        super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, action: action), navigationBarAppearance: .none)
+    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {
+        super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, action: action), navigationBarAppearance: .none)
         
         self.navigationPresentation = .flatModal
     }

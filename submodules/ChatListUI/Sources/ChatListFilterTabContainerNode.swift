@@ -192,7 +192,7 @@ private final class ItemNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateText(strings: PresentationStrings, title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func updateText(strings: PresentationStrings, title: String, shortTitle: String, unreadCount: Int, unreadHasUnmuted: Bool, isNoFilter: Bool, selectionFraction: CGFloat, isEditing: Bool, isAllChats: Bool, isReordering: Bool, canReorderAllChats: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
         self.isEditing = isEditing
         
         if self.theme !== presentationData.theme {
@@ -215,7 +215,7 @@ private final class ItemNode: ASDisplayNode {
         self.selectionFraction = selectionFraction
         self.unreadCount = unreadCount
         
-        transition.updateAlpha(node: self.containerNode, alpha: isEditing || (isReordering && isAllChats) ? 0.5 : 1.0)
+        transition.updateAlpha(node: self.containerNode, alpha: isEditing || (isReordering && isAllChats && !canReorderAllChats) ? 0.5 : 1.0)
         
         if isReordering && !isAllChats {
             if self.deleteButtonNode == nil {
@@ -265,7 +265,7 @@ private final class ItemNode: ASDisplayNode {
         
         if self.isReordering != isReordering {
             self.isReordering = isReordering
-            if self.isReordering && !isAllChats {
+            if self.isReordering && (!isAllChats || canReorderAllChats) {
                 self.startShaking()
             } else {
                 self.layer.removeAnimation(forKey: "shaking_position")
@@ -474,14 +474,14 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
     private var reorderedItemIds: [ChatListFilterTabEntryId]?
     private lazy var hapticFeedback = { HapticFeedback() }()
     
-    private var currentParams: (size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, transitionFraction: CGFloat, presentationData: PresentationData)?
+    private var currentParams: (size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, canReorderAllChats: Bool, transitionFraction: CGFloat, presentationData: PresentationData)?
     
     var reorderedFilterIds: [Int32]? {
         return self.reorderedItemIds.flatMap {
             $0.compactMap {
                 switch $0 {
                 case .all:
-                    return nil
+                    return 0
                 case let .filter(id):
                     return id
                 }
@@ -516,7 +516,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             }
             for (id, itemNode) in strongSelf.itemNodes {
                 if itemNode.view.convert(itemNode.bounds, to: strongSelf.view).contains(point) {
-                    if case .all = id {
+                    if case .all = id, !(strongSelf.currentParams?.canReorderAllChats ?? false) {
                         return false
                     }
                     return true
@@ -553,8 +553,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                     strongSelf.addSubnode(itemNode)
                     
                     strongSelf.reorderingItemPosition = (itemNode.frame.minX, 0.0)
-                    if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, transitionFraction, presentationData) = strongSelf.currentParams {
-                        strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
+                    if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, canReorderAllChats, transitionFraction, presentationData) = strongSelf.currentParams {
+                        strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, canReorderAllChats: canReorderAllChats, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
                     }
                     return
                 }
@@ -573,13 +573,15 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             strongSelf.reorderingItemPosition = nil
             strongSelf.reorderingAutoScrollAnimator?.invalidate()
             strongSelf.reorderingAutoScrollAnimator = nil
-            if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, transitionFraction, presentationData) = strongSelf.currentParams {
-                strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
+            if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, canReorderAllChats, transitionFraction, presentationData) = strongSelf.currentParams {
+                strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, canReorderAllChats: canReorderAllChats, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
             }
         }, moved: { [weak self] offset in
             guard let strongSelf = self, let reorderingItem = strongSelf.reorderingItem else {
                 return
             }
+            
+            let minIndex = (strongSelf.currentParams?.canReorderAllChats ?? false) ? 0 : 1
             if let reorderingItemNode = strongSelf.itemNodes[reorderingItem], let (initial, _) = strongSelf.reorderingItemPosition, let reorderedItemIds = strongSelf.reorderedItemIds, let currentItemIndex = reorderedItemIds.firstIndex(of: reorderingItem) {
                 
                 for (id, itemNode) in strongSelf.itemNodes {
@@ -591,9 +593,9 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                         if reorderingItemNode.frame.intersects(itemFrame) {
                             let targetIndex: Int
                             if reorderingItemNode.frame.midX < itemFrame.midX {
-                                targetIndex = max(1, itemIndex - 1)
+                                targetIndex = max(minIndex, itemIndex - 1)
                             } else {
-                                targetIndex = max(1, min(reorderedItemIds.count - 1, itemIndex))
+                                targetIndex = max(minIndex, min(reorderedItemIds.count - 1, itemIndex))
                             }
                             if targetIndex != currentItemIndex {
                                 strongSelf.hapticFeedback.tap()
@@ -607,8 +609,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                                     updatedReorderedItemIds.insert(reorderingItem, at: targetIndex)
                                 }
                                 strongSelf.reorderedItemIds = updatedReorderedItemIds
-                                if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, transitionFraction, presentationData) = strongSelf.currentParams {
-                                    strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
+                                if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, canReorderAllChats, transitionFraction, presentationData) = strongSelf.currentParams {
+                                    strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, canReorderAllChats: canReorderAllChats, transitionFraction: transitionFraction, presentationData: presentationData, transition: .animated(duration: 0.25, curve: .easeInOut))
                                 }
                             }
                             break
@@ -618,8 +620,8 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 
                 strongSelf.reorderingItemPosition = (initial, offset)
             }
-            if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, transitionFraction, presentationData) = strongSelf.currentParams {
-                strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, transitionFraction: transitionFraction, presentationData: presentationData, transition: .immediate)
+            if let (size, sideInset, filters, selectedFilter, isReordering, isEditing, canReorderAllChats, transitionFraction, presentationData) = strongSelf.currentParams {
+                strongSelf.update(size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering: isReordering, isEditing: isEditing, canReorderAllChats: canReorderAllChats, transitionFraction: transitionFraction, presentationData: presentationData, transition: .immediate)
             }
         })
         self.reorderingGesture = reorderingGesture
@@ -635,7 +637,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
         self.scrollNode.layer.removeAllAnimations()
     }
     
-    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, sideInset: CGFloat, filters: [ChatListFilterTabEntry], selectedFilter: ChatListFilterTabEntryId?, isReordering: Bool, isEditing: Bool, canReorderAllChats: Bool, transitionFraction: CGFloat, presentationData: PresentationData, transition proposedTransition: ContainedViewLayoutTransition) {
         let isFirstTime = self.currentParams == nil
         let transition: ContainedViewLayoutTransition = isFirstTime ? .immediate : proposedTransition
         
@@ -680,7 +682,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             self.reorderedItemIds = nil
         }
         
-        self.currentParams = (size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering, isEditing, transitionFraction, presentationData: presentationData)
+        self.currentParams = (size: size, sideInset: sideInset, filters: filters, selectedFilter: selectedFilter, isReordering, isEditing, canReorderAllChats, transitionFraction, presentationData: presentationData)
         
         self.reorderingGesture?.isEnabled = isReordering
         
@@ -762,7 +764,7 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
                 selectionFraction = 0.0
             }
             
-            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isAllChats: isNoFilter, isReordering: isReordering, presentationData: presentationData, transition: itemNodeTransition)
+            itemNode.updateText(strings: presentationData.strings, title: filter.title(strings: presentationData.strings), shortTitle: filter.shortTitle(strings: presentationData.strings), unreadCount: unreadCount, unreadHasUnmuted: unreadHasUnmuted, isNoFilter: isNoFilter, selectionFraction: selectionFraction, isEditing: isEditing, isAllChats: isNoFilter, isReordering: isReordering, canReorderAllChats: canReorderAllChats, presentationData: presentationData, transition: itemNodeTransition)
         }
         var removeKeys: [ChatListFilterTabEntryId] = []
         for (id, _) in self.itemNodes {
@@ -893,7 +895,13 @@ final class ChatListFilterTabContainerNode: ASDisplayNode {
             } else {
                 transition.updateFrame(node: self.selectedLineNode, frame: lineFrame)
             }
-            transition.updateAlpha(node: self.selectedLineNode, alpha: isReordering && selectedFilter == .all ? 0.5 : 1.0)
+            let lineAlpha: CGFloat
+            if isReordering && canReorderAllChats {
+                lineAlpha = 0.0
+            } else {
+                lineAlpha = isReordering && selectedFilter == .all ? 0.5 : 1.0
+            }
+            transition.updateAlpha(node: self.selectedLineNode, alpha: lineAlpha)
             
             if let previousSelectedFrame = self.previousSelectedFrame {
                 let previousContentOffsetX = max(0.0, min(previousContentWidth - previousScrollBounds.width, floor(previousSelectedFrame.midX - previousScrollBounds.width / 2.0)))

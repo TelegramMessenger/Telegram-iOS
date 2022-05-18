@@ -242,6 +242,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return .join(String(component.dropFirst()))
                     }
+                } else if pathComponents[0].hasPrefix("$") || pathComponents[0].hasPrefix("%24") {
+                    let component = pathComponents[0].replacingOccurrences(of: "%24", with: "$")
+                    return .invoice(component)
                 }
                 return .peerName(peerName, nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {

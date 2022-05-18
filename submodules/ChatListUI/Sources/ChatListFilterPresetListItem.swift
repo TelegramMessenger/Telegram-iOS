@@ -23,6 +23,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
     let editing: ChatListFilterPresetListItemEditing
     let canBeReordered: Bool
     let canBeDeleted: Bool
+    let isAllChats: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
@@ -36,6 +37,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         editing: ChatListFilterPresetListItemEditing,
         canBeReordered: Bool,
         canBeDeleted: Bool,
+        isAllChats: Bool,
         sectionId: ItemListSectionId,
         action: @escaping () -> Void,
         setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void,
@@ -48,6 +50,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         self.editing = editing
         self.canBeReordered = canBeReordered
         self.canBeDeleted = canBeDeleted
+        self.isAllChats = isAllChats
         self.sectionId = sectionId
         self.action = action
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
@@ -92,7 +95,9 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         }
     }
     
-    var selectable: Bool = true
+    var selectable: Bool  {
+        return !self.isAllChats
+    }
     
     func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
@@ -205,7 +210,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             }
             
             let titleAttributedString = NSMutableAttributedString()
-            titleAttributedString.append(NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor))
+            titleAttributedString.append(NSAttributedString(string: item.isAllChats ? item.presentationData.strings.ChatList_FolderAllChats : item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor))
             
             var editableControlSizeAndApply: (CGFloat, (CGFloat) -> ItemListEditableControlNode)?
             var reorderControlSizeAndApply: (CGFloat, (CGFloat, Bool, ContainedViewLayoutTransition) -> ItemListEditableReorderControlNode)?
@@ -293,6 +298,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                             editableControlNode?.removeFromSupernode()
                         })
                     }
+                    strongSelf.editableControlNode?.isHidden = !item.canBeDeleted
                     
                     if let reorderControlSizeAndApply = reorderControlSizeAndApply {
                         if strongSelf.reorderControlNode == nil {
@@ -374,6 +380,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     if let arrowImage = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
+                    strongSelf.arrowNode.isHidden = item.isAllChats
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     
