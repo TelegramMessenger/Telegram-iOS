@@ -788,6 +788,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 })
 
                 transition.horizontal.animateTransformScale(node: statusContainerNode.contentNode, from: 1.0 / scale)
+                
+                contentNode.interactiveFileNode.animateSent()
 
                 return statusContainerNode
             }

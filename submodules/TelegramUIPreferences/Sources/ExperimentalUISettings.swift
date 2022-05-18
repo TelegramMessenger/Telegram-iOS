@@ -21,6 +21,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var experimentalBackground: Bool
     public var snow: Bool
     public var inlineStickers: Bool
+    public var localTranscription: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -40,7 +41,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             acceleratedStickers: false,
             experimentalBackground: false,
             snow: false,
-            inlineStickers: false
+            inlineStickers: false,
+            localTranscription: false
         )
     }
     
@@ -61,7 +63,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         acceleratedStickers: Bool,
         experimentalBackground: Bool,
         snow: Bool,
-        inlineStickers: Bool
+        inlineStickers: Bool,
+        localTranscription: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -80,6 +83,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalBackground = experimentalBackground
         self.snow = snow
         self.inlineStickers = inlineStickers
+        self.localTranscription = localTranscription
     }
     
     public init(from decoder: Decoder) throws {
@@ -102,6 +106,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.experimentalBackground = (try container.decodeIfPresent(Int32.self, forKey: "experimentalBackground") ?? 0) != 0
         self.snow = (try container.decodeIfPresent(Int32.self, forKey: "snow") ?? 0) != 0
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
+        self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -124,6 +129,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode((self.experimentalBackground ? 1 : 0) as Int32, forKey: "experimentalBackground")
         try container.encode((self.snow ? 1 : 0) as Int32, forKey: "snow")
         try container.encode((self.inlineStickers ? 1 : 0) as Int32, forKey: "inlineStickers")
+        try container.encode((self.localTranscription ? 1 : 0) as Int32, forKey: "localTranscription")
     }
 }
 

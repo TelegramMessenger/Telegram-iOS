@@ -75,7 +75,7 @@ private final class InlineStickerItemLayer: SimpleLayer {
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
     
-    private var isInHierarchy: Bool = false
+    private var isInHierarchyValue: Bool = false
     var isVisibleForAnimations: Bool = false {
         didSet {
             self.updatePlayback()
@@ -132,16 +132,16 @@ private final class InlineStickerItemLayer: SimpleLayer {
     
     override func action(forKey event: String) -> CAAction? {
         if event == kCAOnOrderIn {
-            self.isInHierarchy = true
+            self.isInHierarchyValue = true
         } else if event == kCAOnOrderOut {
-            self.isInHierarchy = false
+            self.isInHierarchyValue = false
         }
         self.updatePlayback()
         return nullAction
     }
     
     private func updatePlayback() {
-        let shouldBePlaying = self.isInHierarchy && self.isVisibleForAnimations && self.frameSource != nil
+        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations && self.frameSource != nil
         if shouldBePlaying != (self.displayLink != nil) {
             if shouldBePlaying {
                 self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in

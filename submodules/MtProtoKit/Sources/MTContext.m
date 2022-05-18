@@ -900,9 +900,33 @@ static int32_t fixedTimeDifferenceValue = 0;
         } else {
             [results addObjectsFromArray:[self _allTransportSchemesForDatacenterWithId:datacenterId]];
         }
-        MTTransportScheme *manualScheme = _datacenterManuallySelectedSchemeById[[[MTTransportSchemeKey alloc] initWithDatacenterId:datacenterId isProxy:isProxy isMedia:media]];
-        if (manualScheme != nil && ![results containsObject:manualScheme]) {
-            [results addObject:manualScheme];
+        
+        MTDatacenterAddressSet *addressSet = [self addressSetForDatacenterWithId:datacenterId];
+        if (addressSet != nil) {
+            MTTransportScheme *manualScheme = _datacenterManuallySelectedSchemeById[[[MTTransportSchemeKey alloc] initWithDatacenterId:datacenterId isProxy:isProxy isMedia:media]];
+            if (manualScheme != nil) {
+                bool addressValid = false;
+                for (MTDatacenterAddress *address in addressSet.addressList) {
+                    if ([manualScheme.address isEqualToAddress:address]) {
+                        addressValid = true;
+                        break;
+                    }
+                }
+                
+                if (addressValid) {
+                    bool found = false;
+                    for (MTTransportScheme *result in results) {
+                        if ([result isEqualToScheme:manualScheme]) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        [results addObject:manualScheme];
+                    }
+                }
+            }
         }
     } synchronous:true];
     
@@ -911,6 +935,23 @@ static int32_t fixedTimeDifferenceValue = 0;
             [results removeObjectAtIndex:i];
         } else if (!media && results[i].address.preferForMedia) {
             [results removeObjectAtIndex:i];
+        }
+    }
+    
+    if (media) {
+        bool hasMedia = false;
+        for (MTTransportScheme *scheme in results) {
+            if (scheme.address.preferForMedia) {
+                hasMedia = true;
+                break;
+            }
+        }
+        if (hasMedia) {
+            for (int i = (int)(results.count - 1); i >= 0; i--) {
+                if (!results[i].address.preferForMedia) {
+                    [results removeObjectAtIndex:i];
+                }
+            }
         }
     }
     

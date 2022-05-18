@@ -205,9 +205,9 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     } else if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     }
-                    if ext == "mkv" {
+                    /*if ext == "mkv" {
                         return .document(file, true)
-                    }
+                    }*/
                 }
                 
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {

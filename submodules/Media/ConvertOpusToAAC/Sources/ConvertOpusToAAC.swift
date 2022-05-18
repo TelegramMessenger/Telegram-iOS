@@ -23,7 +23,7 @@ public func convertOpusToAAC(sourcePath: String, allocateTempFile: @escaping () 
                 let outputSettings: [String: Any] = [
                     AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
                     AVSampleRateKey: 48000,
-                    AVEncoderBitRateKey: 96000,
+                    AVEncoderBitRateKey: 32000,
                     AVNumberOfChannelsKey: 1,
                     AVChannelLayoutKey: NSData(bytes: &channelLayout, length: MemoryLayout<AudioChannelLayout>.size)
                 ]

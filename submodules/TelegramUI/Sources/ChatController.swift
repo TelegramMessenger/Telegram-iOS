@@ -8471,6 +8471,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case group
                         case channel
                         case bot
+                        case user
                     }
                     var isBot = false
                     for message in messages {
@@ -8482,8 +8483,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let type: PeerType
                     if isBot {
                         type = .bot
-                    } else if let user = peer as? TelegramUser, user.botInfo != nil {
-                        type = .bot
+                    } else if let user = peer as? TelegramUser {
+                        if user.botInfo != nil {
+                            type = .bot
+                        } else {
+                            type = .user
+                        }
                     } else if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                         type = .channel
                     }  else {
@@ -8498,6 +8503,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         text = save ? strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionForwardingDisabledChannel
                     case .bot:
                         text = save ? strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionSavingDisabledBot : strongSelf.presentationInterfaceState.strings.Conversation_CopyProtectionForwardingDisabledBot
+                    case .user:
+                        text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledSecret : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledSecret
                     }
                     
                     strongSelf.copyProtectionTooltipController?.dismiss()
