@@ -13,6 +13,9 @@ swift_library(
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/AppBundle:AppBundle",
         "//submodules/Display:Display",
+        "//submodules/ShimmerEffect:ShimmerEffect",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
     visibility = [
         "//visibility:public",

@@ -10,11 +10,14 @@ public let nullAction = NullActionClass()
 open class SimpleLayer: CALayer {
     public var didEnterHierarchy: (() -> Void)?
     public var didExitHierarchy: (() -> Void)?
+    public private(set) var isInHierarchy: Bool = false
     
     override open func action(forKey event: String) -> CAAction? {
         if event == kCAOnOrderIn {
+            self.isInHierarchy = true
             self.didEnterHierarchy?()
         } else if event == kCAOnOrderOut {
+            self.isInHierarchy = false
             self.didExitHierarchy?()
         }
         return nullAction

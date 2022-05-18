@@ -656,11 +656,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 case group
                                 case channel
                                 case bot
+                                case user
                             }
                             var type: PeerType = .group
                             for message in messages {
-                                if let user = message.author?._asPeer() as? TelegramUser, user.botInfo != nil {
-                                    type = .bot
+                                if let user = message.author?._asPeer() as? TelegramUser {
+                                    if user.botInfo != nil {
+                                        type = .bot
+                                    } else {
+                                        type = .user
+                                    }
                                     break
                                 } else if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
                                     type = .channel
@@ -676,6 +681,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                                 text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledChannel : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledChannel
                             case .bot:
                                 text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledBot : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledBot
+                            case .user:
+                                text = save ? strongSelf.presentationData.strings.Conversation_CopyProtectionSavingDisabledSecret : strongSelf.presentationData.strings.Conversation_CopyProtectionForwardingDisabledSecret
                             }
                             
                             strongSelf.copyProtectionTooltipController?.dismiss()

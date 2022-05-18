@@ -102,11 +102,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let descriptionMeasuringNode: TextNode
     private let fetchingTextNode: ImmediateTextNode
     private let fetchingCompactTextNode: ImmediateTextNode
-    private let waveformNode: AudioWaveformNode
+    
+    private var waveformView: ComponentHostView<Empty>?
+    
+    /*private let waveformNode: AudioWaveformNode
     private let waveformForegroundNode: AudioWaveformNode
     private var waveformShimmerNode: ShimmerEffectNode?
     private var waveformMaskNode: AudioWaveformNode?
-    private var waveformScrubbingNode: MediaPlayerScrubbingNode?
+    private var waveformScrubbingNode: MediaPlayerScrubbingNode?*/
+    
     private var audioTranscriptionButton: ComponentHostView<Empty>?
     private let textNode: TextNode
     let dateAndStatusNode: ChatMessageDateAndStatusNode
@@ -201,10 +205,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.contentsScale = UIScreenScale
         self.fetchingCompactTextNode.isHidden = true
         
-        self.waveformNode = AudioWaveformNode()
+        /*self.waveformNode = AudioWaveformNode()
         self.waveformNode.isLayerBacked = true
         self.waveformForegroundNode = AudioWaveformNode()
-        self.waveformForegroundNode.isLayerBacked = true
+        self.waveformForegroundNode.isLayerBacked = true*/
         
         self.textNode = TextNode()
         self.textNode.displaysAsynchronously = false
@@ -298,7 +302,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     }
     
     private func transcribe() {
-        guard let context = self.context, let message = self.message else {
+        guard let context = self.context, let message = self.message, let presentationData = self.presentationData else {
             return
         }
         if self.transcribedText == nil {
@@ -306,7 +310,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
                 
-                if !"".isEmpty {
+                if context.sharedContext.immediateExperimentalUISettings.localTranscription {
+                    let appLocale = presentationData.strings.baseLanguageCode
+                    
                     let signal: Signal<String?, NoError> = context.account.postbox.transaction { transaction -> Message? in
                         return transaction.getMessage(message.id)
                     }
@@ -338,7 +344,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         guard let result = result else {
                             return .single(nil)
                         }
-                        return transcribeAudio(path: result)
+                        return transcribeAudio(path: result, appLocale: appLocale)
                     }
                     
                     let _ = signal.start(next: { [weak self] result in
@@ -346,8 +352,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return
                         }
                         strongSelf.transcribeDisposable = nil
-                        strongSelf.audioTranscriptionState = .expanded
                         strongSelf.transcribedText = result
+                        if strongSelf.transcribedText != nil {
+                            strongSelf.audioTranscriptionState = .expanded
+                        } else {
+                            strongSelf.audioTranscriptionState = .collapsed
+                        }
                         strongSelf.requestUpdateLayout(true)
                     })
                 } else {
@@ -470,6 +480,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
+                let canTranscribe = arguments.associatedData.isPremium || arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription
+                
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
                 for attribute in arguments.file.attributes {
@@ -571,7 +583,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let (textLayout, textApply) = textAsyncLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: inlineTextConstrainedSize.width - horizontalInset, height: .greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let minVoiceWidth: CGFloat = 120.0
-                let maxVoiceWidth = constrainedSize.width
+                let maxVoiceWidth = constrainedSize.width - 36.0
                 let maxVoiceLength: CGFloat = 30.0
                 let minVoiceLength: CGFloat = 2.0
                 
@@ -666,7 +678,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     let descriptionAndStatusWidth = descriptionLayout.size.width
                     
                     let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
-                    minLayoutWidth = 30.0 + 8.0 + minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
+                    minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
+                    if canTranscribe {
+                        minLayoutWidth += 30.0 + 8.0
+                    }
                     minLayoutWidth = max(descriptionAndStatusWidth + 56, minLayoutWidth)
                 } else {
                     minLayoutWidth = max(titleLayout.size.width, descriptionMaxWidth) + 44.0 + 8.0
@@ -729,9 +744,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     if let statusSizeAndApply = statusSizeAndApply {
                         fittedLayoutSize.width = max(fittedLayoutSize.width, statusSizeAndApply.0.width)
                         fittedLayoutSize.height += statusSizeAndApply.0.height
-                        if !statusSizeAndApply.0.height.isZero && iconFrame == nil {
-                            statusOffset = -10.0
-                            fittedLayoutSize.height += statusOffset
+                        if textString == nil {
+                            if !statusSizeAndApply.0.height.isZero && iconFrame == nil {
+                                statusOffset = -10.0
+                                fittedLayoutSize.height += statusOffset
+                            }
                         }
                     }
                     
@@ -806,7 +823,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if let statusSizeAndApply = statusSizeAndApply {
                                 let statusFrame: CGRect
                                 if textString != nil {
-                                    statusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width - 5.0 - statusSizeAndApply.0.width, y: textFrame.maxY + 4.0), size: statusSizeAndApply.0)
+                                    statusFrame = CGRect(origin: CGPoint(x: fittedLayoutSize.width - 6.0 - statusSizeAndApply.0.width, y: textFrame.maxY + 4.0), size: statusSizeAndApply.0)
                                 } else {
                                     statusFrame = CGRect(origin: CGPoint(x: statusReferenceFrame.minX, y: statusReferenceFrame.maxY + statusOffset), size: statusSizeAndApply.0)
                                 }
@@ -822,7 +839,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             
                             if isVoice {
-                                if strongSelf.waveformScrubbingNode == nil {
+                                var scrubbingFrame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 18.0))
+                                if canTranscribe {
+                                    scrubbingFrame.size.width -= 30.0 + 4.0
+                                }
+                                
+                                /*if strongSelf.waveformScrubbingNode == nil {
                                     let waveformScrubbingNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: strongSelf.waveformNode, foregroundContentNode: strongSelf.waveformForegroundNode))
                                     waveformScrubbingNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: 0.0, bottom: -10.0, right: 0.0)
                                     waveformScrubbingNode.seek = { timestamp in
@@ -834,8 +856,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     strongSelf.waveformScrubbingNode = waveformScrubbingNode
                                     strongSelf.addSubnode(waveformScrubbingNode)
                                 }
-                                
-                                let scrubbingFrame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0 - 30.0 - 8.0, height: 15.0))
                                 
                                 if case .inProgress = audioTranscriptionState {
                                     if strongSelf.waveformShimmerNode == nil {
@@ -899,36 +919,97 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     waveformColor = messageTheme.mediaInactiveControlColor
                                 }
                                 strongSelf.waveformNode.setup(color: waveformColor, gravity: .bottom, waveform: audioWaveform)
-                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, gravity: .bottom, waveform: audioWaveform)
+                                strongSelf.waveformForegroundNode.setup(color: messageTheme.mediaActiveControlColor, gravity: .bottom, waveform: audioWaveform)*/
                                 
-                                let audioTranscriptionButton: ComponentHostView<Empty>
-                                if let current = strongSelf.audioTranscriptionButton {
-                                    audioTranscriptionButton = current
+                                let waveformView: ComponentHostView<Empty>
+                                let waveformTransition: Transition
+                                if let current = strongSelf.waveformView {
+                                    waveformView = current
+                                    switch animation.transition {
+                                    case .immediate:
+                                        waveformTransition = .immediate
+                                    case let .animated(duration, _):
+                                        waveformTransition = .easeInOut(duration: duration)
+                                    }
                                 } else {
-                                    audioTranscriptionButton = ComponentHostView<Empty>()
-                                    strongSelf.audioTranscriptionButton = audioTranscriptionButton
-                                    strongSelf.view.addSubview(audioTranscriptionButton)
+                                    waveformView = ComponentHostView<Empty>()
+                                    strongSelf.waveformView = waveformView
+                                    strongSelf.view.addSubview(waveformView)
+                                    waveformTransition = .immediate
                                 }
-                                let audioTranscriptionButtonSize = audioTranscriptionButton.update(
-                                    transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
-                                    component: AnyComponent(AudioTranscriptionButtonComponent(
-                                        theme: arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing,
-                                        transcriptionState: audioTranscriptionState,
-                                        pressed: {
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            strongSelf.transcribe()
-                                        }
+                                
+                                let waveformColor: UIColor
+                                if arguments.incoming {
+                                    if consumableContentIcon != nil {
+                                        waveformColor = messageTheme.mediaActiveControlColor
+                                    } else {
+                                        waveformColor = messageTheme.mediaInactiveControlColor
+                                    }
+                                } else {
+                                    waveformColor = messageTheme.mediaInactiveControlColor
+                                }
+                                
+                                var isTranscriptionInProgress = false
+                                if case .inProgress = audioTranscriptionState {
+                                    isTranscriptionInProgress = true
+                                }
+                                
+                                let _ = waveformView.update(
+                                    transition: waveformTransition.withUserData(ComponentHostViewSkipSettingFrame()),
+                                    component: AnyComponent(AudioWaveformComponent(
+                                        backgroundColor: waveformColor,
+                                        foregroundColor: messageTheme.mediaActiveControlColor,
+                                        shimmerColor: isTranscriptionInProgress ? messageTheme.mediaActiveControlColor : nil,
+                                        samples: audioWaveform?.samples ?? Data(),
+                                        peak: audioWaveform?.peak ?? 0,
+                                        status: strongSelf.playbackStatus.get()
                                     )),
                                     environment: {},
-                                    containerSize: CGSize(width: 30.0, height: 30.0)
+                                    containerSize: scrubbingFrame.size
                                 )
-                                animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: CGRect(origin: CGPoint(x: boundingWidth - 30.0 + 3.0, y: -6.0), size: audioTranscriptionButtonSize), completion: nil)
+                                
+                                animation.animator.updateFrame(layer: waveformView.layer, frame: scrubbingFrame, completion: nil)
+                                animation.animator.updateFrame(layer: waveformView.componentView!.layer, frame: CGRect(origin: CGPoint(), size: scrubbingFrame.size), completion: nil)
+                                
+                                if canTranscribe {
+                                    let audioTranscriptionButton: ComponentHostView<Empty>
+                                    if let current = strongSelf.audioTranscriptionButton {
+                                        audioTranscriptionButton = current
+                                    } else {
+                                        audioTranscriptionButton = ComponentHostView<Empty>()
+                                        strongSelf.audioTranscriptionButton = audioTranscriptionButton
+                                        strongSelf.view.addSubview(audioTranscriptionButton)
+                                    }
+                                    let audioTranscriptionButtonSize = audioTranscriptionButton.update(
+                                        transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
+                                        component: AnyComponent(AudioTranscriptionButtonComponent(
+                                            theme: arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing,
+                                            transcriptionState: audioTranscriptionState,
+                                            pressed: {
+                                                guard let strongSelf = self else {
+                                                    return
+                                                }
+                                                strongSelf.transcribe()
+                                            }
+                                        )),
+                                        environment: {},
+                                        containerSize: CGSize(width: 30.0, height: 30.0)
+                                    )
+                                    animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: CGRect(origin: CGPoint(x: boundingWidth - 30.0 + 3.0, y: -6.0), size: audioTranscriptionButtonSize), completion: nil)
+                                } else {
+                                    if let audioTranscriptionButton = strongSelf.audioTranscriptionButton {
+                                        strongSelf.audioTranscriptionButton = nil
+                                        audioTranscriptionButton.removeFromSuperview()
+                                    }
+                                }
                             } else {
-                                if let waveformScrubbingNode = strongSelf.waveformScrubbingNode {
+                                /*if let waveformScrubbingNode = strongSelf.waveformScrubbingNode {
                                     strongSelf.waveformScrubbingNode = nil
                                     waveformScrubbingNode.removeFromSupernode()
+                                }*/
+                                if let waveformView = strongSelf.waveformView {
+                                    strongSelf.waveformView = nil
+                                    waveformView.removeFromSuperview()
                                 }
                                 if let audioTranscriptionButton = strongSelf.audioTranscriptionButton {
                                     strongSelf.audioTranscriptionButton = nil
@@ -996,7 +1077,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }))
                             }
                                                         
-                            strongSelf.waveformNode.displaysAsynchronously = !arguments.presentationData.isPreview
+                            //strongSelf.waveformNode.displaysAsynchronously = !arguments.presentationData.isPreview
                             strongSelf.statusNode?.displaysAsynchronously = !arguments.presentationData.isPreview
                             strongSelf.statusNode?.frame = CGRect(origin: CGPoint(), size: progressFrame.size)
 
@@ -1168,7 +1249,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if self.message?.forwardInfo != nil {
                     fetchStatus = resourceStatus.fetchStatus
                 }
-                self.waveformScrubbingNode?.enableScrubbing = false
+                //self.waveformScrubbingNode?.enableScrubbing = false
                 switch fetchStatus {
                     case let .Fetching(_, progress):
                         let adjustedProgress = max(progress, 0.027)
@@ -1202,7 +1283,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                 }
             case let .playbackStatus(playbackStatus):
-                self.waveformScrubbingNode?.enableScrubbing = true
+                //self.waveformScrubbingNode?.enableScrubbing = true
                 switch playbackStatus {
                     case .playing:
                         state = .pause
@@ -1473,6 +1554,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return true
         }
         return false
+    }
+    
+    func animateSent() {
+        if let view = self.waveformView?.componentView as? AudioWaveformComponent.View {
+            view.animateIn()
+        }
     }
 }
 

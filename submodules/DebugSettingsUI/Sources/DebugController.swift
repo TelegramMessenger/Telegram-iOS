@@ -85,6 +85,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case acceleratedStickers(Bool)
     case experimentalBackground(Bool)
     case inlineStickers(Bool)
+    case localTranscription(Bool)
     case snow(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
@@ -107,7 +108,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .snow:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, .snow:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -184,16 +185,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 30
         case .inlineStickers:
             return 31
-        case .snow:
+        case .localTranscription:
             return 32
-        case .playerEmbedding:
+        case .snow:
             return 33
-        case .playlistPlayback:
+        case .playerEmbedding:
             return 34
-        case .voiceConference:
+        case .playlistPlayback:
             return 35
+        case .voiceConference:
+            return 36
         case let .preferredVideoCodec(index, _, _, _):
-            return 36 + index
+            return 37 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -961,6 +964,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .localTranscription(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Local Transcription", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
+                        settings.localTranscription = value
+                        return PreferencesEntry(settings)
+                    })
+                }).start()
+            })
         case let .snow(value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Snow", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
@@ -1087,6 +1100,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
         entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
         entries.append(.inlineStickers(experimentalSettings.inlineStickers))
+        entries.append(.localTranscription(experimentalSettings.localTranscription))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
     }

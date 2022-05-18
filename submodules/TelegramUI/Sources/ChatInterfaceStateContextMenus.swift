@@ -1460,7 +1460,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                 optionsMap[id] = []
             }
             if let message = getMessage(id) {
-                if message.isCopyProtected() {
+                if message.isCopyProtected() || message.containsSecretMedia {
                     isCopyProtected = true
                 }
                 for media in message.media {
