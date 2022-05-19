@@ -68,6 +68,7 @@ import ChatPresentationInterfaceState
 import CreateExternalMediaStreamScreen
 import PaymentMethodUI
 import PremiumUI
+import InstantPageCache
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
