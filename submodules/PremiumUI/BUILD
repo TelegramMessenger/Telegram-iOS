@@ -44,6 +44,7 @@ swift_library(
         "//submodules/ConfettiEffect:ConfettiEffect",
         "//submodules/TextFormat:TextFormat",
         "//submodules/GZip:GZip",
+        "//submodules/InstantPageCache:InstantPageCache",
     ],
     visibility = [
         "//visibility:public",

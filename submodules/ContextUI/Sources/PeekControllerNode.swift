@@ -115,6 +115,9 @@ final class PeekControllerNode: ViewControllerTracingNode {
         self.addSubnode(self.actionsContainerNode)
         
         if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
+            self.fullScreenAccessoryNode?.dismiss = { [weak self] in
+                self?.requestDismiss()
+            }
             self.addSubnode(fullScreenAccessoryNode)
         }
         
@@ -194,6 +197,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         
         if let fullScreenAccessoryNode = self.fullScreenAccessoryNode {
             fullScreenAccessoryNode.updateLayout(size: layout.size, transition: transition)
+            transition.updateFrame(node: fullScreenAccessoryNode, frame: CGRect(origin: .zero, size: layout.size))
         }
         
         self.contentNodeHasValidLayout = true

@@ -4,7 +4,7 @@ import SwiftSignalKit
 
 private var backArrowImageCache: [Int32: UIImage] = [:]
 
-public final class SparseNode: ASDisplayNode {
+open class SparseNode: ASDisplayNode {
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.alpha.isZero {
             return nil

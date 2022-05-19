@@ -226,7 +226,7 @@ public class ASTextNode: ImmediateTextNode {
     }
 }
 
-public class ImmediateTextView: TextView {
+open class ImmediateTextView: TextView {
     public var attributedText: NSAttributedString?
     public var textAlignment: NSTextAlignment = .natural
     public var verticalAlignment: TextVerticalAlignment = .top

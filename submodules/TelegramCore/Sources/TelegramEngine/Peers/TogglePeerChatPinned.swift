@@ -52,7 +52,7 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
             
             let count = sameKind.count + additionalCount
             if count > limitCount, itemIds.firstIndex(of: itemId) == nil {
-                return .limitExceeded(count: count, limit: limitCount)
+                return .limitExceeded(count: sameKind.count, limit: limitCount)
             } else {
                 if let index = itemIds.firstIndex(of: itemId) {
                     itemIds.remove(at: index)

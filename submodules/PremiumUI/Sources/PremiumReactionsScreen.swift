@@ -11,7 +11,7 @@ import PresentationDataUtils
 import SolidRoundedButtonNode
 import AppBundle
 
-public final class PremiumStickersScreen: ViewController {
+public final class PremiumReactionsScreen: ViewController {
     private let context: AccountContext
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
@@ -21,7 +21,7 @@ public final class PremiumStickersScreen: ViewController {
     public var proceed: (() -> Void)?
     
     private class Node: ViewControllerTracingNode, UIGestureRecognizerDelegate {
-        private weak var controller: PremiumStickersScreen?
+        private weak var controller: PremiumReactionsScreen?
         private var presentationData: PresentationData
         
         private let blurView: UIVisualEffectView
@@ -38,7 +38,7 @@ public final class PremiumStickersScreen: ViewController {
         
         private var validLayout: ContainerViewLayout?
         
-        init(controller: PremiumStickersScreen) {
+        init(controller: PremiumReactionsScreen) {
             self.controller = controller
             self.presentationData = controller.presentationData
             
@@ -70,7 +70,14 @@ public final class PremiumStickersScreen: ViewController {
             self.overlayTextNode.maximumNumberOfLines = 0
             self.overlayTextNode.lineSpacing = 0.1
             
-            self.proceedButton = SolidRoundedButtonNode(title: self.presentationData.strings.Premium_Reactions_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 11.0, gloss: true)
+            self.proceedButton = SolidRoundedButtonNode(title: self.presentationData.strings.Premium_Reactions_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(
+                backgroundColor: .white,
+                backgroundColors: [
+                UIColor(rgb: 0x0077ff),
+                UIColor(rgb: 0x6b93ff),
+                UIColor(rgb: 0x8878ff),
+                UIColor(rgb: 0xe46ace)
+            ], foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
             
             self.cancelButton = HighlightableButtonNode()
             self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
@@ -78,7 +85,7 @@ public final class PremiumStickersScreen: ViewController {
             self.carouselNode = ReactionCarouselNode(context: controller.context, theme: controller.presentationData.theme, reactions: controller.reactions)
             
             super.init()
-                        
+                                    
             self.addSubnode(self.dimNode)
             self.addSubnode(self.darkDimNode)
             self.addSubnode(self.containerNode)
@@ -99,7 +106,10 @@ public final class PremiumStickersScreen: ViewController {
             self.overlayTextNode.attributedText = NSAttributedString(string: self.presentationData.strings.Premium_Reactions_Description, font: Font.regular(17.0), textColor: textColor)
             
             self.proceedButton.pressed = { [weak self] in
-                self?.animateOut()
+                if let strongSelf = self, let controller = strongSelf.controller, let navigationController = controller.navigationController {
+                    strongSelf.animateOut()
+                    navigationController.pushViewController(PremiumIntroScreen(context: controller.context), animated: true)
+                }
             }
             
             self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
@@ -208,6 +218,8 @@ public final class PremiumStickersScreen: ViewController {
         self.updatedPresentationData = updatedPresentationData
                 
         super.init(navigationBarPresentationData: nil)
+        
+        self.navigationPresentation = .flatModal
         
         self.statusBar.statusBarStyle = .Ignore
         
