@@ -3,7 +3,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import AccountContext
-//import InstantPageUI
 import UrlHandling
 
 public func extractAnchor(string: String) -> (String, String?) {

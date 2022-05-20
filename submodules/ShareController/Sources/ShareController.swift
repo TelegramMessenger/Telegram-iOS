@@ -317,6 +317,7 @@ public final class ShareController: ViewController {
     private let accountActiveDisposable = MetaDisposable()
     
     private var defaultAction: ShareControllerAction?
+    public private(set) var actionIsMediaSaving = false
     
     public var actionCompleted: (() -> Void)?
     public var dismissed: ((Bool) -> Void)?
@@ -391,6 +392,7 @@ public final class ShareController: ViewController {
                 break
             case let .image(representations):
                 if case .saveToCameraRoll = preferredAction {
+                    self.actionIsMediaSaving = true
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
                         self?.saveToCameraRoll(representations: representations)
                         self?.actionCompleted?()
@@ -406,6 +408,7 @@ public final class ShareController: ViewController {
                     isVideo = file.isVideo
                 }
                 if case .saveToCameraRoll = preferredAction, canSave {
+                    self.actionIsMediaSaving = true
                     self.defaultAction = ShareControllerAction(title: isVideo ? self.presentationData.strings.Gallery_SaveVideo : self.presentationData.strings.Gallery_SaveImage, action: { [weak self] in
                         self?.saveToCameraRoll(mediaReference: mediaReference)
                         self?.actionCompleted?()
@@ -413,6 +416,7 @@ public final class ShareController: ViewController {
                 }
             case let .messages(messages):
                 if case .saveToCameraRoll = preferredAction {
+                    self.actionIsMediaSaving = true
                     self.defaultAction = ShareControllerAction(title: self.presentationData.strings.Preview_SaveToCameraRoll, action: { [weak self] in
                         self?.saveToCameraRoll(messages: messages)
                         self?.actionCompleted?()

@@ -3,11 +3,13 @@ import UIKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
+import TelegramCore
+import TelegramPresentationData
+import PresentationDataUtils
 import ViewControllerComponent
 import AccountContext
 import SolidRoundedButtonComponent
 import MultilineTextComponent
-import PresentationDataUtils
 import PrefixSectionGroupComponent
 import BundleIconComponent
 import SolidRoundedButtonComponent
@@ -16,6 +18,236 @@ import InAppPurchaseManager
 import ConfettiEffect
 import TextFormat
 import InstantPageCache
+
+public enum PremiumSource {
+    case settings
+    case stickers
+    case reactions
+    case ads
+    case groupsAndChannels
+    case pinnedChats
+    case publicLinks
+    case savedGifs
+    case savedStickers
+    case folders
+    case chatsPerFolder
+    case accounts
+    
+    var identifier: String {
+        switch self {
+            case .settings:
+                return "settings"
+            case .stickers:
+                return "premium_stickers"
+            case .reactions:
+                return "unique_reactions"
+            case .ads:
+                return "no_ads"
+            case .groupsAndChannels:
+                return "double_limits__channels"
+            case .pinnedChats:
+                return "double_limits__dialog_pinned"
+            case .publicLinks:
+                return "double_limits__channels_public"
+            case .savedGifs:
+                return "double_limits__saved_gifs"
+            case .savedStickers:
+                return "double_limits__stickers_faved"
+            case .folders:
+                return "double_limits__dialog_filters"
+            case .chatsPerFolder:
+                return "double_limits__dialog_filters_chats"
+            case .accounts:
+                return "double_limits__accounts"
+        }
+    }
+}
+
+private enum PremiumPerk: CaseIterable {
+    case doubleLimits
+    case moreUpload
+    case fasterDownload
+    case voiceToText
+    case noAds
+    case uniqueReactions
+    case premiumStickers
+    case advancedChatManagement
+    case profileBadge
+    case animatedUserpics
+    
+    static var allCases: [PremiumPerk] {
+        return [
+            .doubleLimits,
+            .moreUpload,
+            .fasterDownload,
+            .voiceToText,
+            .noAds,
+            .uniqueReactions,
+            .premiumStickers,
+            .advancedChatManagement,
+            .profileBadge,
+            .animatedUserpics
+        ]
+    }
+    
+    init?(identifier: String) {
+        for perk in PremiumPerk.allCases {
+            if perk.identifier == identifier {
+                self = perk
+                return
+            }
+        }
+        return nil
+    }
+    
+    var identifier: String {
+        switch self {
+            case .doubleLimits:
+                return "double_limits"
+            case .moreUpload:
+                return "more_upload"
+            case .fasterDownload:
+                return "faster_download"
+            case .voiceToText:
+                return "voice_to_text"
+            case .noAds:
+                return "no_ads"
+            case .uniqueReactions:
+                return "unique_reactions"
+            case .premiumStickers:
+                return "premium_stickers"
+            case .advancedChatManagement:
+                return "advanced_chat_management"
+            case .profileBadge:
+                return "profile_badge"
+            case .animatedUserpics:
+                return "animated_userpics"
+        }
+    }
+    
+    func title(strings: PresentationStrings) -> String {
+        switch self {
+            case .doubleLimits:
+                return strings.Premium_DoubledLimits
+            case .moreUpload:
+                return strings.Premium_UploadSize
+            case .fasterDownload:
+                return strings.Premium_FasterSpeed
+            case .voiceToText:
+                return strings.Premium_VoiceToText
+            case .noAds:
+                return strings.Premium_NoAds
+            case .uniqueReactions:
+                return strings.Premium_Reactions
+            case .premiumStickers:
+                return strings.Premium_Stickers
+            case .advancedChatManagement:
+                return strings.Premium_ChatManagement
+            case .profileBadge:
+                return strings.Premium_Badge
+            case .animatedUserpics:
+                return strings.Premium_Avatar
+        }
+    }
+    
+    func subtitle(strings: PresentationStrings) -> String {
+        switch self {
+            case .doubleLimits:
+                return strings.Premium_DoubledLimitsInfo
+            case .moreUpload:
+                return strings.Premium_UploadSizeInfo
+            case .fasterDownload:
+                return strings.Premium_FasterSpeedInfo
+            case .voiceToText:
+                return strings.Premium_VoiceToTextInfo
+            case .noAds:
+                return strings.Premium_NoAdsInfo
+            case .uniqueReactions:
+                return strings.Premium_ReactionsInfo
+            case .premiumStickers:
+                return strings.Premium_StickersInfo
+            case .advancedChatManagement:
+                return strings.Premium_ChatManagementInfo
+            case .profileBadge:
+                return strings.Premium_BadgeInfo
+            case .animatedUserpics:
+                return strings.Premium_AvatarInfo
+        }
+    }
+    
+    var iconName: String {
+        switch self {
+            case .doubleLimits:
+                return "Premium/Perk/Limits"
+            case .moreUpload:
+                return "Premium/Perk/Upload"
+            case .fasterDownload:
+                return "Premium/Perk/Speed"
+            case .voiceToText:
+                return "Premium/Perk/Voice"
+            case .noAds:
+                return "Premium/Perk/NoAds"
+            case .uniqueReactions:
+                return "Premium/Perk/Reactions"
+            case .premiumStickers:
+                return "Premium/Perk/Stickers"
+            case .advancedChatManagement:
+                return "Premium/Perk/Chat"
+            case .profileBadge:
+                return "Premium/Perk/Badge"
+            case .animatedUserpics:
+                return "Premium/Perk/Avatar"
+        }
+    }
+}
+
+private struct PremiumIntroConfiguration {
+    static var defaultValue: PremiumIntroConfiguration {
+        return PremiumIntroConfiguration(perks: [
+            .doubleLimits,
+            .moreUpload,
+            .fasterDownload,
+            .voiceToText,
+            .noAds,
+            .uniqueReactions,
+            .premiumStickers,
+            .advancedChatManagement,
+            .profileBadge,
+            .animatedUserpics
+        ])
+    }
+    
+    let perks: [PremiumPerk]
+    
+    fileprivate init(perks: [PremiumPerk]) {
+        self.perks = perks
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> PremiumIntroConfiguration {
+        if let data = appConfiguration.data, let values = data["premium_promo_order"] as? [String] {
+            var perks: [PremiumPerk] = []
+            for value in values {
+                if let perk = PremiumPerk(identifier: value) {
+                    if !perks.contains(perk) {
+                        perks.append(perk)
+                    } else {
+                        perks = []
+                        break
+                    }
+                } else {
+                    perks = []
+                    break
+                }
+            }
+            if perks.count < 4 {
+                perks = PremiumIntroConfiguration.defaultValue.perks
+            }
+            return PremiumIntroConfiguration(perks: perks)
+        } else {
+            return .defaultValue
+        }
+    }
+}
 
 private final class SectionGroupComponent: Component {
     public final class Item: Equatable {
@@ -495,6 +727,40 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         return true
     }
     
+    final class State: ComponentState {
+        private let context: AccountContext
+        
+        private var disposable: Disposable?
+        var configuration = PremiumIntroConfiguration.defaultValue
+        
+        init(context: AccountContext) {
+            self.context = context
+            
+            super.init()
+            
+            self.disposable = (context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+            |> map { view -> AppConfiguration in
+                let appConfiguration: AppConfiguration = view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                return appConfiguration
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                if let strongSelf = self {
+                    strongSelf.configuration = PremiumIntroConfiguration.with(appConfiguration: appConfiguration)
+                    strongSelf.updated(transition: .immediate)
+                }
+            })
+        }
+        
+        deinit {
+            self.disposable?.dispose()
+        }
+    }
+    
+    func makeState() -> State {
+        return State(context: self.context)
+    }
+    
     static var body: Body {
         let overscroll = Child(Rectangle.self)
         let fade = Child(RoundedRectangle.self)
@@ -510,6 +776,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             let scrollEnvironment = context.environment[ScrollChildEnvironment.self].value
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
+            let state = context.state
             
             let theme = environment.theme
             let strings = environment.strings
@@ -576,230 +843,52 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             size.height += text.size.height
             size.height += 21.0
             
+            let gradientColors: [(UIColor, UIColor)] = [
+                (UIColor(rgb: 0xF28528), UIColor(rgb: 0xEF7633)),
+                (UIColor(rgb: 0xEA5F43), UIColor(rgb: 0xE7504E)),
+                (UIColor(rgb: 0xDE4768), UIColor(rgb: 0xD54D82)),
+                (UIColor(rgb: 0xDE4768), UIColor(rgb: 0xD54D82)),
+                (UIColor(rgb: 0xC654A8), UIColor(rgb: 0xBE5AC2)),
+                (UIColor(rgb: 0xAF62E9), UIColor(rgb: 0xA668FF)),
+                (UIColor(rgb: 0x9674FF), UIColor(rgb: 0x8C7DFF)),
+                (UIColor(rgb: 0x9674FF), UIColor(rgb: 0x8C7DFF)),
+                (UIColor(rgb: 0x7B88FF), UIColor(rgb: 0x7091FF)),
+                (UIColor(rgb: 0x609DFF), UIColor(rgb: 0x56A5FF))
+            ]
+            
+            var items: [SectionGroupComponent.Item] = []
+            
+            var i = 0
+            for perk in state.configuration.perks {
+                let iconBackgroundColors = gradientColors[i]
+                items.append(SectionGroupComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: perk.identifier,
+                        component: AnyComponent(
+                            PerkComponent(
+                                iconName: perk.iconName,
+                                iconBackgroundColors: [
+                                    iconBackgroundColors.0,
+                                    iconBackgroundColors.1
+                                ],
+                                title: perk.title(strings: strings),
+                                titleColor: titleColor,
+                                subtitle: perk.subtitle(strings: strings),
+                                subtitleColor: subtitleColor,
+                                arrowColor: arrowColor
+                            )
+                        )
+                    ),
+                    action: {
+                        
+                    }
+                ))
+                i += 1
+            }
+            
             let section = section.update(
                 component: SectionGroupComponent(
-                    items: [
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "limits",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Limits",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0xF28528),
-                                            UIColor(rgb: 0xEF7633)
-                                        ],
-                                        title: strings.Premium_DoubledLimits,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_DoubledLimitsInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "upload",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Upload",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0xEA5F43),
-                                            UIColor(rgb: 0xE7504E)
-                                        ],
-                                        title: strings.Premium_UploadSize,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_UploadSizeInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "speed",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Speed",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0xDE4768),
-                                            UIColor(rgb: 0xD54D82)
-                                        ],
-                                        title: strings.Premium_FasterSpeed,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_FasterSpeedInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "voice",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Voice",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0xDE4768),
-                                            UIColor(rgb: 0xD54D82)
-                                        ],
-                                        title: strings.Premium_VoiceToText,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_VoiceToTextInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "noAds",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/NoAds",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0xC654A8),
-                                            UIColor(rgb: 0xBE5AC2)
-                                        ],
-                                        title: strings.Premium_NoAds,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_NoAdsInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "reactions",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Reactions",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0xAF62E9),
-                                            UIColor(rgb: 0xA668FF)
-                                        ],
-                                        title: strings.Premium_Reactions,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_ReactionsInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "stickers",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Stickers",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0x9674FF),
-                                            UIColor(rgb: 0x8C7DFF)
-                                        ],
-                                        title: strings.Premium_Stickers,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_StickersInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "chat",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Chat",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0x9674FF),
-                                            UIColor(rgb: 0x8C7DFF)
-                                        ],
-                                        title: strings.Premium_ChatManagement,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_ChatManagementInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "badge",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Badge",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0x7B88FF),
-                                            UIColor(rgb: 0x7091FF)
-                                        ],
-                                        title: strings.Premium_Badge,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_BadgeInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                        SectionGroupComponent.Item(
-                            AnyComponentWithIdentity(
-                                id: "avatar",
-                                component: AnyComponent(
-                                    PerkComponent(
-                                        iconName: "Premium/Perk/Avatar",
-                                        iconBackgroundColors: [
-                                            UIColor(rgb: 0x609DFF),
-                                            UIColor(rgb: 0x56A5FF)
-                                        ],
-                                        title: strings.Premium_Avatar,
-                                        titleColor: titleColor,
-                                        subtitle: strings.Premium_AvatarInfo,
-                                        subtitleColor: subtitleColor,
-                                        arrowColor: arrowColor
-                                    )
-                                )
-                            ),
-                            action: {
-                                
-                            }
-                        ),
-                    ],
+                    items: items,
                     backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
                     selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
                     separatorColor: environment.theme.list.itemBlocksSeparatorColor
@@ -808,6 +897,241 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
+            
+//
+            
+//            let section = section.update(
+//                component: SectionGroupComponent(
+//                    items: [
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "limits",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Limits",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0xF28528),
+//                                            UIColor(rgb: 0xEF7633)
+//                                        ],
+//                                        title: strings.Premium_DoubledLimits,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_DoubledLimitsInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "upload",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Upload",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0xEA5F43),
+//                                            UIColor(rgb: 0xE7504E)
+//                                        ],
+//                                        title: strings.Premium_UploadSize,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_UploadSizeInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "speed",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Speed",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0xDE4768),
+//                                            UIColor(rgb: 0xD54D82)
+//                                        ],
+//                                        title: strings.Premium_FasterSpeed,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_FasterSpeedInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "voice",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Voice",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0xDE4768),
+//                                            UIColor(rgb: 0xD54D82)
+//                                        ],
+//                                        title: strings.Premium_VoiceToText,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_VoiceToTextInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "noAds",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/NoAds",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0xC654A8),
+//                                            UIColor(rgb: 0xBE5AC2)
+//                                        ],
+//                                        title: strings.Premium_NoAds,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_NoAdsInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "reactions",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Reactions",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0xAF62E9),
+//                                            UIColor(rgb: 0xA668FF)
+//                                        ],
+//                                        title: strings.Premium_Reactions,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_ReactionsInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "stickers",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Stickers",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0x9674FF),
+//                                            UIColor(rgb: 0x8C7DFF)
+//                                        ],
+//                                        title: strings.Premium_Stickers,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_StickersInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "chat",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Chat",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0x9674FF),
+//                                            UIColor(rgb: 0x8C7DFF)
+//                                        ],
+//                                        title: strings.Premium_ChatManagement,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_ChatManagementInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "badge",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Badge",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0x7B88FF),
+//                                            UIColor(rgb: 0x7091FF)
+//                                        ],
+//                                        title: strings.Premium_Badge,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_BadgeInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                        SectionGroupComponent.Item(
+//                            AnyComponentWithIdentity(
+//                                id: "avatar",
+//                                component: AnyComponent(
+//                                    PerkComponent(
+//                                        iconName: "Premium/Perk/Avatar",
+//                                        iconBackgroundColors: [
+//                                            UIColor(rgb: 0x609DFF),
+//                                            UIColor(rgb: 0x56A5FF)
+//                                        ],
+//                                        title: strings.Premium_Avatar,
+//                                        titleColor: titleColor,
+//                                        subtitle: strings.Premium_AvatarInfo,
+//                                        subtitleColor: subtitleColor,
+//                                        arrowColor: arrowColor
+//                                    )
+//                                )
+//                            ),
+//                            action: {
+//
+//                            }
+//                        ),
+//                    ],
+//                    backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
+//                    selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
+//                    separatorColor: environment.theme.list.itemBlocksSeparatorColor
+//                ),
+//                environment: {},
+//                availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
+//                transition: context.transition
+//            )
             context.add(section
                 .position(CGPoint(x: availableWidth / 2.0, y: size.height + section.size.height / 2.0))
                 .clipsToBounds(true)
@@ -1276,7 +1600,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         return self._ready
     }
     
-    public init(context: AccountContext, modal: Bool = true) {
+    public init(context: AccountContext, modal: Bool = true, reference: String? = nil, source: PremiumSource? = nil) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?

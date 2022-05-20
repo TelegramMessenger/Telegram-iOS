@@ -27,6 +27,7 @@ import PeerInfoUI
 import Markdown
 import WebUI
 import BotPaymentsUI
+import PremiumUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -514,8 +515,19 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             navigationController.setViewControllers(controllers, animated: true)
                         })
                     }
-                    break
             }
+        case let .premiumOffer(reference):
+            dismissInput()
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { peer in
+                let isPremium = peer?.isPremium ?? false
+                if !isPremium {
+                    let controller = PremiumIntroScreen(context: context, reference: reference)
+                    if let navigationController = navigationController {
+                        navigationController.pushViewController(controller, animated: true)
+                    }
+                }
+            })
         case let .joinVoiceChat(peerId, invite):
             dismissInput()
             if let navigationController = navigationController {

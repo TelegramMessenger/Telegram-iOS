@@ -1630,7 +1630,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             
             if hasNamesToRevoke && selectedType == .publicChannel {
                 footerItem = IncreaseLimitFooterItem(theme: presentationData.theme, title: presentationData.strings.Premium_IncreaseLimit, colorful: true, action: {
-                    let controller = PremiumIntroScreen(context: context)
+                    let controller = PremiumIntroScreen(context: context, source: .publicLinks)
                     pushControllerImpl?(controller)
                 })
             }

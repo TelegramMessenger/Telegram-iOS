@@ -132,6 +132,7 @@ final class WebAppWebView: WKWebView {
         self.sendEvent(name: "viewport_changed", data: data)
     }
     
+    var lastTouchTimestamp: Double?
     private(set) var didTouchOnce = false
     var onFirstTouch: () -> Void = {}
     
@@ -161,6 +162,7 @@ final class WebAppWebView: WKWebView {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         let result = super.hitTest(point, with: event)
+        self.lastTouchTimestamp = CACurrentMediaTime()
         if result != nil && !self.didTouchOnce {
             self.didTouchOnce = true
             self.onFirstTouch()

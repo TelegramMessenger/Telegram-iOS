@@ -3125,6 +3125,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if !onlyHaptic {
                 strongSelf.chatDisplayNode.animateQuizCorrectOptionSelected()
             }
+        }, displayPremiumStickerTooltip: { [weak self] file, message in
+            self?.displayPremiumStickerTooltip(file: file, message: message)
         }, openPeerContextMenu: { [weak self] peer, messageId, node, rect, gesture in
             guard let strongSelf = self else {
                 return
@@ -3358,7 +3360,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(false))).start(next: { [weak self] responded in
                             if let strongSelf = self {
                                 if !responded {
-                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Conversation_InteractiveEmojiSyncTip(EnginePeer(peer).compactDisplayTitle).string), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Conversation_InteractiveEmojiSyncTip(EnginePeer(peer).compactDisplayTitle).string, undoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     
                                     let _ = ApplicationSpecificNotice.incrementInteractiveEmojiSyncTip(accountManager: strongSelf.context.sharedContext.accountManager, timestamp: currentTimestamp).start()
                                 }
@@ -3486,7 +3488,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                     controller.navigationPresentation = .flatModal
                     strongSelf.push(controller)
-//                    strongSelf.present(controller, in: .window(.root))
                     strongSelf.currentMenuWebAppController = controller
                 } else if simple {
                     strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestSimpleWebView(botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
@@ -7952,12 +7953,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             switch result {
                                 case .generic:
-                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites), elevatedLayout: true, action: { _ in return false }), with: nil)
+                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: true, action: { _ in return false }), with: nil)
                                 case .limitExceeded:
-                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("5").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("10").string), elevatedLayout: true, action: { [weak self] action in
+                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("5").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("10").string, undoText: nil), elevatedLayout: true, action: { [weak self] action in
                                         if let strongSelf = self {
                                             if case .info = action {
-                                                let controller = PremiumIntroScreen(context: strongSelf.context)
+                                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
                                                 strongSelf.push(controller)
                                                 return true
                                             }
@@ -11176,7 +11177,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             let present = {
-                strongSelf.present(attachmentController, in: .window(.root))
+                attachmentController.navigationPresentation = .flatModal
+                strongSelf.push(attachmentController)
+//                strongSelf.present(attachmentController, in: .window(.root))
                 strongSelf.attachmentController = attachmentController
             }
             
@@ -12351,6 +12354,51 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func transformEnqueueMessages(_ messages: [EnqueueMessage]) -> [EnqueueMessage] {
         let silentPosting = self.presentationInterfaceState.interfaceState.silentPosting
         return transformEnqueueMessages(messages, silentPosting: silentPosting)
+    }
+    
+    private func displayPremiumStickerTooltip(file: TelegramMediaFile, message: Message) {
+        var currentOverlayController: UndoOverlayController?
+        
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                currentOverlayController = controller
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                currentOverlayController = controller
+            }
+            return true
+        })
+        
+        if let currentOverlayController = currentOverlayController {
+            if case .sticker = currentOverlayController.content {
+                return
+            }
+            currentOverlayController.dismissWithCommitAction()
+        }
+        
+        var stickerPackReference: StickerPackReference?
+        for attribute in file.attributes {
+            if case let .Sticker(_, packReference, _) = attribute, let packReference = packReference {
+                stickerPackReference = packReference
+                break
+            }
+        }
+        
+        if let stickerPackReference = stickerPackReference {
+            let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
+            |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
+                if let strongSelf = self, case let .result(info, _, _) = stickerPack {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: info.title, text: strongSelf.presentationData.strings.Stickers_PremiumPackInfoText, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView), elevatedLayout: false, action: { [weak self] action in
+                        if let strongSelf = self, action == .undo {
+                            let _ = strongSelf.controllerInteraction?.openMessage(message, .default)
+                        }
+                        return false
+                    }), in: .current)
+                }
+            })
+        }
     }
     
     private func displayDiceTooltip(dice: TelegramMediaDice) {

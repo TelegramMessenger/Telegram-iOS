@@ -258,6 +258,7 @@ public enum ResolvedUrl {
     case importStickers
     case startAttach(peerId: PeerId, payload: String?)
     case invoice(slug: String, invoice: TelegramMediaInvoice)
+    case premiumOffer(reference: String?)
 }
 
 public enum NavigateToChatKeepStack {
