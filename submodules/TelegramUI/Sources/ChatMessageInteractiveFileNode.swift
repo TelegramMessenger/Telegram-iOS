@@ -175,7 +175,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var fileIconImage: UIImage?
     
     private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .possible
-    private var transcribedText: String?
+    private var transcribedText: EngineAudioTranscriptionResult?
     private var transcribeDisposable: Disposable?
     
     override init() {
@@ -305,6 +305,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let context = self.context, let message = self.message, let presentationData = self.presentationData else {
             return
         }
+        
+        if self.transcribedText == nil {
+            for attribute in message.attributes {
+                if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                    self.transcribedText = .success(EngineAudioTranscriptionResult.Success(id: attribute.id, text: attribute.text))
+                    self.audioTranscriptionState = .collapsed
+                    break
+                }
+            }
+        }
+        
         if self.transcribedText == nil {
             if self.transcribeDisposable == nil {
                 self.audioTranscriptionState = .inProgress
@@ -352,7 +363,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return
                         }
                         strongSelf.transcribeDisposable = nil
-                        strongSelf.transcribedText = result
+                        if let result = result {
+                            strongSelf.transcribedText = .success(EngineAudioTranscriptionResult.Success(id: 0, text: result))
+                        } else {
+                            strongSelf.transcribedText = .error
+                        }
                         if strongSelf.transcribedText != nil {
                             strongSelf.audioTranscriptionState = .expanded
                         } else {
@@ -368,7 +383,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                         strongSelf.transcribeDisposable = nil
                         strongSelf.audioTranscriptionState = .expanded
-                        strongSelf.transcribedText = result?.text
+                        strongSelf.transcribedText = result
                         strongSelf.requestUpdateLayout(true)
                     })
                 }
@@ -573,7 +588,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let textFont = arguments.presentationData.messageFont
                 let textString: NSAttributedString?
                 if let transcribedText = transcribedText, case .expanded = audioTranscriptionState {
-                    textString = NSAttributedString(string: transcribedText, font: textFont, textColor: messageTheme.primaryTextColor)
+                    switch transcribedText {
+                    case let .success(success):
+                        textString = NSAttributedString(string: success.text, font: textFont, textColor: messageTheme.primaryTextColor)
+                    case .error:
+                        let errorTextFont = Font.regular(floor(arguments.presentationData.fontSize.baseDisplaySize * 15.0 / 17.0))
+                        //TODO:localize
+                        textString = NSAttributedString(string: "No speech detected", font: errorTextFont, textColor: messageTheme.secondaryTextColor)
+                    }
                 } else {
                     textString = nil
                 }

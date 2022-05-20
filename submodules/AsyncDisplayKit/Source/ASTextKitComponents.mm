@@ -13,6 +13,27 @@
 
 #import <tgmath.h>
 
+@interface ASCustomLayoutManager : NSLayoutManager
+
+@end
+
+@implementation ASCustomLayoutManager
+
+- (void)drawGlyphsForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
+    /*CGGlyph glyph = [self glyphAtIndex:glyphsToShow.location];
+    if (glyph) {
+    }
+    
+    CGRect bounds = [self boundingRectForGlyphRange:glyphsToShow inTextContainer:[self textContainerForGlyphAtIndex:glyphsToShow.location effectiveRange:nil]];
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextSetFillColorWithColor(context, [UIColor grayColor].CGColor);
+    CGContextFillRect(context, bounds);*/
+    
+    [super drawGlyphsForGlyphRange:glyphsToShow atPoint:origin];
+}
+
+@end
+
 @interface ASTextKitComponentsTextView () {
   // Prevent UITextView from updating contentOffset while deallocating: https://github.com/TextureGroup/Texture/issues/860
   BOOL _deallocating;
@@ -83,7 +104,7 @@
 
   return [self componentsWithTextStorage:textStorage
                        textContainerSize:textContainerSize
-                           layoutManager:[[NSLayoutManager alloc] init]];
+                           layoutManager:[[ASCustomLayoutManager alloc] init]];
 }
 
 + (instancetype)componentsWithTextStorage:(NSTextStorage *)textStorage

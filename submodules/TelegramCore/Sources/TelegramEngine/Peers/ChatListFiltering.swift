@@ -348,8 +348,6 @@ extension ChatListFilter {
                     }
                 )
             )
-        case .dialogFilterDefault:
-            preconditionFailure()
         }
     }
     
@@ -486,8 +484,6 @@ private func requestChatListFilters(accountPeerId: PeerId, postbox: Postbox, net
                             }
                         }
                     }
-                case .dialogFilterDefault:
-                    break
                 }
             }
             return (filters, missingPeers, missingChats)

@@ -159,11 +159,19 @@ public final class AccountContextImpl: AccountContext {
     public let cachedGroupCallContexts: AccountGroupCallContextCache
     public let meshAnimationCache: MeshAnimationCache
     
+    private var animatedEmojiStickersDisposable: Disposable?
+    public private(set) var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+    
+    private var userLimitsConfigurationDisposable: Disposable?
+    public private(set) var userLimits: EngineConfiguration.UserLimits
+    
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.engine = TelegramEngine(account: account)
+        
+        self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -244,6 +252,40 @@ public final class AccountContextImpl: AccountContext {
         account.callSessionManager.updateVersions(versions: PresentationCallManagerImpl.voipVersions(includeExperimental: true, includeReference: true).map { version, supportsVideo -> CallSessionManagerImplementationVersion in
             CallSessionManagerImplementationVersion(version: version, supportsVideo: supportsVideo)
         })
+        
+        self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
+        |> map { animatedEmoji -> [String: [StickerPackItem]] in
+            var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
+            switch animatedEmoji {
+                case let .result(_, items, _):
+                    for item in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = [item]
+                            let strippedEmoji = emoji.basicEmoji.0.strippedEmoji
+                            if animatedEmojiStickers[strippedEmoji] == nil {
+                                animatedEmojiStickers[strippedEmoji] = [item]
+                            }
+                        }
+                    }
+                default:
+                    break
+            }
+            return animatedEmojiStickers
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] stickers in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.animatedEmojiStickers = stickers
+        })
+        
+        self.userLimitsConfigurationDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false))
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.userLimits = value
+        })
     }
     
     deinit {
@@ -252,6 +294,7 @@ public final class AccountContextImpl: AccountContext {
         self.contentSettingsDisposable?.dispose()
         self.appConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
+        self.animatedEmojiStickersDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

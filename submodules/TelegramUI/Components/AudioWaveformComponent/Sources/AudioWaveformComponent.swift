@@ -139,7 +139,7 @@ public final class AudioWaveformComponent: Component {
                         self.updateShimmer()
                     }
                     
-                    if let previousContents = previousContents, let contents = self.contents {
+                    if let previousContents = previousContents, CFGetTypeID(previousContents as CFTypeRef) == CGImage.typeID, (previousContents as! CGImage).width != Int(image.size.width * image.scale), let contents = self.contents {
                         self.animate(from: previousContents as AnyObject, to: contents as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15)
                     }
                 }
@@ -317,7 +317,7 @@ public final class AudioWaveformComponent: Component {
         func update(component: AudioWaveformComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             let size = CGSize(width: availableSize.width, height: availableSize.height)
             
-            if self.validSize != size || self.component?.samples != component.samples || self.component?.peak != component.peak {
+            if self.validSize != size || self.component != component {
                 self.setNeedsDisplay()
             }
             
@@ -464,8 +464,6 @@ public final class AudioWaveformComponent: Component {
                 }
                 memset(adjustedSamplesMemory, 0, numSamples * 2)
                 
-                var generateFakeSamples = false
-                
                 var bins: [UInt16: Int] = [:]
                 for i in 0 ..< maxReadSamples {
                     let index = i * numSamples / maxReadSamples
@@ -490,27 +488,6 @@ public final class AudioWaveformComponent: Component {
                     }
                 }
                 sortedSamples.sort { $0.1 > $1.1 }
-                
-                let topSamples = sortedSamples.prefix(1)
-                let topCount = topSamples.map{ $0.1 }.reduce(.zero, +)
-                var topCountPercent: Float = 0.0
-                if bins.count > 0 {
-                    topCountPercent = Float(topCount) / Float(totalCount)
-                }
-                
-                if topCountPercent > 0.75 {
-                    generateFakeSamples = true
-                }
-                
-                if generateFakeSamples {
-                    if maxSample < 10 {
-                        maxSample = 20
-                    }
-                    for i in 0 ..< maxReadSamples {
-                        let index = i * numSamples / maxReadSamples
-                        adjustedSamples[index] = UInt16.random(in: 6...maxSample)
-                    }
-                }
                 
                 let invScale = 1.0 / max(1.0, CGFloat(maxSample))
                 
