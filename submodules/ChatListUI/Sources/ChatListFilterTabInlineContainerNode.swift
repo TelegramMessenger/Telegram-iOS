@@ -390,7 +390,7 @@ final class ChatListFilterTabInlineContainerNode: ASDisplayNode {
             $0.compactMap {
                 switch $0 {
                 case .all:
-                    return nil
+                    return 0
                 case let .filter(id):
                     return id
                 }

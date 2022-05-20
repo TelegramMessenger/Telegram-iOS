@@ -139,14 +139,16 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         segments = [.text(0, NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
                                     }
                                 }
-                                if peer.isFake {
-                                    titleCredibilityIcon = .fake
-                                } else if peer.isScam {
-                                    titleCredibilityIcon = .scam
-                                } else if peer.isVerified {
-                                    titleCredibilityIcon = .verified
-                                } else if peer.isPremium {
-                                    titleCredibilityIcon = .premium
+                                if peer.id != self.account.peerId {
+                                    if peer.isFake {
+                                        titleCredibilityIcon = .fake
+                                    } else if peer.isScam {
+                                        titleCredibilityIcon = .scam
+                                    } else if peer.isVerified {
+                                        titleCredibilityIcon = .verified
+                                    } else if peer.isPremium {
+                                        titleCredibilityIcon = .premium
+                                    }
                                 }
                             }
                             if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -619,6 +621,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.strings = strings
         
         let titleContent = self.titleContent
+        self.titleCredibilityIcon = .none
         self.titleContent = titleContent
         let _ = self.updateStatus()
         

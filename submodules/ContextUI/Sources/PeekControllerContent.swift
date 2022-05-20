@@ -30,5 +30,7 @@ public protocol PeekControllerContentNode {
 }
 
 public protocol PeekControllerAccessoryNode {
+    var dismiss: () -> Void { get set }
+    
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
 }

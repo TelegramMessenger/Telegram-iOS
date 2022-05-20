@@ -603,14 +603,16 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             var updatedLabelBadgeImage: UIImage?
             var currentCredibilityIconImage: UIImage?
             
-            if item.peer.isScam {
-                currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
-            } else if item.peer.isFake {
-                currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
-            } else if item.peer.isVerified {
-                currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
-            } else if item.peer.isPremium {
-                currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+            if item.peer.id != item.context.account.peerId {
+                if item.peer.isScam {
+                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                } else if item.peer.isFake {
+                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                } else if item.peer.isVerified {
+                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                } else if item.peer.isPremium {
+                    currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                }
             }
             
             var titleIconsWidth: CGFloat = 0.0

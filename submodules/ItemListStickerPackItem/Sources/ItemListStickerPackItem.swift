@@ -241,6 +241,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
         self.installationActionBackgroundNode.displayWithoutProcessing = true
         self.installationActionBackgroundNode.isLayerBacked = true
         self.installationActionNode = HighlightableButtonNode()
+        self.installationActionNode.hitTestSlop = UIEdgeInsets(top: -16.0, left: -16.0, bottom: -16.0, right: -16.0)
         
         self.installTextNode = TextNode()
         self.installTextNode.isUserInteractionEnabled = false

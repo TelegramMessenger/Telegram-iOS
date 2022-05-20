@@ -110,7 +110,12 @@ public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilte
 }
 
 func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
-    let filterPredicate: ChatListFilterPredicate? = (location.filter?.data).flatMap(chatListFilterPredicate)
+    let filterPredicate: ChatListFilterPredicate?
+    if let filter = location.filter, case let .filter(_, _, _, data) = filter {
+        filterPredicate = chatListFilterPredicate(filter: data)
+    } else {
+        filterPredicate = nil
+    }
     
     switch location {
         case let .initial(count, _):

@@ -25,6 +25,7 @@ swift_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/UrlHandling:UrlHandling",
         "//submodules/MoreButtonNode:MoreButtonNode",
+        "//submodules/BotPaymentsUI:BotPaymentsUI",
     ],
     visibility = [
         "//visibility:public",

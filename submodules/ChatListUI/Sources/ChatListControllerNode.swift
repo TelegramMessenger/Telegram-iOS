@@ -448,6 +448,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         return _ready.get()
     }
     
+    private let _validLayoutReady = Promise<Bool>()
+    var validLayoutReady: Signal<Bool, NoError> {
+        return _validLayoutReady.get()
+    }
+    
     private var currentItemNodeValue: ChatListContainerItemNode?
     var currentItemNode: ChatListNode {
         return self.currentItemNodeValue!.listNode
@@ -833,13 +838,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func switchToFilter(id: ChatListFilterTabEntryId, completion: (() -> Void)? = nil) {
-        guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
-            return
-        }
+    func switchToFilter(id: ChatListFilterTabEntryId, animated: Bool = true, completion: (() -> Void)? = nil) {
         self.onFilterSwitch?()
         if id != self.selectedId, let index = self.availableFilters.firstIndex(where: { $0.id == id }) {
             if let itemNode = self.itemNodes[id] {
+                guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = self.validLayout else {
+                    return
+                }
                 self.selectedId = id
                 if let currentItemNode = self.currentItemNodeValue {
                     itemNode.listNode.adjustScrollOffsetForNavigation(isNavigationHidden: currentItemNode.listNode.isNavigationHidden)
@@ -859,8 +864,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
                 
-                disposable.set((itemNode.listNode.ready
-                |> filter { $0 }
+                disposable.set((combineLatest(itemNode.listNode.ready, self.validLayoutReady)
+                |> filter { $0 && $1 }
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] _ in
                     guard let strongSelf = self, let itemNode = itemNode, itemNode === strongSelf.pendingItemNode?.1 else {
@@ -871,7 +876,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     }
                     strongSelf.pendingItemNode = nil
                     
-                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                    let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .spring) : .immediate
                     
                     if let previousIndex = strongSelf.availableFilters.firstIndex(where: { $0.id == strongSelf.selectedId }), let index = strongSelf.availableFilters.firstIndex(where: { $0.id == id }) {
                         let previousId = strongSelf.selectedId
@@ -936,6 +941,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     func update(layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, isReorderingFilters: Bool, isEditing: Bool, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing)
+        
+        self._validLayoutReady.set(.single(true))
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight

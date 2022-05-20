@@ -35,8 +35,9 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     public let item: StickerPreviewPeekItem
     let isLocked: Bool
     let menu: [ContextMenuItem]
+    let openPremiumIntro: () -> Void
     
-    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem]) {
+    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, item: StickerPreviewPeekItem, isLocked: Bool = false, menu: [ContextMenuItem], openPremiumIntro: @escaping () -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -47,6 +48,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
         } else {
             self.menu = menu
         }
+        self.openPremiumIntro = openPremiumIntro
     }
     
     public func presentation() -> PeekControllerContentPresentation {
@@ -71,7 +73,7 @@ public final class StickerPreviewPeekContent: PeekControllerContent {
     
     public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         if self.isLocked {
-            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings)
+            return PremiumStickerPackAccessoryNode(theme: self.theme, strings: self.strings, proceed: self.openPremiumIntro)
         } else {
             return nil
         }
@@ -211,12 +213,17 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
     }
 }
 
-final class PremiumStickerPackAccessoryNode: ASDisplayNode, PeekControllerAccessoryNode {
+final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessoryNode {
+    var dismiss: () -> Void = {}
+    let proceed: () -> Void
+    
     let textNode: ImmediateTextNode
     let proceedButton: SolidRoundedButtonNode
     let cancelButton: HighlightableButtonNode
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    init(theme: PresentationTheme, strings: PresentationStrings, proceed: @escaping () -> Void) {
+        self.proceed = proceed
+        
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.textAlignment = .center
@@ -224,7 +231,14 @@ final class PremiumStickerPackAccessoryNode: ASDisplayNode, PeekControllerAccess
         self.textNode.attributedText = NSAttributedString(string: strings.Premium_Stickers_Description, font: Font.regular(17.0), textColor: theme.actionSheet.secondaryTextColor)
         self.textNode.lineSpacing = 0.1
         
-        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: true)
+        self.proceedButton = SolidRoundedButtonNode(title: strings.Premium_Stickers_Proceed, icon: UIImage(bundleImageName: "Premium/ButtonIcon"), theme: SolidRoundedButtonTheme(
+            backgroundColor: .white,
+            backgroundColors: [
+            UIColor(rgb: 0x0077ff),
+            UIColor(rgb: 0x6b93ff),
+            UIColor(rgb: 0x8878ff),
+            UIColor(rgb: 0xe46ace)
+        ], foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: true)
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemAccentColor, for: .normal)
@@ -235,14 +249,14 @@ final class PremiumStickerPackAccessoryNode: ASDisplayNode, PeekControllerAccess
         self.addSubnode(self.proceedButton)
         self.addSubnode(self.cancelButton)
         
-        self.proceedButton.pressed = {
-            
+        self.proceedButton.pressed = { [weak self] in
+            self?.proceed()
         }
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
     }
     
     @objc func cancelPressed() {
-        
+        self.dismiss()
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

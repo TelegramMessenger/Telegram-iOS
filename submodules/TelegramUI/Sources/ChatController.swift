@@ -1095,8 +1095,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if case .premium = value {
                             controller?.dismiss()
 
-                            let controller = PremiumStickersScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, reactions: premiumReactions)
-                            strongSelf.present(controller, in: .window(.root))
+                            let controller = PremiumReactionsScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, reactions: premiumReactions)
+                            strongSelf.push(controller)
                             return
                         }
                         
@@ -3481,8 +3481,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.chatDisplayNode.textInputPanelNode?.ensureFocused()
                             }
                         }
+                    }, getNavigationController: { [weak self] in
+                        return self?.effectiveNavigationController
                     })
-                    strongSelf.present(controller, in: .window(.root))
+                    controller.navigationPresentation = .flatModal
+                    strongSelf.push(controller)
+//                    strongSelf.present(controller, in: .window(.root))
                     strongSelf.currentMenuWebAppController = controller
                 } else if simple {
                     strongSelf.messageActionCallbackDisposable.set(((strongSelf.context.engine.messages.requestSimpleWebView(botId: peerId, url: url, themeParams: generateWebAppThemeParams(strongSelf.presentationData.theme))
@@ -3496,6 +3500,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, isSimple: true)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, openUrl: { [weak self] url in
                             self?.openUrl(url, concealed: true, forceExternal: true)
+                        }, getNavigationController: { [weak self] in
+                            return self?.effectiveNavigationController
                         })
                         strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
@@ -3519,6 +3525,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             self?.openUrl(url, concealed: true, forceExternal: true)
                         }, completion: { [weak self] in
                             self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                        }, getNavigationController: { [weak self] in
+                            return self?.effectiveNavigationController
                         })
                         strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
@@ -10745,6 +10753,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     public func presentAttachmentBot(botId: PeerId, payload: String?) {
+        self.attachmentController?.dismiss(animated: true, completion: nil)
         self.presentAttachmentMenu(editMediaOptions: nil, editMediaReference: nil, botId: botId, botPayload: payload)
     }
     

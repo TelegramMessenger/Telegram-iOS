@@ -584,7 +584,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
                     return .single(nil)
                 })
-                navigationController.pushViewController(BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                let checkoutController = BotCheckoutController(context: context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
                     /*strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .paymentSent(currencyValue: currencyValue, itemTitle: invoice.title), elevatedLayout: false, action: { action in
                         guard let strongSelf = self, let receiptMessageId = receiptMessageId else {
                             return false
@@ -596,7 +596,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         }
                         return false
                     }), in: .current)*/
-                }))
+                })
+                checkoutController.navigationPresentation = .modal
+                navigationController.pushViewController(checkoutController)
             }
     }
 }

@@ -380,6 +380,8 @@ public class AttachmentController: ViewController {
         override func didLoad() {
             super.didLoad()
             
+            self.view.disablesInteractiveModalDismiss = true
+            
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
             
             if let controller = self.controller {

@@ -18,6 +18,7 @@ import PhotoResources
 import LegacyComponents
 import UrlHandling
 import MoreButtonNode
+import BotPaymentsUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
@@ -80,7 +81,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var cancelPanGesture: () -> Void = { }
     public var isContainerPanning: () -> Bool = { return false }
     public var isContainerExpanded: () -> Bool = { return false }
-    
+        
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
         
@@ -93,23 +94,23 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         private let context: AccountContext
         var presentationData: PresentationData
-        private let present: (ViewController, Any?) -> Void
         private var queryId: Int64?
         
         private var placeholderDisposable: Disposable?
         private var iconDisposable: Disposable?
         private var keepAliveDisposable: Disposable?
         
+        private var paymentDisposable: Disposable?
+        
         private var didTransitionIn = false
         private var dismissed = false
         
         private var validLayout: (ContainerViewLayout, CGFloat)?
         
-        init(context: AccountContext, controller: WebAppController, present: @escaping (ViewController, Any?) -> Void) {
+        init(context: AccountContext, controller: WebAppController) {
             self.context = context
             self.controller = controller
             self.presentationData = controller.presentationData
-            self.present = present
             
             super.init()
             
@@ -264,6 +265,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.placeholderDisposable?.dispose()
             self.iconDisposable?.dispose()
             self.keepAliveDisposable?.dispose()
+            self.paymentDisposable?.dispose()
             
             self.webView?.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
         }
@@ -475,16 +477,38 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_request_theme":
                     self.sendThemeChangedEvent()
                 case "web_app_expand":
-                    self.controller?.requestAttachmentMenuExpansion()
+                    controller.requestAttachmentMenuExpansion()
                 case "web_app_close":
-                    self.controller?.dismiss()
+                    controller.dismiss()
                 case "web_app_open_tg_link":
                     if let json = json, let path = json["path_full"] as? String {
-                        print(path)
+                        controller.openUrl("https://t.me\(path)")
+                        controller.dismiss()
                     }
                 case "web_app_open_invoice":
                     if let json = json, let slug = json["slug"] as? String {
-                        print(slug)
+                        self.paymentDisposable = (context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
+                        |> map(Optional.init)
+                        |> `catch` { _ -> Signal<TelegramMediaInvoice?, NoError> in
+                            return .single(nil)
+                        }
+                        |> deliverOnMainQueue).start(next: { [weak self] invoice in
+                            if let strongSelf = self, let invoice = invoice {
+                                let inputData = Promise<BotCheckoutController.InputData?>()
+                                inputData.set(BotCheckoutController.InputData.fetch(context: strongSelf.context, source: .slug(slug))
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<BotCheckoutController.InputData?, NoError> in
+                                    return .single(nil)
+                                })
+                                if let navigationController = strongSelf.controller?.getNavigationController() {
+                                    let checkoutController = BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
+                                        
+                                    })
+                                    checkoutController.navigationPresentation = .modal
+                                    navigationController.pushViewController(checkoutController)
+                                }
+                            }
+                        })
                     }
                 default:
                     break
@@ -539,8 +563,27 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView?.sendEvent(name: "theme_changed", data: themeParamsString)
         }
         
-        private func sendInvoiceClosedEvent(slug: String, status: String) {
-            let paramsString = "{slug: \"\(slug)\", status: \"\(status)\"}"
+        enum InvoiceCloseResult {
+            case paid
+            case pending
+            case cancelled
+            case failed
+            
+            var string: String {
+                switch self {
+                    case .paid:
+                        return "paid"
+                    case .pending:
+                        return "pending"
+                    case .cancelled:
+                        return "cancelled"
+                    case .failed:
+                        return "failed"
+                    }
+            }
+        }
+        private func sendInvoiceClosedEvent(slug: String, result: InvoiceCloseResult) {
+            let paramsString = "{slug: \"\(slug)\", status: \"\(result.string)\"}"
             self.webView?.sendEvent(name: "invoice_closed", data: paramsString)
         }
     }
@@ -704,9 +747,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(context: self.context, controller: self, present: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
-        })
+        self.displayNode = Node(context: self.context, controller: self)
         
         self.navigationBar?.updateBackgroundAlpha(0.0, transition: .immediate)
         self.updateTabBarAlpha(1.0, .immediate)
@@ -790,13 +831,14 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}) -> ViewController {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }) -> ViewController {
     let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu)
     controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
         let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil)
         webAppController.openUrl = openUrl
         webAppController.completion = completion
+        webAppController.getNavigationController = getNavigationController
         present(webAppController, webAppController.mediaPickerContext)
     }
     controller.willDismiss = willDismiss

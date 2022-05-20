@@ -585,8 +585,10 @@ public extension TelegramEngine {
                     sortedFilters.append(contentsOf: filters[index...])
                     sortedFilters.append(contentsOf: filters[0 ..< index])
                     for i in 0 ..< sortedFilters.count {
-                        if let value = getForFilter(predicate: getFilterPredicate(sortedFilters[i].data), isArchived: false) {
-                            return (peer: value.peer, unreadCount: value.unreadCount, location: i == 0 ? .same : .folder(id: sortedFilters[i].id, title: sortedFilters[i].title))
+                        if case let .filter(id, title, _, data) = sortedFilters[i] {
+                            if let value = getForFilter(predicate: getFilterPredicate(data), isArchived: false) {
+                                return (peer: value.peer, unreadCount: value.unreadCount, location: i == 0 ? .same : .folder(id: id, title: title))
+                            }
                         }
                     }
                     return nil
