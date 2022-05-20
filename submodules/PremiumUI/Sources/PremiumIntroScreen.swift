@@ -15,6 +15,7 @@ import Markdown
 import InAppPurchaseManager
 import ConfettiEffect
 import TextFormat
+import InstantPageCache
 
 private final class SectionGroupComponent: Component {
     public final class Item: Equatable {
@@ -884,7 +885,39 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     ),
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.0
+                    lineSpacing: 0.0,
+                    highlightColor: environment.theme.list.itemAccentColor.withAlphaComponent(0.3),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { attributes, _ in
+                        if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String,
+                           let controller = environment.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
+                            let context = controller.context
+                            let signal: Signal<ResolvedUrl, NoError>?
+                            switch url {
+                                case "terms":
+                                    signal = cachedTermsPage(context: context)
+                                case "privacy":
+                                    signal = cachedPrivacyPage(context: context)
+                                default:
+                                    signal = nil
+                            }
+                            if let signal = signal {
+                                let _ = (signal
+                                |> deliverOnMainQueue).start(next: { resolvedUrl in
+                                    context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
+                                    }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak controller] c, arguments in
+                                        controller?.push(c)
+                                    }, dismissInput: {}, contentContext: nil)
+                                })
+                            }
+                        }
+                    }
                 ),
                 environment: {},
                 availableSize: CGSize(width: availableWidth - sideInsets - textSideInset * 2.0, height: .greatestFiniteMagnitude),
@@ -1222,7 +1255,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 .opacity(bottomPanelAlpha)
             )
             context.add(bottomSeparator
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height - bottomSeparator.size.height))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height))
                 .opacity(bottomPanelAlpha)
             )
             context.add(button
@@ -1235,7 +1268,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
 }
 
 public final class PremiumIntroScreen: ViewControllerComponentContainer {
-    private let context: AccountContext
+    fileprivate let context: AccountContext
     
     private var didSetReady = false
     private let _ready = Promise<Bool>()

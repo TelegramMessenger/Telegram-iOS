@@ -621,6 +621,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         self.strings = strings
         
         let titleContent = self.titleContent
+        self.titleCredibilityIcon = .none
         self.titleContent = titleContent
         let _ = self.updateStatus()
         

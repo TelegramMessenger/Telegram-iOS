@@ -7612,3 +7612,6 @@ Sorry for the inconvenience.";
 
 "Conversation.CopyProtectionSavingDisabledSecret" = "Saving is restricted";
 "Conversation.CopyProtectionForwardingDisabledSecret" = "Forwards are restricted";
+
+"Settings.Terms_URL" = "https://telegram.org/tos";
+"Settings.PrivacyPolicy_URL" = "https://telegram.org/privacy";

@@ -16,6 +16,7 @@ import NotificationSoundSelectionUI
 import PresentationDataUtils
 import PhoneNumberFormat
 import AccountUtils
+import InstantPageCache
 
 enum SettingsSearchableItemIcon {
     case profile

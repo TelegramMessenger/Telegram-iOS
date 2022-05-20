@@ -1095,8 +1095,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if case .premium = value {
                             controller?.dismiss()
 
-                            let controller = PremiumStickersScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, reactions: premiumReactions)
-                            strongSelf.present(controller, in: .window(.root))
+                            let controller = PremiumReactionsScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, reactions: premiumReactions)
+                            strongSelf.push(controller)
                             return
                         }
                         

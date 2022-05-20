@@ -599,7 +599,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let limit = state.limits.maxFoldersCount
                     let premiumLimit = state.premiumLimits.maxFoldersCount
                     iconName = "Premium/Folder"
-                    badgeText = "\(limit)"
+                    badgeText = "\(component.count)"
                     string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = "\(premiumLimit)"
@@ -608,7 +608,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let limit = state.limits.maxFolderChatsCount
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
-                    badgeText = "\(limit)"
+                    badgeText = "\(component.count)"
                     string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = "\(premiumLimit)"
@@ -617,7 +617,7 @@ private final class LimitSheetContent: CombinedComponent {
                     let limit = state.limits.maxPinnedChatCount
                     let premiumLimit = state.premiumLimits.maxPinnedChatCount
                     iconName = "Premium/Pin"
-                    badgeText = "\(limit)"
+                    badgeText = "\(component.count)"
                     string = strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
                     premiumValue = "\(premiumLimit)"
