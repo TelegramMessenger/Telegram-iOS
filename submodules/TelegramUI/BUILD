@@ -273,6 +273,8 @@ swift_library(
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
         "//submodules/TelegramUI/Components/AudioTranscriptionButtonComponent:AudioTranscriptionButtonComponent",
         "//submodules/TelegramUI/Components/AudioWaveformComponent:AudioWaveformComponent",
+        "//submodules/TelegramUI/Components/EditableChatTextNode:EditableChatTextNode",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
         "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",
     ] + select({

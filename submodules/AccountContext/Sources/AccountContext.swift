@@ -823,6 +823,10 @@ public protocol AccountContext: AnyObject {
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
     
+    var animatedEmojiStickers: [String: [StickerPackItem]] { get }
+    
+    var userLimits: EngineConfiguration.UserLimits { get }
+    
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?
     

@@ -4964,6 +4964,24 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func rateTranscribedAudio(peer: Api.InputPeer, msgId: Int32, transcriptionId: Int64, good: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2132608815)
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    serializeInt64(transcriptionId, buffer: buffer, boxed: false)
+                    good.serialize(buffer, true)
+                    return (FunctionDescription(name: "messages.rateTranscribedAudio", parameters: [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("transcriptionId", String(describing: transcriptionId)), ("good", String(describing: good))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func readDiscussion(peer: Api.InputPeer, msgId: Int32, readMaxId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-147740172)

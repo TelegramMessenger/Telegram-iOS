@@ -144,7 +144,7 @@ public protocol AnimatedStickerNodeSource {
     var isVideo: Bool { get }
     
     func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError>
-    func directDataPath() -> Signal<String, NoError>
+    func directDataPath(attemptSynchronously: Bool) -> Signal<String?, NoError>
 }
 
 public final class AnimatedStickerNode: ASDisplayNode {
@@ -304,9 +304,10 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     strongSelf.play(firstFrame: true)
                 }
             }
-            self.disposable.set((source.directDataPath()
+            self.disposable.set((source.directDataPath(attemptSynchronously: false)
+            |> filter { $0 != nil }
             |> deliverOnMainQueue).start(next: { path in
-                f(path)
+                f(path!)
             }))
         case .cached:
             self.disposable.set((source.cachedDataPath(width: width, height: height)

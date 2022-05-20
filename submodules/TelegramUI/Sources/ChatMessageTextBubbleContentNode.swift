@@ -91,10 +91,11 @@ private final class InlineStickerItemLayer: SimpleLayer {
         
         let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
         
-        self.disposable = (self.source.directDataPath()
+        self.disposable = (self.source.directDataPath(attemptSynchronously: false)
+        |> filter { $0 != nil }
         |> take(1)
         |> deliverOn(InlineStickerItemLayer.queue)).start(next: { [weak self] path in
-            guard let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) else {
+            guard let directData = try? Data(contentsOf: URL(fileURLWithPath: path!), options: [.mappedRead]) else {
                 return
             }
             Queue.mainQueue().async {
@@ -161,12 +162,6 @@ private final class InlineStickerItemLayer: SimpleLayer {
         guard let frameSource = self.frameSource else {
             return
         }
-        if self.contents != nil {
-            return
-        }
-        if self.didRequestFrame {
-            return
-        }
         self.didRequestFrame = true
         frameSource.with { [weak self] impl in
             if let animationFrame = impl.takeFrame(draw: true) {
@@ -198,9 +193,6 @@ private final class InlineStickerItemLayer: SimpleLayer {
                 if let image = image {
                     Queue.mainQueue().async {
                         guard let strongSelf = self else {
-                            return
-                        }
-                        if strongSelf.contents != nil {
                             return
                         }
                         strongSelf.contents = image.cgImage
@@ -473,41 +465,72 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     attributedText = NSAttributedString(string: " ", font: textFont, textColor: messageTheme.primaryTextColor)
                 }
                 
-                /*if item.context.sharedContext.immediateExperimentalUISettings.inlineStickers*/ do {
-                    var currentCount = 0
+                if let entities = entities {
                     let updatedString = NSMutableAttributedString(attributedString: attributedText)
-                    var startIndex = updatedString.string.startIndex
-                    while true {
-                        var hadUpdates = false
-                        updatedString.string.enumerateSubstrings(in: startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
-                            if let substring = substring {
-                                let emoji = substring.basicEmoji.0
-                                
-                                var emojiFile: TelegramMediaFile?
-                                emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
-                                if emojiFile == nil {
-                                    emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
-                                }
-                                
-                                if let emojiFile = emojiFile {
-                                    let currentDict = updatedString.attributes(at: NSRange(substringRange, in: updatedString.string).lowerBound, effectiveRange: nil)
-                                    var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
-                                    updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-                                    updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
+                    
+                    for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
+                        guard case .AnimatedEmoji = entity.type else {
+                            continue
+                        }
+                        
+                        let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+                        
+                        let substring = updatedString.attributedSubstring(from: range)
+                        
+                        let emoji = substring.string.basicEmoji.0
+                        
+                        var emojiFile: TelegramMediaFile?
+                        emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                        if emojiFile == nil {
+                            emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                        }
+                        
+                        if let emojiFile = emojiFile {
+                            let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
+                            var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
+                            updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
+                            updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
+                            
+                            let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                            //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
+                            updatedString.replaceCharacters(in: range, with: insertString)
+                        }
+                        
+                        /*var currentCount = 0
+                        let updatedString = NSMutableAttributedString(attributedString: attributedText)
+                        var startIndex = updatedString.string.startIndex
+                        while true {
+                            var hadUpdates = false
+                            updatedString.string.enumerateSubstrings(in: startIndex ..< updatedString.string.endIndex, options: [.byComposedCharacterSequences]) { substring, substringRange, _, stop in
+                                if let substring = substring {
+                                    let emoji = substring.basicEmoji.0
                                     
-                                    let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
-                                    //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
-                                    updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: insertString)
-                                    startIndex = substringRange.lowerBound
-                                    currentCount += 1
-                                    hadUpdates = true
-                                    stop = true
+                                    var emojiFile: TelegramMediaFile?
+                                    emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.first?.file
+                                    if emojiFile == nil {
+                                        emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
+                                    }
+                                    
+                                    if let emojiFile = emojiFile {
+                                        let currentDict = updatedString.attributes(at: NSRange(substringRange, in: updatedString.string).lowerBound, effectiveRange: nil)
+                                        var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
+                                        updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
+                                        updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
+                                        
+                                        let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                                        //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
+                                        updatedString.replaceCharacters(in: NSRange(substringRange, in: updatedString.string), with: insertString)
+                                        startIndex = substringRange.lowerBound
+                                        currentCount += 1
+                                        hadUpdates = true
+                                        stop = true
+                                    }
                                 }
                             }
-                        }
-                        if !hadUpdates || currentCount >= 10 {
-                            break
-                        }
+                            if !hadUpdates || currentCount >= 10 {
+                                break
+                            }
+                        }*/
                     }
                     attributedText = updatedString
                 }

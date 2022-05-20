@@ -322,8 +322,12 @@ public extension TelegramEngine {
             return _internal_translate(network: self.account.network, text: text, fromLang: fromLang, toLang: toLang)
         }
         
-        public func transcribeAudio(messageId: MessageId) -> Signal<String?, NoError> {
+        public func transcribeAudio(messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
             return _internal_transcribeAudio(postbox: self.account.postbox, network: self.account.network, messageId: messageId)
+        }
+        
+        public func rateAudioTranscription(messageId: MessageId, id: Int64, isGood: Bool) -> Signal<Never, NoError> {
+            return _internal_rateAudioTranscription(postbox: self.account.postbox, network: self.account.network, messageId: messageId, id: id, isGood: isGood)
         }
         
         public func requestWebView(peerId: PeerId, botId: PeerId, url: String?, payload: String?, themeParams: [String: Any]?, fromMenu: Bool, replyToMessageId: MessageId?) -> Signal<RequestWebViewResult, RequestWebViewError> {
@@ -353,6 +357,14 @@ public extension TelegramEngine {
         
         public func attachMenuBots() -> Signal<[AttachMenuBot], NoError> {
             return _internal_attachMenuBots(postbox: self.account.postbox)
+        }
+        
+        public func ensureMessagesAreLocallyAvailable(messages: [EngineMessage]) {
+            let _ = self.account.postbox.transaction({ transaction in
+                for message in messages {
+                    _internal_storeMessageFromSearch(transaction: transaction, message: message._asMessage())
+                }
+            }).start()
         }
     }
 }

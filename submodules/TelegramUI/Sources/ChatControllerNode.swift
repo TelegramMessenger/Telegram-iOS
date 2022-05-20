@@ -1932,9 +1932,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         case .none:
             break
         case .inputButtons:
-            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
-                return (.none, state.keyboardButtonsMessage?.id ?? state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
-            })
+            if let peer = self.chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil {
+            } else {
+                self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
+                    return (.none, state.keyboardButtonsMessage?.id ?? state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
+                })
+            }
         default:
             self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId({ state in
                 return (.none, state.interfaceState.messageActionsState.closedButtonKeyboardMessageId)
@@ -2427,7 +2430,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     for text in breakChatInputText(trimChatInputText(inputText)) {
                         if text.length != 0 {
                             var attributes: [MessageAttribute] = []
-                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                            let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text, maxAnimatedEmojisInText: Int(self.context.userLimits.maxAnimatedEmojisInText)))
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }

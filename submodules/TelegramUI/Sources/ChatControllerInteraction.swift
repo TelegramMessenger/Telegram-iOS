@@ -139,6 +139,7 @@ public final class ChatControllerInteraction {
     
     var canPlayMedia: Bool = false
     var hiddenMedia: [MessageId: [Media]] = [:]
+    var expandedTranslationMessageStableIds: Set<UInt32> = Set()
     var selectionState: ChatInterfaceSelectionState?
     var highlightedState: ChatInterfaceHighlightedState?
     var contextHighlightedState: ChatInterfaceHighlightedState?

@@ -1847,7 +1847,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             guard let strongSelf = self, let node = node as? ContextExtractedContentContainingNode else {
                 return
             }
-            let _ = storedMessageFromSearch(account: strongSelf.context.account, message: message).start()
+            
+            strongSelf.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [EngineMessage(message)])
             
             var linkForCopying: String?
             var currentSupernode: ASDisplayNode? = node
@@ -2197,11 +2198,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             var foundGalleryMessage: Message?
             if let searchContentNode = strongSelf.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
                 if let galleryMessage = searchContentNode.messageForGallery(message.id) {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
-                        if transaction.getMessage(galleryMessage.id) == nil {
-                            storeMessageFromSearch(transaction: transaction, message: galleryMessage)
-                        }
-                    }).start()
+                    strongSelf.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [EngineMessage(galleryMessage)])
                     foundGalleryMessage = galleryMessage
                 }
             }
@@ -2934,6 +2931,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             |> `catch` { _ -> Signal<Bool, NoError> in
                 return .single(false)
             }))
+            
             self.cachedFaq.set(.single(nil) |> then(cachedFaqInstantPage(context: self.context) |> map(Optional.init)))
             
             screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: self.hasPassport.get())
@@ -3202,11 +3200,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         var foundGalleryMessage: Message?
         if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
             if let galleryMessage = searchContentNode.messageForGallery(id) {
-                let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                    if transaction.getMessage(galleryMessage.id) == nil {
-                        storeMessageFromSearch(transaction: transaction, message: galleryMessage)
-                    }
-                }).start()
+                self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [EngineMessage(galleryMessage)])
                 foundGalleryMessage = galleryMessage
             }
         }
@@ -5763,7 +5757,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         for childController in tabController.controllers {
             if let chatListController = childController as? ChatListController {
-                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), joined: false, deleteGloballyIfPossible: globally, completion: { [weak navigationController] deleted in
+                chatListController.maybeAskForPeerChatRemoval(peer: EngineRenderedPeer(peer: EnginePeer(peer)), joined: false, deleteGloballyIfPossible: globally, completion: { [weak navigationController] deleted in
                     if deleted {
                         navigationController?.popToRoot(animated: true)
                     }

@@ -29,27 +29,70 @@ func _internal_translate(network: Network, text: String, fromLang: String?, toLa
     }
 }
 
-func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<String?, NoError> {    
+public enum EngineAudioTranscriptionResult {
+    public struct Success {
+        public var id: Int64
+        public var text: String
+        
+        public init(id: Int64, text: String) {
+            self.id = id
+            self.text = text
+        }
+    }
+    
+    case success(Success)
+    case error
+}
+
+func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: MessageId) -> Signal<EngineAudioTranscriptionResult, NoError> {
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { inputPeer -> Signal<String?, NoError> in
+    |> mapToSignal { inputPeer -> Signal<EngineAudioTranscriptionResult, NoError> in
         guard let inputPeer = inputPeer else {
-            return .single(nil)
+            return .single(.error)
         }
         return network.request(Api.functions.messages.transcribeAudio(peer: inputPeer, msgId: messageId.id))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.messages.TranscribedAudio?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result -> Signal<String?, NoError> in
+        |> mapToSignal { result -> Signal<EngineAudioTranscriptionResult, NoError> in
             guard let result = result else {
-                return .single(nil)
+                return .single(.error)
             }
-            switch result {
-            case let .transcribedAudio(string):
-                return .single(string)
+            
+            return postbox.transaction { transaction -> EngineAudioTranscriptionResult in
+                switch result {
+                case let .transcribedAudio(transcriptionId, text):
+                    transaction.updateMessage(messageId, update: { currentMessage in
+                        let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+                        var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
+                        
+                        attributes.append(AudioTranscriptionMessageAttribute(id: transcriptionId, text: text))
+                        
+                        return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                    })
+                    
+                    return .success(EngineAudioTranscriptionResult.Success(id: transcriptionId, text: text))
+                }
             }
         }
+    }
+}
+
+func _internal_rateAudioTranscription(postbox: Postbox, network: Network, messageId: MessageId, id: Int64, isGood: Bool) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .complete()
+        }
+        return network.request(Api.functions.messages.rateTranscribedAudio(peer: inputPeer, msgId: messageId.id, transcriptionId: id, good: isGood ? .boolTrue : .boolFalse))
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> ignoreValues
     }
 }
