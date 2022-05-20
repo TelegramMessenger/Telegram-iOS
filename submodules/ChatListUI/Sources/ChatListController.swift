@@ -973,7 +973,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId, deactivateOnAction in
             if let strongSelf = self {
-                strongSelf.openMessageFromSearchDisposable.set((storedMessageFromSearchPeer(account: strongSelf.context.account, peer: peer._asPeer())
+                strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
@@ -995,13 +995,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.requestOpenPeerFromSearch = { [weak self] peer, dismissSearch in
             if let strongSelf = self {
-                let storedPeer = strongSelf.context.account.postbox.transaction { transaction -> Void in
-                    if transaction.getPeer(peer.id) == nil {
-                        updatePeers(transaction: transaction, peers: [peer._asPeer()], update: { previousPeer, updatedPeer in
-                            return updatedPeer
-                        })
-                    }
-                }
+                let storedPeer = strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer) |> map { _ -> Void in return Void() }
                 strongSelf.openMessageFromSearchDisposable.set((storedPeer |> deliverOnMainQueue).start(completed: { [weak strongSelf] in
                     if let strongSelf = strongSelf {
                         if dismissSearch {
@@ -1528,27 +1522,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.didSuggestLocalization = true
             
             let context = self.context
-            let signal = combineLatest(self.context.sharedContext.accountManager.transaction { transaction -> String in
-                let languageCode: String
-                if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
-                    let code = current.primaryComponent.languageCode
-                    let rawSuffix = "-raw"
-                    if code.hasSuffix(rawSuffix) {
-                        languageCode = String(code.dropLast(rawSuffix.count))
+            
+            let suggestedLocalization = self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SuggestedLocalization())
+            
+            let signal = combineLatest(
+                self.context.sharedContext.accountManager.transaction { transaction -> String in
+                    let languageCode: String
+                    if let current = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self) {
+                        let code = current.primaryComponent.languageCode
+                        let rawSuffix = "-raw"
+                        if code.hasSuffix(rawSuffix) {
+                            languageCode = String(code.dropLast(rawSuffix.count))
+                        } else {
+                            languageCode = code
+                        }
                     } else {
-                        languageCode = code
+                        languageCode = "en"
                     }
-                } else {
-                    languageCode = "en"
-                }
-                return languageCode
-            }, self.context.account.postbox.transaction { transaction -> SuggestedLocalizationEntry? in
-                var suggestedLocalization: SuggestedLocalizationEntry?
-                if let localization = transaction.getPreferencesEntry(key: PreferencesKeys.suggestedLocalization)?.get(SuggestedLocalizationEntry.self) {
-                    suggestedLocalization = localization
-                }
-                return suggestedLocalization
-            })
+                    return languageCode
+                },
+                suggestedLocalization
+            )
             |> mapToSignal({ value -> Signal<(String, SuggestedLocalizationInfo)?, NoError> in
                 guard let suggestedLocalization = value.1, !suggestedLocalization.isSeen && suggestedLocalization.languageCode != "en" && suggestedLocalization.languageCode != value.0 else {
                     return .single(nil)
@@ -1604,14 +1598,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }))
             
             Queue.mainQueue().after(1.0, {
-                let _ = (self.context.account.postbox.transaction { transaction -> Int32? in
-                    if let value = transaction.getNoticeEntry(key: ApplicationSpecificNotice.forcedPasswordSetupKey())?.get(ApplicationSpecificCounterNotice.self) {
-                        return value.value
-                    } else {
-                        return nil
+                let _ = (
+                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Notices.Notice(key: ApplicationSpecificNotice.forcedPasswordSetupKey()))
+                    |> map { entry -> Int32? in
+                        return entry?.get(ApplicationSpecificCounterNotice.self)?.value
                     }
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] value in
+                    |> deliverOnMainQueue
+                ).start(next: { [weak self] value in
                     guard let strongSelf = self else {
                         return
                     }
@@ -2534,20 +2527,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     func deletePeerChat(peerId: PeerId, joined: Bool) {
-        let _ = (self.context.account.postbox.transaction { transaction -> RenderedPeer? in
-            guard let peer = transaction.getPeer(peerId) else {
-                return nil
-            }
-            if let associatedPeerId = peer.associatedPeerId {
-                if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                    return RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]))
-                } else {
-                    return nil
-                }
-            } else {
-                return RenderedPeer(peer: peer)
-            }
-        }
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId))
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
                 return
@@ -2564,7 +2544,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 canRemoveGlobally = true
             }
             
-            if let user = chatPeer as? TelegramUser, user.botInfo == nil, canRemoveGlobally {
+            if case let .user(user) = chatPeer, user.botInfo == nil, canRemoveGlobally {
                 strongSelf.maybeAskForPeerChatRemoval(peer: peer, joined: joined, completion: { _ in }, removed: {})
             } else {
                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
@@ -2574,7 +2554,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 var canRemoveGlobally = false
                 
                 var deleteTitle = strongSelf.presentationData.strings.Common_Delete
-                if let channel = chatPeer as? TelegramChannel {
+                if case let .channel(channel) = chatPeer {
                     if case .broadcast = channel.info {
                         canClear = false
                         deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
@@ -2590,30 +2570,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if let addressName = channel.addressName, !addressName.isEmpty {
                         canClear = false
                     }
-                } else if let group = chatPeer as? TelegramGroup {
+                } else if case let .legacyGroup(group) = chatPeer {
                     if case .creator = group.role {
                         canRemoveGlobally = true
                     }
-                } else if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+                } else if case let .user(user) = chatPeer, user.botInfo != nil {
                     canStop = !user.flags.contains(.isSupport)
                     canClear = user.botInfo == nil
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
-                } else if let _ = chatPeer as? TelegramSecretChat {
+                } else if case .secretChat = chatPeer {
                     canClear = true
                     deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
                 }
                 
                 let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
-                if chatPeer is TelegramUser && chatPeer.id != strongSelf.context.account.peerId {
+                if case .user = chatPeer, chatPeer.id != strongSelf.context.account.peerId {
                     if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
                         canRemoveGlobally = true
                     }
-                } else if chatPeer is TelegramSecretChat {
+                } else if case .secretChat = chatPeer {
                     canRemoveGlobally = true
                 }
                 
-                if canRemoveGlobally, (mainPeer is TelegramGroup || mainPeer is TelegramChannel) {
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                var isGroupOrChannel = false
+                switch mainPeer {
+                case .legacyGroup, .channel:
+                    isGroupOrChannel = true
+                default:
+                    break
+                }
+                
+                if canRemoveGlobally && isGroupOrChannel {
+                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                     
                     items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -2622,7 +2610,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }))
                     
                     let deleteForAllText: String
-                    if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                    if case let .channel(channel) = mainPeer, case .broadcast = channel.info {
                         deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllSubscribers
                     } else {
                         deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembers
@@ -2635,7 +2623,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }
                         
                         let deleteForAllConfirmation: String
-                        if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                        if case let .channel(channel) = mainPeer, case .broadcast = channel.info {
                             deleteForAllConfirmation = strongSelf.presentationData.strings.ChannelInfo_DeleteChannelConfirmation
                         } else {
                             deleteForAllConfirmation = strongSelf.presentationData.strings.ChannelInfo_DeleteGroupConfirmation
@@ -2651,7 +2639,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         ], parseMarkdown: true), in: .window(.root))
                     }))
                 } else {
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                     
                     if canClear {
                         let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
@@ -2705,14 +2693,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             
-                            if chatPeer is TelegramSecretChat {
+                            if case .secretChat = chatPeer {
                                 beginClear(.forEveryone)
                             } else {
                                 if canRemoveGlobally {
                                     let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                     var items: [ActionSheetItem] = []
                                                                 
-                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .clearHistory(canClearCache: false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory(canClearCache: false), strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                                     
                                     if joined || mainPeer.isDeleted {
                                         items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Delete, color: .destructive, action: { [weak actionSheet] in
@@ -2724,7 +2712,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                             beginClear(.forLocalPeer)
                                             actionSheet?.dismissAnimated()
                                         }))
-                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(mainPeer).compactDisplayTitle).string, color: .destructive, action: { [weak actionSheet] in
+                                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, color: .destructive, action: { [weak actionSheet] in
                                             beginClear(.forEveryone)
                                             actionSheet?.dismissAnimated()
                                         }))
@@ -2752,8 +2740,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         }))
                     }
                     
-                    if chatPeer is TelegramSecretChat {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(mainPeer).compactDisplayTitle).string, color: .destructive, action: { [weak actionSheet] in
+                    if case .secretChat = chatPeer {
+                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
                             guard let strongSelf = self else {
                                 return
@@ -2768,11 +2756,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 return
                             }
                             
-                            if canRemoveGlobally, (mainPeer is TelegramGroup || mainPeer is TelegramChannel) {
+                            var isGroupOrChannel = false
+                            switch mainPeer {
+                            case .legacyGroup, .channel:
+                                isGroupOrChannel = true
+                            default:
+                                break
+                            }
+                            
+                            if canRemoveGlobally && isGroupOrChannel {
                                 let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
                                 var items: [ActionSheetItem] = []
                                 
-                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
+                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .deleteAndLeave, strings: strongSelf.presentationData.strings, nameDisplayOrder: strongSelf.presentationData.nameDisplayOrder))
                                 
                                 items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
@@ -2781,7 +2777,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 }))
                                 
                                 let deleteForAllText: String
-                                if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                if case let .channel(channel) = mainPeer, case .broadcast = channel.info {
                                     deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllSubscribers
                                 } else {
                                     deleteForAllText = strongSelf.presentationData.strings.ChatList_DeleteForAllMembers
@@ -2794,7 +2790,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     }
                                     
                                     let deleteForAllConfirmation: String
-                                    if let channel = mainPeer as? TelegramChannel, case .broadcast = channel.info {
+                                    if case let .channel(channel) = mainPeer, case .broadcast = channel.info {
                                         deleteForAllConfirmation = strongSelf.presentationData.strings.ChatList_DeleteForAllSubscribersConfirmationText
                                     } else {
                                         deleteForAllConfirmation = strongSelf.presentationData.strings.ChatList_DeleteForAllMembersConfirmationText
@@ -2854,7 +2850,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
     }
     
-    public func maybeAskForPeerChatRemoval(peer: RenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {
+    public func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {
         guard let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
             completion(false)
             return
@@ -2866,10 +2862,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 canRemoveGlobally = true
             }
         }
-        if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+        if case let .user(user) = chatPeer, user.botInfo != nil {
             canRemoveGlobally = false
         }
-        if let _ = chatPeer as? TelegramSecretChat {
+        if case .secretChat = chatPeer {
             canRemoveGlobally = true
         }
         
@@ -2877,7 +2873,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let actionSheet = ActionSheetController(presentationData: self.presentationData)
             var items: [ActionSheetItem] = []
             
-            items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: EnginePeer(mainPeer), chatPeer: EnginePeer(chatPeer), action: .delete, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+            items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
             
             if joined || mainPeer.isDeleted {
                 items.append(ActionSheetButtonItem(title: self.presentationData.strings.Common_Delete, color: .destructive, action: { [weak self, weak actionSheet] in
@@ -2895,7 +2891,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     })
                     completion(true)
                 }))
-                items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(mainPeer).compactDisplayTitle).string, color: .destructive, action: { [weak self, weak actionSheet] in
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).string, color: .destructive, action: { [weak self, weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     guard let strongSelf = self else {
                         return
@@ -3016,7 +3012,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
     }
     
-    private func schedulePeerChatRemoval(peer: RenderedPeer, type: InteractiveMessagesDeletionType, deleteGloballyIfPossible: Bool, completion: @escaping () -> Void) {
+    private func schedulePeerChatRemoval(peer: EngineRenderedPeer, type: InteractiveMessagesDeletionType, deleteGloballyIfPossible: Bool, completion: @escaping () -> Void) {
         guard let chatPeer = peer.peers[peer.peerId] else {
             return
         }
@@ -3035,7 +3031,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         let statusText: String
-        if let channel = chatPeer as? TelegramChannel {
+        if case let .channel(channel) = chatPeer {
             if deleteGloballyIfPossible {
                 if case .broadcast = channel.info {
                     statusText = self.presentationData.strings.Undo_DeletedChannel
@@ -3049,13 +3045,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     statusText = self.presentationData.strings.Undo_LeftGroup
                 }
             }
-        } else if let _ = chatPeer as? TelegramGroup {
+        } else if case .legacyGroup = chatPeer {
             if deleteGloballyIfPossible {
                 statusText = self.presentationData.strings.Undo_DeletedGroup
             } else {
                 statusText = self.presentationData.strings.Undo_LeftGroup
             }
-        } else if let _ = chatPeer as? TelegramSecretChat {
+        } else if case .secretChat = chatPeer {
             statusText = self.presentationData.strings.Undo_SecretChatDeleted
         } else {
             if case .forEveryone = type {
@@ -3078,7 +3074,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             if value == .commit {
                 strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
-                if let channel = chatPeer as? TelegramChannel {
+                if case let .channel(channel) = chatPeer {
                     strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
                 }
                 let _ = strongSelf.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: false, deleteGloballyIfPossible: deleteGloballyIfPossible).start(completed: {

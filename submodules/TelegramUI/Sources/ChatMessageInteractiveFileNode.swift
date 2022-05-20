@@ -368,7 +368,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                         strongSelf.transcribeDisposable = nil
                         strongSelf.audioTranscriptionState = .expanded
-                        strongSelf.transcribedText = result
+                        strongSelf.transcribedText = result?.text
                         strongSelf.requestUpdateLayout(true)
                     })
                 }
@@ -962,7 +962,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         shimmerColor: isTranscriptionInProgress ? messageTheme.mediaActiveControlColor : nil,
                                         samples: audioWaveform?.samples ?? Data(),
                                         peak: audioWaveform?.peak ?? 0,
-                                        status: strongSelf.playbackStatus.get()
+                                        status: strongSelf.playbackStatus.get(),
+                                        seek: { timestamp in
+                                            if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
+                                                context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
+                                            }
+                                        }
                                     )),
                                     environment: {},
                                     containerSize: scrubbingFrame.size
@@ -1249,7 +1254,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if self.message?.forwardInfo != nil {
                     fetchStatus = resourceStatus.fetchStatus
                 }
+                (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = false
                 //self.waveformScrubbingNode?.enableScrubbing = false
+            
                 switch fetchStatus {
                     case let .Fetching(_, progress):
                         let adjustedProgress = max(progress, 0.027)
@@ -1283,7 +1290,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                 }
             case let .playbackStatus(playbackStatus):
+                (self.waveformView?.componentView as? AudioWaveformComponent.View)?.enableScrubbing = true
                 //self.waveformScrubbingNode?.enableScrubbing = true
+            
                 switch playbackStatus {
                     case .playing:
                         state = .pause

@@ -614,11 +614,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     guard let strongSelf = self, let messageIds = strongSelf.stateValue.selectedMessageIds, !messageIds.isEmpty else {
                         return
                     }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
+                    let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                        messageIds.map { id -> TelegramEngine.EngineData.Item.Messages.Message in
+                            return TelegramEngine.EngineData.Item.Messages.Message(id: id)
+                        }
+                    ))
+                    |> map { messageMap -> [EngineMessage] in
                         var messages: [EngineMessage] = []
                         for id in messageIds {
-                            if let message = transaction.getMessage(id) {
-                                messages.append(EngineMessage(message))
+                            if let messageValue = messageMap[id], let message = messageValue {
+                                messages.append(message)
                             }
                         }
                         return messages
@@ -641,11 +646,16 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     guard let strongSelf = self, let messageIds = strongSelf.stateValue.selectedMessageIds, !messageIds.isEmpty else {
                         return
                     }
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> [EngineMessage] in
+                    let _ = (strongSelf.context.engine.data.get(EngineDataMap(
+                        messageIds.map { id -> TelegramEngine.EngineData.Item.Messages.Message in
+                            return TelegramEngine.EngineData.Item.Messages.Message(id: id)
+                        }
+                    ))
+                    |> map { messageMap -> [EngineMessage] in
                         var messages: [EngineMessage] = []
                         for id in messageIds {
-                            if let message = transaction.getMessage(id) {
-                                messages.append(EngineMessage(message))
+                            if let messageValue = messageMap[id], let message = messageValue {
+                                messages.append(message)
                             }
                         }
                         return messages
@@ -898,43 +908,6 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     })))
                 }
                 
-                /*if !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty {
-                    if !items.isEmpty {
-                        items.append(.separator)
-                    }
-                    
-                    if actions.options.contains(.deleteLocally) {
-                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_DeleteMessagesForMe, textColor: .destructive, icon: { _ in
-                            return nil
-                        }, action: { controller, f in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forLocalPeer).start()
-                            f(.dismissWithoutContent)
-                        })))
-                    }
-                    
-                    if actions.options.contains(.deleteGlobally) {
-                        let text: String
-                        if let mainPeer = message.peers[message.id.peerId] {
-                            if mainPeer is TelegramUser {
-                                text = strongSelf.presentationData.strings.ChatList_DeleteForEveryone(EnginePeer(mainPeer).compactDisplayTitle).string
-                            } else {
-                                text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                            }
-                        } else {
-                            text = strongSelf.presentationData.strings.Conversation_DeleteMessagesForEveryone
-                        }
-                        items.append(.action(ContextMenuActionItem(text: text, textColor: .destructive, icon: { _ in
-                            return nil
-                        }, action: { controller, f in
-                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
-                            f(.dismissWithoutContent)
-                        })))
-                    }
-                }*/
-                
                 return items
             }
             
@@ -944,7 +917,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             return
         }
         
-        let _ = storedMessageFromSearch(account: self.context.account, message: message._asMessage()).start()
+        self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [message])
         
         var linkForCopying: String?
         var currentSupernode: ASDisplayNode? = node
@@ -1093,8 +1066,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         if let messageIds = messageIds ?? self.stateValue.selectedMessageIds, !messageIds.isEmpty {
             if isDownloads {
-                let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-                    return messageIds.compactMap(transaction.getMessage)
+                let _ = (self.context.engine.data.get(EngineDataMap(
+                    messageIds.map { id -> TelegramEngine.EngineData.Item.Messages.Message in
+                        return TelegramEngine.EngineData.Item.Messages.Message(id: id)
+                    }
+                ))
+                |> map { messageMap -> [EngineMessage] in
+                    var messages: [EngineMessage] = []
+                    for id in messageIds {
+                        if let messageValue = messageMap[id], let message = messageValue {
+                            messages.append(message)
+                        }
+                    }
+                    return messages
                 }
                 |> deliverOnMainQueue).start(next: { [weak self] messages in
                     guard let strongSelf = self else {
@@ -1142,13 +1126,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 })
             } else {
                 let (peers, messages) = self.currentMessages
-                let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                    for id in messageIds {
-                        if transaction.getMessage(id) == nil, let message = messages[id] {
-                            storeMessageFromSearch(transaction: transaction, message: message._asMessage())
-                        }
-                    }
-                }).start()
+                
+                self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
                 
                 self.activeActionDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds, messages: messages, peers: peers)
                 |> deliverOnMainQueue).start(next: { [weak self] actions in
@@ -1211,13 +1190,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         let messageIds = messageIds ?? self.stateValue.selectedMessageIds
         if let messageIds = messageIds, !messageIds.isEmpty {
             let messages = self.paneContainerNode.allCurrentMessages()
-            let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                for id in messageIds {
-                    if transaction.getMessage(id) == nil, let message = messages[id] {
-                        storeMessageFromSearch(transaction: transaction, message: message._asMessage())
-                    }
-                }
-            }).start()
+            
+            self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: messages.values.filter { messageIds.contains($0.id) })
             
             let peerSelectionController = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: true))
             peerSelectionController.multiplePeersSelected = { [weak self, weak peerSelectionController] peers, peerMap, messageText, mode, forwardOptions in

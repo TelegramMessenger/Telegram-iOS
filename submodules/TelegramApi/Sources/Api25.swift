@@ -490,14 +490,15 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum TranscribedAudio: TypeConstructorDescription {
-        case transcribedAudio(text: String)
+        case transcribedAudio(transcriptionId: Int64, text: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .transcribedAudio(let text):
+                case .transcribedAudio(let transcriptionId, let text):
                     if boxed {
-                        buffer.appendInt32(-1442723025)
+                        buffer.appendInt32(-1077051894)
                     }
+                    serializeInt64(transcriptionId, buffer: buffer, boxed: false)
                     serializeString(text, buffer: buffer, boxed: false)
                     break
     }
@@ -505,17 +506,20 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .transcribedAudio(let text):
-                return ("transcribedAudio", [("text", String(describing: text))])
+                case .transcribedAudio(let transcriptionId, let text):
+                return ("transcribedAudio", [("transcriptionId", String(describing: transcriptionId)), ("text", String(describing: text))])
     }
     }
     
         public static func parse_transcribedAudio(_ reader: BufferReader) -> TranscribedAudio? {
-            var _1: String?
-            _1 = parseString(reader)
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: String?
+            _2 = parseString(reader)
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.messages.TranscribedAudio.transcribedAudio(text: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.TranscribedAudio.transcribedAudio(transcriptionId: _1!, text: _2!)
             }
             else {
                 return nil

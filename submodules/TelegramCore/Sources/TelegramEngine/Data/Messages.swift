@@ -54,10 +54,14 @@ public extension EnginePeerReadCounters {
 
 public extension TelegramEngine.EngineData.Item {
     enum Messages {
-        public struct Message: TelegramEngineDataItem, PostboxViewDataItem {
+        public struct Message: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Optional<EngineMessage>
 
             fileprivate var id: EngineMessage.Id
+            
+            public var mapKey: EngineMessage.Id {
+                return self.id
+            }
 
             public init(id: EngineMessage.Id) {
                 self.id = id

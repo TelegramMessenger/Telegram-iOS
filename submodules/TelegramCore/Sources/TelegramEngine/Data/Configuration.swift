@@ -166,5 +166,27 @@ public extension TelegramEngine.EngineData.Item {
                 return EngineConfiguration.UserLimits(UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: self.isPremium))
             }
         }
+        
+        public struct SuggestedLocalization: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = SuggestedLocalizationEntry?
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.suggestedLocalization]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let suggestedLocalization = view.values[PreferencesKeys.suggestedLocalization]?.get(SuggestedLocalizationEntry.self) else {
+                    return nil
+                }
+                return suggestedLocalization
+            }
+        }
+
     }
 }

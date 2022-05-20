@@ -799,7 +799,7 @@ public struct ChatListSearchOptions {
 
 private struct DownloadItem: Equatable {
     let resourceId: MediaResourceId
-    let message: Message
+    let message: EngineMessage
     let priority: FetchManagerPriorityKey
     let isPaused: Bool
     
@@ -1053,8 +1053,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 for entry in entries {
                     switch entry.id.locationKey {
                     case let .messageId(id):
-                        itemSignals.append(context.account.postbox.transaction { transaction -> DownloadItem? in
-                            if let message = transaction.getMessage(id) {
+                        itemSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
+                        |> map { message -> DownloadItem? in
+                            if let message = message {
                                 return DownloadItem(resourceId: entry.resourceReference.resource.id, message: message, priority: entry.priority, isPaused: entry.isPaused)
                             }
                             return nil
@@ -1134,7 +1135,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         }
                         existingMessageIds.insert(item.message.id)
                         
-                        let message = EngineMessage(item.message)
+                        let message = item.message
                         
                         if !queryTokens.isEmpty {
                             if !messageMatchesTokens(message: message, tokens: queryTokens) {
