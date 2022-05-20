@@ -569,7 +569,7 @@ public class AttachmentController: ViewController {
                 ContainedViewLayoutTransition.animated(duration: 0.3, curve: .linear).updateAlpha(node: self.dim, alpha: 1.0)
                 
                 let targetPosition = self.container.position
-                let startPosition = targetPosition.offsetBy(dx: 0.0, dy: self.bounds.height)
+                let startPosition = targetPosition.offsetBy(dx: 0.0, dy: layout.size.height)
                 
                 self.container.position = startPosition
                 let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -785,7 +785,9 @@ public class AttachmentController: ViewController {
                 }
                 
                 let controllers = self.currentControllers
-                containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: containerRect.size))
+                if !self.animating {
+                    containerTransition.updateFrame(node: self.container, frame: CGRect(origin: CGPoint(), size: containerRect.size))
+                }
                 
                 let containerLayout = containerLayout.withUpdatedIntrinsicInsets(containerInsets)
                 

@@ -356,6 +356,13 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                                     case .translate:
                                                         if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
                                                             let controller = TranslateScreen(context: strongSelf.context, text: string, fromLanguage: nil)
+                                                            controller.pushController = { [weak parentController] c in
+                                                                (parentController?.navigationController as? NavigationController)?._keepModalDismissProgress = true
+                                                                parentController?.push(c)
+                                                            }
+                                                            controller.presentController = { [weak parentController] c in
+                                                                parentController?.present(c, in: .window(.root))
+                                                            }
                                                             parentController.present(controller, in: .window(.root))
                                                         }
                                                     }

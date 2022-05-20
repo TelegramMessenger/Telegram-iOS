@@ -7615,3 +7615,6 @@ Sorry for the inconvenience.";
 
 "Settings.Terms_URL" = "https://telegram.org/tos";
 "Settings.PrivacyPolicy_URL" = "https://telegram.org/privacy";
+
+"Stickers.PremiumPackInfoText" = "This pack contains premium stickers like this one.";
+"Stickers.PremiumPackView" = "View";

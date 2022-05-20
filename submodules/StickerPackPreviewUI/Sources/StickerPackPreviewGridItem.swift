@@ -262,10 +262,14 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         
         let bounds = self.bounds
         let boundsSide = min(bounds.size.width - 14.0, bounds.size.height - 14.0)
-        let boundingSize = CGSize(width: boundsSide, height: boundsSide)
+        var boundingSize = CGSize(width: boundsSide, height: boundsSide)
                 
         if let (_, item) = self.currentState {
             if let item = item, let dimensions = item.file.dimensions?.cgSize {
+                if item.file.isPremiumSticker {
+                    boundingSize = CGSize(width: boundingSize.width * 1.1, height: boundingSize.width * 1.1)
+                }
+                
                 let imageSize = dimensions.aspectFitted(boundingSize)
                 let imageFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
                 self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()

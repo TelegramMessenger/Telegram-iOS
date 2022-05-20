@@ -2312,15 +2312,36 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else if case .scam = credibilityIcon {
                 image = PresentationResourcesChatList.scamIcon(presentationData.theme, strings: presentationData.strings, type: .regular)
             } else if case .verified = credibilityIcon {
-                if let sourceImage = UIImage(bundleImageName: "Peer Info/VerifiedIcon") {
-                    image = generateImage(sourceImage.size, contextGenerator: { size, context in
-                        context.clear(CGRect(origin: CGPoint(), size: size))
-                        context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
-                        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 7.0, dy: 7.0))
-                        context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
-                        context.clip(to: CGRect(origin: CGPoint(), size: size), mask: sourceImage.cgImage!)
-                        context.fill(CGRect(origin: CGPoint(), size: size))
-                    })
+                if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconForeground") {
+                    image = generateImage(backgroundImage.size, contextGenerator: { size, context in
+                        if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.saveGState()
+                            context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
+
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                            context.restoreGState()
+                            
+                            context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.foregroundColor.cgColor)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                        }
+                    }, opaque: false)
+                    expandedImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
+                        if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            context.saveGState()
+                            context.clip(to: CGRect(origin: .zero, size: size), mask: backgroundCgImage)
+                            context.setFillColor(UIColor(rgb: 0xffffff, alpha: 0.75).cgColor)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                            context.restoreGState()
+                            
+                            context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
+                            context.setBlendMode(.clear)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
+                        }
+                    }, opaque: false)
                 } else {
                     image = nil
                 }
@@ -2331,17 +2352,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             context.clear(CGRect(origin: CGPoint(), size: size))
                             context.clip(to: CGRect(origin: .zero, size: size), mask: cgImage)
                             
-                            let colorsArray: [CGColor] = [
-                                UIColor(rgb: 0x6B93FF).cgColor,
-                                UIColor(rgb: 0x6B93FF).cgColor,
-                                UIColor(rgb: 0x976FFF).cgColor,
-                                UIColor(rgb: 0xE46ACE).cgColor,
-                                UIColor(rgb: 0xE46ACE).cgColor
-                            ]
-                            var locations: [CGFloat] = [0.0, 0.35, 0.5, 0.65, 1.0]
-                            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
-
-                            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
+                            context.setFillColor(presentationData.theme.list.itemCheckColors.fillColor.cgColor)
+                            context.fill(CGRect(origin: CGPoint(), size: size))
                         }
                     }, opaque: false)
                     expandedImage = generateImage(sourceImage.size, contextGenerator: { size, context in

@@ -299,7 +299,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 if filters.count >= limit {
                     var replaceImpl: ((ViewController) -> Void)?
                     let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
-                        let controller = PremiumIntroScreen(context: context)
+                        let controller = PremiumIntroScreen(context: context, source: .folders)
                         replaceImpl?(controller)
                     })
                     replaceImpl = { [weak controller] c in

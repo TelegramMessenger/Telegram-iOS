@@ -108,7 +108,7 @@ public final class PremiumReactionsScreen: ViewController {
             self.proceedButton.pressed = { [weak self] in
                 if let strongSelf = self, let controller = strongSelf.controller, let navigationController = controller.navigationController {
                     strongSelf.animateOut()
-                    navigationController.pushViewController(PremiumIntroScreen(context: controller.context), animated: true)
+                    navigationController.pushViewController(PremiumIntroScreen(context: controller.context, source: .reactions), animated: true)
                 }
             }
             

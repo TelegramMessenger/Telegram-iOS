@@ -355,9 +355,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     private func updateItemsLayout(width: CGFloat) {
         self.displayItems.removeAll()
         
-        let itemsPerRow = min(8, max(4, Int(width / 80)))
-        let sideInset: CGFloat = 4.0
-        let itemSpacing: CGFloat = 4.0
+        let itemsPerRow = min(8, max(5, Int(width / 80)))
+        let sideInset: CGFloat = 2.0
+        let itemSpacing: CGFloat = 2.0
         let itemSize = floor((width - sideInset * 2.0 - itemSpacing * (CGFloat(itemsPerRow) - 1.0)) / CGFloat(itemsPerRow))
         
         var columnIndex = 0

@@ -427,6 +427,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
         }
              
+        private let hapticFeedback = HapticFeedback()
+        
         private var delayedScriptMessage: WKScriptMessage?
         private func handleScriptMessage(_ message: WKScriptMessage) {
             guard let controller = self.controller else {
@@ -487,7 +489,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_open_invoice":
                     if let json = json, let slug = json["slug"] as? String {
-                        self.paymentDisposable = (context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
+                        self.paymentDisposable = (self.context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
                         |> map(Optional.init)
                         |> `catch` { _ -> Signal<TelegramMediaInvoice?, NoError> in
                             return .single(nil)
@@ -509,6 +511,51 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 }
                             }
                         })
+                    }
+                case "web_app_open_link":
+                    if let json = json, let url = json["url"] as? String {
+                        let currentTimestamp = CACurrentMediaTime()
+                        if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
+                            self.webView?.lastTouchTimestamp = nil
+                            self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: true, presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
+                        }
+                    }
+                case "web_app_setup_back_button":
+                    break
+                case "web_app_trigger_haptic_feedback":
+                    if let json = json, let type = json["type"] as? String {
+                        switch type {
+                            case "impact":
+                                if let impactType = json["impact_style"] as? String {
+                                    switch impactType {
+                                        case "light":
+                                            self.hapticFeedback.impact(.light)
+                                        case "medium":
+                                            self.hapticFeedback.impact(.medium)
+                                        case "heavy":
+                                            self.hapticFeedback.impact(.heavy)
+                                        default:
+                                            break
+                                    }
+                                }
+                            case "notification":
+                                if let notificationType = json["notification_type"] as? String {
+                                    switch notificationType {
+                                        case "success":
+                                            self.hapticFeedback.success()
+                                        case "error":
+                                            self.hapticFeedback.error()
+                                        case "warning":
+                                            self.hapticFeedback.warning()
+                                        default:
+                                            break
+                                    }
+                                }
+                            case "selection_change":
+                                self.hapticFeedback.tap()
+                            default:
+                                break
+                        }
                     }
                 default:
                     break

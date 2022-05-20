@@ -830,30 +830,44 @@ public final class ChatListNode: ListView {
                 }
             }
         }, setItemPinned: { [weak self] itemId, _ in
-            let location: TogglePeerChatPinnedLocation
-            if let chatListFilter = chatListFilter {
-                location = .filter(chatListFilter.id)
-            } else {
-                location = .group(groupId._asGroup())
-            }
-            let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
-            |> deliverOnMainQueue).start(next: { result in
-                if let strongSelf = self {
-                    switch result {
-                    case .done:
-                        break
-                    case let .limitExceeded(count, _):
-                        var replaceImpl: ((ViewController) -> Void)?
-                        let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
-                            let premiumScreen = PremiumIntroScreen(context: context)
-                            replaceImpl?(premiumScreen)
-                        })
-                        replaceImpl = { [weak controller] c in
-                            controller?.replace(with: c)
-                        }
-                        strongSelf.push?(controller)
-                    }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                let isPremium = peer?.isPremium ?? false
+                let location: TogglePeerChatPinnedLocation
+                if let chatListFilter = chatListFilter {
+                    location = .filter(chatListFilter.id)
+                } else {
+                    location = .group(groupId._asGroup())
                 }
+                let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
+                |> deliverOnMainQueue).start(next: { result in
+                    if let strongSelf = self {
+                        switch result {
+                        case .done:
+                            break
+                        case let .limitExceeded(count, limit):
+                            if isPremium {
+                                let text: String
+                                if chatListFilter != nil {
+                                    text = strongSelf.currentState.presentationData.strings.DialogList_UnknownPinLimitError
+                                } else {
+                                    text = strongSelf.currentState.presentationData.strings.DialogList_PinLimitError("\(limit)").string
+                                }
+                                strongSelf.presentAlert?(text)
+                            } else {
+                                var replaceImpl: ((ViewController) -> Void)?
+                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                    let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                    replaceImpl?(premiumScreen)
+                                })
+                                replaceImpl = { [weak controller] c in
+                                    controller?.replace(with: c)
+                                }
+                                strongSelf.push?(controller)
+                            }
+                        }
+                    }
+                })
             })
         }, setPeerMuted: { [weak self] peerId, _ in
             guard let strongSelf = self else {
