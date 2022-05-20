@@ -2375,11 +2375,11 @@ private final class ChatRateTranscriptionContextItemNode: ASDisplayNode, Context
         self.textNode.maximumNumberOfLines = 1
         
         self.upButtonImageNode = ASImageNode()
-        self.upButtonImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DarkMode"), color: presentationData.theme.contextMenu.primaryColor, backgroundColor: nil)
+        self.upButtonImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ThumbsUp"), color: presentationData.theme.contextMenu.primaryColor, backgroundColor: nil)
         self.upButtonImageNode.isUserInteractionEnabled = false
         
         self.downButtonImageNode = ASImageNode()
-        self.downButtonImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: presentationData.theme.contextMenu.primaryColor, backgroundColor: nil)
+        self.downButtonImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ThumbsDown"), color: presentationData.theme.contextMenu.primaryColor, backgroundColor: nil)
         self.downButtonImageNode.isUserInteractionEnabled = false
         
         self.upButtonNode = HighlightableButtonNode()
