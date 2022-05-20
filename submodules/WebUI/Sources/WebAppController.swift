@@ -534,6 +534,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                             self.hapticFeedback.impact(.medium)
                                         case "heavy":
                                             self.hapticFeedback.impact(.heavy)
+                                        case "rigid":
+                                            self.hapticFeedback.impact(.rigid)
+                                        case "soft":
+                                            self.hapticFeedback.impact(.soft)
                                         default:
                                             break
                                     }

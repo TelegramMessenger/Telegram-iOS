@@ -362,7 +362,14 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.isUpdatingContainers = true
         
         if let badgeNode = self.badgeNode, let image = badgeNode.image {
-            badgeNode.isHidden = !rawLayout.deviceMetrics.hasTopNotch || rawLayout.size.width > rawLayout.size.height
+            let badgeIsHidden = !rawLayout.deviceMetrics.hasTopNotch || rawLayout.size.width > rawLayout.size.height
+            if badgeIsHidden != badgeNode.isHidden && !badgeIsHidden {
+                Queue.mainQueue().after(0.3) {
+                    badgeNode.isHidden = badgeIsHidden
+                }
+            } else {
+                badgeNode.isHidden = badgeIsHidden
+            }
             badgeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((rawLayout.size.width - image.size.width) / 2.0), y: 6.0), size: image.size)
         }
         
