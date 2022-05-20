@@ -896,8 +896,6 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         
         let faq = SettingsSearchableItem(id: .faq(0), title: strings.Settings_FAQ, alternate: synonyms(strings.SettingsSearch_Synonyms_FAQ), icon: .faq, breadcrumbs: [], present: { context, navigationController, present in
             
-            #if DEBUG
-            #else
             let _ = (cachedFaqInstantPage(context: context)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
@@ -905,7 +903,6 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
                     present(.push, controller)
                 }, dismissInput: {}, contentContext: nil)
             })
-            #endif
         })
         allItems.append(faq)
     
