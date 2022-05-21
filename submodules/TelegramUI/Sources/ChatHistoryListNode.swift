@@ -543,7 +543,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
-    private let currentlyPlayingMessageIdPromise = ValuePromise<MessageIndex?>(nil)
+    private let currentlyPlayingMessageIdPromise = Promise<(MessageIndex, Bool)?>(nil)
     private var appliedPlayingMessageId: MessageIndex? = nil
     
     private(set) var isScrollAtBottomPosition = false
@@ -1030,7 +1030,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             availableReactions,
             defaultReaction,
             isPremium
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageId, adMessages, availableReactions, defaultReaction, isPremium in
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageIdAndType, adMessages, availableReactions, defaultReaction, isPremium in
+            let currentlyPlayingMessageId = currentlyPlayingMessageIdAndType?.0
+            
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -1233,12 +1235,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 var scrollAnimationCurve: ListViewAnimationCurve? = nil
                 if let strongSelf = self, case .default = source {
-                    if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let currentlyPlayingMessageId = currentlyPlayingMessageId  {
+                    let wasPlaying = strongSelf.appliedPlayingMessageId != nil
+                    
+                    if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let (currentlyPlayingMessageId, currentlyPlayingVideo) = currentlyPlayingMessageIdAndType {
                         if isFirstTime {
                         } else if case let .peer(peerId) = chatLocation, currentlyPlayingMessageId.id.peerId != peerId {
                         } else {
-                            updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
-                            scrollAnimationCurve = .Spring(duration: 0.4)
+                            if wasPlaying || currentlyPlayingVideo {
+                                updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
+                                scrollAnimationCurve = .Spring(duration: 0.4)
+                            }
                         }
                     }
                     isFirstTime = false
@@ -3258,10 +3264,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
     
     func voicePlaylistItemChanged(_ previousItem: SharedMediaPlaylistItem?, _ currentItem: SharedMediaPlaylistItem?) -> Void {
-        if let currentItem = currentItem?.id as? PeerMessagesMediaPlaylistItemId {
-            self.currentlyPlayingMessageIdPromise.set(currentItem.messageIndex)
+        if let currentItemId = currentItem?.id as? PeerMessagesMediaPlaylistItemId {
+            let isVideo = currentItem?.playbackData?.type == .instantVideo
+            self.currentlyPlayingMessageIdPromise.set(.single((currentItemId.messageIndex, isVideo)))
         } else {
-            self.currentlyPlayingMessageIdPromise.set(nil)
+            self.currentlyPlayingMessageIdPromise.set(.single(nil))
         }
     }
 
