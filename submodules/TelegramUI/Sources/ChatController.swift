@@ -3504,6 +3504,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }, getNavigationController: { [weak self] in
                             return self?.effectiveNavigationController
                         })
+                        controller.navigationPresentation = .flatModal
                         strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }, error: { [weak self] error in
@@ -3529,6 +3530,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }, getNavigationController: { [weak self] in
                             return self?.effectiveNavigationController
                         })
+                        controller.navigationPresentation = .flatModal
                         strongSelf.currentWebAppController = controller
                         strongSelf.present(controller, in: .window(.root))
                     }, error: { [weak self] error in
@@ -14758,7 +14760,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             $0.updatedBotStartPayload(startPayload.payload)
                         })
                     } else if let navigationController = strongSelf.effectiveNavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: startPayload))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: startPayload, keepStack: .always))
                     }
                 case let .withAttachBot(attachBotStart):
                     if let navigationController = strongSelf.effectiveNavigationController {

@@ -79,6 +79,9 @@ public final class BotCheckoutController: ViewController {
     private let invoice: TelegramMediaInvoice
     private let source: BotPaymentInvoiceSource
     private let completed: (String, EngineMessage.Id?) -> Void
+    private let pending: () -> Void
+    private let cancelled: () -> Void
+    private let failed: () -> Void
     
     private var presentationData: PresentationData
     
@@ -86,12 +89,14 @@ public final class BotCheckoutController: ViewController {
 
     private let inputData: Promise<BotCheckoutController.InputData?>
     
-    public init(context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, EngineMessage.Id?) -> Void) {
+    public init(context: AccountContext, invoice: TelegramMediaInvoice, source: BotPaymentInvoiceSource, inputData: Promise<BotCheckoutController.InputData?>, completed: @escaping (String, EngineMessage.Id?) -> Void, pending: @escaping () -> Void = {}, cancelled: @escaping () -> Void = {}, failed: @escaping () -> Void = {}) {
         self.context = context
         self.invoice = invoice
         self.source = source
         self.inputData = inputData
         self.completed = completed
+        self.cancelled = cancelled
+        self.failed = failed
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -122,6 +127,12 @@ public final class BotCheckoutController: ViewController {
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
+        displayNode.pending = { [weak self] in
+            self?.pending()
+        }
+        displayNode.failed = { [weak self] in
+            self?.failed()
+        }
         
         self.displayNode = displayNode
         super.displayNodeDidLoad()
@@ -146,6 +157,7 @@ public final class BotCheckoutController: ViewController {
     }
     
     @objc private func cancelPressed() {
+        self.cancelled()
         self.dismiss()
     }
 }

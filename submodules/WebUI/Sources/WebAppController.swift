@@ -602,7 +602,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 })
                                 if let navigationController = strongSelf.controller?.getNavigationController() {
                                     let checkoutController = BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                                        
+                                        self?.sendInvoiceClosedEvent(slug: slug, result: .paid)
+                                    }, cancelled: { [weak self] in
+                                        self?.sendInvoiceClosedEvent(slug: slug, result: .cancelled)
+                                    }, failed: { [weak self] in
+                                        self?.sendInvoiceClosedEvent(slug: slug, result: .failed)
                                     })
                                     checkoutController.navigationPresentation = .modal
                                     navigationController.pushViewController(checkoutController)
