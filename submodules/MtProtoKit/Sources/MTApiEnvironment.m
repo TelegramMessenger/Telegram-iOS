@@ -461,18 +461,13 @@ static NSData *base64_decode(NSString *str) {
         
 NSString *suffix = @"";
 #if TARGET_OS_OSX
-#ifdef BETA
-        suffix = @" BETA";
+        NSString *value = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"SOURCE"];
+        if (value != nil) {
+            suffix = [NSString stringWithFormat:@"%@ ", value];
+        }
 #endif
         
-#ifdef APPSTORE
-        suffix = @" APPSTORE";
-#endif
-        
-#ifdef STABLE
-        suffix = @" STABLE";
-#endif
-#endif
+        //SOURCE
         NSString *versionString = [[NSString alloc] initWithFormat:@"%@ (%@)%@", [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleShortVersionString"], [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"], suffix];
         _appVersion = versionString;
         
