@@ -225,12 +225,12 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
     case includePeersHeader(String)
     case addIncludePeer(title: String)
     case includeCategory(index: Int, category: ChatListFilterIncludeCategory, title: String, isRevealed: Bool)
-    case includePeer(index: Int, peer: RenderedPeer, isRevealed: Bool)
+    case includePeer(index: Int, peer: EngineRenderedPeer, isRevealed: Bool)
     case includePeerInfo(String)
     case excludePeersHeader(String)
     case addExcludePeer(title: String)
     case excludeCategory(index: Int, category: ChatListFilterExcludeCategory, title: String, isRevealed: Bool)
-    case excludePeer(index: Int, peer: RenderedPeer, isRevealed: Bool)
+    case excludePeer(index: Int, peer: EngineRenderedPeer, isRevealed: Bool)
     case excludePeerInfo(String)
     case includeExpand(String)
     case excludeExpand(String)
@@ -389,7 +389,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 }
             )
         case let .includePeer(_, peer, isRevealed):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer.chatMainPeer!), height: .peerList, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: isRevealed), revealOptions: ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.chatMainPeer!, height: .peerList, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: isRevealed), revealOptions: ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
                 arguments.deleteIncludePeer(peer.peerId)
             })]), switchValue: nil, enabled: true, selectable: false, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
                 arguments.setItemIdWithRevealedOptions(lhs.flatMap { .peer($0) }, rhs.flatMap { .peer($0) })
@@ -397,7 +397,7 @@ private enum ChatListFilterPresetEntry: ItemListNodeEntry {
                 arguments.deleteIncludePeer(id)
             })
         case let .excludePeer(_, peer, isRevealed):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: EnginePeer(peer.chatMainPeer!), height: .peerList, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: isRevealed), revealOptions: ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: .firstLast, context: arguments.context, peer: peer.chatMainPeer!, height: .peerList, aliasHandling: .threatSelfAsSaved, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: isRevealed), revealOptions: ItemListPeerItemRevealOptions(options: [ItemListPeerItemRevealOption(type: .destructive, title: presentationData.strings.Common_Delete, action: {
                 arguments.deleteExcludePeer(peer.peerId)
             })]), switchValue: nil, enabled: true, selectable: false, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { lhs, rhs in
                 arguments.setItemIdWithRevealedOptions(lhs.flatMap { .peer($0) }, rhs.flatMap { .peer($0) })
@@ -454,7 +454,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
-private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [RenderedPeer], excludePeers: [RenderedPeer]) -> [ChatListFilterPresetEntry] {
+private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer]) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
     if isNewFilter {
@@ -984,12 +984,12 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         }
     )
     
-    let currentPeers = Atomic<[PeerId: RenderedPeer]>(value: [:])
+    let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
     let stateWithPeers = statePromise.get()
-    |> mapToSignal { state -> Signal<(ChatListFilterPresetControllerState, [RenderedPeer], [RenderedPeer]), NoError> in
+    |> mapToSignal { state -> Signal<(ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]), NoError> in
         let currentPeersValue = currentPeers.with { $0 }
-        var included: [RenderedPeer] = []
-        var excluded: [RenderedPeer] = []
+        var included: [EngineRenderedPeer] = []
+        var excluded: [EngineRenderedPeer] = []
         var missingPeers = false
         for peerId in state.additionallyIncludePeers {
             if let peer = currentPeersValue[peerId] {
@@ -1006,20 +1006,30 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             }
         }
         if missingPeers {
-            return context.account.postbox.transaction { transaction -> (ChatListFilterPresetControllerState, [RenderedPeer], [RenderedPeer]) in
-                var included: [RenderedPeer] = []
-                var excluded: [RenderedPeer] = []
-                var allPeers: [PeerId: RenderedPeer] = [:]
+            return context.engine.data.get(
+                EngineDataMap(
+                    state.additionallyIncludePeers.map { peerId -> TelegramEngine.EngineData.Item.Peer.RenderedPeer in
+                        return TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId)
+                    }
+                ),
+                EngineDataMap(
+                    state.additionallyExcludePeers.map { peerId -> TelegramEngine.EngineData.Item.Peer.RenderedPeer in
+                        return TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId)
+                    }
+                )
+            )
+            |> map { additionallyIncludePeers, additionallyExcludePeers -> (ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]) in
+                var included: [EngineRenderedPeer] = []
+                var excluded: [EngineRenderedPeer] = []
+                var allPeers: [EnginePeer.Id: EngineRenderedPeer] = [:]
                 for peerId in state.additionallyIncludePeers {
-                    if let peer = transaction.getPeer(peerId) {
-                        let renderedPeer = RenderedPeer(peer: peer)
+                    if let renderedPeerValue = additionallyIncludePeers[peerId], let renderedPeer = renderedPeerValue {
                         included.append(renderedPeer)
                         allPeers[renderedPeer.peerId] = renderedPeer
                     }
                 }
                 for peerId in state.additionallyExcludePeers {
-                    if let peer = transaction.getPeer(peerId) {
-                        let renderedPeer = RenderedPeer(peer: peer)
+                    if let renderedPeerValue = additionallyExcludePeers[peerId], let renderedPeer = renderedPeerValue {
                         excluded.append(renderedPeer)
                         allPeers[renderedPeer.peerId] = renderedPeer
                     }

@@ -628,7 +628,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .sticker(context, file, title, text):
+            case let .sticker(context, file, title, text, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -702,7 +702,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     isUserInteractionEnabled = true
                 }
             
-                displayUndo = false
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
                 self.originalRemainingSeconds = 3
             
                 if let updatedFetchSignal = updatedFetchSignal {
@@ -869,12 +874,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         switch content {
         case .removedChat:
             self.panelWrapperNode.addSubnode(self.timerTextNode)
-        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .sticker, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal:
+        case .archivedChat, .hidArchive, .revealedArchive, .autoDelete, .succeed, .emoji, .swipeToReply, .actionSucceeded, .stickersModified, .chatAddedToFolder, .chatRemovedFromFolder, .messagesUnpinned, .setProximityAlert, .invitedToVoiceChat, .linkCopied, .banned, .importedMessage, .audioRate, .forward, .gigagroupConversion, .linkRevoked, .voiceChatRecording, .voiceChatFlag, .voiceChatCanSpeak, .copy, .mediaSaved, .paymentSent, .image, .inviteRequestSent, .notificationSoundAdded, .universal:
             if self.textNode.tapAttributeAction != nil {
                 self.isUserInteractionEnabled = true
             } else {
                 self.isUserInteractionEnabled = false
             }
+        case let .sticker(_, _, _, _, undoText):
+            self.isUserInteractionEnabled = undoText != nil
         case .dice:
             self.panelWrapperNode.clipsToBounds = true
         case .info:

@@ -684,6 +684,25 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        var audioTranscription: AudioTranscriptionMessageAttribute?
+        for attribute in message.attributes {
+            if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                audioTranscription = attribute
+                break
+            }
+        }
+        
+        if let audioTranscription = audioTranscription {
+            actions.insert(.custom(ChatRateTranscriptionContextItem(context: context, message: message, action: { [weak context] value in
+                guard let context = context else {
+                    return
+                }
+                
+                let _ = context.engine.messages.rateAudioTranscription(messageId: message.id, id: audioTranscription.id, isGood: value).start()
+            }), false), at: 0)
+            actions.insert(.separator, at: 1)
+        }
+        
         for media in message.media {
             if let file = media as? TelegramMediaFile, let size = file.size, size < 1 * 1024 * 1024, let duration = file.duration, duration < 60, (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/ogg"] as [String]).contains(file.mimeType.lowercased()) {
                 let fileName = file.fileName ?? "Tone"
@@ -716,9 +735,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             })
                         }
                     })))
+                    actions.append(.separator)
                 }
             }
-            actions.append(.separator)
         }
         
         var isReplyThreadHead = false
@@ -770,6 +789,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     messageText = ""
                     break
                 }
+            }
+        }
+        
+        for attribute in message.attributes {
+            if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                if !messageText.isEmpty {
+                    messageText.append("\n")
+                }
+                messageText.append(attribute.text)
+                break
             }
         }
         
@@ -2292,4 +2321,163 @@ private func stringForRemainingTime(_ duration: Int32, strings: PresentationStri
         durationString = String(format: "%d:%02d", minutes, seconds)
     }
     return strings.Conversation_AutoremoveRemainingTime(durationString).string
+}
+
+final class ChatRateTranscriptionContextItem: ContextMenuCustomItem {
+    fileprivate let context: AccountContext
+    fileprivate let message: Message
+    fileprivate let action: (Bool) -> Void
+
+    init(context: AccountContext, message: Message, action: @escaping (Bool) -> Void) {
+        self.context = context
+        self.message = message
+        self.action = action
+    }
+
+    func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+        return ChatRateTranscriptionContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected, action: self.action)
+    }
+}
+
+private final class ChatRateTranscriptionContextItemNode: ASDisplayNode, ContextMenuCustomNode, ContextActionNodeProtocol {
+    private let item: ChatRateTranscriptionContextItem
+    private var presentationData: PresentationData
+    private let getController: () -> ContextControllerProtocol?
+    private let actionSelected: (ContextMenuActionResult) -> Void
+    private let action: (Bool) -> Void
+
+    private let backgroundNode: ASDisplayNode
+    private let textNode: ImmediateTextNode
+    
+    private let upButtonImageNode: ASImageNode
+    private let downButtonImageNode: ASImageNode
+    private let upButtonNode: HighlightableButtonNode
+    private let downButtonNode: HighlightableButtonNode
+
+    init(presentationData: PresentationData, item: ChatRateTranscriptionContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void, action: @escaping (Bool) -> Void) {
+        self.item = item
+        self.presentationData = presentationData
+        self.getController = getController
+        self.actionSelected = actionSelected
+        self.action = action
+
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 15.0 / 17.0)
+
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isAccessibilityElement = false
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+
+        self.textNode = ImmediateTextNode()
+        self.textNode.isAccessibilityElement = false
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        self.textNode.attributedText = NSAttributedString(string: "Rate Transcription", font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
+        self.textNode.maximumNumberOfLines = 1
+        
+        self.upButtonImageNode = ASImageNode()
+        self.upButtonImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ThumbsUp"), color: presentationData.theme.contextMenu.primaryColor, backgroundColor: nil)
+        self.upButtonImageNode.isUserInteractionEnabled = false
+        
+        self.downButtonImageNode = ASImageNode()
+        self.downButtonImageNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ThumbsDown"), color: presentationData.theme.contextMenu.primaryColor, backgroundColor: nil)
+        self.downButtonImageNode.isUserInteractionEnabled = false
+        
+        self.upButtonNode = HighlightableButtonNode()
+        self.upButtonNode.addSubnode(self.upButtonImageNode)
+        
+        self.downButtonNode = HighlightableButtonNode()
+        self.downButtonNode.addSubnode(self.downButtonImageNode)
+
+        super.init()
+
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.textNode)
+        
+        self.addSubnode(self.upButtonNode)
+        self.addSubnode(self.downButtonNode)
+        
+        self.upButtonNode.addTarget(self, action: #selector(self.upPressed), forControlEvents: .touchUpInside)
+        self.downButtonNode.addTarget(self, action: #selector(self.downPressed), forControlEvents: .touchUpInside)
+    }
+
+    deinit {
+    }
+
+    override func didLoad() {
+        super.didLoad()
+    }
+    
+    @objc private func upPressed() {
+        self.action(true)
+        self.getController()?.dismiss(completion: nil)
+    }
+    
+    @objc private func downPressed() {
+        self.action(false)
+        self.getController()?.dismiss(completion: nil)
+    }
+
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+        let sideInset: CGFloat = 14.0
+        let verticalInset: CGFloat = 9.0
+
+        let calculatedWidth = min(constrainedWidth, 250.0)
+
+        let textSize = self.textNode.updateLayout(CGSize(width: calculatedWidth - sideInset, height: .greatestFiniteMagnitude))
+
+        let combinedTextHeight = textSize.height
+        return (CGSize(width: calculatedWidth, height: verticalInset * 2.0 + combinedTextHeight + 35.0), { size, transition in
+            let verticalOrigin = verticalInset
+            let textFrame = CGRect(origin: CGPoint(x: floor((size.width - textSize.width) / 2.0), y: verticalOrigin), size: textSize)
+            transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+            
+            let buttonArea = CGRect(origin: CGPoint(x: 0.0, y: size.height - 35.0 - 6.0), size: CGSize(width: size.width, height: 35.0))
+            
+            self.upButtonNode.frame = CGRect(origin: CGPoint(x: buttonArea.minX, y: buttonArea.minY), size: CGSize(width: floor(buttonArea.size.width / 2.0), height: buttonArea.height))
+            self.downButtonNode.frame = CGRect(origin: CGPoint(x: buttonArea.minX + floor(buttonArea.size.width / 2.0), y: buttonArea.minY), size: CGSize(width: floor(buttonArea.size.width / 2.0), height: buttonArea.height))
+            
+            let spacing: CGFloat = 56.0
+            
+            if let image = self.upButtonImageNode.image {
+                self.upButtonImageNode.frame = CGRect(origin: CGPoint(x: floor(buttonArea.width / 2.0) - floor(spacing / 2.0) - image.size.width, y: floor((buttonArea.height - image.size.height) / 2.0)), size: image.size)
+            }
+            if let image = self.downButtonImageNode.image {
+                self.downButtonImageNode.frame = CGRect(origin: CGPoint(x: floor(spacing / 2.0), y: floor((buttonArea.height - image.size.height) / 2.0)), size: image.size)
+            }
+
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+        })
+    }
+
+    func updateTheme(presentationData: PresentationData) {
+        self.presentationData = presentationData
+
+        self.backgroundNode.backgroundColor = presentationData.theme.contextMenu.itemBackgroundColor
+
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize)
+
+        self.textNode.attributedText = NSAttributedString(string: self.textNode.attributedText?.string ?? "", font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+    }
+    
+    func canBeHighlighted() -> Bool {
+        return self.isActionEnabled
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+
+    func performAction() {
+    }
+
+    var isActionEnabled: Bool {
+        return false
+    }
+
+    func setIsHighlighted(_ value: Bool) {
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNodeProtocol {
+        return self
+    }
 }

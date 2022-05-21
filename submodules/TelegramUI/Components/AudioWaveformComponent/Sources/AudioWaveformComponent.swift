@@ -13,6 +13,7 @@ public final class AudioWaveformComponent: Component {
     public let samples: Data
     public let peak: Int32
     public let status: Signal<MediaPlayerStatus, NoError>
+    public let seek: (Double) -> Void
     
     public init(
         backgroundColor: UIColor,
@@ -20,7 +21,8 @@ public final class AudioWaveformComponent: Component {
         shimmerColor: UIColor?,
         samples: Data,
         peak: Int32,
-        status: Signal<MediaPlayerStatus, NoError>
+        status: Signal<MediaPlayerStatus, NoError>,
+        seek: @escaping (Double) -> Void
     ) {
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
@@ -28,6 +30,7 @@ public final class AudioWaveformComponent: Component {
         self.samples = samples
         self.peak = peak
         self.status = status
+        self.seek = seek
     }
     
     public static func ==(lhs: AudioWaveformComponent, rhs: AudioWaveformComponent) -> Bool {
@@ -49,7 +52,7 @@ public final class AudioWaveformComponent: Component {
         return true
     }
     
-    public final class View: UIView {
+    public final class View: UIView, UIGestureRecognizerDelegate {
         private struct ShimmerParams: Equatable {
             var backgroundColor: UIColor
             var foregroundColor: UIColor
@@ -136,7 +139,7 @@ public final class AudioWaveformComponent: Component {
                         self.updateShimmer()
                     }
                     
-                    if let previousContents = previousContents, let contents = self.contents {
+                    if let previousContents = previousContents, CFGetTypeID(previousContents as CFTypeRef) == CGImage.typeID, (previousContents as! CGImage).width != Int(image.size.width * image.scale), let contents = self.contents {
                         self.animate(from: previousContents as AnyObject, to: contents as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15)
                     }
                 }
@@ -147,16 +150,38 @@ public final class AudioWaveformComponent: Component {
             return LayerImpl.self
         }
         
+        private var panRecognizer: UIPanGestureRecognizer?
+        
+        private var endScrubbing: ((Bool) -> Void)?
+        private var updateScrubbing: ((CGFloat, Double) -> Void)?
+        private var updateMultiplier: ((Double) -> Void)?
+        
+        private var verticalPanEnabled = false
+        
+        private var scrubbingMultiplier: Double = 1.0
+        private var scrubbingStartLocation: CGPoint?
+        
         private var component: AudioWaveformComponent?
         private var validSize: CGSize?
         
         private var playbackStatus: MediaPlayerStatus?
+        private var scrubbingBeginTimestamp: Double?
         private var scrubbingTimestampValue: Double?
+        private var isAwaitingScrubbingApplication: Bool = false
         private var statusDisposable: Disposable?
         private var playbackStatusAnimator: ConstantDisplayLinkAnimator?
         
         private var revealProgress: CGFloat = 1.0
         private var animator: DisplayLinkAnimator?
+        
+        public var enableScrubbing: Bool = false {
+            didSet {
+                if self.enableScrubbing != oldValue {
+                    self.disablesInteractiveTransitionGestureRecognizer = self.enableScrubbing
+                    self.panRecognizer?.isEnabled = self.enableScrubbing
+                }
+            }
+        }
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -170,6 +195,12 @@ public final class AudioWaveformComponent: Component {
             (self.layer as! LayerImpl).didExitHierarchy = { [weak self] in
                 self?.updatePlaybackAnimation()
             }
+            
+            let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+            panRecognizer.delegate = self
+            self.addGestureRecognizer(panRecognizer)
+            panRecognizer.isEnabled = false
+            self.panRecognizer = panRecognizer
         }
         
         required public init?(coder: NSCoder) {
@@ -178,6 +209,86 @@ public final class AudioWaveformComponent: Component {
         
         deinit {
             self.statusDisposable?.dispose()
+        }
+        
+        @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+            var location = recognizer.location(in: self)
+            location.x -= self.bounds.minX
+            switch recognizer.state {
+            case .began:
+                self.scrubbingStartLocation = location
+                self.beginScrubbing()
+            case .changed:
+                if let scrubbingStartLocation = self.scrubbingStartLocation {
+                    let delta = location.x - scrubbingStartLocation.x
+                    var multiplier: Double = 1.0
+                    var skipUpdate = false
+                    if self.verticalPanEnabled, location.y > scrubbingStartLocation.y {
+                        let verticalDelta = abs(location.y - scrubbingStartLocation.y)
+                        if verticalDelta > 150.0 {
+                            multiplier = 0.01
+                        } else if verticalDelta > 100.0 {
+                            multiplier = 0.25
+                        } else if verticalDelta > 50.0 {
+                            multiplier = 0.5
+                        }
+                        if multiplier != self.scrubbingMultiplier {
+                            skipUpdate = true
+                            self.scrubbingMultiplier = multiplier
+                            self.scrubbingStartLocation = CGPoint(x: location.x, y: scrubbingStartLocation.y)
+                            self.updateMultiplier?(multiplier)
+                        }
+                    }
+                    if !skipUpdate {
+                        self.updateScrubbing(addedFraction: delta / self.bounds.size.width, multiplier: multiplier)
+                    }
+                }
+            case .ended, .cancelled:
+                if let scrubbingStartLocation = self.scrubbingStartLocation {
+                    self.scrubbingStartLocation = nil
+                    let delta = location.x - scrubbingStartLocation.x
+                    self.updateScrubbing?(delta / self.bounds.size.width, self.scrubbingMultiplier)
+                    self.endScrubbing(apply: recognizer.state == .ended)
+                    //self.highlighted?(false)
+                    self.scrubbingMultiplier = 1.0
+                }
+            default:
+                break
+            }
+        }
+        
+        private func beginScrubbing() {
+            if let statusValue = self.playbackStatus, statusValue.duration > 0.0 {
+                self.scrubbingBeginTimestamp = statusValue.timestamp
+                self.scrubbingTimestampValue = statusValue.timestamp
+                self.setNeedsDisplay()
+            }
+        }
+        
+        private func endScrubbing(apply: Bool) {
+            self.scrubbingBeginTimestamp = nil
+            let scrubbingTimestampValue = self.scrubbingTimestampValue
+            
+            self.isAwaitingScrubbingApplication = true
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
+                guard let strongSelf = self, strongSelf.isAwaitingScrubbingApplication else {
+                    return
+                }
+                strongSelf.isAwaitingScrubbingApplication = false
+                strongSelf.scrubbingTimestampValue = nil
+                strongSelf.setNeedsDisplay()
+            })
+            
+            if let scrubbingTimestampValue = scrubbingTimestampValue, apply {
+                self.component?.seek(scrubbingTimestampValue)
+            }
+        }
+        
+        private func updateScrubbing(addedFraction: CGFloat, multiplier: Double) {
+            if let statusValue = self.playbackStatus, let scrubbingBeginTimestamp = self.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                self.scrubbingTimestampValue = scrubbingBeginTimestamp + (statusValue.duration * Double(addedFraction)) * multiplier
+                self.setNeedsDisplay()
+            }
         }
         
         public func animateIn() {
@@ -206,7 +317,7 @@ public final class AudioWaveformComponent: Component {
         func update(component: AudioWaveformComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             let size = CGSize(width: availableSize.width, height: availableSize.height)
             
-            if self.validSize != size || self.component?.samples != component.samples || self.component?.peak != component.peak {
+            if self.validSize != size || self.component != component {
                 self.setNeedsDisplay()
             }
             
@@ -226,6 +337,12 @@ public final class AudioWaveformComponent: Component {
                     guard let strongSelf = self else {
                         return
                     }
+                    
+                    if strongSelf.isAwaitingScrubbingApplication, value.duration > 0.0, let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue, abs(value.timestamp - scrubbingTimestampValue) <= value.duration * 0.01 {
+                        strongSelf.isAwaitingScrubbingApplication = false
+                        strongSelf.scrubbingTimestampValue = nil
+                    }
+                    
                     if strongSelf.playbackStatus != value {
                         strongSelf.playbackStatus = value
                         strongSelf.setNeedsDisplay()
@@ -347,8 +464,6 @@ public final class AudioWaveformComponent: Component {
                 }
                 memset(adjustedSamplesMemory, 0, numSamples * 2)
                 
-                var generateFakeSamples = false
-                
                 var bins: [UInt16: Int] = [:]
                 for i in 0 ..< maxReadSamples {
                     let index = i * numSamples / maxReadSamples
@@ -373,27 +488,6 @@ public final class AudioWaveformComponent: Component {
                     }
                 }
                 sortedSamples.sort { $0.1 > $1.1 }
-                
-                let topSamples = sortedSamples.prefix(1)
-                let topCount = topSamples.map{ $0.1 }.reduce(.zero, +)
-                var topCountPercent: Float = 0.0
-                if bins.count > 0 {
-                    topCountPercent = Float(topCount) / Float(totalCount)
-                }
-                
-                if topCountPercent > 0.75 {
-                    generateFakeSamples = true
-                }
-                
-                if generateFakeSamples {
-                    if maxSample < 10 {
-                        maxSample = 20
-                    }
-                    for i in 0 ..< maxReadSamples {
-                        let index = i * numSamples / maxReadSamples
-                        adjustedSamples[index] = UInt16.random(in: 6...maxSample)
-                    }
-                }
                 
                 let invScale = 1.0 / max(1.0, CGFloat(maxSample))
                 
@@ -439,6 +533,7 @@ public final class AudioWaveformComponent: Component {
                     }*/
                     
                     context.setFillColor(component.backgroundColor.mixedWith(component.foregroundColor, alpha: colorMixFraction).cgColor)
+                    context.setBlendMode(.copy)
                     
                     let adjustedSampleHeight = sampleHeight - diff
                     if adjustedSampleHeight.isLessThanOrEqualTo(sampleWidth) {
@@ -450,9 +545,9 @@ public final class AudioWaveformComponent: Component {
                             width: sampleWidth,
                             height: adjustedSampleHeight - halfSampleWidth
                         )
-                        context.fill(adjustedRect)
                         context.fillEllipse(in: CGRect(x: adjustedRect.minX, y: adjustedRect.minY - halfSampleWidth, width: sampleWidth, height: sampleWidth))
                         context.fillEllipse(in: CGRect(x: adjustedRect.minX, y: adjustedRect.maxY - halfSampleWidth, width: sampleWidth, height: sampleWidth))
+                        context.fill(adjustedRect)
                     }
                 }
             }

@@ -724,6 +724,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             return
                         }
                     }
+                } else if parsedUrl.host == "premium_offer" {
+                    var reference: String?
+                    if let components = URLComponents(string: "/?" + query) {
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "ref" {
+                                        reference = value
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    handleResolvedUrl(.premiumOffer(reference: reference))
                 }
             } else {
                 if parsedUrl.host == "importStickers" {
@@ -743,6 +757,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             handleResolvedUrl(.settings(section))
                         }
                     }
+                } else if parsedUrl.host == "premium_offer" {
+                    handleResolvedUrl(.premiumOffer(reference: nil))
                 }
             }
             

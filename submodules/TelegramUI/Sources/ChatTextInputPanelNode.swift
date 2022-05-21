@@ -23,6 +23,8 @@ import Pasteboard
 import ChatPresentationInterfaceState
 import ManagedAnimationNode
 import AttachmentUI
+import EditableChatTextNode
+import EmojiTextAttachmentView
 
 private let accessoryButtonFont = Font.medium(14.0)
 private let counterFont = Font.with(size: 14.0, design: .regular, traits: [.monospacedNumbers])
@@ -409,8 +411,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
+            textInputNode.attributedText = textAttributedStringForStateText(state.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickers.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
             textInputNode.selectedRange = NSMakeRange(state.selectionRange.lowerBound, state.selectionRange.count)
+            
+            if let presentationInterfaceState = self.presentationInterfaceState {
+                refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickers.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
+            }
+            
             self.updatingInputState = false
             self.keepSendButtonEnabled = keepSendButtonEnabled
             self.extendedSearchLayout = extendedSearchLayout
@@ -451,6 +458,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     private var spoilersRevealed = false
     
     private var touchDownGestureRecognizer: TouchDownGestureRecognizer?
+    
+    private var emojiViewProvider: ((String) -> UIView)?
     
     init(presentationInterfaceState: ChatPresentationInterfaceState, presentationContext: ChatPresentationContext?, presentController: @escaping (ViewController) -> Void) {
         self.presentationInterfaceState = presentationInterfaceState
@@ -657,6 +666,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         self.textInputBackgroundNode.isUserInteractionEnabled = true
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
+        
+        self.emojiViewProvider = { [weak self] emoji in
+            guard let strongSelf = self, let context = strongSelf.context, let file = strongSelf.context?.animatedEmojiStickers[emoji]?.first?.file else {
+                return UIView()
+            }
+            
+            return EmojiTextAttachmentView(context: context, file: file)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -674,7 +691,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     }
     
     private func loadTextInputNode() {
-        let textInputNode = EditableTextNode()
+        let textInputNode = EditableChatTextNode()
         textInputNode.initialPrimaryLanguage = self.presentationInterfaceState?.interfaceState.inputLanguage
         var textColor: UIColor = .black
         var tintColor: UIColor = .blue
@@ -1858,7 +1875,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     @objc func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let textInputNode = self.textInputNode, let presentationInterfaceState = self.presentationInterfaceState {
             let baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
-            refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed)
+            refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickers.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)
             
             self.updateSpoiler()
@@ -1983,9 +2000,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         
         textInputNode.textView.isScrollEnabled = false
         
-        refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed)
+        refreshChatTextInputAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickers.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
         
-        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
+        textInputNode.attributedText = textAttributedStringForStateText(self.inputTextState.inputText, fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickers.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
         
         if textInputNode.textView.subviews.count > 1, animated {
             let containerView = textInputNode.textView.subviews[1]
@@ -2310,6 +2327,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
         self.storedInputLanguage = editableTextNode.textInputMode.primaryLanguage
         self.inputMenu.deactivate()
+        
+        if let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramUser, peer.botInfo != nil {
+            self.interfaceInteraction?.updateInputModeAndDismissedButtonKeyboardMessageId { _ in
+                return (.inputButtons, nil)
+            }
+        }
     }
     
     func editableTextNodeTarget(forAction action: Selector) -> ASEditableTextNodeTargetForAction? {
@@ -2487,7 +2510,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 accentTextColor = presentationInterfaceState.theme.chat.inputPanel.panelControlAccentColor
                 baseFontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
             }
-            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed)
+            let cleanReplacementString = textAttributedStringForStateText(NSAttributedString(string: cleanText), fontSize: baseFontSize, textColor: textColor, accentTextColor: accentTextColor, writingDirection: nil, spoilersRevealed: self.spoilersRevealed, availableEmojis: (self.context?.animatedEmojiStickers.keys).flatMap(Set.init) ?? Set(), emojiViewProvider: self.emojiViewProvider)
             string.replaceCharacters(in: range, with: cleanReplacementString)
             self.textInputNode?.attributedText = string
             self.textInputNode?.selectedRange = NSMakeRange(range.lowerBound + cleanReplacementString.length, 0)

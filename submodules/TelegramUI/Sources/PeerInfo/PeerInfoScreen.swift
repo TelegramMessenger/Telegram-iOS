@@ -1847,7 +1847,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             guard let strongSelf = self, let node = node as? ContextExtractedContentContainingNode else {
                 return
             }
-            let _ = storedMessageFromSearch(account: strongSelf.context.account, message: message).start()
+            
+            strongSelf.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [EngineMessage(message)])
             
             var linkForCopying: String?
             var currentSupernode: ASDisplayNode? = node
@@ -2197,11 +2198,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             var foundGalleryMessage: Message?
             if let searchContentNode = strongSelf.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
                 if let galleryMessage = searchContentNode.messageForGallery(message.id) {
-                    let _ = (strongSelf.context.account.postbox.transaction { transaction -> Void in
-                        if transaction.getMessage(galleryMessage.id) == nil {
-                            storeMessageFromSearch(transaction: transaction, message: galleryMessage)
-                        }
-                    }).start()
+                    strongSelf.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [EngineMessage(galleryMessage)])
                     foundGalleryMessage = galleryMessage
                 }
             }
@@ -2303,6 +2300,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _ in
+        }, displayPremiumStickerTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -2933,6 +2931,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             |> `catch` { _ -> Signal<Bool, NoError> in
                 return .single(false)
             }))
+            
             self.cachedFaq.set(.single(nil) |> then(cachedFaqInstantPage(context: self.context) |> map(Optional.init)))
             
             screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: self.hasPassport.get())
@@ -3201,11 +3200,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         var foundGalleryMessage: Message?
         if let searchContentNode = self.searchDisplayController?.contentNode as? ChatHistorySearchContainerNode {
             if let galleryMessage = searchContentNode.messageForGallery(id) {
-                let _ = (self.context.account.postbox.transaction { transaction -> Void in
-                    if transaction.getMessage(galleryMessage.id) == nil {
-                        storeMessageFromSearch(transaction: transaction, message: galleryMessage)
-                    }
-                }).start()
+                self.context.engine.messages.ensureMessagesAreLocallyAvailable(messages: [EngineMessage(galleryMessage)])
                 foundGalleryMessage = galleryMessage
             }
         }
@@ -5576,6 +5571,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuTranslate, accessibilityLabel: presentationData.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
                             
                             let controller = TranslateScreen(context: context, text: text, fromLanguage: language)
+                            controller.pushController = { [weak self] c in
+                                (self?.controller?.navigationController as? NavigationController)?._keepModalDismissProgress = true
+                                self?.controller?.push(c)
+                            }
+                            controller.presentController = { [weak self] c in
+                                self?.controller?.present(c, in: .window(.root))
+                            }
                             self?.controller?.present(controller, in: .window(.root))
                         }))
                     }
@@ -5755,7 +5757,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         for childController in tabController.controllers {
             if let chatListController = childController as? ChatListController {
-                chatListController.maybeAskForPeerChatRemoval(peer: RenderedPeer(peer: peer), joined: false, deleteGloballyIfPossible: globally, completion: { [weak navigationController] deleted in
+                chatListController.maybeAskForPeerChatRemoval(peer: EngineRenderedPeer(peer: EnginePeer(peer)), joined: false, deleteGloballyIfPossible: globally, completion: { [weak navigationController] deleted in
                     if deleted {
                         navigationController?.popToRoot(animated: true)
                     }
@@ -6204,7 +6206,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .language:
                 push(LocalizationListController(context: self.context))
             case .premium:
-                self.controller?.push(PremiumIntroScreen(context: self.context, modal: false))
+            self.controller?.push(PremiumIntroScreen(context: self.context, modal: false, source: .settings))
             case .stickers:
                 if let settings = self.data?.globalSettings {
                     push(installedStickerPacksController(context: self.context, mode: .general, archivedPacks: settings.archivedStickerPacks, updatedPacks: { [weak self] packs in
@@ -7457,10 +7459,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .done, isForExpandedView: false))
             } else {
                 if self.isSettings {
-                    if let addressName = self.data?.peer?.addressName, !addressName.isEmpty {
-                        leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .qrCode, isForExpandedView: false))
-                    }
-                    
+                    leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .qrCode, isForExpandedView: false))
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
                 } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {

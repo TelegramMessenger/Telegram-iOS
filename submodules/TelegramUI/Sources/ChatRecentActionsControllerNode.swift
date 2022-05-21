@@ -518,6 +518,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _ in
+        }, displayPremiumStickerTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in
@@ -957,6 +958,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     #endif
                     case .settings:
+                        break
+                    case .premiumOffer:
                         break
                     case let .joinVoiceChat(peerId, invite):
                         strongSelf.presentController(VoiceChatJoinScreen(context: strongSelf.context, peerId: peerId, invite: invite, join: { call in

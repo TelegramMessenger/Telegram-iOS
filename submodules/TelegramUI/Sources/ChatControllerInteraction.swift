@@ -118,6 +118,7 @@ public final class ChatControllerInteraction {
     let displayPsa: (String, ASDisplayNode) -> Void
     let displayDiceTooltip: (TelegramMediaDice) -> Void
     let animateDiceSuccess: (Bool) -> Void
+    let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
     let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
@@ -138,6 +139,7 @@ public final class ChatControllerInteraction {
     
     var canPlayMedia: Bool = false
     var hiddenMedia: [MessageId: [Media]] = [:]
+    var expandedTranslationMessageStableIds: Set<UInt32> = Set()
     var selectionState: ChatInterfaceSelectionState?
     var highlightedState: ChatInterfaceHighlightedState?
     var contextHighlightedState: ChatInterfaceHighlightedState?
@@ -218,6 +220,7 @@ public final class ChatControllerInteraction {
         displayPsa: @escaping (String, ASDisplayNode) -> Void,
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
         animateDiceSuccess: @escaping (Bool) -> Void,
+        displayPremiumStickerTooltip: @escaping (TelegramMediaFile, Message) -> Void,
         openPeerContextMenu: @escaping (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
@@ -304,6 +307,7 @@ public final class ChatControllerInteraction {
         self.openMessagePollResults = openMessagePollResults
         self.displayDiceTooltip = displayDiceTooltip
         self.animateDiceSuccess = animateDiceSuccess
+        self.displayPremiumStickerTooltip = displayPremiumStickerTooltip
         self.openPeerContextMenu = openPeerContextMenu
         self.openMessageReplies = openMessageReplies
         self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage
@@ -362,6 +366,7 @@ public final class ChatControllerInteraction {
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
         }, animateDiceSuccess: { _ in
+        }, displayPremiumStickerTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
         }, openReplyThreadOriginalMessage: { _ in

@@ -1723,10 +1723,21 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             if let item = self.item, self.imageNode.frame.contains(location) {
-                if let _ = self.telegramFile {
-                    return .optionalAction({
-                        let _ = item.controllerInteraction.openMessage(item.message, .default)
-                    })
+                if let file = self.telegramFile {
+                    if file.isPremiumSticker {
+                        return .optionalAction({
+                            if self.additionalAnimationNodes.isEmpty {
+                                self.playedPremiumStickerAnimation = false
+                                self.playPremiumStickerAnimation()
+                            } else {
+                                item.controllerInteraction.displayPremiumStickerTooltip(file, item.message)
+                            }
+                        })
+                    } else {
+                        return .optionalAction({
+                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        })
+                    }
                 } else if let dice = self.telegramDice {
                     return .optionalAction({
                         item.controllerInteraction.displayDiceTooltip(dice)

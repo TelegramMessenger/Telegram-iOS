@@ -709,6 +709,8 @@ private func decryptedEntities73(_ entities: [MessageTextEntity]?) -> [SecretApi
                 break
             case .Spoiler:
                 break
+            case .AnimatedEmoji:
+                break
             case .Custom:
                 break
         }
@@ -759,6 +761,8 @@ private func decryptedEntities101(_ entities: [MessageTextEntity]?) -> [SecretAp
             case .BankCard:
                 break
             case .Spoiler:
+                break
+            case .AnimatedEmoji:
                 break
             case .Custom:
                 break

@@ -258,6 +258,7 @@ public enum ResolvedUrl {
     case importStickers
     case startAttach(peerId: PeerId, payload: String?)
     case invoice(slug: String, invoice: TelegramMediaInvoice)
+    case premiumOffer(reference: String?)
 }
 
 public enum NavigateToChatKeepStack {
@@ -821,6 +822,10 @@ public protocol AccountContext: AnyObject {
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
+    
+    var animatedEmojiStickers: [String: [StickerPackItem]] { get }
+    
+    var userLimits: EngineConfiguration.UserLimits { get }
     
     func storeSecureIdPassword(password: String)
     func getStoredSecureIdPassword() -> String?

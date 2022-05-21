@@ -11,6 +11,7 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxFolderChatsCount: Int32
     public let maxCaptionLengthCount: Int32
     public let maxUploadFileParts: Int32
+    public let maxAnimatedEmojisInText: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -22,7 +23,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxFoldersCount: 10,
             maxFolderChatsCount: 100,
             maxCaptionLengthCount: 1024,
-            maxUploadFileParts: 4000
+            maxUploadFileParts: 4000,
+            maxAnimatedEmojisInText: 10
         )
     }
 
@@ -35,7 +37,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxFoldersCount: Int32,
         maxFolderChatsCount: Int32,
         maxCaptionLengthCount: Int32,
-        maxUploadFileParts: Int32
+        maxUploadFileParts: Int32,
+        maxAnimatedEmojisInText: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxChannelsCount = maxChannelsCount
@@ -46,6 +49,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxFolderChatsCount = maxFolderChatsCount
         self.maxCaptionLengthCount = maxCaptionLengthCount
         self.maxUploadFileParts = maxUploadFileParts
+        self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
     }
 }
 
@@ -62,6 +66,14 @@ extension UserLimitsConfiguration {
             }
         }
         
+        func getGeneralValue(_ key: String, orElse defaultValue: Int32) -> Int32 {
+            if let value = appConfiguration.data?[key] as? Double {
+                return Int32(value)
+            } else {
+                return defaultValue
+            }
+        }
+        
         self.maxPinnedChatCount = getValue("dialogs_pinned_limit", orElse: defaultValue.maxPinnedChatCount)
         self.maxChannelsCount = getValue("channels_limit", orElse: defaultValue.maxPinnedChatCount)
         self.maxPublicLinksCount = getValue("channels_public_limit", orElse: defaultValue.maxPinnedChatCount)
@@ -71,5 +83,6 @@ extension UserLimitsConfiguration {
         self.maxFolderChatsCount = getValue("dialog_filters_chats_limit", orElse: defaultValue.maxPinnedChatCount)
         self.maxCaptionLengthCount = getValue("caption_length_limit", orElse: defaultValue.maxCaptionLengthCount)
         self.maxUploadFileParts = getValue("upload_max_fileparts", orElse: defaultValue.maxUploadFileParts)
+        self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
     }
 }

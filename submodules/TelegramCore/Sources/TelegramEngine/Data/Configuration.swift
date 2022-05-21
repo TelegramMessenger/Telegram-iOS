@@ -57,6 +57,7 @@ public enum EngineConfiguration {
         public let maxFolderChatsCount: Int32
         public let maxCaptionLengthCount: Int32
         public let maxUploadFileParts: Int32
+        public let maxAnimatedEmojisInText: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -71,7 +72,8 @@ public enum EngineConfiguration {
             maxFoldersCount: Int32,
             maxFolderChatsCount: Int32,
             maxCaptionLengthCount: Int32,
-            maxUploadFileParts: Int32
+            maxUploadFileParts: Int32,
+            maxAnimatedEmojisInText: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxChannelsCount = maxChannelsCount
@@ -82,6 +84,7 @@ public enum EngineConfiguration {
             self.maxFolderChatsCount = maxFolderChatsCount
             self.maxCaptionLengthCount = maxCaptionLengthCount
             self.maxUploadFileParts = maxUploadFileParts
+            self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
         }
     }
 }
@@ -105,7 +108,7 @@ extension EngineConfiguration.Limits {
     }
 }
 
-extension EngineConfiguration.UserLimits {
+public extension EngineConfiguration.UserLimits {
     init(_ userLimitsConfiguration: UserLimitsConfiguration) {
         self.init(
             maxPinnedChatCount: userLimitsConfiguration.maxPinnedChatCount,
@@ -116,7 +119,8 @@ extension EngineConfiguration.UserLimits {
             maxFoldersCount: userLimitsConfiguration.maxFoldersCount,
             maxFolderChatsCount: userLimitsConfiguration.maxFolderChatsCount,
             maxCaptionLengthCount: userLimitsConfiguration.maxCaptionLengthCount,
-            maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts
+            maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts,
+            maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText
         )
     }
 }
@@ -166,5 +170,27 @@ public extension TelegramEngine.EngineData.Item {
                 return EngineConfiguration.UserLimits(UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: self.isPremium))
             }
         }
+        
+        public struct SuggestedLocalization: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = SuggestedLocalizationEntry?
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.suggestedLocalization]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let suggestedLocalization = view.values[PreferencesKeys.suggestedLocalization]?.get(SuggestedLocalizationEntry.self) else {
+                    return nil
+                }
+                return suggestedLocalization
+            }
+        }
+
     }
 }

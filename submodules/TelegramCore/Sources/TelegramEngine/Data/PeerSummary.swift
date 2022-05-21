@@ -32,7 +32,7 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
 
-        public struct RenderedPeer: TelegramEngineDataItem, PostboxViewDataItem {
+        public struct RenderedPeer: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Optional<EngineRenderedPeer>
 
             fileprivate var id: EnginePeer.Id

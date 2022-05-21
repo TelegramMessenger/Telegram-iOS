@@ -18,16 +18,20 @@ public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource
         self.name = name
     }
         
-    public func directDataPath() -> Signal<String, NoError> {
+    public func directDataPath(attemptSynchronously: Bool) -> Signal<String?, NoError> {
         if let path = self.path {
             return .single(path)
         } else {
-            return .never()
+            return .single(nil)
         }
     }
     
     public func cachedDataPath(width: Int, height: Int) -> Signal<(String, Bool), NoError> {
         return .never()
+    }
+    
+    func maybeCachedDataPath(width: Int, height: Int) -> (String, Bool)? {
+        return nil
     }
     
     public var path: String? {
@@ -64,13 +68,14 @@ public final class AnimatedStickerResourceSource: AnimatedStickerNodeSource {
         }
     }
     
-    public func directDataPath() -> Signal<String, NoError> {
-        return self.account.postbox.mediaBox.resourceData(self.resource)
-        |> filter { data in
-            return data.complete
-        }
-        |> map { data -> String in
-            return data.path
+    public func directDataPath(attemptSynchronously: Bool) -> Signal<String?, NoError> {
+        return self.account.postbox.mediaBox.resourceData(self.resource, attemptSynchronously: attemptSynchronously)
+        |> map { data -> String? in
+            if data.complete {
+                return data.path
+            } else {
+                return nil
+            }
         }
     }
 }

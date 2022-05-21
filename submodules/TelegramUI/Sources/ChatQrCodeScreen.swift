@@ -570,7 +570,13 @@ final class ChatQrCodeScreen: ViewController {
         var fileName: String {
             switch self {
             case let .peer(peer):
-                return "t_me-\(peer.addressName ?? "")"
+                if let addressName = peer.addressName, !addressName.isEmpty {
+                    return "t_me-\(peer.addressName ?? "")"
+                } else if let peer = peer as? TelegramUser {
+                    return "t_me-\(peer.phone ?? "")"
+                } else {
+                    return "t_me-\(Int32.random(in: 0 ..< Int32.max))"
+                }
             case let .messages(messages):
                 if let message = messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                     return "t_me-\(addressName)-\(message.id.id)"
@@ -1510,9 +1516,16 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = nil
         }
         
+        let codeText: String
+        if let addressName = peer.addressName, !addressName.isEmpty {
+            codeText = "@\(peer.addressName ?? "")".uppercased()
+        } else {
+            codeText = peer.debugDisplayTitle.uppercased()
+        }
+        
         self.codeTextNode = ImmediateTextNode()
         self.codeTextNode.displaysAsynchronously = false
-        self.codeTextNode.attributedText = NSAttributedString(string: "@\(peer.addressName ?? "")".uppercased(), font: Font.with(size: 23.0, design: .round, weight: .bold, traits: []), textColor: .black)
+        self.codeTextNode.attributedText = NSAttributedString(string: codeText, font: Font.with(size: 23.0, design: .round, weight: .bold, traits: []), textColor: .black)
         self.codeTextNode.truncationMode = .byCharWrapping
         self.codeTextNode.maximumNumberOfLines = 2
         self.codeTextNode.textAlignment = .center
@@ -1547,8 +1560,17 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.addSubnode(codeAnimatedIconNode)
         }
         
+        let codeLink: String
+        if let addressName = peer.addressName, !addressName.isEmpty {
+            codeLink = "https://t.me/\(peer.addressName ?? "")"
+        } else if let peer = peer as? TelegramUser {
+            codeLink = "https://t.me/+\(peer.phone ?? "")"
+        } else {
+            codeLink = ""
+        }
+        
         let codeReadyPromise = ValuePromise<Bool>()
-        self.codeImageNode.setSignal(qrCode(string: "https://t.me/\(peer.addressName ?? "")", color: .black, backgroundColor: nil, icon: .cutout, ecl: "Q") |> beforeNext { [weak self] size, _ in
+        self.codeImageNode.setSignal(qrCode(string: codeLink, color: .black, backgroundColor: nil, icon: .cutout, ecl: "Q") |> beforeNext { [weak self] size, _ in
             guard let strongSelf = self else {
                 return
             }

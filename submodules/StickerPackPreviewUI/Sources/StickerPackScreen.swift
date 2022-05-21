@@ -751,7 +751,7 @@ private final class StickerPackContainer: ASDisplayNode {
         
         let gridFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top + titleAreaInset), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - titleAreaInset))
         
-        let itemsPerRow = 4
+        let itemsPerRow = 5
         let fillingWidth = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: 0.0)
         let itemWidth = floor(fillingWidth / CGFloat(itemsPerRow))
         let gridLeftInset = floor((layout.size.width - fillingWidth) / 2.0)
