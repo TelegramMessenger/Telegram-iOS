@@ -95,6 +95,7 @@ public final class BotCheckoutController: ViewController {
         self.source = source
         self.inputData = inputData
         self.completed = completed
+        self.pending = pending
         self.cancelled = cancelled
         self.failed = failed
         
