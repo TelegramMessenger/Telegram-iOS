@@ -11,6 +11,7 @@ import AccountContext
 import StickerPackPreviewUI
 import ContextUI
 import ChatPresentationInterfaceState
+import PremiumUI
 
 private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
     private final class DisplayItem {
@@ -175,8 +176,12 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                     }
                                 }))
                             )
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: {
-                                
+                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                                guard let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() else {
+                                    return
+                                }
+                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                controllerInteraction.navigationController()?.pushViewController(controller)
                             }))
                         } else {
                             return nil

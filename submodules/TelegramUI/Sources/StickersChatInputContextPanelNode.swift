@@ -12,6 +12,7 @@ import AccountContext
 import StickerPackPreviewUI
 import ContextUI
 import ChatPresentationInterfaceState
+import PremiumUI
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]
@@ -176,8 +177,12 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: {
-                                    
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                    strongSelf.controllerInteraction?.navigationController()?.pushViewController(controller)
                                 }))
                             } else {
                                 return nil

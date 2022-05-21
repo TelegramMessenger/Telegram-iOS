@@ -13,6 +13,7 @@ import StickerPackPreviewUI
 import ContextUI
 import ChatPresentationInterfaceState
 import UndoUI
+import PremiumUI
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult
@@ -174,8 +175,12 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     }
                                 })))
                             }
-                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems, openPremiumIntro: {
-                                
+                            selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems, openPremiumIntro: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                strongSelf.interfaceInteraction?.getNavigationController()?.pushViewController(controller)
                             }))
                         } else {
                             var menuItems: [ContextMenuItem] = []

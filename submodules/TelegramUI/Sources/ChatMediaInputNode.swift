@@ -20,6 +20,7 @@ import PresentationDataUtils
 import ChatInterfaceState
 import ChatPresentationInterfaceState
 import UndoUI
+import PremiumUI
 
 struct PeerSpecificPackData {
     let peer: Peer
@@ -1617,8 +1618,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: {
-                                        
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                        strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
                                     }))
                                 } else {
                                     return nil
@@ -1745,8 +1750,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
-                                            
+                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                            strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
                                         }))
                                     } else {
                                         return nil

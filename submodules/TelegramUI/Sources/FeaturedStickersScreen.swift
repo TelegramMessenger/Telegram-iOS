@@ -15,6 +15,7 @@ import PresentationDataUtils
 import SearchBarNode
 import UndoUI
 import ContextUI
+import PremiumUI
 
 private final class FeaturedInteraction {
     let installPack: (ItemCollectionInfo, Bool) -> Void
@@ -531,8 +532,12 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems, openPremiumIntro: {
-                                    
+                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                    strongSelf.controller?.push(controller)
                                 }))
                             } else {
                                 return nil
@@ -597,8 +602,12 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                 }
                             }))
                         ]
-                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), menu: menuItems, openPremiumIntro: {
-                            
+                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                            strongSelf.controller?.push(controller)
                         }))
                     } else {
                         return nil
