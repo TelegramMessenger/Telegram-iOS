@@ -669,7 +669,7 @@ private final class LimitSheetContent: CombinedComponent {
             if state.initialized {
                 let limit = limit.update(
                     component: PremiumLimitDisplayComponent(
-                        inactiveColor: UIColor(rgb: 0xE9E9EA),
+                        inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
                         activeColors: [
                             UIColor(rgb: 0x0077ff),
                             UIColor(rgb: 0x6b93ff),
@@ -678,7 +678,7 @@ private final class LimitSheetContent: CombinedComponent {
                         ],
                         inactiveTitle: strings.Premium_Free,
                         inactiveValue: defaultValue,
-                        inactiveTitleColor: .black,
+                        inactiveTitleColor: theme.list.itemPrimaryTextColor,
                         activeTitle: strings.Premium_Premium,
                         activeValue: premiumValue,
                         activeTitleColor: .white,

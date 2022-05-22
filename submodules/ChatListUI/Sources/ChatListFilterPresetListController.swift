@@ -191,7 +191,7 @@ private func filtersWithAppliedOrder(filters: [(ChatListFilter, Int)], order: [I
     return sortedFilters
 }
 
-private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings, isPremium: Bool) -> [ChatListFilterPresetListEntry] {
+private func chatListFilterPresetListControllerEntries(presentationData: PresentationData, state: ChatListFilterPresetListControllerState, filters: [(ChatListFilter, Int)], updatedFilterOrder: [Int32]?, suggestedFilters: [ChatListFeaturedFilter], settings: ChatListFilterSettings, isPremium: Bool, limits: EngineConfiguration.UserLimits) -> [ChatListFilterPresetListEntry] {
     var entries: [ChatListFilterPresetListEntry] = []
 
     entries.append(.screenHeader(presentationData.strings.ChatListFolderSettings_Info))
@@ -218,7 +218,7 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
                 entries.append(.preset(index: PresetIndex(value: entries.count), title: title, label: chatCount == 0 ? "" : "\(chatCount)", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: true, isEditing: state.isEditing, isAllChats: false))
             }
         }
-        if filters.count < 10 {
+        if !isPremium || filters.count < limits.maxFolderChatsCount {
             entries.append(.addItem(text: presentationData.strings.ChatListFolderSettings_NewFolder, isEditing: state.isEditing))
         }
         entries.append(.listFooter(presentationData.strings.ChatListFolderSettings_EditFoldersInfo))
@@ -361,6 +361,10 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     
     let preferences = context.account.postbox.preferencesView(keys: [ApplicationSpecificPreferencesKeys.chatListFilterSettings])
     
+    let limits = context.engine.data.get(
+        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+        TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+    )
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
         statePromise.get(),
@@ -368,10 +372,12 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         preferences,
         updatedFilterOrder.get(),
         featuredFilters,
-        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+        limits
     )
-    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters, result -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let isPremium = result?.isPremium ?? false
+    |> map { presentationData, state, filtersWithCountsValue, preferences, updatedFilterOrderValue, suggestedFilters, peer, limits -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let isPremium = peer?.isPremium ?? false
+        let effectiveLimits = isPremium ? limits.1 : limits.0
         
         let filterSettings = preferences.values[ApplicationSpecificPreferencesKeys.chatListFilterSettings]?.get(ChatListFilterSettings.self) ?? ChatListFilterSettings.default
         let leftNavigationButton: ItemListNavigationButton?
@@ -441,7 +447,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.ChatListFolderSettings_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, settings: filterSettings, isPremium: isPremium), style: .blocks, animateChanges: true)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetListControllerEntries(presentationData: presentationData, state: state, filters: filtersWithCountsValue, updatedFilterOrder: updatedFilterOrderValue, suggestedFilters: suggestedFilters, settings: filterSettings, isPremium: isPremium, limits: effectiveLimits), style: .blocks, animateChanges: true)
         
         return (controllerState, (listState, arguments))
     }

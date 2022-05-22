@@ -1131,13 +1131,11 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             return animatedEmojiStickers
         }
-        
-        let accountPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        
+                
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, accountPeer)
-        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, accountPeer -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, context.account.postbox.peerView(id: context.account.peerId))
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, peerView -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -1169,6 +1167,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
+            let accountPeer = peerView.peers[peerView.peerId]
             let hasPremium = accountPeer?.isPremium ?? false
             
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, premiumStickers: hasPremium ? premiumStickers : nil, expanded: panelExpanded, reorderable: true)
