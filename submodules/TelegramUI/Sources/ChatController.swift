@@ -7956,8 +7956,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             switch result {
                                 case .generic:
                                     strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: nil, text: added ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: true, action: { _ in return false }), with: nil)
-                                case .limitExceeded:
-                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("5").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("10").string, undoText: nil), elevatedLayout: true, action: { [weak self] action in
+                                case let .limitExceeded(limit, premiumLimit):
+                                    strongSelf.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: stickerFile, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: true, action: { [weak self] action in
                                         if let strongSelf = self {
                                             if case .info = action {
                                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)

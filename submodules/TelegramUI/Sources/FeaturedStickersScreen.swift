@@ -498,11 +498,24 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                         f(.default)
                                         
                                         if let strongSelf = self {
-                                            if isStarred {
-                                                let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                            } else {
-                                                let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                            }
+                                            let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                            |> deliverOnMainQueue).start(next: { result in
+                                                switch result {
+                                                    case .generic:
+                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
+                                                    case let .limitExceeded(limit, premiumLimit):
+                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                            if let strongSelf = self {
+                                                                if case .info = action {
+                                                                    let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                    strongSelf.controller?.push(controller)
+                                                                    return true
+                                                                }
+                                                            }
+                                                            return false
+                                                        }), with: nil)
+                                                }
+                                            })
                                         }
                                     })),
                                     .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
@@ -568,11 +581,24 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                 f(.default)
                                 
                                 if let strongSelf = self {
-                                    if isStarred {
-                                        let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                    } else {
-                                        let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                    }
+                                    let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                    |> deliverOnMainQueue).start(next: { result in
+                                        switch result {
+                                            case .generic:
+                                            strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
+                                            case let .limitExceeded(limit, premiumLimit):
+                                                strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                    if let strongSelf = self {
+                                                        if case .info = action {
+                                                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                            strongSelf.controller?.push(controller)
+                                                            return true
+                                                        }
+                                                    }
+                                                    return false
+                                                }), with: nil)
+                                        }
+                                    })
                                 }
                             })),
                             .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.StickerPack_ViewPack, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
