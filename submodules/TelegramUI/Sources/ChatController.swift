@@ -1043,9 +1043,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             guard let aroundAnimation = reaction.aroundAnimation else {
                                 continue
                             }
-//                            if reaction.isPremium {
+                            if reaction.isPremium {
                                 premiumReactions.append(reaction)
-//                            }
+                            }
                             if !reaction.isEnabled {
                                 continue
                             }
