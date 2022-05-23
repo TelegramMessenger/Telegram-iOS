@@ -391,6 +391,11 @@ private final class StickerPackContainer: ASDisplayNode {
                 let controller = PeekController(presentationData: strongSelf.presentationData, content: content, sourceNode: {
                     return sourceNode
                 })
+                controller.visibilityUpdated = { [weak self] visible in
+                    if let strongSelf = self {
+                        strongSelf.gridNode.forceHidden = visible
+                    }
+                }
                 strongSelf.peekController = controller
                 strongSelf.presentInGlobalOverlay(controller, nil)
                 return controller

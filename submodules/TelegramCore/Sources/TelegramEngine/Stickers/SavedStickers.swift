@@ -20,8 +20,14 @@ func _internal_toggleStickerSaved(postbox: Postbox, network: Network, accountPee
             
             return addSavedSticker(postbox: postbox, network: network, file: file)
             |> map { _ -> SavedStickerResult in
-                return items.count == limitsConfiguration.maxFavedStickerCount && !isPremium ? .limitExceeded(limitsConfiguration.maxFavedStickerCount, premiumLimitsConfiguration.maxFavedStickerCount) : .generic
+                return .generic
             }
+            |> filter { _ in
+                return false
+            }
+            |> then(
+                items.count == limitsConfiguration.maxFavedStickerCount && !isPremium ? .single(.limitExceeded(limitsConfiguration.maxFavedStickerCount, premiumLimitsConfiguration.maxFavedStickerCount)) : .single(.generic)
+            )
         }
         |> castError(AddSavedStickerError.self)
         |> switchToLatest

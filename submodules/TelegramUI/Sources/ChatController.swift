@@ -224,6 +224,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private let peerDisposable = MetaDisposable()
     private let titleDisposable = MetaDisposable()
+    private var accountPeerDisposable: Disposable?
     private let navigationActionDisposable = MetaDisposable()
     private var networkStateDisposable: Disposable?
     
@@ -3697,6 +3698,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let chatLocationPeerId: PeerId? = chatLocation.peerId
         
+        self.accountPeerDisposable = (context.account.postbox.peerView(id: context.account.peerId)
+        |> deliverOnMainQueue).start(next: { [weak self] peerView in
+            if let strongSelf = self {
+                let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, {
+                    return $0.updatedIsPremium(isPremium)
+                })
+            }
+        })
+        
         do {
             let peerId = chatLocationPeerId
             if case let .peer(peerView) = self.chatLocationInfoData, let peerId = peerId {
@@ -4874,6 +4885,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.galleryHiddenMesageAndMediaDisposable.dispose()
         self.temporaryHiddenGalleryMediaDisposable.dispose()
         self.peerDisposable.dispose()
+        self.accountPeerDisposable?.dispose()
         self.titleDisposable.dispose()
         self.messageContextDisposable.dispose()
         self.controllerNavigationDisposable.dispose()
