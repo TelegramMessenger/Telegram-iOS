@@ -230,7 +230,7 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0), size: CGSize(width: 44.0, height: 12.0))
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
-            self.badgeView.center = CGPoint(x: availableSize.width * component.badgePosition, y: 82.0)
+            self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition, y: 82.0)
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
                 self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeSize.height / 2.0)

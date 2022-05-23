@@ -3506,7 +3506,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                         controller.navigationPresentation = .flatModal
                         strongSelf.currentWebAppController = controller
-                        strongSelf.present(controller, in: .window(.root))
+                        strongSelf.push(controller)
                     }, error: { [weak self] error in
                         if let strongSelf = self {
                             strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -3532,7 +3532,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                         controller.navigationPresentation = .flatModal
                         strongSelf.currentWebAppController = controller
-                        strongSelf.present(controller, in: .window(.root))
+                        strongSelf.push(controller)
                     }, error: { [weak self] error in
                         if let strongSelf = self {
                             strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -11181,7 +11181,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let present = {
                 attachmentController.navigationPresentation = .flatModal
                 strongSelf.push(attachmentController)
-//                strongSelf.present(attachmentController, in: .window(.root))
                 strongSelf.attachmentController = attachmentController
             }
             

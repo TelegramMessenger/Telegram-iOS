@@ -1245,8 +1245,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             strongSelf.setToolbar(toolbar, transition: transition)
         }))
         
-        self.tabContainerNode.tabSelected = { [weak self] id in
-            self?.selectTab(id: id)
+        self.tabContainerNode.tabSelected = { [weak self] id, disabled in
+            guard let strongSelf = self else {
+                return
+            }
+            if disabled {
+                let context = strongSelf.context
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
+                    let controller = PremiumIntroScreen(context: context, source: .folders)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                strongSelf.push(controller)
+            } else {
+                strongSelf.selectTab(id: id)
+            }
         }
         self.chatListDisplayNode.inlineTabContainerNode.tabSelected = { [weak self] id in
             self?.selectTab(id: id)
@@ -1342,7 +1358,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                             
                                             if let accountPeer = accountPeer, accountPeer.isPremium {
                                                 if data.includePeers.peers.count >= premiumLimit {
-                                                    //printPremiumError
                                                     return
                                                 }
                                             } else {

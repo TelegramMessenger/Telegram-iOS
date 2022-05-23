@@ -495,6 +495,7 @@ private final class ScrollComponent<ChildEnvironment: Equatable>: Component {
             }
             self.delegate = self
             self.showsVerticalScrollIndicator = false
+            self.showsHorizontalScrollIndicator = false
             self.canCancelContentTouches = true
                         
             self.addSubview(self.contentView)
@@ -1506,7 +1507,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
                         state?.topContentOffset = topContentOffset
                         state?.bottomContentOffset = bottomContentOffset
-                        state?.updated(transition: .immediate)
+                        Queue.mainQueue().justDispatch {
+                            state?.updated(transition: .immediate)
+                        }
                     },
                     contentOffsetWillCommit: { targetContentOffset in
                         if targetContentOffset.pointee.y < 100.0 {
