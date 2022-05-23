@@ -16,6 +16,27 @@ import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
 
+private func generateCloseButtonImage(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(UIColor(rgb: 0x808084, alpha: 0.1).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(theme.actionSheet.inputClearButtonColor.cgColor)
+        
+        context.move(to: CGPoint(x: 10.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 20.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
+        context.strokePath()
+    })
+}
+
 private class PremiumLimitAnimationComponent: Component {
     private let iconName: String
     private let inactiveColor: UIColor
@@ -540,6 +561,8 @@ private final class LimitSheetContent: CombinedComponent {
         var limits: EngineConfiguration.UserLimits
         var premiumLimits: EngineConfiguration.UserLimits
         
+        var cachedCloseImage: (UIImage, PresentationTheme)?
+        
         init(context: AccountContext, subject: PremiumLimitScreen.Subject) {
             self.context = context
             self.limits = EngineConfiguration.UserLimits.defaultValue
@@ -571,6 +594,7 @@ private final class LimitSheetContent: CombinedComponent {
     }
     
     static var body: Body {
+        let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
         let text = Child(MultilineTextComponent.self)
         let limit = Child(PremiumLimitDisplayComponent.self)
@@ -587,6 +611,28 @@ private final class LimitSheetContent: CombinedComponent {
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 24.0 + environment.safeInsets.left
+            
+            let closeImage: UIImage
+            if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
+                closeImage = image
+            } else {
+                closeImage = generateCloseButtonImage(theme: theme)!
+                state.cachedCloseImage = (closeImage, theme)
+            }
+            
+            let closeButton = closeButton.update(
+                component: Button(
+                    content: AnyComponent(Image(image: closeImage)),
+                    action: { [weak component] in
+                        component?.dismiss()
+                    }
+                ),
+                availableSize: CGSize(width: 30.0, height: 30.0),
+                transition: .immediate
+            )
+            context.add(closeButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
+            )
             
             let iconName: String
             let badgeText: String
