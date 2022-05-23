@@ -623,14 +623,14 @@ private final class LimitSheetContent: CombinedComponent {
                     premiumValue = "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .files:
-                    let limit: Int64 = 2048 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
-                    let premiumLimit: Int64 = 4096 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
+                    let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024
+                    let premiumLimit = Int64(state.limits.maxUploadFileParts) * 512 * 1024
                     iconName = "Premium/File"
                     badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
                     defaultValue = ""
                     premiumValue = dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgePosition = 0.5
             }
             
             let title = title.update(

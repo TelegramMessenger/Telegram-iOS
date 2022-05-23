@@ -7618,3 +7618,5 @@ Sorry for the inconvenience.";
 
 "Stickers.PremiumPackInfoText" = "This pack contains premium stickers like this one.";
 "Stickers.PremiumPackView" = "View";
+
+"Conversation.PremiumUploadFileTooLarge" = "File could not be sent, because it is larger than 4 GB.\n\nYou can send as many files as you like, but each must be smaller than 4 GB.";

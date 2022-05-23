@@ -24,6 +24,7 @@ public enum PremiumSource {
     case stickers
     case reactions
     case ads
+    case upload
     case groupsAndChannels
     case pinnedChats
     case publicLinks
@@ -43,6 +44,8 @@ public enum PremiumSource {
                 return "unique_reactions"
             case .ads:
                 return "no_ads"
+            case .upload:
+                return "more_upload"
             case .groupsAndChannels:
                 return "double_limits__channels"
             case .pinnedChats:

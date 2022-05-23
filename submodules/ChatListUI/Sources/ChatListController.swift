@@ -1287,11 +1287,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 queue: Queue.mainQueue(),
                 strongSelf.context.engine.peers.currentChatListFilters(),
                 context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
-                    TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
                     TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
                 )
-            ).start(next: { [weak self] filters, result in
+            ).start(next: { [weak self] filters, premiumLimits in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1325,10 +1323,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         })
                     })))
                     
-                    let (_, _, premiumLimits) = result
-                    let premiumLimit = premiumLimits.maxFolderChatsCount
-                    
-                    if let filter = filters.first(where: { $0.id == id }), case let .filter(_, _, _, data) = filter, data.includePeers.peers.count < premiumLimit {
+                    if let filter = filters.first(where: { $0.id == id }), case let .filter(_, _, _, data) = filter, data.includePeers.peers.count < premiumLimits.maxFolderChatsCount {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.ChatList_AddChatsToFolder, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.contextMenu.primaryColor)
                         }, action: { c, f in

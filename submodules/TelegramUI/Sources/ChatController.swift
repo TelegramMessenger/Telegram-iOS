@@ -11492,84 +11492,110 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentICloudFileGallery(editingMessage: Bool = false) {
-        self.present(legacyICloudFilePicker(theme: self.presentationData.theme, completion: { [weak self] urls in
-            if let strongSelf = self, !urls.isEmpty {
-                var signals: [Signal<ICloudFileDescription?, NoError>] = []
-                for url in urls {
-                    signals.append(iCloudFileDescription(url))
-                }
-                strongSelf.enqueueMediaMessageDisposable.set((combineLatest(signals)
-                |> deliverOnMainQueue).start(next: { results in
-                    if let strongSelf = self {
-                        let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
-                        
-                        for item in results {
-                            if let item = item, item.fileSize > 2000 * 1024 * 1024 {
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Conversation_UploadFileTooLarge, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-                                return
-                            }
-                        }
-                        
-                        var groupingKey: Int64?
-                        var fileTypes: (music: Bool, other: Bool) = (false, false)
-                        if results.count > 1 {
+        let _ = (self.context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+        )
+        |> deliverOnMainQueue).start(next: { [weak self] result in
+            guard let strongSelf = self else {
+                return
+            }
+            let (accountPeer, limits, premiumLimits) = result
+            let isPremium = accountPeer?.isPremium ?? false
+            
+            strongSelf.present(legacyICloudFilePicker(theme: strongSelf.presentationData.theme, completion: { [weak self] urls in
+                if let strongSelf = self, !urls.isEmpty {
+                    var signals: [Signal<ICloudFileDescription?, NoError>] = []
+                    for url in urls {
+                        signals.append(iCloudFileDescription(url))
+                    }
+                    strongSelf.enqueueMediaMessageDisposable.set((combineLatest(signals)
+                    |> deliverOnMainQueue).start(next: { results in
+                        if let strongSelf = self {
+                            let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
+                            
                             for item in results {
                                 if let item = item {
-                                    let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
-                                    if ["mp3", "m4a"].contains(pathExtension) {
-                                        fileTypes.music = true
-                                    } else {
-                                        fileTypes.other = true
+                                    if item.fileSize > Int64(premiumLimits.maxUploadFileParts) * 512 * 1024 {
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Conversation_PremiumUploadFileTooLarge, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        return
+                                    } else if item.fileSize > Int64(limits.maxUploadFileParts) * 512 * 1024 && !isPremium {
+                                        let context = strongSelf.context
+                                        var replaceImpl: ((ViewController) -> Void)?
+                                        let controller = PremiumLimitScreen(context: context, subject: .files, count: 0, action: {
+                                            replaceImpl?(PremiumIntroScreen(context: context, source: .upload))
+                                        })
+                                        replaceImpl = { [weak controller] c in
+                                            controller?.replace(with: c)
+                                        }
+                                        strongSelf.push(controller)
+                                        return
                                     }
                                 }
                             }
-                        }
-                        if fileTypes.music != fileTypes.other {
-                            groupingKey = Int64.random(in: Int64.min ... Int64.max)
-                        }
-                        
-                        var messages: [EnqueueMessage] = []
-                        for item in results {
-                            if let item = item {
-                                let fileId = Int64.random(in: Int64.min ... Int64.max)
-                                let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
-                                var previewRepresentations: [TelegramMediaImageRepresentation] = []
-                                if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
-                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil))
+                            
+                            var groupingKey: Int64?
+                            var fileTypes: (music: Bool, other: Bool) = (false, false)
+                            if results.count > 1 {
+                                for item in results {
+                                    if let item = item {
+                                        let pathExtension = (item.fileName as NSString).pathExtension.lowercased()
+                                        if ["mp3", "m4a"].contains(pathExtension) {
+                                            fileTypes.music = true
+                                        } else {
+                                            fileTypes.other = true
+                                        }
+                                    }
                                 }
-                                var attributes: [TelegramMediaFileAttribute] = []
-                                attributes.append(.FileName(fileName: item.fileName))
-                                if let audioMetadata = item.audioMetadata {
-                                    attributes.append(.Audio(isVoice: false, duration: audioMetadata.duration, title: audioMetadata.title, performer: audioMetadata.performer, waveform: nil))
-                                }
-                                
-                                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(item.fileSize), attributes: attributes)
-                                let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey, correlationId: nil)
-                                messages.append(message)
                             }
-                            if let _ = groupingKey, messages.count % 10 == 0 {
+                            if fileTypes.music != fileTypes.other {
                                 groupingKey = Int64.random(in: Int64.min ... Int64.max)
                             }
-                        }
-                        
-                        if !messages.isEmpty {
-                            if editingMessage {
-                                strongSelf.editMessageMediaWithMessages(messages)
-                            } else {
-                                strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
-                                    if let strongSelf = self {
-                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
-                                        })
+                            
+                            var messages: [EnqueueMessage] = []
+                            for item in results {
+                                if let item = item {
+                                    let fileId = Int64.random(in: Int64.min ... Int64.max)
+                                    let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
+                                    var previewRepresentations: [TelegramMediaImageRepresentation] = []
+                                    if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
+                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil))
                                     }
-                                }, nil)
-                                strongSelf.sendMessages(messages)
+                                    var attributes: [TelegramMediaFileAttribute] = []
+                                    attributes.append(.FileName(fileName: item.fileName))
+                                    if let audioMetadata = item.audioMetadata {
+                                        attributes.append(.Audio(isVoice: false, duration: audioMetadata.duration, title: audioMetadata.title, performer: audioMetadata.performer, waveform: nil))
+                                    }
+                                    
+                                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: fileId), partialReference: nil, resource: ICloudFileResource(urlData: item.urlData, thumbnail: false), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(item.fileSize), attributes: attributes)
+                                    let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: replyMessageId, localGroupingKey: groupingKey, correlationId: nil)
+                                    messages.append(message)
+                                }
+                                if let _ = groupingKey, messages.count % 10 == 0 {
+                                    groupingKey = Int64.random(in: Int64.min ... Int64.max)
+                                }
+                            }
+                            
+                            if !messages.isEmpty {
+                                if editingMessage {
+                                    strongSelf.editMessageMediaWithMessages(messages)
+                                } else {
+                                    strongSelf.chatDisplayNode.setupSendActionOnViewUpdate({
+                                        if let strongSelf = self {
+                                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
+                                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageId(nil) }
+                                            })
+                                        }
+                                    }, nil)
+                                    strongSelf.sendMessages(messages)
+                                }
                             }
                         }
-                    }
-                }))
-            }
-        }), in: .window(.root))
+                    }))
+                }
+            }), in: .window(.root))
+        })
     }
     
     private func presentFileMediaPickerOptions(editingMessage: Bool) {
