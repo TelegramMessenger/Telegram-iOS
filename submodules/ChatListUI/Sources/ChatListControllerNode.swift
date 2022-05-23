@@ -432,6 +432,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var itemNodes: [ChatListFilterTabEntryId: ChatListContainerItemNode] = [:]
     private var pendingItemNode: (ChatListFilterTabEntryId, ChatListContainerItemNode, Disposable)?
     private var availableFilters: [ChatListContainerNodeFilter] = [.all]
+    private var filtersLimit: Int32? = nil
     private var selectedId: ChatListFilterTabEntryId
     
     private(set) var transitionFraction: CGFloat = 0.0
@@ -578,6 +579,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var activateChatPreview: ((ChatListItem, ASDisplayNode, ContextGesture?) -> Void)?
     var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     var didBeginSelectingChats: (() -> Void)?
+    var displayFilterLimit: (() -> Void)?
     
     init(context: AccountContext, groupId: EngineChatList.Group, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
         self.context = context
@@ -649,6 +651,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
+        let filtersLimit = self.filtersLimit.flatMap({ $0 + 1 }) ?? Int32(self.availableFilters.count)
+        
         switch recognizer.state {
         case .began:
             self.onFilterSwitch?()
@@ -688,9 +692,18 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     let overscroll = translation.x
                     transitionFraction = rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
                 }
-                if selectedIndex >= self.availableFilters.count - 1 && translation.x < 0.0 {
+                
+                if selectedIndex >= filtersLimit - 1 && translation.x < 0.0 {
                     let overscroll = -translation.x
                     transitionFraction = -rubberBandingOffset(offset: overscroll, bandingStart: 0.0) / layout.size.width
+                    
+                    if self.filtersLimit != nil {
+                        transitionFraction = 0.0
+                        recognizer.isEnabled = false
+                        recognizer.isEnabled = true
+                        
+                        self.displayFilterLimit?()
+                    }
                 }
                 self.transitionFraction = transitionFraction + self.transitionFractionOffset
                 if let currentItemNode = self.currentItemNodeValue {
@@ -731,7 +744,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = selectedIndex
                     if directionIsToRight {
-                        updatedIndex = min(updatedIndex + 1, self.availableFilters.count - 1)
+                        updatedIndex = min(updatedIndex + 1, Int(filtersLimit) - 1)
                     } else {
                         updatedIndex = max(updatedIndex - 1, 0)
                     }
@@ -807,13 +820,14 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func updateAvailableFilters(_ availableFilters: [ChatListContainerNodeFilter]) {
+    func updateAvailableFilters(_ availableFilters: [ChatListContainerNodeFilter], limit: Int32?) {
         if self.availableFilters != availableFilters {
             let apply: () -> Void = { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.availableFilters = availableFilters
+                strongSelf.filtersLimit = limit
                 if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout {
                     strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: isReorderingFilters, isEditing: isEditing, transition: .immediate)
                 }
