@@ -378,6 +378,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         @objc fileprivate func mainButtonPressed() {
+            self.webView?.lastTouchTimestamp = CACurrentMediaTime()
             self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
         
