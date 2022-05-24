@@ -606,7 +606,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let wasVisible = self.visibilityStatus
             let isVisible: Bool
             switch self.visibility {
-                case let .visible(fraction):
+                case let .visible(fraction, _):
                     isVisible = fraction > 0.2
                 case .none:
                     isVisible = false

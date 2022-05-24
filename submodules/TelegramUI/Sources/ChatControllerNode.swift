@@ -514,7 +514,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.historyNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
         
-        self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(backgroundNode: backgroundNode), presentController: { [weak self] controller in
+        self.textInputPanelNode = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode), presentController: { [weak self] controller in
             self?.interfaceInteraction?.presentController(controller, nil)
         })
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage
@@ -630,7 +630,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         if let itemNode = itemNode as? ChatMessageItemView, let (_, soundEnabled, isVideoMessage, _, badgeNode) = itemNode.playMediaWithSound(), let node = badgeNode {
                             if soundEnabled {
                                 skip = true
-                            } else if !skip && !isVideoMessage, case let .visible(fraction) = itemNode.visibility {
+                            } else if !skip && !isVideoMessage, case let .visible(fraction, _) = itemNode.visibility {
                                 nodes.insert((fraction, itemNode, node), at: 0)
                             }
                         }

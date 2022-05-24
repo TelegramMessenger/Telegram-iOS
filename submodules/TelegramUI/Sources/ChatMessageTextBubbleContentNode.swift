@@ -15,6 +15,9 @@ import TelegramAnimatedStickerNode
 import SwiftSignalKit
 import AccountContext
 import YuvConversion
+import AnimationCache
+import LottieAnimationCache
+import MultiAnimationRenderer
 
 private final class CachedChatMessageText {
     let text: String
@@ -61,7 +64,7 @@ private final class InlineStickerItem: Hashable {
     }
 }
 
-private final class InlineStickerItemLayer: SimpleLayer {
+private final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     static let queue = Queue()
     
     struct Key: Hashable {
@@ -70,26 +73,50 @@ private final class InlineStickerItemLayer: SimpleLayer {
     }
     
     private let file: TelegramMediaFile
-    private let source: AnimatedStickerNodeSource
-    private var frameSource: QueueLocalObject<AnimatedStickerDirectFrameSource>?
+    //private var frameSource: QueueLocalObject<AnimatedStickerDirectFrameSource>?
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
     
     private var isInHierarchyValue: Bool = false
     var isVisibleForAnimations: Bool = false {
         didSet {
-            self.updatePlayback()
+            if self.isVisibleForAnimations != oldValue {
+                self.updatePlayback()
+            }
         }
     }
     private var displayLink: ConstantDisplayLinkAnimator?
     
-    init(context: AccountContext, file: TelegramMediaFile) {
-        self.source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+    init(context: AccountContext, file: TelegramMediaFile, cache: AnimationCache, renderer: MultiAnimationRenderer) {
         self.file = file
         
         super.init()
         
-        let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+        self.disposable = renderer.add(groupId: "inlineEmoji", target: self, cache: cache, itemId: file.resource.id.stringRepresentation, fetch: { writer in
+            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+            
+            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+                guard let result = result else {
+                    return
+                }
+                        
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                    writer.finish()
+                    return
+                }
+                let scale = min(2.0, UIScreenScale)
+                cacheLottieAnimation(data: data, width: Int(24 * scale), height: Int(24 * scale), writer: writer)
+            })
+            
+            let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+            
+            return ActionDisposable {
+                dataDisposable.dispose()
+                fetchDisposable.dispose()
+            }
+        })
+        
+        /*let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
         
         self.disposable = (self.source.directDataPath(attemptSynchronously: false)
         |> filter { $0 != nil }
@@ -109,17 +136,11 @@ private final class InlineStickerItemLayer: SimpleLayer {
             }
         })
         
-        self.fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+        self.fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()*/
     }
     
     override init(layer: Any) {
-        guard let layer = layer as? InlineStickerItemLayer else {
-            preconditionFailure()
-        }
-        self.source = layer.source
-        self.file = layer.file
-        
-        super.init(layer: layer)
+        preconditionFailure()
     }
     
     required public init?(coder: NSCoder) {
@@ -142,8 +163,11 @@ private final class InlineStickerItemLayer: SimpleLayer {
     }
     
     private func updatePlayback() {
-        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations && self.frameSource != nil
-        if shouldBePlaying != (self.displayLink != nil) {
+        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
+        
+        self.shouldBeAnimating = shouldBePlaying
+        
+        /*if shouldBePlaying != (self.displayLink != nil) {
             if shouldBePlaying {
                 self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
                     self?.loadNextFrame()
@@ -153,12 +177,10 @@ private final class InlineStickerItemLayer: SimpleLayer {
                 self.displayLink?.invalidate()
                 self.displayLink = nil
             }
-        }
+        }*/
     }
     
-    private var didRequestFrame = false
-    
-    private func loadNextFrame() {
+    /*private func loadNextFrame() {
         guard let frameSource = self.frameSource else {
             return
         }
@@ -200,7 +222,7 @@ private final class InlineStickerItemLayer: SimpleLayer {
                 }
             }
         }
-    }
+    }*/
 }
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
@@ -224,11 +246,25 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
-            let wasVisible = oldValue != .none
-            let isVisible = self.visibility != .none
-            if wasVisible != isVisible {
-                for (_, itemLayer) in self.inlineStickerItemLayers {
-                    itemLayer.isVisibleForAnimations = isVisible
+            if !self.inlineStickerItemLayers.isEmpty {
+                if oldValue != self.visibility {
+                    for (_, itemLayer) in self.inlineStickerItemLayers {
+                        let isItemVisible: Bool
+                        switch self.visibility {
+                        case .none:
+                            isItemVisible = false
+                        case let .visible(_, subRect):
+                            var subRect = subRect
+                            subRect.origin.x = 0.0
+                            subRect.size.width = 10000.0
+                            if itemLayer.frame.intersects(subRect) {
+                                isItemVisible = true
+                            } else {
+                                isItemVisible = false
+                            }
+                        }
+                        itemLayer.isVisibleForAnimations = isItemVisible
+                    }
                 }
             }
         }
@@ -491,7 +527,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
                             updatedAttributes[NSAttributedString.Key("Attribute__EmbeddedItem")] = InlineStickerItem(file: emojiFile)
                             
-                            let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}\u{00a0}]", attributes: updatedAttributes)
+                            let insertString = NSAttributedString(string: "[\u{00a0}\u{00a0}]", attributes: updatedAttributes)
                             //updatedString.insert(insertString, at: NSRange(substringRange, in: updatedString.string).upperBound)
                             updatedString.replaceCharacters(in: range, with: insertString)
                         }
@@ -687,7 +723,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                             
-                            strongSelf.updateInlineStickers(context: item.context, textLayout: textLayout)
+                            strongSelf.updateInlineStickers(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, textLayout: textLayout)
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
@@ -718,7 +754,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    private func updateInlineStickers(context: AccountContext, textLayout: TextNodeLayout?) {
+    private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?) {
         var nextIndexById: [MediaId: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -739,7 +775,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, file: stickerItem.file)
+                        itemLayer = InlineStickerItemLayer(context: context, file: stickerItem.file, cache: cache, renderer: renderer)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         itemLayer.isVisibleForAnimations = self.isVisibleForAnimations

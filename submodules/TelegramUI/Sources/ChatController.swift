@@ -2903,7 +2903,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if !forceOpen {
                     strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
                         if !found, let itemNode = itemNode as? ChatMessageItemView, itemNode.item?.message.id == message.id, let (action, _, _, _, _) = itemNode.playMediaWithSound() {
-                            if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
+                            if case let .visible(fraction, _) = itemNode.visibility, fraction > 0.7 {
                                 action(Double(timestamp))
                             } else {
                                 let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(Double(timestamp)))
@@ -3564,7 +3564,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
-        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(backgroundNode: self.chatBackgroundNode))
+        }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         
         self.controllerInteraction = controllerInteraction
         
@@ -8827,7 +8827,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var hasUnconsumed = false
             strongSelf.chatDisplayNode.historyNode.forEachVisibleItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView, let (action, _, _, isUnconsumed, _) = itemNode.playMediaWithSound() {
-                    if case let .visible(fraction) = itemNode.visibility, fraction > 0.7 {
+                    if case let .visible(fraction, _) = itemNode.visibility, fraction > 0.7 {
                         actions.insert((isUnconsumed, action), at: 0)
                         if !hasUnconsumed && isUnconsumed {
                             hasUnconsumed = true
