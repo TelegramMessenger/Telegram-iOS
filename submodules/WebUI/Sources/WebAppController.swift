@@ -22,6 +22,104 @@ import BotPaymentsUI
 
 private let durgerKingBotIds: [Int64] = [5104055776, 2200339955]
 
+private class CancelButtonNode: ASDisplayNode {
+    enum State {
+        case cancel
+        case back
+    }
+    
+    private let buttonNode: HighlightTrackingButtonNode
+    private let arrowNode: ASImageNode
+    private let labelNode: ImmediateTextNode
+    
+    var state: State = .cancel
+    
+    var theme: PresentationTheme {
+        didSet {
+            
+        }
+    }
+    private let strings: PresentationStrings
+    
+    init(theme: PresentationTheme, strings: PresentationStrings) {
+        self.theme = theme
+        self.strings = strings
+        
+        self.buttonNode = HighlightTrackingButtonNode()
+        
+        self.arrowNode = ASImageNode()
+        self.arrowNode.displaysAsynchronously = false
+        
+        self.labelNode = ImmediateTextNode()
+        
+        super.init()
+        
+        self.addSubnode(self.buttonNode)
+        self.buttonNode.addSubnode(self.arrowNode)
+        self.buttonNode.addSubnode(self.labelNode)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            guard let strongSelf = self else {
+                return
+            }
+            if highlighted {
+                strongSelf.arrowNode.layer.removeAnimation(forKey: "opacity")
+                strongSelf.arrowNode.alpha = 0.4
+                strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
+                strongSelf.labelNode.alpha = 0.4
+            } else {
+                strongSelf.arrowNode.alpha = 1.0
+                strongSelf.arrowNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                strongSelf.labelNode.alpha = 1.0
+                strongSelf.labelNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+            }
+        }
+        
+        self.setState(.cancel, animated: false, force: true)
+    }
+    
+    func setState(_ state: State, animated: Bool, force: Bool = false) {
+        guard self.state != state || force else {
+            return
+        }
+        self.state = state
+        
+        if animated, let snapshotView = self.buttonNode.view.snapshotContentTree() {
+            snapshotView.layer.sublayerTransform = self.buttonNode.subnodeTransform
+            self.view.addSubview(snapshotView)
+            
+            snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.25, removeOnCompletion: false)
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+            
+            self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            self.buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.25)
+        }
+        
+        self.arrowNode.isHidden = state == .cancel
+        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Cancel : self.strings.Common_Back, font: Font.regular(17.0), textColor: self.theme.rootController.navigationBar.accentTextColor)
+        
+        let labelSize = self.labelNode.updateLayout(CGSize(width: 120.0, height: 56.0))
+        
+        self.buttonNode.frame = CGRect(origin: .zero, size: CGSize(width: labelSize.width, height: self.buttonNode.frame.height))
+        self.arrowNode.image = NavigationBarTheme.generateBackArrowImage(color: self.theme.rootController.navigationBar.accentTextColor)
+        if let image = self.arrowNode.image {
+            self.arrowNode.frame = CGRect(origin: self.arrowNode.frame.origin, size: image.size)
+        }
+        self.labelNode.frame = CGRect(origin: self.labelNode.frame.origin, size: labelSize)
+        self.buttonNode.subnodeTransform = CATransform3DMakeTranslation(state == .back ? 11.0 : 0.0, 0.0, 0.0)
+    }
+    
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        self.buttonNode.frame = CGRect(origin: .zero, size: CGSize(width: self.buttonNode.frame.width, height: constrainedSize.height))
+        self.arrowNode.frame = CGRect(origin: CGPoint(x: -19.0, y: floorToScreenPixels((constrainedSize.height - self.arrowNode.frame.size.height) / 2.0)), size: self.arrowNode.frame.size)
+        self.labelNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((constrainedSize.height - self.labelNode.frame.size.height) / 2.0)), size: self.labelNode.frame.size)
+
+        return CGSize(width: 70.0, height: 56.0)
+    }
+}
+
 public struct WebAppParameters {
     let peerId: PeerId
     let botId: PeerId
@@ -280,6 +378,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         @objc fileprivate func mainButtonPressed() {
+            self.webView?.lastTouchTimestamp = CACurrentMediaTime()
             self.webView?.sendEvent(name: "main_button_pressed", data: nil)
         }
         
@@ -504,7 +603,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 })
                                 if let navigationController = strongSelf.controller?.getNavigationController() {
                                     let checkoutController = BotCheckoutController(context: strongSelf.context, invoice: invoice, source: .slug(slug), inputData: inputData, completed: { currencyValue, receiptMessageId in
-                                        
+                                        self?.sendInvoiceClosedEvent(slug: slug, result: .paid)
+                                    }, cancelled: { [weak self] in
+                                        self?.sendInvoiceClosedEvent(slug: slug, result: .cancelled)
+                                    }, failed: { [weak self] in
+                                        self?.sendInvoiceClosedEvent(slug: slug, result: .failed)
                                     })
                                     checkoutController.navigationPresentation = .modal
                                     navigationController.pushViewController(checkoutController)
@@ -521,7 +624,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     }
                 case "web_app_setup_back_button":
-                    break
+                    if let json = json, let isVisible = json["is_visible"] as? Bool {
+                        self.controller?.cancelButtonNode.setState(isVisible ? .back : .cancel, animated: true)
+                    }
                 case "web_app_trigger_haptic_feedback":
                     if let json = json, let type = json["type"] as? String {
                         switch type {
@@ -633,9 +738,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
             }
         }
+        
         private func sendInvoiceClosedEvent(slug: String, result: InvoiceCloseResult) {
             let paramsString = "{slug: \"\(slug)\", status: \"\(result.string)\"}"
             self.webView?.sendEvent(name: "invoice_closed", data: paramsString)
+        }
+        
+        fileprivate func sendBackButtonEvent() {
+            self.webView?.sendEvent(name: "back_button_pressed", data: nil)
         }
     }
     
@@ -644,6 +754,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     private var titleView: CounterContollerTitleView?
+    private let cancelButtonNode: CancelButtonNode
     private let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
@@ -684,6 +795,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         
+        self.cancelButtonNode = CancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        
         self.moreButtonNode = MoreButtonNode(theme: self.presentationData.theme)
         self.moreButtonNode.iconNode.enqueueState(.more, animated: false)
         
@@ -692,7 +805,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+//        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customDisplayNode: self.cancelButtonNode)
+        self.navigationItem.leftBarButtonItem?.action = #selector(self.cancelPressed)
+        self.navigationItem.leftBarButtonItem?.target = self
+        
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreButtonNode)
         self.navigationItem.rightBarButtonItem?.action = #selector(self.moreButtonPressed)
         self.navigationItem.rightBarButtonItem?.target = self
@@ -717,6 +835,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
                 strongSelf.titleView?.theme = presentationData.theme
                 
+                strongSelf.cancelButtonNode.theme = presentationData.theme
+                strongSelf.moreButtonNode.theme = presentationData.theme
+                
                 if strongSelf.isNodeLoaded {
                     strongSelf.controllerNode.updatePresentationData(presentationData)
                 }
@@ -734,7 +855,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     @objc private func cancelPressed() {
-        self.dismiss()
+        if case .back = self.cancelButtonNode.state {
+            self.controllerNode.sendBackButtonEvent()
+        } else {
+            self.dismiss()
+        }
     }
     
     @objc private func moreButtonPressed() {

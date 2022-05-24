@@ -226,6 +226,8 @@ final class PeekControllerNode: ViewControllerTracingNode {
     }
     
     func animateOut(to rect: CGRect, completion: @escaping () -> Void) {
+        self.isUserInteractionEnabled = false
+        
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.blurView.layer.animateAlpha(from: self.blurView.alpha, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.darkDimNode.layer.animateAlpha(from: self.darkDimNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)

@@ -708,7 +708,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-                self.originalRemainingSeconds = 3
+                self.originalRemainingSeconds = isUserInteractionEnabled ? 5 : 3
             
                 if let updatedFetchSignal = updatedFetchSignal {
                     self.fetchResourceDisposable = updatedFetchSignal.start()

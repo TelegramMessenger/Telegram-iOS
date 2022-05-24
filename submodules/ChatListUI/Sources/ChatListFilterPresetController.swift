@@ -13,6 +13,7 @@ import ItemListPeerItem
 import ItemListPeerActionItem
 import AvatarNode
 import ChatListFilterSettingsHeaderItem
+import PremiumUI
 
 private enum FilterSection: Int32, Hashable {
     case include
@@ -454,7 +455,7 @@ private struct ChatListFilterPresetControllerState: Equatable {
     }
 }
 
-private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer]) -> [ChatListFilterPresetEntry] {
+private func chatListFilterPresetControllerEntries(presentationData: PresentationData, isNewFilter: Bool, state: ChatListFilterPresetControllerState, includePeers: [EngineRenderedPeer], excludePeers: [EngineRenderedPeer], isPremium: Bool, limit: Int32) -> [ChatListFilterPresetEntry] {
     var entries: [ChatListFilterPresetEntry] = []
     
     if isNewFilter {
@@ -465,7 +466,9 @@ private func chatListFilterPresetControllerEntries(presentationData: Presentatio
     entries.append(.name(placeholder: presentationData.strings.ChatListFolder_NamePlaceholder, value: state.name))
     
     entries.append(.includePeersHeader(presentationData.strings.ChatListFolder_IncludedSectionHeader))
-    entries.append(.addIncludePeer(title: presentationData.strings.ChatListFolder_AddChats))
+    if includePeers.count < limit {
+        entries.append(.addIncludePeer(title: presentationData.strings.ChatListFolder_AddChats))
+    }
     
     var includeCategoryIndex = 0
     for category in ChatListFilterIncludeCategory.allCases {
@@ -871,8 +874,67 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     actionsDisposable.add(addPeerDisposable)
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var focusOnNameImpl: (() -> Void)?
+    
+    let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
+    let stateWithPeers = statePromise.get()
+    |> mapToSignal { state -> Signal<(ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]), NoError> in
+        let currentPeersValue = currentPeers.with { $0 }
+        var included: [EngineRenderedPeer] = []
+        var excluded: [EngineRenderedPeer] = []
+        var missingPeers = false
+        for peerId in state.additionallyIncludePeers {
+            if let peer = currentPeersValue[peerId] {
+                included.append(peer)
+            } else {
+                missingPeers = true
+            }
+        }
+        for peerId in state.additionallyExcludePeers {
+            if let peer = currentPeersValue[peerId] {
+                excluded.append(peer)
+            } else {
+                missingPeers = true
+            }
+        }
+        if missingPeers {
+            return context.engine.data.get(
+                EngineDataMap(
+                    state.additionallyIncludePeers.map { peerId -> TelegramEngine.EngineData.Item.Peer.RenderedPeer in
+                        return TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId)
+                    }
+                ),
+                EngineDataMap(
+                    state.additionallyExcludePeers.map { peerId -> TelegramEngine.EngineData.Item.Peer.RenderedPeer in
+                        return TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId)
+                    }
+                )
+            )
+            |> map { additionallyIncludePeers, additionallyExcludePeers -> (ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]) in
+                var included: [EngineRenderedPeer] = []
+                var excluded: [EngineRenderedPeer] = []
+                var allPeers: [EnginePeer.Id: EngineRenderedPeer] = [:]
+                for peerId in state.additionallyIncludePeers {
+                    if let renderedPeerValue = additionallyIncludePeers[peerId], let renderedPeer = renderedPeerValue {
+                        included.append(renderedPeer)
+                        allPeers[renderedPeer.peerId] = renderedPeer
+                    }
+                }
+                for peerId in state.additionallyExcludePeers {
+                    if let renderedPeerValue = additionallyExcludePeers[peerId], let renderedPeer = renderedPeerValue {
+                        excluded.append(renderedPeer)
+                        allPeers[renderedPeer.peerId] = renderedPeer
+                    }
+                }
+                let _ = currentPeers.swap(allPeers)
+                return (state, included, excluded)
+            }
+        } else {
+            return .single((state, included, excluded))
+        }
+    }
     
     let arguments = ChatListFilterPresetControllerArguments(
         context: context,
@@ -880,24 +942,59 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             updateState(f)
         },
         openAddIncludePeer: {
-            let state = stateValue.with { $0 }
-            var includePeers = ChatListFilterIncludePeers()
-            includePeers.setPeers(state.additionallyIncludePeers)
-            let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
-            
-            let _ = (context.engine.peers.currentChatListFilters()
-            |> deliverOnMainQueue).start(next: { filters in
-                let controller = internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, updated: { filter in
-                    skipStateAnimation = true
-                    updateState { state in
-                        var state = state
-                        state.additionallyIncludePeers = filter.data?.includePeers.peers ?? []
-                        state.additionallyExcludePeers = filter.data?.excludePeers ?? []
-                        state.includeCategories = filter.data?.categories ?? []
-                        return state
+            let _ = combineLatest(
+                queue: Queue.mainQueue(),
+                context.engine.data.get(
+                    TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                    TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                    TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+                ),
+                stateWithPeers |> take(1)
+            ).start(next: { result, state in
+                let (accountPeer, limits, premiumLimits) = result
+                                
+                let (_, currentIncludePeers, _) = state
+
+                let limit = limits.maxFolderChatsCount
+                let premiumLimit = premiumLimits.maxFolderChatsCount
+                if let accountPeer = accountPeer, accountPeer.isPremium {
+                    if currentIncludePeers.count >= premiumLimit {
+                        return
                     }
+                } else {
+                    if currentIncludePeers.count >= limit {
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumLimitScreen(context: context, subject: .chatsInFolder, count: Int32(currentIncludePeers.count), action: {
+                            let controller = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+                            replaceImpl?(controller)
+                        })
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        pushControllerImpl?(controller)
+                        return
+                    }
+                }
+                
+                let state = stateValue.with { $0 }
+                var includePeers = ChatListFilterIncludePeers()
+                includePeers.setPeers(state.additionallyIncludePeers)
+                let filter: ChatListFilter = .filter(id: currentPreset?.id ?? -1, title: state.name, emoticon: currentPreset?.emoticon, data: ChatListFilterData(categories: state.includeCategories, excludeMuted: state.excludeMuted, excludeRead: state.excludeRead, excludeArchived: state.excludeArchived, includePeers: includePeers, excludePeers: state.additionallyExcludePeers))
+                
+                let _ = (context.engine.peers.currentChatListFilters()
+                |> deliverOnMainQueue).start(next: { filters in
+                    let controller = internalChatListFilterAddChatsController(context: context, filter: filter, allFilters: filters, applyAutomatically: false, updated: { filter in
+                        skipStateAnimation = true
+                        updateState { state in
+                            var state = state
+                            state.additionallyIncludePeers = filter.data?.includePeers.peers ?? []
+                            state.additionallyExcludePeers = filter.data?.excludePeers ?? []
+                            state.includeCategories = filter.data?.categories ?? []
+                            return state
+                        }
+                    })
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
-                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             })
         },
         openAddExcludePeer: {
@@ -983,65 +1080,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
             }
         }
     )
-    
-    let currentPeers = Atomic<[PeerId: EngineRenderedPeer]>(value: [:])
-    let stateWithPeers = statePromise.get()
-    |> mapToSignal { state -> Signal<(ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]), NoError> in
-        let currentPeersValue = currentPeers.with { $0 }
-        var included: [EngineRenderedPeer] = []
-        var excluded: [EngineRenderedPeer] = []
-        var missingPeers = false
-        for peerId in state.additionallyIncludePeers {
-            if let peer = currentPeersValue[peerId] {
-                included.append(peer)
-            } else {
-                missingPeers = true
-            }
-        }
-        for peerId in state.additionallyExcludePeers {
-            if let peer = currentPeersValue[peerId] {
-                excluded.append(peer)
-            } else {
-                missingPeers = true
-            }
-        }
-        if missingPeers {
-            return context.engine.data.get(
-                EngineDataMap(
-                    state.additionallyIncludePeers.map { peerId -> TelegramEngine.EngineData.Item.Peer.RenderedPeer in
-                        return TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId)
-                    }
-                ),
-                EngineDataMap(
-                    state.additionallyExcludePeers.map { peerId -> TelegramEngine.EngineData.Item.Peer.RenderedPeer in
-                        return TelegramEngine.EngineData.Item.Peer.RenderedPeer(id: peerId)
-                    }
-                )
-            )
-            |> map { additionallyIncludePeers, additionallyExcludePeers -> (ChatListFilterPresetControllerState, [EngineRenderedPeer], [EngineRenderedPeer]) in
-                var included: [EngineRenderedPeer] = []
-                var excluded: [EngineRenderedPeer] = []
-                var allPeers: [EnginePeer.Id: EngineRenderedPeer] = [:]
-                for peerId in state.additionallyIncludePeers {
-                    if let renderedPeerValue = additionallyIncludePeers[peerId], let renderedPeer = renderedPeerValue {
-                        included.append(renderedPeer)
-                        allPeers[renderedPeer.peerId] = renderedPeer
-                    }
-                }
-                for peerId in state.additionallyExcludePeers {
-                    if let renderedPeerValue = additionallyExcludePeers[peerId], let renderedPeer = renderedPeerValue {
-                        excluded.append(renderedPeer)
-                        allPeers[renderedPeer.peerId] = renderedPeer
-                    }
-                }
-                let _ = currentPeers.swap(allPeers)
-                return (state, included, excluded)
-            }
-        } else {
-            return .single((state, included, excluded))
-        }
-    }
-    
+        
     var attemptNavigationImpl: (() -> Bool)?
     let applyImpl: (() -> Void)? = {
         let state = stateValue.with { $0 }
@@ -1093,11 +1132,17 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,
-        stateWithPeers
+        stateWithPeers,
+        context.account.postbox.peerView(id: context.account.peerId),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+        )
     )
     |> deliverOnMainQueue
-    |> map { presentationData, stateWithPeers -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, stateWithPeers, peerView, premiumLimits -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (state, includePeers, excludePeers) = stateWithPeers
+        
+        let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
         
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             if attemptNavigationImpl?() ?? true {
@@ -1115,7 +1160,7 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(currentPreset != nil ? presentationData.strings.ChatListFolder_TitleEdit : presentationData.strings.ChatListFolder_TitleCreate), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: chatListFilterPresetControllerEntries(presentationData: presentationData, isNewFilter: currentPreset == nil, state: state, includePeers: includePeers, excludePeers: excludePeers, isPremium: isPremium, limit: premiumLimits.maxFolderChatsCount), style: .blocks, emptyStateItem: nil, animateChanges: !skipStateAnimation)
         skipStateAnimation = false
         
         return (controllerState, (listState, arguments))
@@ -1128,6 +1173,9 @@ func chatListFilterPresetController(context: AccountContext, currentPreset: Chat
     controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, d in
         controller?.present(c, in: .window(.root), with: d)
+    }
+    pushControllerImpl = { [weak controller] c in
+        controller?.push(c)
     }
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()

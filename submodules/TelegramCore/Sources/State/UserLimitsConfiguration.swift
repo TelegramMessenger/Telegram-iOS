@@ -75,12 +75,12 @@ extension UserLimitsConfiguration {
         }
         
         self.maxPinnedChatCount = getValue("dialogs_pinned_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxChannelsCount = getValue("channels_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxPublicLinksCount = getValue("channels_public_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxSavedGifCount = getValue("saved_gifs_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxFavedStickerCount = getValue("stickers_faved_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxFoldersCount = getValue("dialog_filters_limit", orElse: defaultValue.maxPinnedChatCount)
-        self.maxFolderChatsCount = getValue("dialog_filters_chats_limit", orElse: defaultValue.maxPinnedChatCount)
+        self.maxChannelsCount = getValue("channels_limit", orElse: defaultValue.maxChannelsCount)
+        self.maxPublicLinksCount = getValue("channels_public_limit", orElse: defaultValue.maxPublicLinksCount)
+        self.maxSavedGifCount = getValue("saved_gifs_limit", orElse: defaultValue.maxSavedGifCount)
+        self.maxFavedStickerCount = getValue("stickers_faved_limit", orElse: defaultValue.maxFavedStickerCount)
+        self.maxFoldersCount = getValue("dialog_filters_limit", orElse: defaultValue.maxFoldersCount)
+        self.maxFolderChatsCount = getValue("dialog_filters_chats_limit", orElse: defaultValue.maxFolderChatsCount)
         self.maxCaptionLengthCount = getValue("caption_length_limit", orElse: defaultValue.maxCaptionLengthCount)
         self.maxUploadFileParts = getValue("upload_max_fileparts", orElse: defaultValue.maxUploadFileParts)
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)

@@ -30,6 +30,7 @@ import DebugSettingsUI
 import ChatPresentationInterfaceState
 import Pasteboard
 import SettingsUI
+import PremiumUI
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -391,6 +392,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
             })
         })))
+        
+        if !chatPresentationInterfaceState.isPremium {
+            actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Hide, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0)), badge: nil, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.actionSheet.primaryTextColor)
+            }, iconSource: nil, action: { c, _ in
+                c.dismiss(completion: {
+                    controllerInteraction.navigationController()?.pushViewController(PremiumIntroScreen(context: context, source: .ads))
+                })
+            })))
+        }
 
         actions.append(.separator)
 

@@ -497,7 +497,10 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
     private let present: (ViewController, Any?) -> Void
     private let dismissAnimated: () -> Void
     private let completed: (String, EngineMessage.Id?) -> Void
-    
+
+    var pending: () -> Void = {}
+    var failed: () -> Void = {}
+
     private var stateValue = BotCheckoutControllerState()
     private let state = ValuePromise(BotCheckoutControllerState(), ignoreRepeated: true)
     private var arguments: BotCheckoutControllerArguments?
@@ -1312,6 +1315,8 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     }
                     
                     strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
+                    
+                    strongSelf.failed()
                 }
             }))
         }

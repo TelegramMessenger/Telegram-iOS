@@ -20,6 +20,7 @@ import PresentationDataUtils
 import ChatInterfaceState
 import ChatPresentationInterfaceState
 import UndoUI
+import PremiumUI
 
 struct PeerSpecificPackData {
     let peer: Peer
@@ -1130,13 +1131,11 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             return animatedEmojiStickers
         }
-        
-        let accountPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        
+                
         let previousView = Atomic<ItemCollectionsView?>(value: nil)
         let transitionQueue = Queue()
-        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, accountPeer)
-        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, accountPeer -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
+        let transitions = combineLatest(queue: transitionQueue, itemCollectionsView, peerSpecificPack, context.account.viewTracker.featuredStickerPacks(), self.themeAndStringsPromise.get(), reactions, self.panelIsFocusedPromise.get(), ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager), temporaryPackOrder.get(), animatedEmojiStickers, context.account.postbox.peerView(id: context.account.peerId))
+        |> map { viewAndUpdate, peerSpecificPack, trendingPacks, themeAndStrings, reactions, panelExpanded, dismissedTrendingStickerPacks, temporaryPackOrder, animatedEmojiStickers, peerView -> (ItemCollectionsView, ChatMediaInputPanelTransition, ChatMediaInputPanelTransition, Bool, ChatMediaInputGridTransition, Bool) in
             let (view, viewUpdate) = viewAndUpdate
             let previous = previousView.swap(view)
             var update = viewUpdate
@@ -1168,6 +1167,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 trendingIsDismissed = true
             }
                         
+            let accountPeer = peerView.peers[peerView.peerId]
             let hasPremium = accountPeer?.isPremium ?? false
             
             let panelEntries = chatMediaInputPanelEntries(view: view, savedStickers: savedStickers, recentStickers: recentStickers, temporaryPackOrder: temporaryPackOrder, trendingIsDismissed: trendingIsDismissed, peerSpecificPack: peerSpecificPack.0, canInstallPeerSpecificPack: peerSpecificPack.1, theme: theme, strings: strings, premiumStickers: hasPremium ? premiumStickers : nil, expanded: panelExpanded, reorderable: true)
@@ -1581,11 +1581,25 @@ final class ChatMediaInputNode: ChatInputNode {
                                             f(.default)
                                             
                                             if let strongSelf = self {
-                                                if isStarred {
-                                                    let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                                } else {
-                                                    let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                                }
+                                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                                let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                                |> deliverOnMainQueue).start(next: { result in
+                                                    switch result {
+                                                        case .generic:
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                        case let .limitExceeded(limit, premiumLimit):
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                                if let strongSelf = self {
+                                                                    if case .info = action {
+                                                                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                        strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                                                                        return true
+                                                                    }
+                                                                }
+                                                                return false
+                                                            }), nil)
+                                                    }
+                                                })
                                             }
                                         }))
                                     )
@@ -1617,8 +1631,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: {
-                                        
+                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                        strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
                                     }))
                                 } else {
                                     return nil
@@ -1707,11 +1725,25 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 f(.default)
                                                 
                                                 if let strongSelf = self {
-                                                    if isStarred {
-                                                        let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
-                                                    } else {
-                                                        let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
-                                                    }
+                                                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                                    let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
+                                                    |> deliverOnMainQueue).start(next: { result in
+                                                        switch result {
+                                                            case .generic:
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                            case let .limitExceeded(limit, premiumLimit):
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                                    if let strongSelf = self {
+                                                                        if case .info = action {
+                                                                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
+                                                                            strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
+                                                                            return true
+                                                                        }
+                                                                    }
+                                                                    return false
+                                                                }), nil)
+                                                        }
+                                                    })
                                                 }
                                             }))
                                         )
@@ -1745,8 +1777,12 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
-                                            
+                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
+                                            guard let strongSelf = self else {
+                                                return
+                                            }
+                                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .stickers)
+                                            strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
                                         }))
                                     } else {
                                         return nil

@@ -16,6 +16,27 @@ import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
 
+private func generateCloseButtonImage(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.setFillColor(UIColor(rgb: 0x808084, alpha: 0.1).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+        
+        context.setLineWidth(2.0)
+        context.setLineCap(.round)
+        context.setStrokeColor(theme.actionSheet.inputClearButtonColor.cgColor)
+        
+        context.move(to: CGPoint(x: 10.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 20.0, y: 20.0))
+        context.strokePath()
+        
+        context.move(to: CGPoint(x: 20.0, y: 10.0))
+        context.addLine(to: CGPoint(x: 10.0, y: 20.0))
+        context.strokePath()
+    })
+}
+
 private class PremiumLimitAnimationComponent: Component {
     private let iconName: String
     private let inactiveColor: UIColor
@@ -230,7 +251,7 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0), size: CGSize(width: 44.0, height: 12.0))
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
-            self.badgeView.center = CGPoint(x: availableSize.width * component.badgePosition, y: 82.0)
+            self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition, y: 82.0)
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
                 self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeSize.height / 2.0)
@@ -540,6 +561,8 @@ private final class LimitSheetContent: CombinedComponent {
         var limits: EngineConfiguration.UserLimits
         var premiumLimits: EngineConfiguration.UserLimits
         
+        var cachedCloseImage: (UIImage, PresentationTheme)?
+        
         init(context: AccountContext, subject: PremiumLimitScreen.Subject) {
             self.context = context
             self.limits = EngineConfiguration.UserLimits.defaultValue
@@ -571,6 +594,7 @@ private final class LimitSheetContent: CombinedComponent {
     }
     
     static var body: Body {
+        let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
         let text = Child(MultilineTextComponent.self)
         let limit = Child(PremiumLimitDisplayComponent.self)
@@ -587,6 +611,28 @@ private final class LimitSheetContent: CombinedComponent {
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 24.0 + environment.safeInsets.left
+            
+            let closeImage: UIImage
+            if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
+                closeImage = image
+            } else {
+                closeImage = generateCloseButtonImage(theme: theme)!
+                state.cachedCloseImage = (closeImage, theme)
+            }
+            
+            let closeButton = closeButton.update(
+                component: Button(
+                    content: AnyComponent(Image(image: closeImage)),
+                    action: { [weak component] in
+                        component?.dismiss()
+                    }
+                ),
+                availableSize: CGSize(width: 30.0, height: 30.0),
+                transition: .immediate
+            )
+            context.add(closeButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
+            )
             
             let iconName: String
             let badgeText: String
@@ -623,14 +669,14 @@ private final class LimitSheetContent: CombinedComponent {
                     premiumValue = "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .files:
-                    let limit: Int64 = 2048 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
-                    let premiumLimit: Int64 = 4096 * 1024 * 1024 * Int64(state.limits.maxUploadFileParts)
+                    let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024
+                    let premiumLimit = Int64(state.limits.maxUploadFileParts) * 512 * 1024
                     iconName = "Premium/File"
                     badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
                     defaultValue = ""
                     premiumValue = dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    badgePosition = 0.5
             }
             
             let title = title.update(
@@ -669,7 +715,7 @@ private final class LimitSheetContent: CombinedComponent {
             if state.initialized {
                 let limit = limit.update(
                     component: PremiumLimitDisplayComponent(
-                        inactiveColor: UIColor(rgb: 0xE9E9EA),
+                        inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
                         activeColors: [
                             UIColor(rgb: 0x0077ff),
                             UIColor(rgb: 0x6b93ff),
@@ -678,7 +724,7 @@ private final class LimitSheetContent: CombinedComponent {
                         ],
                         inactiveTitle: strings.Premium_Free,
                         inactiveValue: defaultValue,
-                        inactiveTitleColor: .black,
+                        inactiveTitleColor: theme.list.itemPrimaryTextColor,
                         activeTitle: strings.Premium_Premium,
                         activeValue: premiumValue,
                         activeTitleColor: .white,

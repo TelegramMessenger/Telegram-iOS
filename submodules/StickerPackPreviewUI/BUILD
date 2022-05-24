@@ -33,6 +33,7 @@ swift_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/MoreButtonNode:MoreButtonNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/PremiumUI:PremiumUI",
     ],
     visibility = [
         "//visibility:public",

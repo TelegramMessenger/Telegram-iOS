@@ -152,7 +152,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             if isPremiumSticker {
                 animationNode.completed = { [weak self] _ in
                     if let strongSelf = self, let animationNode = strongSelf.animationNode, let additionalAnimationNode = strongSelf.additionalAnimationNode {
-                        Queue.mainQueue().after(0.5, {
+                        Queue.mainQueue().after(0.1, {
                             animationNode.play()
                             additionalAnimationNode.play()
                         })
@@ -250,6 +250,7 @@ final class PremiumStickerPackAccessoryNode: SparseNode, PeekControllerAccessory
         self.addSubnode(self.cancelButton)
         
         self.proceedButton.pressed = { [weak self] in
+            self?.dismiss()
             self?.proceed()
         }
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)

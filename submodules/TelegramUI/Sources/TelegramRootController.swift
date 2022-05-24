@@ -30,6 +30,8 @@ public final class TelegramRootController: NavigationController {
     private var permissionsDisposable: Disposable?
     private var presentationDataDisposable: Disposable?
     private var presentationData: PresentationData
+    
+    private var applicationInFocusDisposable: Disposable?
         
     public init(context: AccountContext) {
         self.context = context
@@ -71,6 +73,15 @@ public final class TelegramRootController: NavigationController {
                 }
             }
         })
+        
+        self.applicationInFocusDisposable = (context.sharedContext.applicationBindings.applicationIsActive
+        |> distinctUntilChanged
+        |> deliverOn(Queue.mainQueue())).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setForceBadgeHidden(!value)
+        })
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -80,6 +91,7 @@ public final class TelegramRootController: NavigationController {
     deinit {
         self.permissionsDisposable?.dispose()
         self.presentationDataDisposable?.dispose()
+        self.applicationInFocusDisposable?.dispose()
     }
     
     public func addRootControllers(showCallsTab: Bool) {
