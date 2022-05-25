@@ -188,6 +188,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         private let backgroundNode: ASDisplayNode
         private let headerBackgroundNode: ASDisplayNode
+        private let topOverscrollNode: ASDisplayNode
         
         fileprivate var webView: WebAppWebView?
         private var placeholderIcon: (UIImage, Bool)?
@@ -218,6 +219,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             self.backgroundNode = ASDisplayNode()
             self.headerBackgroundNode = ASDisplayNode()
+            self.topOverscrollNode = ASDisplayNode()
             
             super.init()
             
@@ -387,6 +389,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             self.view.addSubview(webView)
+            webView.scrollView.addSubnode(self.topOverscrollNode)
         }
         
         @objc fileprivate func mainButtonPressed() {
@@ -482,6 +485,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         
             transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: layout.size))
             transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight)))
+            transition.updateFrame(node: self.topOverscrollNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -1000.0), size: CGSize(width: layout.size.width, height: 1000.0)))
             
             if let webView = self.webView {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
@@ -718,6 +722,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 color = nil
             }
             transition.updateBackgroundColor(node: self.headerBackgroundNode, color: color ?? .clear)
+            transition.updateBackgroundColor(node: self.topOverscrollNode, color: color ?? .clear)
         }
         
         private func handleSendData(data string: String) {
