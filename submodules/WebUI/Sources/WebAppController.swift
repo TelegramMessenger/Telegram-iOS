@@ -162,7 +162,7 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
     var secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
     if backgroundColor == 0x000000 {
         backgroundColor = presentationTheme.list.itemBlocksBackgroundColor.rgb
-        secondaryBackgroundColor = presentationTheme.list.plainBackgroundColor.rgb
+        secondaryBackgroundColor = presentationTheme.list.itemBlocksBackgroundColor.rgb
     }
     return [
         "bg_color": Int32(bitPattern: backgroundColor),
@@ -185,6 +185,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
     fileprivate class Node: ViewControllerTracingNode, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
         private weak var controller: WebAppController?
+        
+        private let backgroundNode: ASDisplayNode
+        private let headerBackgroundNode: ASDisplayNode
         
         fileprivate var webView: WebAppWebView?
         private var placeholderIcon: (UIImage, Bool)?
@@ -212,6 +215,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.context = context
             self.controller = controller
             self.presentationData = controller.presentationData
+            
+            self.backgroundNode = ASDisplayNode()
+            self.headerBackgroundNode = ASDisplayNode()
             
             super.init()
             
@@ -243,6 +249,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             placeholderNode.allowsGroupOpacity = true
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
+            
+            self.addSubnode(self.backgroundNode)
+            self.addSubnode(self.headerBackgroundNode)
             
             let placeholder: Signal<(FileMediaReference, Bool)?, NoError>
             if durgerKingBotIds.contains(controller.botId.id._internalGetInt64Value()) {
@@ -471,6 +480,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let previousLayout = self.validLayout?.0
             self.validLayout = (layout, navigationBarHeight)
                         
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: layout.size))
+            transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight)))
+            
             if let webView = self.webView {
                 let frame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom)))
                 let viewportFrame = CGRect(origin: CGPoint(x: layout.safeInsets.left, y: navigationBarHeight), size: CGSize(width: layout.size.width - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - navigationBarHeight - layout.intrinsicInsets.bottom - layout.additionalInsets.bottom)))
@@ -669,9 +681,43 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                 break
                         }
                     }
+                case "web_app_set_background_color":
+                    if let json = json, let colorValue = json["color"] as? String, let color = UIColor(hexString: colorValue) {
+                        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+                        transition.updateBackgroundColor(node: self.backgroundNode, color: color)
+                    }
+                case "web_app_set_header_color":
+                    if let json = json, let colorKey = json["color_key"] as? String, ["bg_color", "secondary_bg_color"].contains(colorKey) {
+                        self.headerColorKey = colorKey
+                        self.updateHeaderBackgroundColor(transition: .animated(duration: 0.2, curve: .linear))
+                    }
                 default:
                     break
             }
+        }
+        
+        private var headerColorKey: String?
+        private func updateHeaderBackgroundColor(transition: ContainedViewLayoutTransition) {
+            let color: UIColor?
+            var backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            var secondaryBackgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+            if backgroundColor.rgb == 0x000000 {
+                backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+                secondaryBackgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
+            }
+            if let headerColorKey = self.headerColorKey {
+                switch headerColorKey {
+                    case "bg_color":
+                        color = backgroundColor
+                    case "secondary_bg_color":
+                        color = secondaryBackgroundColor
+                    default:
+                        color = nil
+                }
+            } else {
+                color = nil
+            }
+            transition.updateBackgroundColor(node: self.headerBackgroundNode, color: color ?? .clear)
         }
         
         private func handleSendData(data string: String) {
@@ -702,6 +748,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             } else {
                 self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
+            self.updateHeaderBackgroundColor(transition: .immediate)
             self.sendThemeChangedEvent()
         }
         

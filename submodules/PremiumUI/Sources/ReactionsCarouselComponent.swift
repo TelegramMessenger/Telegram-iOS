@@ -42,8 +42,12 @@ final class ReactionsCarouselComponent: Component {
     public final class View: UIView {
         private var component: ReactionsCarouselComponent?
         private var node: ReactionCarouselNode?
+        
+        private var isVisible = false
                 
-        public func update(component: ReactionsCarouselComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+        public func update(component: ReactionsCarouselComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+            let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
+            
             if self.node == nil {
                 let node = ReactionCarouselNode(
                     context: component.context,
@@ -54,7 +58,6 @@ final class ReactionsCarouselComponent: Component {
                 self.addSubnode(node)
             }
             
-            let isFirstTime = self.component == nil
             self.component = component
                         
             if let node = self.node {
@@ -62,9 +65,10 @@ final class ReactionsCarouselComponent: Component {
                 node.updateLayout(size: availableSize, transition: .immediate)
             }
             
-            if isFirstTime {
+            if isDisplaying && !self.isVisible {
                 self.node?.animateIn()
             }
+            self.isVisible = isDisplaying
             
             return availableSize
         }
@@ -75,7 +79,7 @@ final class ReactionsCarouselComponent: Component {
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, transition: transition)
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
     }
 }
 

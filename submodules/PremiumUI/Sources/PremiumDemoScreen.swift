@@ -129,13 +129,18 @@ private final class GradientBackgroundComponent: Component {
 
 final class DemoPageEnvironment: Equatable {
     public let isDisplaying: Bool
+    public let isCentral: Bool
     
-    public init(isDisplaying: Bool) {
+    public init(isDisplaying: Bool, isCentral: Bool) {
         self.isDisplaying = isDisplaying
+        self.isCentral = isCentral
     }
     
     public static func ==(lhs: DemoPageEnvironment, rhs: DemoPageEnvironment) -> Bool {
         if lhs.isDisplaying != rhs.isDisplaying {
+            return false
+        }
+        if lhs.isCentral != rhs.isCentral {
             return false
         }
         return true
@@ -317,7 +322,7 @@ private final class DemoPagerComponent: Component {
                 if let itemView = self.itemViews[item.content.id] {
                     let isDisplaying = itemView.frame.intersects(self.scrollView.bounds)
                         
-                    let environment = DemoPageEnvironment(isDisplaying: isDisplaying)
+                    let environment = DemoPageEnvironment(isDisplaying: isDisplaying, isCentral: isDisplaying)
                     let _ = itemView.update(
                         transition: .immediate,
                         component: item.content.component,
@@ -362,7 +367,7 @@ private final class DemoPagerComponent: Component {
                 let itemFrame = CGRect(origin: CGPoint(x: availableSize.width * CGFloat(i), y: 0.0), size: availableSize)
                 let isDisplaying = itemFrame.intersects(self.scrollView.bounds)
                 
-                let environment = DemoPageEnvironment(isDisplaying: isDisplaying)
+                let environment = DemoPageEnvironment(isDisplaying: isDisplaying, isCentral: isDisplaying)
                 let _ = itemView.update(
                     transition: itemTransition,
                     component: item.content.component,

@@ -718,13 +718,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
+    let isPremium: Bool?
     let price: String?
     let present: (ViewController) -> Void
     let buy: () -> Void
     let updateIsFocused: (Bool) -> Void
     
-    init(context: AccountContext, price: String?, present: @escaping (ViewController) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
+    init(context: AccountContext, isPremium: Bool?, price: String?, present: @escaping (ViewController) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
         self.context = context
+        self.isPremium = isPremium
         self.price = price
         self.present = present
         self.buy = buy
@@ -733,6 +735,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     
     static func ==(lhs: PremiumIntroScreenContentComponent, rhs: PremiumIntroScreenContentComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isPremium != rhs.isPremium {
             return false
         }
         if lhs.price != rhs.price {
@@ -841,7 +846,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let text = text.update(
                 component: MultilineTextComponent(
                     text: .markdown(
-                        text: strings.Premium_Description,
+                        text: context.component.isPremium == true ? strings.Premium_SubscribedDescription : strings.Premium_Description,
                         attributes: markdownAttributes
                     ),
                     horizontalAlignment: .center,
@@ -1166,6 +1171,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         var inProgress = false
         var premiumProduct: InAppPurchaseManager.Product?
+        var isPremium: Bool?
+        
         private var disposable: Disposable?
         private var paymentDisposable = MetaDisposable()
         private var activationDisposable = MetaDisposable()
@@ -1178,10 +1185,17 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             super.init()
             
             if let inAppPurchaseManager = context.sharedContext.inAppPurchaseManager {
-                self.disposable = (inAppPurchaseManager.availableProducts
-                |> deliverOnMainQueue).start(next: { [weak self] products in
+                self.disposable = combineLatest(
+                    queue: Queue.mainQueue(),
+                    inAppPurchaseManager.availableProducts,
+                    context.account.postbox.peerView(id: context.account.peerId)
+                    |> map { view -> Bool in
+                        return view.peers[view.peerId]?.isPremium ?? false
+                    }
+                ).start(next: { [weak self] products, isPremium in
                     if let strongSelf = self {
                         strongSelf.premiumProduct = products.first
+                        strongSelf.isPremium = isPremium
                         strongSelf.updated(transition: .immediate)
                     }
                 })
@@ -1281,7 +1295,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             
             let title = title.update(
                 component: Text(
-                    text: environment.strings.Premium_Title,
+                    text: state.isPremium == true ? environment.strings.Premium_SubscribedTitle : environment.strings.Premium_Title,
                     font: Font.bold(28.0),
                     color: environment.theme.rootController.navigationBar.primaryTextColor
                 ),
@@ -1336,6 +1350,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(PremiumIntroScreenContentComponent(
                         context: context.component.context,
+                        isPremium: state.isPremium,
                         price: state.premiumProduct?.price,
                         present: context.component.present,
                         buy: { [weak state] in
