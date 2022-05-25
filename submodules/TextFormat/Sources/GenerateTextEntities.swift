@@ -159,7 +159,10 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
                     
                     count += 1
                     if count >= maxAnimatedEmojisInText {
+                        #if DEBUG
+                        #else
                         stop = true
+                        #endif
                     }
                 }
             }

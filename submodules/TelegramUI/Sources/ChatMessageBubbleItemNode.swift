@@ -24,6 +24,8 @@ import Markdown
 import WallpaperBackgroundNode
 import ChatPresentationInterfaceState
 import ChatMessageBackground
+import AnimationCache
+import MultiAnimationRenderer
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -288,9 +290,37 @@ private enum ContentNodeOperation {
 
 class ChatPresentationContext {
     weak var backgroundNode: WallpaperBackgroundNode?
+    let animationCache: AnimationCache
+    let animationRenderer: MultiAnimationRenderer
 
-    init(backgroundNode: WallpaperBackgroundNode?) {
+    init(context: AccountContext, backgroundNode: WallpaperBackgroundNode?) {
         self.backgroundNode = backgroundNode
+        
+        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        self.animationRenderer = MultiAnimationRendererImpl()
+    }
+}
+
+private func mapVisibility(_ visibility: ListViewItemNodeVisibility, boundsSize: CGSize, insets: UIEdgeInsets, to contentNode: ChatMessageBubbleContentNode) -> ListViewItemNodeVisibility {
+    switch visibility {
+    case .none:
+        return .none
+    case let .visible(fraction, subRect):
+        var subRect = subRect
+        subRect.origin.x = 0.0
+        subRect.size.width = 10000.0
+        
+        subRect.origin.y = boundsSize.height - insets.top - (subRect.origin.y + subRect.height)
+        
+        let contentNodeFrame = contentNode.frame
+        if contentNodeFrame.intersects(subRect) {
+            let intersectionRect = contentNodeFrame.intersection(subRect)
+            return .visible(fraction, intersectionRect.offsetBy(dx: 0.0, dy: -contentNodeFrame.minY))
+        } else {
+            return .visible(fraction, CGRect())
+        }
     }
 }
 
@@ -489,12 +519,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
+    //private let debugNode: ASDisplayNode
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
                 for contentNode in self.contentNodes {
-                    contentNode.visibility = self.visibility
+                    contentNode.visibility = mapVisibility(self.visibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
                 }
+                
+                /*switch self.visibility {
+                case let .visible(_, subRect):
+                    let topEdge = self.bounds.height - self.insets.top - (subRect.origin.y + subRect.height)
+                    self.debugNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topEdge), size: CGSize(width: 100.0, height: 2.0))
+                case .none:
+                    break
+                }*/
             }
         }
     }
@@ -513,7 +553,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
 
         self.messageAccessibilityArea = AccessibilityAreaNode()
         
+        //self.debugNode = ASDisplayNode()
+        //self.debugNode.backgroundColor = .blue
+        
         super.init(layerBacked: false)
+        
+        //self.addSubnode(self.debugNode)
         
         self.mainContainerNode.shouldBegin = { [weak self] location in
             guard let strongSelf = self else {
@@ -2650,7 +2695,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     containerSupernode.addSubnode(contentNode)
                     
-                    contentNode.visibility = strongSelf.visibility
                     contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
                         contextSourceNode?.updateDistractionFreeMode?(value)
                     }
@@ -2729,6 +2773,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             } else {
                 contentNode.frame = contentNodeFrame
             }
+            
+            contentNode.visibility = mapVisibility(strongSelf.visibility, boundsSize: layout.contentSize, insets: strongSelf.insets, to: contentNode)
+            
             contentNodeIndex += 1
         }
         

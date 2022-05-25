@@ -3685,7 +3685,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 let itemContentFrame = itemNode.apparentContentFrame
                 let intersection = itemContentFrame.intersection(visibilityRect)
                 let fraction = intersection.height / itemContentFrame.height
-                visibility = .visible(fraction)
+                
+                let subRect = visibilityRect.intersection(itemFrame).offsetBy(dx: 0.0, dy: -itemFrame.minY)
+                
+                visibility = .visible(fraction, subRect)
             }
             var updateVisibility = false
             if !onlyPositive {

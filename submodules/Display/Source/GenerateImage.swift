@@ -492,7 +492,7 @@ public struct DeviceGraphicsContextSettings {
 public class DrawingContext {
     public let size: CGSize
     public let scale: CGFloat
-    private let scaledSize: CGSize
+    public let scaledSize: CGSize
     public let bytesPerRow: Int
     private let bitmapInfo: CGBitmapInfo
     public let length: Int
@@ -525,7 +525,7 @@ public class DrawingContext {
         f(self.context)
     }
     
-    public init(size: CGSize, scale: CGFloat = 0.0, opaque: Bool = false, clear: Bool = false) {
+    public init(size: CGSize, scale: CGFloat = 0.0, opaque: Bool = false, clear: Bool = false, bytesPerRow: Int? = nil) {
         assert(!size.width.isZero && !size.height.isZero)
         let size: CGSize = CGSize(width: max(1.0, size.width), height: max(1.0, size.height))
 
@@ -539,8 +539,8 @@ public class DrawingContext {
         self.scale = actualScale
         self.scaledSize = CGSize(width: size.width * actualScale, height: size.height * actualScale)
         
-        self.bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(scaledSize.width))
-        self.length = bytesPerRow * Int(scaledSize.height)
+        self.bytesPerRow = bytesPerRow ?? DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(scaledSize.width))
+        self.length = self.bytesPerRow * Int(scaledSize.height)
 
         self.imageBuffer = ASCGImageBuffer(length: UInt(self.length))
 

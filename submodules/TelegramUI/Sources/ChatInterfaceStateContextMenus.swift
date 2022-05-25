@@ -703,50 +703,58 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        var hasRateTranscription = false
         if let audioTranscription = audioTranscription {
+            hasRateTranscription = true
             actions.insert(.custom(ChatRateTranscriptionContextItem(context: context, message: message, action: { [weak context] value in
                 guard let context = context else {
                     return
                 }
                 
                 let _ = context.engine.messages.rateAudioTranscription(messageId: message.id, id: audioTranscription.id, isGood: value).start()
+                
+                //TODO:localize
+                let content: UndoOverlayContent = .info(title: nil, text: "Thank you for your feedback.")
+                controllerInteraction.displayUndo(content)
             }), false), at: 0)
             actions.insert(.separator, at: 1)
         }
         
-        for media in message.media {
-            if let file = media as? TelegramMediaFile, let size = file.size, size < 1 * 1024 * 1024, let duration = file.duration, duration < 60, (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/ogg"] as [String]).contains(file.mimeType.lowercased()) {
-                let fileName = file.fileName ?? "Tone"
-                
-                var isAlreadyAdded = false
-                if let notificationSoundList = notificationSoundList, notificationSoundList.sounds.contains(where: { $0.file.fileId == file.fileId }) {
-                    isAlreadyAdded = true
-                }
-                
-                if !isAlreadyAdded {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_SaveForNotifications, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.actionSheet.primaryTextColor)
-                    }, action: { _, f in
-                        f(.default)
-                        
+        if !hasRateTranscription {
+            for media in message.media {
+                if let file = media as? TelegramMediaFile, let size = file.size, size < 1 * 1024 * 1024, let duration = file.duration, duration < 60, (["audio/mpeg", "audio/mp3", "audio/mpeg3", "audio/ogg"] as [String]).contains(file.mimeType.lowercased()) {
+                    let fileName = file.fileName ?? "Tone"
+                    
+                    var isAlreadyAdded = false
+                    if let notificationSoundList = notificationSoundList, notificationSoundList.sounds.contains(where: { $0.file.fileId == file.fileId }) {
+                        isAlreadyAdded = true
+                    }
+                    
+                    if !isAlreadyAdded {
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        
-                        let settings = NotificationSoundSettings.extract(from: context.currentAppConfiguration.with({ $0 }))
-                        if size > settings.maxSize {
-                            controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
-                        } else if Double(duration) > Double(settings.maxDuration) {
-                            controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
-                        } else {
-                            let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
-                            |> deliverOnMainQueue).start(completed: {
-                                controllerInteraction.displayUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_SaveSuccess_Text, action: {
-                                    controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
-                                }))
-                            })
-                        }
-                    })))
-                    actions.append(.separator)
+                        actions.append(.action(ContextMenuActionItem(text: presentationData.strings.Chat_SaveForNotifications, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/DownloadTone"), color: theme.actionSheet.primaryTextColor)
+                        }, action: { _, f in
+                            f(.default)
+                            
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let settings = NotificationSoundSettings.extract(from: context.currentAppConfiguration.with({ $0 }))
+                            if size > settings.maxSize {
+                                controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLarge_Title, text: presentationData.strings.Notifications_UploadError_TooLarge_Text(dataSizeString(Int64(settings.maxSize), formatting: DataSizeStringFormatting(presentationData: presentationData))).string))
+                            } else if Double(duration) > Double(settings.maxDuration) {
+                                controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
+                            } else {
+                                let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
+                                |> deliverOnMainQueue).start(completed: {
+                                    controllerInteraction.displayUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_SaveSuccess_Text, action: {
+                                        controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
+                                    }))
+                                })
+                            }
+                        })))
+                        actions.append(.separator)
+                    }
                 }
             }
         }
@@ -2382,6 +2390,7 @@ private final class ChatRateTranscriptionContextItemNode: ASDisplayNode, Context
         self.textNode.isAccessibilityElement = false
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
+        //TODO:localizable
         self.textNode.attributedText = NSAttributedString(string: "Rate Transcription", font: textFont, textColor: presentationData.theme.contextMenu.secondaryColor)
         self.textNode.maximumNumberOfLines = 1
         

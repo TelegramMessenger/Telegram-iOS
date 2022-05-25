@@ -109,10 +109,54 @@ public final class ManagedFile {
         }
     }
     
+    public func position() -> Int64 {
+        if let queue = self.queue {
+            assert(queue.isCurrent())
+        }
+        
+        return lseek(self.fd, 0, SEEK_CUR);
+    }
+    
     public func sync() {
         if let queue = self.queue {
             assert(queue.isCurrent())
         }
         fsync(self.fd)
+    }
+}
+
+public extension ManagedFile {
+    func write(_ data: Data) -> Int {
+        if data.isEmpty {
+            return 0
+        }
+        return data.withUnsafeBytes { bytes -> Int in
+            return self.write(bytes.baseAddress!, count: bytes.count)
+        }
+    }
+    
+    func write(_ value: Int32) {
+        var value = value
+        let _ = self.write(&value, count: 4)
+    }
+    
+    func write(_ value: UInt32) {
+        var value = value
+        let _ = self.write(&value, count: 4)
+    }
+    
+    func write(_ value: Int64) {
+        var value = value
+        let _ = self.write(&value, count: 8)
+    }
+    
+    func write(_ value: UInt64) {
+        var value = value
+        let _ = self.write(&value, count: 8)
+    }
+    
+    func write(_ value: Float32) {
+        var value = value
+        let _ = self.write(&value, count: 4)
     }
 }
