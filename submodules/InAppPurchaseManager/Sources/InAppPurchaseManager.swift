@@ -27,6 +27,7 @@ public final class InAppPurchaseManager: NSObject {
     
     public enum PurchaseError {
         case generic
+        case cancelled
     }
     
     private final class PaymentTransactionContext {
