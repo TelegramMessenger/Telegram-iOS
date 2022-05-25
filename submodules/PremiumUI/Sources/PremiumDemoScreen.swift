@@ -359,17 +359,18 @@ private final class DemoPagerComponent: Component {
                     self.scrollView.addSubview(itemView)
                 }
                 
+                let itemFrame = CGRect(origin: CGPoint(x: availableSize.width * CGFloat(i), y: 0.0), size: availableSize)
+                let isDisplaying = itemFrame.intersects(self.scrollView.bounds)
                 
-                let isDisplaying = itemView.frame.intersects(self.scrollView.bounds)
                 let environment = DemoPageEnvironment(isDisplaying: isDisplaying)
-                let itemSize = itemView.update(
+                let _ = itemView.update(
                     transition: itemTransition,
                     component: item.content.component,
                     environment: { environment },
                     containerSize: availableSize
                 )
                 
-                itemView.frame = CGRect(origin: CGPoint(x: availableSize.width * CGFloat(i), y: 0.0), size: itemSize)
+                itemView.frame = itemFrame
                                 
                 i += 1
             }
