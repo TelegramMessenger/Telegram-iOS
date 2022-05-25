@@ -113,6 +113,7 @@ private class PremiumLimitAnimationComponent: Component {
             self.activeBackground = SimpleLayer()
             
             self.badgeView = UIView()
+            self.badgeView.alpha = 0.0
             self.badgeView.layer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
             
             self.badgeMaskBackgroundView = UIView()
@@ -202,6 +203,9 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeView.layer.add(positionAnimation, forKey: "appearance1")
             self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
             self.badgeView.layer.add(returnAnimation, forKey: "appearance3")
+            
+            self.badgeView.alpha = 1.0
+            self.badgeView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             
             if let badgeText = component.badgeText {
                 self.badgeCountLabel.configure(with: badgeText)
