@@ -159,11 +159,14 @@ public struct WebAppParameters {
 
 public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
     var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
+    var secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
     if backgroundColor == 0x000000 {
         backgroundColor = presentationTheme.list.itemBlocksBackgroundColor.rgb
+        secondaryBackgroundColor = presentationTheme.list.plainBackgroundColor.rgb
     }
     return [
         "bg_color": Int32(bitPattern: backgroundColor),
+        "secondary_bg_color": Int32(bitPattern: secondaryBackgroundColor),
         "text_color": Int32(bitPattern: presentationTheme.list.itemPrimaryTextColor.rgb),
         "hint_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
         "link_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),

@@ -152,10 +152,10 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             if isPremiumSticker {
                 animationNode.completed = { [weak self] _ in
                     if let strongSelf = self, let animationNode = strongSelf.animationNode, let additionalAnimationNode = strongSelf.additionalAnimationNode {
-                        Queue.mainQueue().after(0.1, {
+                        Queue.mainQueue().async {
                             animationNode.play()
                             additionalAnimationNode.play()
-                        })
+                        }
                     }
                 }
             }

@@ -244,6 +244,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     
     private var emojiViewProvider: ((String) -> UIView)?
     
+    private var maxCaptionLength: Int32?
+    
     public init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, isCaption: Bool = false, isAttachment: Bool = false, presentController: @escaping (ViewController) -> Void) {
         self.context = context
         self.presentationInterfaceState = presentationInterfaceState
@@ -323,6 +325,23 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
         
         self.updateSendButtonEnabled(isCaption || isAttachment, animated: false)
+        
+        if self.isCaption || self.isAttachment {
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            |> mapToSignal { peer -> Signal<Int32, NoError> in
+                if let peer = peer {
+                    return self.context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits.init(isPremium: peer.isPremium))
+                    |> map { limits in
+                        return limits.maxCaptionLengthCount
+                    }
+                } else {
+                    return .complete()
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] maxCaptionLength in
+                self?.maxCaptionLength = maxCaptionLength
+            })
+        }
     }
     
     public var sendPressed: ((NSAttributedString?) -> Void)?
@@ -931,8 +950,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     
     private func updateCounterTextNode(transition: ContainedViewLayoutTransition) {
         let inputTextMaxLength: Int32?
-        if self.isCaption || self.isAttachment {
-            inputTextMaxLength = self.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+        if let maxCaptionLength = self.maxCaptionLength {
+            inputTextMaxLength = maxCaptionLength
         } else {
             inputTextMaxLength = nil
         }
@@ -1301,8 +1320,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     
     @objc func sendButtonPressed() {
         let inputTextMaxLength: Int32?
-        if self.isCaption || self.isAttachment {
-            inputTextMaxLength = self.context.currentLimitsConfiguration.with { $0 }.maxMediaCaptionLength
+        if let maxCaptionLength = self.maxCaptionLength {
+            inputTextMaxLength = maxCaptionLength
         } else {
             inputTextMaxLength = nil
         }

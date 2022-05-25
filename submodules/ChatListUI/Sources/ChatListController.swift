@@ -1461,7 +1461,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             tabContextGesture(id, sourceNode, gesture, true)
         }
         
-        self.ready.set(self.chatListDisplayNode.containerNode.ready)
+        if case .group = self.groupId {
+            self.ready.set(self.chatListDisplayNode.containerNode.ready)
+        } else {
+            self.ready.set(.never())
+        }
         
         self.displayNodeDidLoad()
     }
@@ -2060,10 +2064,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             strongSelf.chatListDisplayNode.containerNode.updateAvailableFilters(availableFilters, limit: filtersLimit)
             
-            if !strongSelf.initializedFilters && selectedEntryId != strongSelf.chatListDisplayNode.containerNode.currentItemFilter {
-                strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: selectedEntryId, animated: false, completion: nil)
+            if !strongSelf.initializedFilters {
+                if selectedEntryId != strongSelf.chatListDisplayNode.containerNode.currentItemFilter {
+                    strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: selectedEntryId, animated: false, completion: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.ready.set(strongSelf.chatListDisplayNode.containerNode.currentItemNode.ready)
+                        }
+                    })
+                } else {
+                    strongSelf.ready.set(strongSelf.chatListDisplayNode.containerNode.currentItemNode.ready)
+                }
+                strongSelf.initializedFilters = true
             }
-            strongSelf.initializedFilters = true
+            
             
             let isEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
             
@@ -3236,15 +3249,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let _ = (combineLatest(queue: .mainQueue(),
             self.context.engine.peers.currentChatListFilters(),
             chatListFilterItems(context: self.context)
-            |> take(1)
+            |> take(1),
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+            )
         )
-        |> deliverOnMainQueue).start(next: { [weak self] presetList, filterItemsAndTotalCount in
+        |> deliverOnMainQueue).start(next: { [weak self] presetList, filterItemsAndTotalCount, result in
             guard let strongSelf = self else {
                 return
             }
             
-            let _ = strongSelf.context.engine.peers.markChatListFeaturedFiltersAsSeen().start()
+            let (accountPeer, limits, _) = result
+            let isPremium = accountPeer?.isPremium ?? false
             
+            
+            let _ = strongSelf.context.engine.peers.markChatListFeaturedFiltersAsSeen().start()
             let (_, filterItems) = filterItemsAndTotalCount
             
             var items: [ContextMenuItem] = []
@@ -3272,11 +3293,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             if !presetList.isEmpty {
-                items.append(.separator)
-                
+                if presetList.count > 1 {
+                    items.append(.separator)
+                }
+                var filterCount = 0
                 for case let .filter(id, title, _, data) in presetList {
                     let filterType = chatListFilterType(data)
                     var badge: ContextMenuActionBadge?
+                    var isDisabled = false
+                    if !isPremium && filterCount >= limits.maxFoldersCount {
+                        isDisabled = true
+                    }
+                    
                     for item in filterItems {
                         if item.0.id == id && item.1 != 0 {
                             badge = ContextMenuActionBadge(value: "\(item.1)", color: item.2 ? .accent : .inactive)
@@ -3284,23 +3312,27 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     items.append(.action(ContextMenuActionItem(text: title, badge: badge, icon: { theme in
                         let imageName: String
-                        switch filterType {
-                        case .generic:
-                            imageName = "Chat/Context Menu/List"
-                        case .unmuted:
-                            imageName = "Chat/Context Menu/Unmute"
-                        case .unread:
-                            imageName = "Chat/Context Menu/MarkAsUnread"
-                        case .channels:
-                            imageName = "Chat/Context Menu/Channels"
-                        case .groups:
-                            imageName = "Chat/Context Menu/Groups"
-                        case .bots:
-                            imageName = "Chat/Context Menu/Bots"
-                        case .contacts:
-                            imageName = "Chat/Context Menu/User"
-                        case .nonContacts:
-                            imageName = "Chat/Context Menu/UnknownUser"
+                        if isDisabled {
+                            imageName = "Chat/Context Menu/Lock"
+                        } else {
+                            switch filterType {
+                            case .generic:
+                                imageName = "Chat/Context Menu/List"
+                            case .unmuted:
+                                imageName = "Chat/Context Menu/Unmute"
+                            case .unread:
+                                imageName = "Chat/Context Menu/MarkAsUnread"
+                            case .channels:
+                                imageName = "Chat/Context Menu/Channels"
+                            case .groups:
+                                imageName = "Chat/Context Menu/Groups"
+                            case .bots:
+                                imageName = "Chat/Context Menu/Bots"
+                            case .contacts:
+                                imageName = "Chat/Context Menu/User"
+                            case .nonContacts:
+                                imageName = "Chat/Context Menu/UnknownUser"
+                            }
                         }
                         return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
                     }, action: { _, f in
@@ -3308,8 +3340,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.selectTab(id: .filter(id))
+                        if isDisabled {
+                            let context = strongSelf.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .folders)
+                                replaceImpl?(controller)
+                            })
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            strongSelf.push(controller)
+                        } else {
+                            strongSelf.selectTab(id: .filter(id))
+                        }
                     })))
+                    
+                    filterCount += 1
                 }
             }
             

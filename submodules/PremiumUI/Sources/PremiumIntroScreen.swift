@@ -718,13 +718,24 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     typealias EnvironmentType = (ViewControllerComponentContainer.Environment, ScrollChildEnvironment)
     
     let context: AccountContext
+    let price: String?
+    let present: (ViewController) -> Void
+    let buy: () -> Void
+    let updateIsFocused: (Bool) -> Void
     
-    init(context: AccountContext) {
+    init(context: AccountContext, price: String?, present: @escaping (ViewController) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
         self.context = context
+        self.price = price
+        self.present = present
+        self.buy = buy
+        self.updateIsFocused = updateIsFocused
     }
     
     static func ==(lhs: PremiumIntroScreenContentComponent, rhs: PremiumIntroScreenContentComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.price != rhs.price {
             return false
         }
     
@@ -862,6 +873,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             
             var items: [SectionGroupComponent.Item] = []
             
+            let accountContext = context.component.context
+            let present = context.component.present
+            let buy = context.component.buy
+            let updateIsFocused = context.component.updateIsFocused
+            let price = context.component.price
             var i = 0
             for perk in state.configuration.perks {
                 let iconBackgroundColors = gradientColors[i]
@@ -884,7 +900,48 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         )
                     ),
                     action: {
+                        var demoSubject: PremiumDemoScreen.Subject
+                        switch perk {
+                        case .doubleLimits:
+                            return
+                        case .moreUpload:
+                            demoSubject = .moreUpload
+                        case .fasterDownload:
+                            demoSubject = .fasterDownload
+                        case .voiceToText:
+                            demoSubject = .voiceToText
+                        case .noAds:
+                            demoSubject = .noAds
+                        case .uniqueReactions:
+                            demoSubject = .uniqueReactions
+                        case .premiumStickers:
+                            demoSubject = .premiumStickers
+                        case .advancedChatManagement:
+                            demoSubject = .advancedChatManagement
+                        case .profileBadge:
+                            demoSubject = .profileBadge
+                        case .animatedUserpics:
+                            demoSubject = .animatedUserpics
+                        }
                         
+                        var dismissImpl: (() -> Void)?
+                        let controller = PremiumDemoScreen(
+                            context: accountContext,
+                            subject: demoSubject,
+                            source: .intro(price),
+                            action: {
+                                dismissImpl?()
+                                buy()
+                            }
+                        )
+                        controller.disposed = {
+                            updateIsFocused(false)
+                        }
+                        present(controller)
+                        dismissImpl = { [weak controller] in
+                            controller?.dismiss(animated: true, completion: nil)
+                        }
+                        updateIsFocused(true)
                     }
                 ))
                 i += 1
@@ -901,241 +958,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
                 transition: context.transition
             )
-            
-//
-            
-//            let section = section.update(
-//                component: SectionGroupComponent(
-//                    items: [
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "limits",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Limits",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0xF28528),
-//                                            UIColor(rgb: 0xEF7633)
-//                                        ],
-//                                        title: strings.Premium_DoubledLimits,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_DoubledLimitsInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "upload",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Upload",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0xEA5F43),
-//                                            UIColor(rgb: 0xE7504E)
-//                                        ],
-//                                        title: strings.Premium_UploadSize,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_UploadSizeInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "speed",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Speed",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0xDE4768),
-//                                            UIColor(rgb: 0xD54D82)
-//                                        ],
-//                                        title: strings.Premium_FasterSpeed,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_FasterSpeedInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "voice",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Voice",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0xDE4768),
-//                                            UIColor(rgb: 0xD54D82)
-//                                        ],
-//                                        title: strings.Premium_VoiceToText,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_VoiceToTextInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "noAds",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/NoAds",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0xC654A8),
-//                                            UIColor(rgb: 0xBE5AC2)
-//                                        ],
-//                                        title: strings.Premium_NoAds,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_NoAdsInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "reactions",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Reactions",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0xAF62E9),
-//                                            UIColor(rgb: 0xA668FF)
-//                                        ],
-//                                        title: strings.Premium_Reactions,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_ReactionsInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "stickers",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Stickers",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0x9674FF),
-//                                            UIColor(rgb: 0x8C7DFF)
-//                                        ],
-//                                        title: strings.Premium_Stickers,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_StickersInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "chat",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Chat",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0x9674FF),
-//                                            UIColor(rgb: 0x8C7DFF)
-//                                        ],
-//                                        title: strings.Premium_ChatManagement,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_ChatManagementInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "badge",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Badge",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0x7B88FF),
-//                                            UIColor(rgb: 0x7091FF)
-//                                        ],
-//                                        title: strings.Premium_Badge,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_BadgeInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                        SectionGroupComponent.Item(
-//                            AnyComponentWithIdentity(
-//                                id: "avatar",
-//                                component: AnyComponent(
-//                                    PerkComponent(
-//                                        iconName: "Premium/Perk/Avatar",
-//                                        iconBackgroundColors: [
-//                                            UIColor(rgb: 0x609DFF),
-//                                            UIColor(rgb: 0x56A5FF)
-//                                        ],
-//                                        title: strings.Premium_Avatar,
-//                                        titleColor: titleColor,
-//                                        subtitle: strings.Premium_AvatarInfo,
-//                                        subtitleColor: subtitleColor,
-//                                        arrowColor: arrowColor
-//                                    )
-//                                )
-//                            ),
-//                            action: {
-//
-//                            }
-//                        ),
-//                    ],
-//                    backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
-//                    selectionColor: environment.theme.list.itemHighlightedBackgroundColor,
-//                    separatorColor: environment.theme.list.itemBlocksSeparatorColor
-//                ),
-//                environment: {},
-//                availableSize: CGSize(width: availableWidth - sideInsets, height: .greatestFiniteMagnitude),
-//                transition: context.transition
-//            )
             context.add(section
                 .position(CGPoint(x: availableWidth / 2.0, y: size.height + section.size.height / 2.0))
                 .clipsToBounds(true)
@@ -1315,11 +1137,13 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     
     let context: AccountContext
     let updateInProgress: (Bool) -> Void
+    let present: (ViewController) -> Void
     let completion: () -> Void
     
-    init(context: AccountContext, updateInProgress: @escaping (Bool) -> Void, completion: @escaping () -> Void) {
+    init(context: AccountContext, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
         self.updateInProgress = updateInProgress
+        self.present = present
         self.completion = completion
     }
         
@@ -1337,6 +1161,8 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         var topContentOffset: CGFloat?
         var bottomContentOffset: CGFloat?
+        
+        var hasIdleAnimations = true
         
         var inProgress = false
         var premiumProduct: InAppPurchaseManager.Product?
@@ -1398,6 +1224,11 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 }
             }))
         }
+        
+        func updateIsFocused(_ isFocused: Bool) {
+            self.hasIdleAnimations = !isFocused
+            self.updated(transition: .immediate)
+        }
     }
     
     func makeState() -> State {
@@ -1427,7 +1258,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
                 
             let star = star.update(
-                component: PremiumStarComponent(isVisible: starIsVisible),
+                component: PremiumStarComponent(isVisible: starIsVisible, hasIdleAnimations: state.hasIdleAnimations),
                 availableSize: CGSize(width: min(390.0, context.availableSize.width), height: 220.0),
                 transition: context.transition
             )
@@ -1504,7 +1335,14 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             let scrollContent = scrollContent.update(
                 component: ScrollComponent<EnvironmentType>(
                     content: AnyComponent(PremiumIntroScreenContentComponent(
-                        context: context.component.context
+                        context: context.component.context,
+                        price: state.premiumProduct?.price,
+                        present: context.component.present,
+                        buy: { [weak state] in
+                            state?.buy()
+                        }, updateIsFocused: { [weak state] isFocused in
+                            state?.updateIsFocused(isFocused)
+                        }
                     )),
                     contentInsets: UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: bottomPanel.size.height, right: 0.0),
                     contentOffsetUpdated: { [weak state] topContentOffset, bottomContentOffset in
@@ -1610,11 +1448,15 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
+        var presentImpl: ((ViewController) -> Void)?
         var completionImpl: (() -> Void)?
         super.init(context: context, component: PremiumIntroScreenComponent(
             context: context,
             updateInProgress: { inProgress in
                 updateInProgressImpl?(inProgress)
+            },
+            present: { c in
+                presentImpl?(c)
             },
             completion: {
                 completionImpl?()
@@ -1637,6 +1479,10 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
                 strongSelf.view.disablesInteractiveTransitionGestureRecognizer = inProgress
                 strongSelf.view.disablesInteractiveModalDismiss = inProgress
             }
+        }
+        
+        presentImpl = { [weak self] c in
+            self?.push(c)
         }
         
         completionImpl = { [weak self] in

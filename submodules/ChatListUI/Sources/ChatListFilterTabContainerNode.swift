@@ -307,7 +307,7 @@ private final class ItemNode: ASDisplayNode {
         self.badgeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((badgeBackgroundFrame.width - badgeSize.width) / 2.0), y: floor((badgeBackgroundFrame.height - badgeSize.height) / 2.0)), size: badgeSize)
         
         let width: CGFloat
-        if self.unreadCount == 0 || self.isReordering || self.isEditing {
+        if self.unreadCount == 0 || self.isReordering || self.isEditing || self.isDisabled {
             if !self.isReordering {
                 self.badgeContainerNode.alpha = 0.0
             }

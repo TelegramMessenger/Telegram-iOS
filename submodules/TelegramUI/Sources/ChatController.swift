@@ -1031,9 +1031,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     actions.context = strongSelf.context
-                    
-                    var premiumReactions: [AvailableReactions.Reaction] = []
-                    
+                                        
                     if canAddMessageReactions(message: topMessage), let availableReactions = availableReactions, let allowedReactions = allowedReactions {
                         var hasPremiumPlaceholder = false
                         filterReactions: for reaction in availableReactions.reactions {
@@ -1042,9 +1040,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             guard let aroundAnimation = reaction.aroundAnimation else {
                                 continue
-                            }
-                            if reaction.isPremium {
-                                premiumReactions.append(reaction)
                             }
                             if !reaction.isEnabled {
                                 continue
@@ -1094,9 +1089,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if case .premium = value {
-                            controller?.dismiss()
+                            controller?.dismissWithoutContent()
 
-                            let controller = PremiumReactionsScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, reactions: premiumReactions)
+                            let context = strongSelf.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .reactions)
+                                replaceImpl?(controller)
+                            })
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
                             strongSelf.push(controller)
                             return
                         }
@@ -11530,7 +11533,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             for item in results {
                                 if let item = item {
                                     if item.fileSize > Int64(premiumLimits.maxUploadFileParts) * 512 * 1024 {
-                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Conversation_PremiumUploadFileTooLarge, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.Premium_FileTooLarge, text: strongSelf.presentationData.strings.Conversation_PremiumUploadFileTooLarge, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         return
                                     } else if item.fileSize > Int64(limits.maxUploadFileParts) * 512 * 1024 && !isPremium {
                                         let context = strongSelf.context

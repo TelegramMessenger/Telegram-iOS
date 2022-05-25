@@ -878,20 +878,28 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
                 
-                disposable.set((combineLatest(itemNode.listNode.ready, self.validLayoutReady)
-                |> filter { $0 && $1 }
+                disposable.set((itemNode.listNode.ready
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] _ in
                     guard let strongSelf = self, let itemNode = itemNode, itemNode === strongSelf.pendingItemNode?.1 else {
                         return
                     }
-                    guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout else {
-                        return
-                    }
+                    
                     strongSelf.pendingItemNode = nil
                     
-                    let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .spring) : .immediate
+                    guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, isReorderingFilters, isEditing) = strongSelf.validLayout else {
+                        strongSelf.itemNodes[id] = itemNode
+                        strongSelf.addSubnode(itemNode)
+                        
+                        strongSelf.selectedId = id
+                        strongSelf.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
+                        strongSelf.currentItemFilterUpdated?(strongSelf.currentItemFilter, strongSelf.transitionFraction, .immediate, false)
+                        
+                        completion?()
+                        return
+                    }
                     
+                    let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.35, curve: .spring) : .immediate
                     if let previousIndex = strongSelf.availableFilters.firstIndex(where: { $0.id == strongSelf.selectedId }), let index = strongSelf.availableFilters.firstIndex(where: { $0.id == id }) {
                         let previousId = strongSelf.selectedId
                         let offsetDirection: CGFloat = index < previousIndex ? 1.0 : -1.0

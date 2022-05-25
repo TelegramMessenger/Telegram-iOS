@@ -46,13 +46,15 @@ private func generateDiffuseTexture() -> UIImage {
 
 class PremiumStarComponent: Component {
     let isVisible: Bool
+    let hasIdleAnimations: Bool
     
-    init(isVisible: Bool) {
+    init(isVisible: Bool, hasIdleAnimations: Bool) {
         self.isVisible = isVisible
+        self.hasIdleAnimations = hasIdleAnimations
     }
     
     static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.isVisible == rhs.isVisible
+        return lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -75,6 +77,7 @@ class PremiumStarComponent: Component {
                 
         private var previousInteractionTimestamp: Double = 0.0
         private var timer: SwiftSignalKit.Timer?
+        private var hasIdleAnimations = false
         
         override init(frame: CGRect) {
             self.sceneView = SCNView(frame: frame)
@@ -249,7 +252,7 @@ class PremiumStarComponent: Component {
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
             self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
-                if let strongSelf = self {
+                if let strongSelf = self, strongSelf.hasIdleAnimations {
                     let currentTimestamp = CACurrentMediaTime()
                     if currentTimestamp > strongSelf.previousInteractionTimestamp + 5.0 {
                         strongSelf.playAppearanceAnimation()
@@ -358,6 +361,8 @@ class PremiumStarComponent: Component {
         func update(component: PremiumStarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+            
+            self.hasIdleAnimations = component.hasIdleAnimations
             
             return availableSize
         }

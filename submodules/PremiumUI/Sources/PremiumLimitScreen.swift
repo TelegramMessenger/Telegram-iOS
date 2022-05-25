@@ -16,16 +16,16 @@ import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
 
-private func generateCloseButtonImage(theme: PresentationTheme) -> UIImage? {
+func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        context.setFillColor(UIColor(rgb: 0x808084, alpha: 0.1).cgColor)
+        context.setFillColor(backgroundColor.cgColor)
         context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
         
         context.setLineWidth(2.0)
         context.setLineCap(.round)
-        context.setStrokeColor(theme.actionSheet.inputClearButtonColor.cgColor)
+        context.setStrokeColor(foregroundColor.cgColor)
         
         context.move(to: CGPoint(x: 10.0, y: 10.0))
         context.addLine(to: CGPoint(x: 20.0, y: 20.0))
@@ -143,7 +143,7 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeCountLabel = RollingLabel()
             self.badgeCountLabel.font = Font.with(size: 24.0, design: .round, weight: .semibold, traits: [])
             self.badgeCountLabel.textColor = .white
-            self.badgeCountLabel.text(num: 0)
+            self.badgeCountLabel.configure(with: "0")
             
             super.init(frame: frame)
             
@@ -203,8 +203,8 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeView.layer.add(rotateAnimation, forKey: "appearance2")
             self.badgeView.layer.add(returnAnimation, forKey: "appearance3")
             
-            if let badgeText = component.badgeText, let num = Int(badgeText) {
-                self.badgeCountLabel.text(num: num)
+            if let badgeText = component.badgeText {
+                self.badgeCountLabel.configure(with: badgeText)
             }
         }
         
@@ -251,7 +251,18 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0), size: CGSize(width: 44.0, height: 12.0))
             
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
-            self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition, y: 82.0)
+            if component.badgePosition > 1.0 - .ulpOfOne {
+                let offset = badgeWidth / 2.0 - 16.0
+                self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition - offset, y: 82.0)
+                self.badgeMaskArrowView.frame = self.badgeMaskArrowView.frame.offsetBy(dx: offset - 18.0, dy: 0.0)
+            } else {
+                self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition, y: 82.0)
+                
+                if self.badgeView.frame.maxX > availableSize.width {
+                    let delta = self.badgeView.frame.maxX - availableSize.width - 6.0
+                    self.badgeView.center = self.badgeView.center.offsetBy(dx: -delta, dy: 0.0)
+                }
+            }
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeSize.width * 3.0, height: badgeSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
                 self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeSize.height / 2.0)
@@ -616,7 +627,7 @@ private final class LimitSheetContent: CombinedComponent {
             if let (image, theme) = state.cachedCloseImage, theme === environment.theme {
                 closeImage = image
             } else {
-                closeImage = generateCloseButtonImage(theme: theme)!
+                closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0x808084, alpha: 0.1), foregroundColor: theme.actionSheet.inputClearButtonColor)!
                 state.cachedCloseImage = (closeImage, theme)
             }
             
@@ -634,6 +645,7 @@ private final class LimitSheetContent: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
             )
             
+            var titleText = strings.Premium_LimitReached
             let iconName: String
             let badgeText: String
             let string: String
@@ -669,20 +681,21 @@ private final class LimitSheetContent: CombinedComponent {
                     premiumValue = "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .files:
-                    let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024
-                    let premiumLimit = Int64(state.limits.maxUploadFileParts) * 512 * 1024
+                    let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
+                    let premiumLimit = Int64(state.premiumLimits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
                     iconName = "Premium/File"
                     badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
                     defaultValue = ""
                     premiumValue = dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     badgePosition = 0.5
+                    titleText = strings.Premium_FileTooLarge
             }
             
             let title = title.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: strings.Premium_LimitReached,
+                        string: titleText,
                         font: Font.semibold(17.0),
                         textColor: theme.actionSheet.primaryTextColor,
                         paragraphAlignment: .center
