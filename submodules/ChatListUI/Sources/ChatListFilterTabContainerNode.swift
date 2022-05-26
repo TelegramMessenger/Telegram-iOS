@@ -239,7 +239,7 @@ private final class ItemNode: ASDisplayNode {
             })
         }
         
-        transition.updateAlpha(node: self.badgeContainerNode, alpha: (isDisabled || isReordering || unreadCount == 0) ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.badgeContainerNode, alpha: (isEditing || isDisabled || isReordering || unreadCount == 0) ? 0.0 : 1.0)
         
         let selectionAlpha: CGFloat = selectionFraction * selectionFraction
         let deselectionAlpha: CGFloat = isDisabled ? 0.5 : 1.0// - selectionFraction
