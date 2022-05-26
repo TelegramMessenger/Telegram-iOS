@@ -116,6 +116,7 @@ public final class SolidRoundedButtonComponent: Component {
             }
             
             if let button = self.button {
+                button.title = component.title
                 button.updateTheme(component.theme)
                 let height = button.updateLayout(width: availableSize.width, transition: .immediate)
                 transition.setFrame(view: button, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height)), completion: nil)

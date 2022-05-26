@@ -2437,6 +2437,10 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.dismiss(result: .default, completion: completion)
     }
     
+    public func dismissWithoutContent() {
+        self.dismiss(result: .dismissWithoutContent, completion: nil)
+    }
+    
     public func dismissNow() {
         self.presentingViewController?.dismiss(animated: false, completion: nil)
         self.dismissed?()

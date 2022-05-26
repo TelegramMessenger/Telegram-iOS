@@ -2,15 +2,90 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import ComponentFlow
 import TelegramCore
 import AccountContext
 import ReactionSelectionNode
 import TelegramPresentationData
 import AccountContext
 
+final class ReactionsCarouselComponent: Component {
+    public typealias EnvironmentType = DemoPageEnvironment
+    
+    let context: AccountContext
+    let theme: PresentationTheme
+    let reactions: [AvailableReactions.Reaction]
+    
+    public init(
+        context: AccountContext,
+        theme: PresentationTheme,
+        reactions: [AvailableReactions.Reaction]
+    ) {
+        self.context = context
+        self.theme = theme
+        self.reactions = reactions
+    }
+    
+    public static func ==(lhs: ReactionsCarouselComponent, rhs: ReactionsCarouselComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.reactions != rhs.reactions {
+            return false
+        }
+        return true
+    }
+    
+    public final class View: UIView {
+        private var component: ReactionsCarouselComponent?
+        private var node: ReactionCarouselNode?
+        
+        private var isVisible = false
+                
+        public func update(component: ReactionsCarouselComponent, availableSize: CGSize, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+            let isDisplaying = environment[DemoPageEnvironment.self].isDisplaying
+            
+            if self.node == nil {
+                let node = ReactionCarouselNode(
+                    context: component.context,
+                    theme: component.theme,
+                    reactions: component.reactions
+                )
+                self.node = node
+                self.addSubnode(node)
+            }
+            
+            self.component = component
+                        
+            if let node = self.node {
+                node.frame = CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: availableSize)
+                node.updateLayout(size: availableSize, transition: .immediate)
+            }
+            
+            if isDisplaying && !self.isVisible {
+                self.node?.animateIn()
+            }
+            self.isVisible = isDisplaying
+            
+            return availableSize
+        }
+    }
+    
+    public func makeView() -> View {
+        return View()
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<DemoPageEnvironment>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, environment: environment, transition: transition)
+    }
+}
+
 private let itemSize = CGSize(width: 110.0, height: 110.0)
 
-final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
+private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private let theme: PresentationTheme
     private let reactions: [AvailableReactions.Reaction]
@@ -167,7 +242,7 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func playReaction() {
         let delta = self.positionDelta
-        let index = max(0, min(self.itemNodes.count - 1, Int(round(self.currentPosition / delta))))
+        let index = max(0, Int(round(self.currentPosition / delta)) % self.itemNodes.count)
         
         guard !self.playingIndices.contains(index) else {
             return
@@ -223,7 +298,8 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             self.scrollStartPosition = (scrollView.contentOffset.x, self.currentPosition)
         }
     }
-        
+     
+    private let hapticFeedback = HapticFeedback()
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard !self.ignoreContentOffsetChange, let (startContentOffset, startPosition) = self.scrollStartPosition else {
             return
@@ -241,10 +317,12 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.currentPosition = updatedPosition
         
         let indexDelta = self.positionDelta
-        let index = max(0, min(self.itemNodes.count - 1, Int(round(self.currentPosition / indexDelta))))
+        let index = max(0, Int(round(self.currentPosition / indexDelta)) % self.itemNodes.count)
         if index != self.currentIndex {
             self.currentIndex = index
-            print(index)
+            if self.scrollNode.view.isTracking || self.scrollNode.view.isDecelerating {
+                self.hapticFeedback.tap()
+            }
         }
         
         if let size = self.validLayout {
@@ -272,7 +350,7 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             self.resetScrollPosition()
             
             let delta = self.positionDelta
-            let index = max(0, min(self.itemNodes.count - 1, Int(round(self.currentPosition / delta))))
+            let index = max(0, Int(round(self.currentPosition / delta)) % self.itemNodes.count)
             self.scrollTo(index, playReaction: true, duration: 0.2)
         }
     }
@@ -287,14 +365,14 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.scrollNode.frame = CGRect(origin: CGPoint(), size: size)
         if self.scrollNode.view.contentSize.width.isZero {
-            self.scrollNode.view.contentSize = CGSize(width: 10000000, height: size.height)
+            self.scrollNode.view.contentSize = CGSize(width: 10000000.0, height: size.height)
             self.tapNode.frame = CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
             self.resetScrollPosition()
         }
         
         let delta = self.positionDelta
     
-        let areaSize = CGSize(width: floor(size.width * 0.7), height: size.height * 0.5)
+        let areaSize = CGSize(width: floor(size.width * 0.7), height: size.height * 0.45)
                 
         for i in 0 ..< self.itemNodes.count {
             let itemNode = self.itemNodes[i]
@@ -326,8 +404,8 @@ final class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             
             let itemFrame = CGRect(origin: CGPoint(x: size.width * 0.5 + point.x * areaSize.width * 0.5 - itemSize.width * 0.5, y: size.height * 0.5 + point.y * areaSize.height * 0.5 - itemSize.height * 0.5), size: itemSize)
             containerNode.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
-            containerNode.position = itemFrame.center
-            transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.45)
+            containerNode.position = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
+            transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.55)
             
             itemNode.frame = CGRect(origin: CGPoint(), size: itemFrame.size)
             itemNode.updateLayout(size: itemFrame.size, isExpanded: false, largeExpanded: false, isPreviewing: false, transition: transition)

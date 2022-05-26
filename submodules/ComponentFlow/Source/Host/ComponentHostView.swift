@@ -71,9 +71,7 @@ public final class ComponentHostView<EnvironmentType>: UIView {
         }
         
         let isEnvironmentUpdated = context.erasedEnvironment.calculateIsUpdated()
-        if isEnvironmentUpdated {
-            context.erasedEnvironment._isUpdated = false
-        }
+
         
         if !forceUpdate, !isEnvironmentUpdated, let currentComponent = self.currentComponent, let currentContainerSize = self.currentContainerSize, let currentSize = self.currentSize {
             if currentContainerSize == containerSize && currentComponent == component {
@@ -98,6 +96,10 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             transition.setFrame(view: componentView, frame: CGRect(origin: CGPoint(), size: updatedSize))
         }
 
+        if isEnvironmentUpdated {
+            context.erasedEnvironment._isUpdated = false
+        }
+        
         self.isUpdating = false
 
         return updatedSize

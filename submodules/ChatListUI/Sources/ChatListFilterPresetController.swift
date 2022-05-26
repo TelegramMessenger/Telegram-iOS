@@ -601,14 +601,22 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
     
     let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .chatSelection(title: presentationData.strings.ChatListFolder_IncludeChatsTitle, selectedChats: Set(filterData.includePeers.peers), additionalCategories: ContactMultiselectionControllerAdditionalCategories(categories: additionalCategories, selectedCategories: selectedCategories), chatListFilters: allFilters), options: [], filters: [], alwaysEnabled: true, limit: 100))
     controller.navigationPresentation = .modal
-    let _ = (controller.result
-    |> take(1)
-    |> deliverOnMainQueue).start(next: { [weak controller] result in
+    let _ = combineLatest(
+        queue: Queue.mainQueue(),
+        controller.result |> take(1),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
+            TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+        )
+    )
+    .start(next: { [weak controller] result, data in
         guard case let .result(peerIds, additionalCategoryIds) = result else {
             controller?.dismiss()
             return
         }
         
+        let (limits, premiumLimits) = data
+                
         var includePeers: [PeerId] = []
         for peerId in peerIds {
             switch peerId {
@@ -619,6 +627,26 @@ private func internalChatListFilterAddChatsController(context: AccountContext, f
             }
         }
         includePeers.sort()
+        
+        if includePeers.count > limits.maxFolderChatsCount {
+            if includePeers.count > premiumLimits.maxFolderChatsCount {
+                let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.ChatListFolder_MaxChatsInFolder(Int(premiumLimits.maxFolderChatsCount)).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                controller?.present(alertController, in: .window(.root))
+                return
+            }
+            
+            var replaceImpl: ((ViewController) -> Void)?
+            let limitController = PremiumLimitScreen(context: context, subject: .chatsInFolder, count: Int32(includePeers.count), action: {
+                let introController = PremiumIntroScreen(context: context, source: .chatsPerFolder)
+                replaceImpl?(introController)
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            controller?.push(limitController)
+            
+            return
+        }
         
         var categories: ChatListFilterPeerCategories = []
         for id in additionalCategoryIds {

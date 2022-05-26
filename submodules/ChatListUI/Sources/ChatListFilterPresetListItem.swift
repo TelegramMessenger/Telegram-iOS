@@ -24,6 +24,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
     let canBeReordered: Bool
     let canBeDeleted: Bool
     let isAllChats: Bool
+    let isDisabled: Bool
     let sectionId: ItemListSectionId
     let action: () -> Void
     let setItemWithRevealedOptions: (Int32?, Int32?) -> Void
@@ -38,6 +39,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         canBeReordered: Bool,
         canBeDeleted: Bool,
         isAllChats: Bool,
+        isDisabled: Bool,
         sectionId: ItemListSectionId,
         action: @escaping () -> Void,
         setItemWithRevealedOptions: @escaping (Int32?, Int32?) -> Void,
@@ -51,6 +53,7 @@ final class ChatListFilterPresetListItem: ListViewItem, ItemListItem {
         self.canBeReordered = canBeReordered
         self.canBeDeleted = canBeDeleted
         self.isAllChats = isAllChats
+        self.isDisabled = isDisabled
         self.sectionId = sectionId
         self.action = action
         self.setItemWithRevealedOptions = setItemWithRevealedOptions
@@ -380,7 +383,7 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     if let arrowImage = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
-                    strongSelf.arrowNode.isHidden = item.isAllChats
+                    strongSelf.arrowNode.isHidden = item.isAllChats || item.isDisabled
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     

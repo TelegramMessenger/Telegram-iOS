@@ -667,12 +667,12 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                 strongSelf.installationActionBackgroundNode.image = backgroundImage
                             }
                         
-                            let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: 50.0, height: layout.contentSize.height))
+                            let installationActionFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: 0.0), size: CGSize(width: installWidth, height: layout.contentSize.height))
                             strongSelf.installationActionNode.frame = installationActionFrame
                         
                             let buttonFrame = CGRect(origin: CGPoint(x: params.width - rightInset - installWidth - 16.0, y: installationActionFrame.minY + floor((installationActionFrame.size.height - 28.0) / 2.0)), size: CGSize(width: installWidth, height: 28.0))
                             strongSelf.installationActionBackgroundNode.frame = buttonFrame
-                            strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
+                            strongSelf.installTextNode.frame = CGRect(origin: CGPoint(x: buttonFrame.minX + floorToScreenPixels((buttonFrame.width - installLayout.size.width) / 2.0), y: buttonFrame.minY + floorToScreenPixels((buttonFrame.height - installLayout.size.height) / 2.0) + 1.0), size: installLayout.size)
                         case .selection:
                             strongSelf.installationActionNode.isHidden = true
                             strongSelf.installationActionBackgroundNode.isHidden = true

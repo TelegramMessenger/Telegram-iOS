@@ -522,7 +522,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             |> deliverOnMainQueue).start(next: { peer in
                 let isPremium = peer?.isPremium ?? false
                 if !isPremium {
-                    let controller = PremiumIntroScreen(context: context, reference: reference)
+                    let controller = PremiumIntroScreen(context: context, source: .deeplink(reference))
                     if let navigationController = navigationController {
                         navigationController.pushViewController(controller, animated: true)
                     }

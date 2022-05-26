@@ -1,4 +1,5 @@
 import UIKit
+import Display
 
 private extension UILabel {
     func textWidth() -> CGFloat {
@@ -32,22 +33,19 @@ open class RollingLabel: UILabel {
     private let duration = 1.12
     private let durationOffset = 0.2
     private let textsNotAnimated = [","]
-    
-    public func text(num: Int) {
-        self.configure(with: num)
-        self.text = " "
-        self.animate()
+        
+    public func setSuffix(suffix: String) {
+        self.suffix = suffix
     }
     
-    public func setPrefix(prefix: String) {
-        self.suffix = prefix
-    }
-    
-    private func configure(with number: Int) {
-        fullText = String(number)
+    func configure(with string: String) {
+        fullText = string
         
         clean()
         setupSubviews()
+        
+        self.text = " "
+        self.animate()
     }
     
     private func animate(ascending: Bool = true) {
@@ -99,9 +97,10 @@ open class RollingLabel: UILabel {
         }
         
         stringArray.enumerated().forEach { index, text in
-            if textsNotAnimated.contains(text) {
+            let nonDigits = CharacterSet.decimalDigits.inverted
+            if text.rangeOfCharacter(from: nonDigits) != nil {
                 let label = UILabel()
-                label.frame.origin = CGPoint(x: x, y: y)
+                label.frame.origin = CGPoint(x: x, y: y - 1.0 - UIScreenPixel)
                 label.textColor = textColor
                 label.font = font
                 label.text = text
@@ -118,28 +117,28 @@ open class RollingLabel: UILabel {
                 label.text = "0"
                 label.textAlignment = .center
                 label.sizeToFit()
-                createScrollLayer(to: label, text: text)
+                createScrollLayer(to: label, text: text, index: index)
                 
                 x += label.bounds.width
             }
         }
     }
     
-    private func createScrollLayer(to label: UILabel, text: String) {
+    private func createScrollLayer(to label: UILabel, text: String, index: Int) {
         let scrollLayer = CAScrollLayer()
-        scrollLayer.frame = label.frame
+        scrollLayer.frame = CGRect(x: label.frame.minX, y: label.frame.minY - 10.0, width: label.frame.width, height: label.frame.height * 3.0)
         scrollLayers.append(scrollLayer)
         self.layer.addSublayer(scrollLayer)
         
-        createContentForLayer(scrollLayer: scrollLayer, text: text)
+        createContentForLayer(scrollLayer: scrollLayer, text: text, index: index)
     }
     
-    private func createContentForLayer(scrollLayer: CAScrollLayer, text: String) {
+    private func createContentForLayer(scrollLayer: CAScrollLayer, text: String, index: Int) {
         var textsForScroll: [String] = []
         
         let max: Int
         var found = false
-        if let val = Int(text) {
+        if let val = Int(text), index == 0 {
             max = val
             found = true
         } else {
@@ -150,11 +149,11 @@ open class RollingLabel: UILabel {
             let str = String(i)
             textsForScroll.append(str)
         }
-        if !found {
+        if !found && text != "9" {
             textsForScroll.append(text)
         }
         
-        var height: CGFloat = 0
+        var height: CGFloat = 0.0
         for text in textsForScroll {
             let label = UILabel()
             label.text = text
@@ -179,17 +178,18 @@ open class RollingLabel: UILabel {
             animation.duration = duration + offset
             animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
             
+            let verticalOffset = 20.0
             if ascending {
-                animation.fromValue = maxY
+                animation.fromValue = maxY + verticalOffset
                 animation.toValue = 0
             } else {
                 animation.fromValue = 0
-                animation.toValue = maxY
+                animation.toValue = maxY + verticalOffset
             }
             
             scrollLayer.scrollMode = .vertically
             scrollLayer.add(animation, forKey: nil)
-            scrollLayer.scroll(to: CGPoint(x: 0, y: maxY))
+            scrollLayer.scroll(to: CGPoint(x: 0, y: maxY + verticalOffset))
             
             offset += self.durationOffset
         }

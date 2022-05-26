@@ -7,7 +7,7 @@ import SceneKit
 import GZip
 import AppBundle
 
-private let sceneVersion: Int = 1
+private let sceneVersion: Int = 2
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -46,13 +46,15 @@ private func generateDiffuseTexture() -> UIImage {
 
 class PremiumStarComponent: Component {
     let isVisible: Bool
+    let hasIdleAnimations: Bool
     
-    init(isVisible: Bool) {
+    init(isVisible: Bool, hasIdleAnimations: Bool) {
         self.isVisible = isVisible
+        self.hasIdleAnimations = hasIdleAnimations
     }
     
     static func ==(lhs: PremiumStarComponent, rhs: PremiumStarComponent) -> Bool {
-        return lhs.isVisible == rhs.isVisible
+        return lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -75,12 +77,14 @@ class PremiumStarComponent: Component {
                 
         private var previousInteractionTimestamp: Double = 0.0
         private var timer: SwiftSignalKit.Timer?
+        private var hasIdleAnimations = false
         
         override init(frame: CGRect) {
             self.sceneView = SCNView(frame: frame)
             self.sceneView.backgroundColor = .clear
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
             self.sceneView.isUserInteractionEnabled = false
+            self.sceneView.preferredFramesPerSecond = 60
             
             super.init(frame: frame)
             
@@ -210,18 +214,24 @@ class PremiumStarComponent: Component {
         }
         
         private func setup() {
-            guard let url = getAppBundle().url(forResource: "star", withExtension: ""),
-                  let compressedData = try? Data(contentsOf: url),
-                  let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
-                return
-            }
-            let fileName = "star_\(sceneVersion).scn"
-            let tmpURL = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
-            if !FileManager.default.fileExists(atPath: tmpURL.path) {
-                try? decompressedData.write(to: tmpURL)
+            let resourceUrl: URL
+            if let url = getAppBundle().url(forResource: "star", withExtension: "scn") {
+                resourceUrl = url
+            } else {
+                let fileName = "star_\(sceneVersion).scn"
+                let tmpUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
+                if !FileManager.default.fileExists(atPath: tmpUrl.path) {
+                    guard let url = getAppBundle().url(forResource: "star", withExtension: ""),
+                          let compressedData = try? Data(contentsOf: url),
+                          let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
+                        return
+                    }
+                    try? decompressedData.write(to: tmpUrl)
+                }
+                resourceUrl = tmpUrl
             }
             
-            guard let scene = try? SCNScene(url: tmpURL, options: nil) else {
+            guard let scene = try? SCNScene(url: resourceUrl, options: nil) else {
                 return
             }
             
@@ -249,7 +259,7 @@ class PremiumStarComponent: Component {
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
             self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
-                if let strongSelf = self {
+                if let strongSelf = self, strongSelf.hasIdleAnimations {
                     let currentTimestamp = CACurrentMediaTime()
                     if currentTimestamp > strongSelf.previousInteractionTimestamp + 5.0 {
                         strongSelf.playAppearanceAnimation()
@@ -358,6 +368,8 @@ class PremiumStarComponent: Component {
         func update(component: PremiumStarComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             self.sceneView.bounds = CGRect(origin: .zero, size: CGSize(width: availableSize.width * 2.0, height: availableSize.height * 2.0))
             self.sceneView.center = CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0)
+            
+            self.hasIdleAnimations = component.hasIdleAnimations
             
             return availableSize
         }
