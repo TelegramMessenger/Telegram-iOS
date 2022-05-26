@@ -878,6 +878,12 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
                 
+                if !animated {
+                    self.selectedId = id
+                    self.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
+                    self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, .immediate, false)
+                }
+                
                 disposable.set((itemNode.listNode.ready
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] _ in

@@ -84,6 +84,7 @@ class PremiumStarComponent: Component {
             self.sceneView.backgroundColor = .clear
             self.sceneView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
             self.sceneView.isUserInteractionEnabled = false
+            self.sceneView.preferredFramesPerSecond = 60
             
             super.init(frame: frame)
             
@@ -213,18 +214,24 @@ class PremiumStarComponent: Component {
         }
         
         private func setup() {
-            guard let url = getAppBundle().url(forResource: "star", withExtension: ""),
-                  let compressedData = try? Data(contentsOf: url),
-                  let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
-                return
-            }
-            let fileName = "star_\(sceneVersion).scn"
-            let tmpURL = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
-            if !FileManager.default.fileExists(atPath: tmpURL.path) {
-                try? decompressedData.write(to: tmpURL)
+            let resourceUrl: URL
+            if let url = getAppBundle().url(forResource: "star", withExtension: "scn") {
+                resourceUrl = url
+            } else {
+                let fileName = "star_\(sceneVersion).scn"
+                let tmpUrl = URL(fileURLWithPath: NSTemporaryDirectory() + fileName)
+                if !FileManager.default.fileExists(atPath: tmpUrl.path) {
+                    guard let url = getAppBundle().url(forResource: "star", withExtension: ""),
+                          let compressedData = try? Data(contentsOf: url),
+                          let decompressedData = TGGUnzipData(compressedData, 8 * 1024 * 1024) else {
+                        return
+                    }
+                    try? decompressedData.write(to: tmpUrl)
+                }
+                resourceUrl = tmpUrl
             }
             
-            guard let scene = try? SCNScene(url: tmpURL, options: nil) else {
+            guard let scene = try? SCNScene(url: resourceUrl, options: nil) else {
                 return
             }
             

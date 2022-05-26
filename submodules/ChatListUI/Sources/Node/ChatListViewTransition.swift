@@ -207,7 +207,7 @@ func preparedChatListNodeViewTransition(from fromView: ChatListNodeView?, to toV
         }
         
         var adjustScrollToFirstItem = false
-        if !previewing && !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 1 {
+        if !previewing && !searchMode && fromEmptyView && scrollToItem == nil && toView.filteredEntries.count >= 2 {
             adjustScrollToFirstItem = true
         }
         
