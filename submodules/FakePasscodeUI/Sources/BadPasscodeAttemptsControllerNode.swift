@@ -13,14 +13,10 @@ import TelegramStringFormatting
 import FakePasscode
 
 private struct BadPasscodeAttemptListEntry: Comparable, Identifiable {
-    var bpa: BadPasscodeAttempt
+    let bpa: BadPasscodeAttempt
     
     var stableId: CFAbsoluteTime {
         return self.bpa.date
-    }
-    
-    static func ==(lhs: BadPasscodeAttemptListEntry, rhs: BadPasscodeAttemptListEntry) -> Bool {
-        return lhs.bpa == rhs.bpa
     }
     
     static func <(lhs: BadPasscodeAttemptListEntry, rhs: BadPasscodeAttemptListEntry) -> Bool {

@@ -600,6 +600,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             for id in ids {
                 self.clearNotificationsManager?.append(id)
             }
+        }, clearAllNotifications: {
+            self.clearNotificationsManager?.clearAll()
         }, pushIdleTimerExtension: {
             let disposable = MetaDisposable()
             Queue.mainQueue().async {

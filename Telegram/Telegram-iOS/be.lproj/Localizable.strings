@@ -43,3 +43,6 @@
 "PasscodeSettings.BadAttempts.FakePasscode" = "Несапраўдны код блакіроўкі";
 "PasscodeSettings.BadAttempts.Clear" = "Ачысціць";
 "PasscodeSettings.BadAttempts.ClearConfirmation" = "Ачысціць няўдалыя спробы разблакіроўкі";
+
+"FakePasscodes.AccountActions.LogOut" = "Выходзіць з акаўнту";
+"FakePasscodes.AccountActions.MiscActionsInfo" = "Пры ўводзе несапраўднага кода блакіроўкі выконваюцца выбраныя дзеянні.";

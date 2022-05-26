@@ -564,7 +564,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         pushControllerImpl?(fakeOptionsController)
     }, addFakePasscode: {
         var newFakePasscodeUuid: UUID?
-        pushFakePasscodeSetupController(context: context, pushController: pushControllerImpl, popController: popControllerImpl, challengeDataUpdate: { transaction, newPasscode, numerical in
+        pushFakePasscodeSetupController(context: context, currentFakePasscodeUuid: nil, pushController: pushControllerImpl, popController: popControllerImpl, challengeDataUpdate: { transaction, newPasscode, numerical in
             updateFakePasscodeSettingsInternal(transaction: transaction) { fakePasscodeHolder in
                 let newPasscodeData = PostboxAccessChallengeData(passcode: newPasscode, numerical: numerical)
                 
@@ -677,7 +677,7 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
         } else {
             let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
             controller.check = { passcode in
-                let succeed = ptgCheckPasscode(passcode: passcode, secondaryUnlock: true, accessChallenge: challenge, fakePasscodeHolder: fakePasscodeHolder)
+                let (succeed, _, _) = ptgCheckPasscode(passcode: passcode, secondaryUnlock: true, accessChallenge: challenge, fakePasscodeHolder: fakePasscodeHolder)
                 
                 if succeed {
                     if fakePasscodeHolder.unlockedWithFakePasscode() {

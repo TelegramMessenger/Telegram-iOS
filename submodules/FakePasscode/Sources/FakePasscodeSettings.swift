@@ -4,22 +4,48 @@ import TelegramCore
 import TelegramUIPreferences
 import SwiftSignalKit
 import TelegramStringFormatting
+import AccountContext
 
-public struct FakePasscodeAccountActionSettings: Codable, Equatable {
-    public init() {
-
+public struct FakePasscodeAccountActionsSettings: Codable, Equatable {
+    public let peerId: PeerId
+    public let recordId: AccountRecordId
+    public let logOut: Bool
+    
+    public static func defaultSettings(peerId: PeerId, recordId: AccountRecordId) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: peerId, recordId: recordId, logOut: false)
+    }
+    
+    public init(peerId: PeerId, recordId: AccountRecordId, logOut: Bool) {
+        self.peerId = peerId
+        self.recordId = recordId
+        self.logOut = logOut
     }
 
     public init(from decoder: Decoder) throws {
-        let _ = try decoder.container(keyedBy: StringCodingKey.self)
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
 
-        // TODO Implement
+        self.peerId = try container.decode(PeerId.self, forKey: "pid")
+        self.recordId = try container.decode(AccountRecordId.self, forKey: "rid")
+        self.logOut = (try container.decodeIfPresent(Int32.self, forKey: "lo") ?? 0) != 0
     }
 
     public func encode(to encoder: Encoder) throws {
-        var _ = encoder.container(keyedBy: StringCodingKey.self)
+        var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        // TODO Implement
+        try container.encode(self.peerId, forKey: "pid")
+        try container.encode(self.recordId, forKey: "rid")
+        try container.encode((self.logOut ? 1 : 0) as Int32, forKey: "lo")
+    }
+    
+    public func withUpdatedLogOut(_ logOut: Bool) -> FakePasscodeAccountActionsSettings {
+        return FakePasscodeAccountActionsSettings(peerId: self.peerId, recordId: self.recordId, logOut: logOut)
+    }
+    
+    public func performActions(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationBindings: TelegramApplicationBindings) {
+        if logOut {
+            applicationBindings.clearAllNotifications()
+            let _ = logoutFromAccount(id: recordId, accountManager: accountManager, alreadyLoggedOutRemotely: false).start()
+        }
     }
 }
 
@@ -129,6 +155,17 @@ public struct FakePasscodeSettingsHolder: Codable, Equatable {  // TODO probably
         }
         return autolockTimeout
     }
+    
+    public func activeFakePasscodeSettings() -> FakePasscodeSettings? {
+        if let activeFakePasscodeUuid = self.activeFakePasscodeUuid {
+            if let fakePasscodeItem = self.settings.first(where: { $0.uuid == activeFakePasscodeUuid }) {
+                return fakePasscodeItem
+            } else {
+                assertionFailure()
+            }
+        }
+        return nil
+    }
 }
 
 public struct FakePasscodeSettings: Codable, Equatable {
@@ -143,17 +180,13 @@ public struct FakePasscodeSettings: Codable, Equatable {
     public let smsActions: FakePasscodeSmsActionSettings?
     public let clearCache: Bool
     public let clearProxies: Bool
-    public let accountActions: FakePasscodeAccountActionSettings?
-
-    public static var defaultSettings: FakePasscodeSettings {
-        return FakePasscodeSettings(name: "New Fake Passcode", passcode: nil)
-    }
+    public let accountActions: [FakePasscodeAccountActionsSettings]
 
     public init(name: String, passcode: String?) {
-        self.init(uuid: UUID(), name: name, passcode: passcode, allowLogin: false, clearAfterActivation: false, deleteOtherPasscodes: false, activationMessage: nil, activationAttempts: -1, smsActions: FakePasscodeSmsActionSettings(), clearCache: false, clearProxies: false, accountActions: FakePasscodeAccountActionSettings())
+        self.init(uuid: UUID(), name: name, passcode: passcode, allowLogin: false, clearAfterActivation: false, deleteOtherPasscodes: false, activationMessage: nil, activationAttempts: -1, smsActions: FakePasscodeSmsActionSettings(), clearCache: false, clearProxies: false, accountActions: [])
     }
 
-    public init(uuid: UUID, name: String, passcode: String?, allowLogin: Bool, clearAfterActivation: Bool, deleteOtherPasscodes: Bool, activationMessage: String?, activationAttempts: Int32, smsActions: FakePasscodeSmsActionSettings?, clearCache: Bool, clearProxies: Bool, accountActions: FakePasscodeAccountActionSettings?) {
+    public init(uuid: UUID, name: String, passcode: String?, allowLogin: Bool, clearAfterActivation: Bool, deleteOtherPasscodes: Bool, activationMessage: String?, activationAttempts: Int32, smsActions: FakePasscodeSmsActionSettings?, clearCache: Bool, clearProxies: Bool, accountActions: [FakePasscodeAccountActionsSettings]) {
         self.uuid = uuid
         self.name = name
         self.passcode = passcode
@@ -182,7 +215,7 @@ public struct FakePasscodeSettings: Codable, Equatable {
         self.smsActions = try container.decodeIfPresent(FakePasscodeSmsActionSettings.self, forKey: "fps")
         self.clearCache = (try container.decode(Int32.self, forKey: "cc")) != 0
         self.clearProxies = (try container.decode(Int32.self, forKey: "cp")) != 0
-        self.accountActions = try container.decodeIfPresent(FakePasscodeAccountActionSettings.self, forKey: "aa")
+        self.accountActions = try container.decodeIfPresent([FakePasscodeAccountActionsSettings].self, forKey: "aa") ?? []
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -199,11 +232,7 @@ public struct FakePasscodeSettings: Codable, Equatable {
         try container.encodeIfPresent(self.smsActions, forKey: "fps")
         try container.encode((self.clearCache ? 1 : 0) as Int32, forKey: "cc")
         try container.encode((self.clearProxies ? 1 : 0) as Int32, forKey: "cp")
-        try container.encodeIfPresent(self.accountActions, forKey: "aa")
-    }
-
-    public static func ==(lhs: FakePasscodeSettings, rhs: FakePasscodeSettings) -> Bool {
-        return lhs.uuid == rhs.uuid && lhs.name == rhs.name && lhs.passcode == rhs.passcode && lhs.allowLogin == rhs.allowLogin && lhs.clearAfterActivation == rhs.clearAfterActivation && lhs.deleteOtherPasscodes == rhs.deleteOtherPasscodes && lhs.activationMessage == rhs.activationMessage && lhs.activationAttempts == rhs.activationAttempts && lhs.smsActions == rhs.smsActions && lhs.clearCache == rhs.clearCache && lhs.clearProxies == rhs.clearProxies && lhs.accountActions == rhs.accountActions
+        try container.encode(self.accountActions, forKey: "aa")
     }
 
     public func withUpdatedPasscode(_ passcode: String?) -> FakePasscodeSettings {
@@ -246,8 +275,16 @@ public struct FakePasscodeSettings: Codable, Equatable {
         return FakePasscodeSettings(uuid: self.uuid, name: self.name, passcode: self.passcode, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: clearProxies, accountActions: self.accountActions)
     }
 
-    public func withUpdatedAccountActions(_ clearProxies: Bool) -> FakePasscodeSettings {
+    public func withUpdatedAccountActions(_ accountActions: [FakePasscodeAccountActionsSettings]) -> FakePasscodeSettings {
         return FakePasscodeSettings(uuid: self.uuid, name: self.name, passcode: self.passcode, allowLogin: self.allowLogin, clearAfterActivation: self.clearAfterActivation, deleteOtherPasscodes: deleteOtherPasscodes, activationMessage: self.activationMessage, activationAttempts: self.activationAttempts, smsActions: self.smsActions, clearCache: self.clearCache, clearProxies: self.clearProxies, accountActions: accountActions)
+    }
+    
+    public func withUpdatedAccountActionItem(_ accountAction: FakePasscodeAccountActionsSettings) -> FakePasscodeSettings {
+        return withUpdatedAccountActions(self.accountActions.filter({ $0.peerId != accountAction.peerId }) + [accountAction])
+    }
+    
+    public func activate(accountManager: AccountManager<TelegramAccountManagerTypes>, applicationBindings: TelegramApplicationBindings) {
+        accountActions.forEach { $0.performActions(accountManager: accountManager, applicationBindings: applicationBindings) }
     }
 }
 
@@ -292,13 +329,11 @@ extension PostboxAccessChallengeData {
 public func ptgCheckPasscode(passcode: String,
                              secondaryUnlock: Bool,
                              accessChallenge: PostboxAccessChallengeData,
-                             fakePasscodeHolder: FakePasscodeSettingsHolder,
-                             updateAccessChallenge: ((PostboxAccessChallengeData) -> Void)? = nil,
-                             updateFakePasscodeSettings: ((FakePasscodeSettingsHolder) -> Void)? = nil) -> Bool {
+                             fakePasscodeHolder: FakePasscodeSettingsHolder) -> (Bool, PostboxAccessChallengeData?, FakePasscodeSettingsHolder?) {
     if let activeFakePasscodeUuid = fakePasscodeHolder.activeFakePasscodeUuid {
         if let fakePasscodeItem = fakePasscodeHolder.settings.first(where: { $0.uuid == activeFakePasscodeUuid }) {
             if passcode == fakePasscodeItem.passcode {
-                return true
+                return (true, nil, nil)
             }
         } else {
             assertionFailure()
@@ -306,26 +341,23 @@ public func ptgCheckPasscode(passcode: String,
 
         if let savedAccessChallenge = fakePasscodeHolder.savedAccessChallenge {
             if !secondaryUnlock && passcode == savedAccessChallenge.normalizedString() {
-                updateAccessChallenge!(savedAccessChallenge)
                 let updatedFakePasscodeSettingsHolder = FakePasscodeSettingsHolder(settings: fakePasscodeHolder.settings, activeFakePasscodeUuid: nil, savedAccessChallenge: nil)
-                updateFakePasscodeSettings!(updatedFakePasscodeSettingsHolder)
-                return true
+                return (true, savedAccessChallenge, updatedFakePasscodeSettingsHolder)
             }
         } else {
             assertionFailure()
         }
     } else {
         if passcode == accessChallenge.normalizedString() {
-            return true
+            return (true, nil, nil)
         }
     }
 
     if !secondaryUnlock,
        let fakePasscodeItem = fakePasscodeHolder.settings.first(where: { passcode == $0.passcode }) {
         let updatedFakePasscodeSettingsHolder = FakePasscodeSettingsHolder(settings: fakePasscodeHolder.settings, activeFakePasscodeUuid: fakePasscodeItem.uuid, savedAccessChallenge: fakePasscodeHolder.unlockedWithFakePasscode() ? fakePasscodeHolder.savedAccessChallenge : accessChallenge)
-        updateFakePasscodeSettings!(updatedFakePasscodeSettingsHolder)
-        return true
+        return (true, nil, updatedFakePasscodeSettingsHolder)
     }
 
-    return false
+    return (false, nil, nil)
 }

@@ -189,6 +189,7 @@ public class ShareRootControllerImpl {
             }, displayNotification: { _ in
                 
             }, applicationInForeground: .single(false), applicationIsActive: .single(false), clearMessageNotifications: { _ in
+            }, clearAllNotifications: {
             }, pushIdleTimerExtension: {
                 return EmptyDisposable
             }, openSettings: {}, openAppStorePage: {}, registerForNotifications: { _ in }, requestSiriAuthorization: { _ in }, siriAuthorization: { return .notDetermined }, getWindowHost: {

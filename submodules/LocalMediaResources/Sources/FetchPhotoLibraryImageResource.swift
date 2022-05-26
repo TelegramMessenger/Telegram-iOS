@@ -11,8 +11,8 @@ private final class RequestId {
     var invalidated: Bool = false
 }
 
-public func resizedImage(_ image: UIImage?, for size: CGSize) -> UIImage? {
-    guard let cgImage = image?.cgImage else {
+private func resizedImage(_ image: UIImage, for size: CGSize) -> UIImage? {
+    guard let cgImage = image.cgImage else {
         return nil
     }
 
