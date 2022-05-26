@@ -366,5 +366,17 @@ public extension TelegramEngine {
                 }
             }).start()
         }
+        
+        public func findRandomMessage(peerId: EnginePeer.Id, namespace: EngineMessage.Id.Namespace, tag: EngineMessage.Tags, ignoreIds: ([EngineMessage.Id], Set<EngineMessage.Id>)) -> Signal<EngineMessage.Index?, NoError> {
+            return self.account.postbox.transaction { transaction -> EngineMessage.Index? in
+                return transaction.findRandomMessage(peerId: peerId, namespace: namespace, tag: tag, ignoreIds: ignoreIds)
+            }
+        }
+        
+        public func failedMessageGroup(id: EngineMessage.Id) -> Signal<[EngineMessage], NoError> {
+            return self.account.postbox.transaction { transaction -> [EngineMessage] in
+                return transaction.getMessageFailedGroup(id)?.map(EngineMessage.init) ?? []
+            }
+        }
     }
 }

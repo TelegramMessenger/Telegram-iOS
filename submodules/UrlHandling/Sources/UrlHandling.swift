@@ -517,9 +517,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 }
             }
         case let .peerId(peerId):
-            return context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(peerId)
-            }
+            return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
                     return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
@@ -528,11 +526,9 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 }
             }
         case let .privateMessage(messageId, threadId, timecode):
-            return context.account.postbox.transaction { transaction -> Peer? in
-                return transaction.getPeer(messageId.peerId)
-            }
+            return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
-                let foundPeer: Signal<Peer?, NoError>
+                let foundPeer: Signal<EnginePeer?, NoError>
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {

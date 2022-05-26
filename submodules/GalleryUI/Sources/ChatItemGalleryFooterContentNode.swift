@@ -1016,9 +1016,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     @objc func deleteButtonPressed() {
         if let currentMessage = self.currentMessage {
-            let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-                return transaction.getMessageGroup(currentMessage.id) ?? []
-            } |> deliverOnMainQueue).start(next: { [weak self] messages in
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.MessageGroup(id: currentMessage.id))
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     if messages.count == 1 {
                         strongSelf.commitDeleteMessages(messages, ask: true)
@@ -1032,7 +1031,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         
                         var generalMessageContentKind: MessageContentKind?
                         for message in messages {
-                            let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
+                            let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
                             if generalMessageContentKind == nil || generalMessageContentKind == currentKind {
                                 generalMessageContentKind = currentKind
                             } else {
@@ -1057,7 +1056,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }
                         }
                     
-                        let deleteAction: ([Message]) -> Void = { messages in
+                        let deleteAction: ([EngineMessage]) -> Void = { messages in
                             if let strongSelf = self {
                                 strongSelf.commitDeleteMessages(messages, ask: false)
                             }
@@ -1070,7 +1069,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                         let items: [ActionSheetItem] = [
                             ActionSheetButtonItem(title: singleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                deleteAction([currentMessage])
+                                deleteAction([EngineMessage(currentMessage)])
                             }),
                             ActionSheetButtonItem(title: multipleText, color: .destructive, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
@@ -1093,7 +1092,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
 
-    private func commitDeleteMessages(_ messages: [Message], ask: Bool) {
+    private func commitDeleteMessages(_ messages: [EngineMessage], ask: Bool) {
         self.messageContextDisposable.set((self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: Set(messages.map { $0.id })) |> deliverOnMainQueue).start(next: { [weak self] actions in
             if let strongSelf = self, let controllerInteration = strongSelf.controllerInteraction, !actions.options.isEmpty {
                 var presentationData = strongSelf.presentationData
@@ -1166,9 +1165,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.interacting?(true)
         
         if let currentMessage = self.currentMessage {
-            let _ = (self.context.account.postbox.transaction { transaction -> [Message] in
-                return transaction.getMessageGroup(currentMessage.id) ?? []
-            } |> deliverOnMainQueue).start(next: { [weak self] messages in
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.MessageGroup(id: currentMessage.id))
+            |> deliverOnMainQueue).start(next: { [weak self] messages in
                 if let strongSelf = self, !messages.isEmpty {
                     var presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     var forceTheme: PresentationTheme?
@@ -1181,7 +1179,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     var messageContentKinds = Set<MessageContentKindKey>()
                     
                     for message in messages {
-                        let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
+                        let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
                         if beganContentKindScanning && currentKind != generalMessageContentKind {
                             generalMessageContentKind = nil
                         } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
@@ -1210,10 +1208,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                     
                     if messages.count == 1 {
-                        var subject: ShareControllerSubject = ShareControllerSubject.messages(messages)
+                        var subject: ShareControllerSubject = ShareControllerSubject.messages(messages.map { $0._asMessage() })
                         for m in messages[0].media {
                             if let image = m as? TelegramMediaImage {
-                                subject = .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(messages[0]), media: m), resource: $0.resource)) }))
+                                subject = .image(image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(messages[0]._asMessage()), media: m), resource: $0.resource)) }))
                             } else if let webpage = m as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                                 if content.embedType == "iframe" {
                                     let item = OpenInItem.url(url: content.url)
@@ -1246,12 +1244,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                     }
                                 }
                             } else if let file = m as? TelegramMediaFile {
-                                subject = .media(.message(message: MessageReference(messages[0]), media: file))
+                                subject = .media(.message(message: MessageReference(messages[0]._asMessage()), media: file))
                                 if file.isAnimated {
                                     preferredAction = .custom(action: ShareControllerAction(title: presentationData.strings.Preview_SaveGif, action: { [weak self] in
                                         if let strongSelf = self {
                                             let message = messages[0]
-                                            let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .message(message: MessageReference(message), media: file)).start()
+                                            let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .message(message: MessageReference(message._asMessage()), media: file)).start()
                                             
                                             strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: true, animateInAsReplacement: true, action: { _ in return false }), nil)
                                         }
@@ -1397,7 +1395,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             }),
                             ActionSheetButtonItem(title: multipleText, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
-                                shareAction(messages)
+                                shareAction(messages.map { $0._asMessage() })
                             })
                         ]
                         

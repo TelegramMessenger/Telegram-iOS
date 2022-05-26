@@ -74,8 +74,11 @@ public extension TelegramEngine {
             }
         }
 
-        public func findChannelById(channelId: Int64) -> Signal<Peer?, NoError> {
+        public func findChannelById(channelId: Int64) -> Signal<EnginePeer?, NoError> {
             return _internal_findChannelById(postbox: self.account.postbox, network: self.account.network, channelId: channelId)
+            |> map { peer in
+                return peer.flatMap(EnginePeer.init)
+            }
         }
 
         public func supportPeerId() -> Signal<PeerId?, NoError> {
@@ -723,6 +726,31 @@ public extension TelegramEngine {
         
         public func ensurePeerIsLocallyAvailable(peer: EnginePeer) -> Signal<EnginePeer.Id, NoError> {
             return _internal_storedMessageFromSearchPeer(account: self.account, peer: peer._asPeer())
+        }
+        
+        public func mostRecentSecretChat(id: EnginePeer.Id) -> Signal<EnginePeer.Id?, NoError> {
+            return self.account.postbox.transaction { transaction -> EnginePeer.Id? in
+                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(id)).filter { $0.namespace == Namespaces.Peer.SecretChat }
+                var activeIndices: [ChatListIndex] = []
+                for associatedId in filteredPeerIds {
+                    if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
+                        switch state {
+                        case .active, .handshake:
+                            if let (_, index) = transaction.getPeerChatListIndex(associatedId) {
+                                activeIndices.append(index)
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                activeIndices.sort()
+                if let index = activeIndices.last {
+                    return index.messageIndex.id.peerId
+                } else {
+                    return nil
+                }
+            }
         }
     }
 }

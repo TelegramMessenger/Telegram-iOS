@@ -34,6 +34,8 @@ public enum PostboxViewKey: Hashable {
     case contacts(accountPeerId: PeerId?, includePresences: Bool)
     case deletedMessages(peerId: PeerId)
     case notice(key: NoticeEntryKey)
+    case messageGroup(id: MessageId)
+    case isContact(id: PeerId)
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -112,6 +114,10 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(peerId)
         case let .notice(key):
             hasher.combine(key)
+        case let .messageGroup(id):
+            hasher.combine(id)
+        case let .isContact(id):
+            hasher.combine(id)
         }
     }
     
@@ -315,6 +321,18 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case let .messageGroup(id):
+            if case .messageGroup(id) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .isContact(id):
+            if case .isContact(id) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -387,5 +405,9 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableDeletedMessagesView(peerId: peerId)
     case let .notice(key):
         return MutableLocalNoticeEntryView(postbox: postbox, key: key)
+    case let .messageGroup(id):
+        return MutableMessageGroupView(postbox: postbox, id: id)
+    case let .isContact(id):
+        return MutableIsContactView(postbox: postbox, id: id)
     }
 }

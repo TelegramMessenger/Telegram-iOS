@@ -56,7 +56,7 @@ public func messageMediaImageInteractiveFetched(fetchManager: FetchManager, mess
     if let range = range {
         ranges = IndexSet(integersIn: Int(range.lowerBound) ..< Int(range.upperBound))
     } else {
-        ranges = FetchCompleteRange
+        ranges = IndexSet(integersIn: Int(0) ..< Int(Int64.max))
     }
     return fetchManager.interactivelyFetched(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(resource), ranges: ranges, statsCategory: .image, elevatedPriority: false, userInitiated: userInitiated, priority: priority, storeToDownloadsPeerType: storeToDownloadsPeerType)
 }

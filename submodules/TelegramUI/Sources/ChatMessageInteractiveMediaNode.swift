@@ -842,7 +842,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     }
                                 }
                             } else {
-                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: 600)
+                                updatedStatusSignal = chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image), displayAtSize: nil)
                                 |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                     return (resourceStatus, nil)
                                 }

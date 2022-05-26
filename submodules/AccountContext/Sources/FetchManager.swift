@@ -148,8 +148,6 @@ public enum FetchManagerPriority: Comparable {
     }
 }
 
-public let FetchCompleteRange = IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>)
-
 public protocol FetchManager {
     var queue: Queue { get }
     

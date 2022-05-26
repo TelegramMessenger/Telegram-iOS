@@ -324,9 +324,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if context.sharedContext.immediateExperimentalUISettings.localTranscription {
                     let appLocale = presentationData.strings.baseLanguageCode
                     
-                    let signal: Signal<String?, NoError> = context.account.postbox.transaction { transaction -> Message? in
-                        return transaction.getMessage(message.id)
-                    }
+                    let signal: Signal<String?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
                     |> mapToSignal { message -> Signal<String?, NoError> in
                         guard let message = message else {
                             return .single(nil)
