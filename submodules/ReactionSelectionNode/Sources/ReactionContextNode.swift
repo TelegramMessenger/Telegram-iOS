@@ -936,7 +936,9 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         self.animateReactionSelection(context: context, theme: theme, reaction: reaction, avatarPeers: avatarPeers, playHaptic: playHaptic, isLarge: isLarge, forceSmallEffectAnimation: forceSmallEffectAnimation, targetView: targetView, addStandaloneReactionAnimation: addStandaloneReactionAnimation, currentItemNode: nil, completion: completion)
     }
         
-    func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
+    public var currentDismissAnimation: (() -> Void)?
+    
+    public func animateReactionSelection(context: AccountContext, theme: PresentationTheme, reaction: ReactionItem, avatarPeers: [EnginePeer], playHaptic: Bool, isLarge: Bool, forceSmallEffectAnimation: Bool = false, targetView: UIView, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, currentItemNode: ReactionNode?, completion: @escaping () -> Void) {
         guard let sourceSnapshotView = targetView.snapshotContentTree() else {
             completion()
             return
@@ -955,12 +957,14 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             itemNode = ReactionNode(context: context, theme: theme, item: reaction)
         }
         self.itemNode = itemNode
-        
-        if let targetView = targetView as? ReactionIconView, !isLarge {
-            self.itemNodeIsEmbedded = true
-            targetView.addSubnode(itemNode)
-        } else {
-            self.addSubnode(itemNode)
+                
+        if !forceSmallEffectAnimation {
+            if let targetView = targetView as? ReactionIconView, !isLarge {
+                self.itemNodeIsEmbedded = true
+                targetView.addSubnode(itemNode)
+            } else {
+                self.addSubnode(itemNode)
+            }
         }
         
         itemNode.expandedAnimationDidBegin = { [weak self, weak targetView] in
@@ -975,7 +979,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 targetView.isHidden = true
             }
         }
-        
+                
         itemNode.isExtracted = true
         let selfTargetRect = self.view.convert(targetView.bounds, from: targetView)
         
@@ -1077,7 +1081,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 completion()
             }
         }
-        
+                
         var didBeginDismissAnimation = false
         let beginDismissAnimation: () -> Void = { [weak self] in
             if !didBeginDismissAnimation {
@@ -1089,62 +1093,91 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     return
                 }
                 
-                if isLarge {
-                    strongSelf.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: true, completion: {
-                        if let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
-                            let standaloneReactionAnimation = StandaloneReactionAnimation()
+                if forceSmallEffectAnimation {
+                    additionalAnimationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak additionalAnimationNode] _ in
+                        additionalAnimationNode?.removeFromSupernode()
+                    })
+                    
+                    mainAnimationCompleted = true
+                    intermediateCompletion()
+                } else {
+                    if isLarge {
+                        strongSelf.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: true, completion: {
+                            if let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
+                                let standaloneReactionAnimation = StandaloneReactionAnimation()
+                                
+                                addStandaloneReactionAnimation(standaloneReactionAnimation)
+                                
+                                standaloneReactionAnimation.animateReactionSelection(
+                                    context: itemNode.context,
+                                    theme: itemNode.context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                                    reaction: itemNode.item,
+                                    avatarPeers: avatarPeers,
+                                    playHaptic: false,
+                                    isLarge: false,
+                                    targetView: targetView,
+                                    addStandaloneReactionAnimation: nil,
+                                    completion: { [weak standaloneReactionAnimation] in
+                                        standaloneReactionAnimation?.removeFromSupernode()
+                                    }
+                                )
+                            }
                             
-                            addStandaloneReactionAnimation(standaloneReactionAnimation)
-                            
-                            standaloneReactionAnimation.animateReactionSelection(
-                                context: itemNode.context,
-                                theme: itemNode.context.sharedContext.currentPresentationData.with({ $0 }).theme,
-                                reaction: itemNode.item,
-                                avatarPeers: avatarPeers,
-                                playHaptic: false,
-                                isLarge: false,
-                                targetView: targetView,
-                                addStandaloneReactionAnimation: nil,
-                                completion: { [weak standaloneReactionAnimation] in
-                                    standaloneReactionAnimation?.removeFromSupernode()
-                                }
-                            )
+                            mainAnimationCompleted = true
+                            intermediateCompletion()
+                        })
+                    } else {
+                        if let targetView = strongSelf.targetView {
+                            if let targetView = targetView as? ReactionIconView, !isLarge {
+                                targetView.imageView.isHidden = false
+                            } else {
+                                targetView.alpha = 1.0
+                                targetView.isHidden = false
+                            }
+                        }
+                        
+                        if strongSelf.itemNodeIsEmbedded {
+                            strongSelf.itemNode?.removeFromSupernode()
                         }
                         
                         mainAnimationCompleted = true
                         intermediateCompletion()
-                    })
-                } else {
-                    if let targetView = strongSelf.targetView {
-                        if let targetView = targetView as? ReactionIconView, !isLarge {
-                            targetView.imageView.isHidden = false
-                        } else {
-                            targetView.alpha = 1.0
-                            targetView.isHidden = false
-                        }
                     }
-                    
-                    if strongSelf.itemNodeIsEmbedded {
-                        strongSelf.itemNode?.removeFromSupernode()
-                    }
-                    
-                    mainAnimationCompleted = true
-                    intermediateCompletion()
                 }
             }
         }
+        self.currentDismissAnimation = beginDismissAnimation
         
+        let maybeBeginDismissAnimation: () -> Void = {
+            if mainAnimationCompleted && additionalAnimationCompleted {
+                beginDismissAnimation()
+            }
+        }
+        
+        if forceSmallEffectAnimation {
+            itemNode.mainAnimationCompletion = {
+                mainAnimationCompleted = true
+                maybeBeginDismissAnimation()
+            }
+        }
+                
         additionalAnimationNode.completed = { _ in
             additionalAnimationCompleted = true
             intermediateCompletion()
-            beginDismissAnimation()
+            if forceSmallEffectAnimation {
+                maybeBeginDismissAnimation()
+            } else {
+                beginDismissAnimation()
+            }
         }
         
         additionalAnimationNode.visibility = true
         
-        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
-            beginDismissAnimation()
-        })
+        if !forceSmallEffectAnimation {
+            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 2.0, execute: {
+                beginDismissAnimation()
+            })
+        }
     }
     
     private func animateFromItemNodeToReaction(itemNode: ReactionNode, targetView: UIView, hideNode: Bool, completion: @escaping () -> Void) {

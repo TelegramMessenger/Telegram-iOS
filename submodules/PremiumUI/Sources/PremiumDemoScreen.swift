@@ -878,6 +878,8 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
     public init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, action: @escaping () -> Void) {
         super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, action: action), navigationBarAppearance: .none)
         
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        
         self.navigationPresentation = .flatModal
     }
     

@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import SwiftSignalKit
 import AsyncDisplayKit
 import ComponentFlow
 import TelegramCore
@@ -66,7 +67,9 @@ final class ReactionsCarouselComponent: Component {
             }
             
             if isDisplaying && !self.isVisible {
-                self.node?.animateIn()
+                self.node?.setVisible(true)
+            } else if !isDisplaying && self.isVisible {
+                self.node?.setVisible(false)
             }
             self.isVisible = isDisplaying
             
@@ -84,6 +87,9 @@ final class ReactionsCarouselComponent: Component {
 }
 
 private let itemSize = CGSize(width: 110.0, height: 110.0)
+
+//private let order = ["👌","😍","🤡","🕊","🥱","🥴"]
+private let order = ["😍","👌","🥴","🥱","🕊","🤡"]
 
 private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -105,10 +111,27 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let positionDelta: Double
     
+    private var previousInteractionTimestamp: Double = 0.0
+    private var timer: SwiftSignalKit.Timer?
+    private var hasIdleAnimations = false
+    
     init(context: AccountContext, theme: PresentationTheme, reactions: [AvailableReactions.Reaction]) {
         self.context = context
         self.theme = theme
-        self.reactions = Array(reactions.shuffled().prefix(6))
+        
+        var reactionMap: [String: AvailableReactions.Reaction] = [:]
+        for reaction in reactions {
+            reactionMap[reaction.value] = reaction
+        }
+        
+        var sortedReactions: [AvailableReactions.Reaction] = []
+        for emoji in order {
+            if let reaction = reactionMap[emoji] {
+                sortedReactions.append(reaction)
+            }
+        }
+        
+        self.reactions = sortedReactions
         
         self.scrollNode = ASScrollNode()
         self.tapNode = ASDisplayNode()
@@ -123,6 +146,10 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.setup()
     }
     
+    deinit {
+        self.timer?.invalidate()
+    }
+    
     override func didLoad() {
         super.didLoad()
         
@@ -134,6 +161,8 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     @objc private func reactionTapped(_ gestureRecognizer: UITapGestureRecognizer) {
+        self.previousInteractionTimestamp = CACurrentMediaTime()
+        
         guard self.animator == nil, self.scrollStartPosition == nil else {
             return
         }
@@ -143,11 +172,42 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        self.scrollTo(index, playReaction: true, duration: 0.4)
+        self.scrollTo(index, playReaction: true, immediately: true, duration: 0.4)
+    }
+    
+    func setVisible(_ visible: Bool) {
+        if visible {
+            self.animateIn()
+        } else {
+            self.scrollTo(0, playReaction: false, immediately: false, duration: 0.0, clockwise: false)
+            self.timer?.invalidate()
+            self.timer = nil
+            
+            self.playingIndices.removeAll()
+            self.standaloneReactionAnimation?.removeFromSupernode()
+        }
     }
     
     func animateIn() {
-        self.scrollTo(1, playReaction: true, duration: 0.5, clockwise: true)
+        self.scrollTo(1, playReaction: true, immediately: false, duration: 0.5, clockwise: true)
+        
+        if self.timer == nil {
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                if let strongSelf = self {
+                    let currentTimestamp = CACurrentMediaTime()
+                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 5.0 {
+                        var nextIndex = strongSelf.currentIndex - 1
+                        if nextIndex < 0 {
+                            nextIndex = strongSelf.reactions.count + nextIndex
+                        }
+                        strongSelf.scrollTo(nextIndex, playReaction: true, immediately: true, duration: 0.3, clockwise: true)
+                        strongSelf.previousInteractionTimestamp = currentTimestamp
+                    }
+                }
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
+        }
     }
     
     func animateOut() {
@@ -156,7 +216,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func scrollTo(_ index: Int, playReaction: Bool, duration: Double, clockwise: Bool? = nil) {
+    func scrollTo(_ index: Int, playReaction: Bool, immediately: Bool, duration: Double, clockwise: Bool? = nil) {
         guard index >= 0 && index < self.itemNodes.count else {
             return
         }
@@ -184,25 +244,36 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.animator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] t in
-            let t = listViewAnimationCurveSystem(t)
-            var updatedPosition = startPosition + change * t
-            while updatedPosition >= 1.0 {
-                updatedPosition -= 1.0
+        if immediately {
+            self.playReaction(index: index)
+        }
+        
+        if duration.isZero {
+            self.currentPosition = newPosition
+            if let size = self.validLayout {
+                self.updateLayout(size: size, transition: .immediate)
             }
-            while updatedPosition < 0.0 {
-                updatedPosition += 1.0
-            }
-            self?.currentPosition = updatedPosition
-            if let size = self?.validLayout {
-                self?.updateLayout(size: size, transition: .immediate)
-            }
-        }, completion: { [weak self] in
-            self?.animator = nil
-            if playReaction {
-                self?.playReaction()
-            }
-        })
+        } else {
+            self.animator = DisplayLinkAnimator(duration: duration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] t in
+                let t = listViewAnimationCurveSystem(t)
+                var updatedPosition = startPosition + change * t
+                while updatedPosition >= 1.0 {
+                    updatedPosition -= 1.0
+                }
+                while updatedPosition < 0.0 {
+                    updatedPosition += 1.0
+                }
+                self?.currentPosition = updatedPosition
+                if let size = self?.validLayout {
+                    self?.updateLayout(size: size, transition: .immediate)
+                }
+            }, completion: { [weak self] in
+                self?.animator = nil
+                if playReaction && !immediately {
+                    self?.playReaction(index: nil)
+                }
+            })
+        }
     }
     
     func setup() {
@@ -240,12 +311,17 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.ignoreContentOffsetChange = false
     }
     
-    func playReaction() {
-        let delta = self.positionDelta
-        let index = max(0, Int(round(self.currentPosition / delta)) % self.itemNodes.count)
+    func playReaction(index: Int?) {
+        let index = index ?? max(0, Int(round(self.currentPosition / self.positionDelta)) % self.itemNodes.count)
         
         guard !self.playingIndices.contains(index) else {
             return
+        }
+        
+        if let current = self.standaloneReactionAnimation, let dismiss = current.currentDismissAnimation {
+            dismiss()
+            current.currentDismissAnimation = nil
+            self.playingIndices.removeAll()
         }
         
         let reaction = self.reactions[index]
@@ -284,10 +360,13 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             forceSmallEffectAnimation: true,
             targetView: targetView,
             addStandaloneReactionAnimation: nil,
+            currentItemNode: self.itemNodes[index],
             completion: { [weak standaloneReactionAnimation, weak self] in
                 standaloneReactionAnimation?.removeFromSupernode()
-                self?.standaloneReactionAnimation = nil
-                self?.playingIndices.remove(index)
+                if self?.standaloneReactionAnimation === standaloneReactionAnimation {
+                    self?.standaloneReactionAnimation = nil
+                    self?.playingIndices.remove(index)
+                }
             }
         )
     }
@@ -301,6 +380,10 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
      
     private let hapticFeedback = HapticFeedback()
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView.isTracking {
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+        }
+        
         guard !self.ignoreContentOffsetChange, let (startContentOffset, startPosition) = self.scrollStartPosition else {
             return
         }
@@ -347,17 +430,21 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+            
             self.resetScrollPosition()
             
             let delta = self.positionDelta
             let index = max(0, Int(round(self.currentPosition / delta)) % self.itemNodes.count)
-            self.scrollTo(index, playReaction: true, duration: 0.2)
+            self.scrollTo(index, playReaction: true, immediately: true, duration: 0.2)
         }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.previousInteractionTimestamp = CACurrentMediaTime()
+        
         self.resetScrollPosition()
-        self.playReaction()
+        self.playReaction(index: nil)
     }
     
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {

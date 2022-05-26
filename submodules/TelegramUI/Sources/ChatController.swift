@@ -1044,11 +1044,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if !reaction.isEnabled {
                                 continue
                             }
-                            if reaction.isPremium && !hasPremium {
-                                hasPremiumPlaceholder = true
-                                continue
-                            }
-                            
+
                             switch allowedReactions {
                             case let .set(set):
                                 if !set.contains(reaction.value) {
@@ -1057,6 +1053,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case .all:
                                 break
                             }
+                            
+                            if reaction.isPremium && !hasPremium {
+                                hasPremiumPlaceholder = true
+                                continue
+                            }
+                            
                             actions.reactionItems.append(.reaction(ReactionItem(
                                 reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
