@@ -389,7 +389,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 return
             }
             self.view.addSubview(webView)
-            webView.scrollView.addSubnode(self.topOverscrollNode)
+            webView.scrollView.insertSubview(self.topOverscrollNode.view, at: 0)
         }
         
         @objc fileprivate func mainButtonPressed() {
