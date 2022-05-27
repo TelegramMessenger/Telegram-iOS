@@ -1579,7 +1579,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
-            if self.textSelectionNode == nil, let item = self.arguments, /*!item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(),*/ let rootNode = item.controllerInteraction.chatControllerNode() {
+            if self.textSelectionNode == nil, self.textNode.supernode != nil, let item = self.arguments, !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
                 let knobColor: UIColor
                 if item.message.effectivelyIncoming(item.context.account.peerId) {
