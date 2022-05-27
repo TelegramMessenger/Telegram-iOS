@@ -2974,6 +2974,21 @@ public extension Api.functions.help {
                 }
 }
 public extension Api.functions.help {
+                static func getPremiumPromo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PremiumPromo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1206152236)
+                    
+                    return (FunctionDescription(name: "help.getPremiumPromo", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.PremiumPromo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.PremiumPromo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.PremiumPromo
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.help {
                 static func getPromoData() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PromoData>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1063816159)
