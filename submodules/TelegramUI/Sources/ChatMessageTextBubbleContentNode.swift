@@ -18,6 +18,7 @@ import YuvConversion
 import AnimationCache
 import LottieAnimationCache
 import MultiAnimationRenderer
+import EmojiTextAttachmentView
 
 private final class CachedChatMessageText {
     let text: String
@@ -62,167 +63,6 @@ private final class InlineStickerItem: Hashable {
         }
         return true
     }
-}
-
-private final class InlineStickerItemLayer: MultiAnimationRenderTarget {
-    static let queue = Queue()
-    
-    struct Key: Hashable {
-        var id: MediaId
-        var index: Int
-    }
-    
-    private let file: TelegramMediaFile
-    //private var frameSource: QueueLocalObject<AnimatedStickerDirectFrameSource>?
-    private var disposable: Disposable?
-    private var fetchDisposable: Disposable?
-    
-    private var isInHierarchyValue: Bool = false
-    var isVisibleForAnimations: Bool = false {
-        didSet {
-            if self.isVisibleForAnimations != oldValue {
-                self.updatePlayback()
-            }
-        }
-    }
-    private var displayLink: ConstantDisplayLinkAnimator?
-    
-    init(context: AccountContext, file: TelegramMediaFile, cache: AnimationCache, renderer: MultiAnimationRenderer) {
-        self.file = file
-        
-        super.init()
-        
-        self.disposable = renderer.add(groupId: "inlineEmoji", target: self, cache: cache, itemId: file.resource.id.stringRepresentation, fetch: { writer in
-            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
-            
-            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
-                guard let result = result else {
-                    return
-                }
-                        
-                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
-                    writer.finish()
-                    return
-                }
-                let scale = min(2.0, UIScreenScale)
-                cacheLottieAnimation(data: data, width: Int(24 * scale), height: Int(24 * scale), writer: writer)
-            })
-            
-            let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
-            
-            return ActionDisposable {
-                dataDisposable.dispose()
-                fetchDisposable.dispose()
-            }
-        })
-        
-        /*let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-        
-        self.disposable = (self.source.directDataPath(attemptSynchronously: false)
-        |> filter { $0 != nil }
-        |> take(1)
-        |> deliverOn(InlineStickerItemLayer.queue)).start(next: { [weak self] path in
-            guard let directData = try? Data(contentsOf: URL(fileURLWithPath: path!), options: [.mappedRead]) else {
-                return
-            }
-            Queue.mainQueue().async {
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.frameSource = QueueLocalObject(queue: InlineStickerItemLayer.queue, generate: {
-                    return AnimatedStickerDirectFrameSource(queue: InlineStickerItemLayer.queue, data: directData, width: Int(24 * UIScreenScale), height: Int(24 * UIScreenScale), cachePathPrefix: pathPrefix, useMetalCache: false, fitzModifier: nil)!
-                })
-                strongSelf.updatePlayback()
-            }
-        })
-        
-        self.fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()*/
-    }
-    
-    override init(layer: Any) {
-        preconditionFailure()
-    }
-    
-    required public init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        self.disposable?.dispose()
-        self.fetchDisposable?.dispose()
-    }
-    
-    override func action(forKey event: String) -> CAAction? {
-        if event == kCAOnOrderIn {
-            self.isInHierarchyValue = true
-        } else if event == kCAOnOrderOut {
-            self.isInHierarchyValue = false
-        }
-        self.updatePlayback()
-        return nullAction
-    }
-    
-    private func updatePlayback() {
-        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
-        
-        self.shouldBeAnimating = shouldBePlaying
-        
-        /*if shouldBePlaying != (self.displayLink != nil) {
-            if shouldBePlaying {
-                self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
-                    self?.loadNextFrame()
-                })
-                self.displayLink?.isPaused = false
-            } else {
-                self.displayLink?.invalidate()
-                self.displayLink = nil
-            }
-        }*/
-    }
-    
-    /*private func loadNextFrame() {
-        guard let frameSource = self.frameSource else {
-            return
-        }
-        self.didRequestFrame = true
-        frameSource.with { [weak self] impl in
-            if let animationFrame = impl.takeFrame(draw: true) {
-                var image: UIImage?
-                
-                autoreleasepool {
-                    image = generateImagePixel(CGSize(width: CGFloat(animationFrame.width), height: CGFloat(animationFrame.height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
-                        var data = animationFrame.data
-                        data.withUnsafeMutableBytes { bytes -> Void in
-                            guard let baseAddress = bytes.baseAddress else {
-                                return
-                            }
-                            switch animationFrame.type {
-                            case .argb:
-                                memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
-                            case .yuva:
-                                if animationFrame.bytesPerRow <= 0 || animationFrame.height <= 0 || animationFrame.width <= 0 || animationFrame.bytesPerRow * animationFrame.height > bytes.count {
-                                    assert(false)
-                                    return
-                                }
-                                decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(animationFrame.width), Int32(animationFrame.height), Int32(contextBytesPerRow))
-                            default:
-                                break
-                            }
-                        }
-                    })
-                }
-                
-                if let image = image {
-                    Queue.mainQueue().async {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.contents = image.cgImage
-                    }
-                }
-            }
-        }
-    }*/
 }
 
 class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
@@ -723,7 +563,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                             
-                            strongSelf.updateInlineStickers(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, textLayout: textLayout)
+                            strongSelf.updateInlineStickers(context: item.context, cache: item.controllerInteraction.presentationContext.animationCache, renderer: item.controllerInteraction.presentationContext.animationRenderer, textLayout: textLayout, placeholderColor: messageTheme.mediaPlaceholderColor)
                             
                             if let statusSizeAndApply = statusSizeAndApply {
                                 animation.animator.updateFrame(layer: strongSelf.statusNode.layer, frame: CGRect(origin: CGPoint(x: textFrameWithoutInsets.minX, y: textFrameWithoutInsets.maxY), size: statusSizeAndApply.0), completion: nil)
@@ -754,7 +594,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?) {
+    private func updateInlineStickers(context: AccountContext, cache: AnimationCache, renderer: MultiAnimationRenderer, textLayout: TextNodeLayout?, placeholderColor: UIColor) {
         var nextIndexById: [MediaId: Int] = [:]
         var validIds: [InlineStickerItemLayer.Key] = []
         
@@ -775,7 +615,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     if let current = self.inlineStickerItemLayers[id] {
                         itemLayer = current
                     } else {
-                        itemLayer = InlineStickerItemLayer(context: context, file: stickerItem.file, cache: cache, renderer: renderer)
+                        itemLayer = InlineStickerItemLayer(context: context, groupId: "inlineEmoji", attemptSynchronousLoad: false, file: stickerItem.file, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
                         self.inlineStickerItemLayers[id] = itemLayer
                         self.textNode.layer.addSublayer(itemLayer)
                         itemLayer.isVisibleForAnimations = self.isVisibleForAnimations

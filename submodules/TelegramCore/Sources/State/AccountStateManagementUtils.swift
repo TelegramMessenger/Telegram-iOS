@@ -1101,6 +1101,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                             updatedState.updateMedia(webpage.webpageId, media: webpage)
                         }
                 }
+            /*case let .updateTranscribeAudio(flags, transcriptionId, text):
+                break*/
             case let .updateNotifySettings(apiPeer, apiNotificationSettings):
                 switch apiPeer {
                     case let .notifyPeer(peer):

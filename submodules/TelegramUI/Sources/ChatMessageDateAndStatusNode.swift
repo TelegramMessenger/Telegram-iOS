@@ -839,8 +839,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         for node in reactionButtons.removedNodes {
                             if animation.isAnimated {
                                 node.view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
-                                node.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
-                                    node?.view.removeFromSuperview()
+                                node.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                    node.view.removeFromSuperview()
                                 })
                             } else {
                                 node.view.removeFromSuperview()

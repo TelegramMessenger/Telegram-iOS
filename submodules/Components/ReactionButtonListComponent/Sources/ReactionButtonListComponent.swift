@@ -834,8 +834,12 @@ public final class ReactionNodePool {
     private var views: [ReactionButtonAsyncNode] = []
     
     func putBack(view: ReactionButtonAsyncNode) {
-        view.reset()
-        self.views.append(view)
+        assert(view.superview == nil)
+        
+        if self.views.count < 64 {
+            view.reset()
+            self.views.append(view)
+        }
     }
     
     func take() -> Item {
@@ -890,6 +894,12 @@ public final class ReactionButtonsAsyncLayoutContainer {
     public private(set) var buttons: [String: ReactionNodePool.Item] = [:]
     
     public init() {
+    }
+    
+    deinit {
+        for (_, button) in self.buttons {
+            button.view.removeFromSuperview()
+        }
     }
     
     public func update(

@@ -599,6 +599,7 @@ public extension Api {
         case updateStickerSets
         case updateStickerSetsOrder(flags: Int32, order: [Int64])
         case updateTheme(theme: Api.Theme)
+        case updateTranscribeAudio(flags: Int32, transcriptionId: Int64, text: String)
         case updateUserName(userId: Int64, firstName: String, lastName: String, username: String)
         case updateUserPhone(userId: Int64, phone: String)
         case updateUserPhoto(userId: Int64, date: Int32, photo: Api.UserProfilePhoto, previous: Api.Bool)
@@ -1423,6 +1424,14 @@ public extension Api {
                     }
                     theme.serialize(buffer, true)
                     break
+                case .updateTranscribeAudio(let flags, let transcriptionId, let text):
+                    if boxed {
+                        buffer.appendInt32(-2006880112)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(transcriptionId, buffer: buffer, boxed: false)
+                    serializeString(text, buffer: buffer, boxed: false)
+                    break
                 case .updateUserName(let userId, let firstName, let lastName, let username):
                     if boxed {
                         buffer.appendInt32(-1007549728)
@@ -1667,6 +1676,8 @@ public extension Api {
                 return ("updateStickerSetsOrder", [("flags", String(describing: flags)), ("order", String(describing: order))])
                 case .updateTheme(let theme):
                 return ("updateTheme", [("theme", String(describing: theme))])
+                case .updateTranscribeAudio(let flags, let transcriptionId, let text):
+                return ("updateTranscribeAudio", [("flags", String(describing: flags)), ("transcriptionId", String(describing: transcriptionId)), ("text", String(describing: text))])
                 case .updateUserName(let userId, let firstName, let lastName, let username):
                 return ("updateUserName", [("userId", String(describing: userId)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("username", String(describing: username))])
                 case .updateUserPhone(let userId, let phone):
@@ -3320,6 +3331,23 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.Update.updateTheme(theme: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateTranscribeAudio(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateTranscribeAudio(flags: _1!, transcriptionId: _2!, text: _3!)
             }
             else {
                 return nil

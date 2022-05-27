@@ -4026,4 +4026,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         return nil
     }
+    
+    func hasExpandedAudioTranscription() -> Bool {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
+                return contentNode.interactiveFileNode.hasExpandedAudioTranscription
+            }
+        }
+        return false
+    }
 }

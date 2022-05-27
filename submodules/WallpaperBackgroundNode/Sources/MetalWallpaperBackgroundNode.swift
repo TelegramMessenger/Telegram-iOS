@@ -150,18 +150,6 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
     private func updateIsVisible(_ isVisible: Bool) {
         if isVisible {
             if self.displayLink == nil {
-                final class DisplayLinkTarget: NSObject {
-                    private let f: () -> Void
-                    
-                    init(_ f: @escaping () -> Void) {
-                        self.f = f
-                    }
-                    
-                    @objc func event() {
-                        self.f()
-                    }
-                }
-                
                 let displayLink = CADisplayLink(target: DisplayLinkTarget { [weak self] in
                     guard let strongSelf = self else {
                         return

@@ -8,7 +8,6 @@ import LottieAnimationComponent
 
 public final class AudioTranscriptionButtonComponent: Component {
     public enum TranscriptionState {
-        case possible
         case inProgress
         case expanded
         case collapsed
@@ -130,8 +129,6 @@ public final class AudioTranscriptionButtonComponent: Component {
                 
                 let animationName: String
                 switch component.transcriptionState {
-                case .possible:
-                    animationName = "voiceToText"
                 case .inProgress:
                     animationName = "voiceToText"
                 case .collapsed:

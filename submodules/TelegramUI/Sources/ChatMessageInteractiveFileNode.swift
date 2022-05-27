@@ -30,6 +30,17 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
+private func transcribedText(message: Message) -> EngineAudioTranscriptionResult? {
+    for attribute in message.attributes {
+        if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+            if !attribute.text.isEmpty || !attribute.isPending {
+                return .success(EngineAudioTranscriptionResult.Success(id: attribute.id, text: attribute.text))
+            }
+        }
+    }
+    return nil
+}
+
 final class ChatMessageInteractiveFileNode: ASDisplayNode {
     final class Arguments {
         let context: AccountContext
@@ -174,9 +185,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     
-    private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .possible
-    private var transcribedText: EngineAudioTranscriptionResult?
+    private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     private var transcribeDisposable: Disposable?
+    var hasExpandedAudioTranscription: Bool {
+        if case .expanded = audioTranscriptionState {
+            return true
+        } else {
+            return false
+        }
+    }
     
     override init() {
         self.titleNode = TextNode()
@@ -306,17 +323,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return
         }
         
-        if self.transcribedText == nil {
-            for attribute in message.attributes {
-                if let attribute = attribute as? AudioTranscriptionMessageAttribute {
-                    self.transcribedText = .success(EngineAudioTranscriptionResult.Success(id: attribute.id, text: attribute.text))
-                    self.audioTranscriptionState = .collapsed
-                    break
-                }
-            }
-        }
-        
-        if self.transcribedText == nil {
+        if transcribedText(message: message) == nil {
             if self.transcribeDisposable == nil {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
@@ -361,7 +368,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return
                         }
                         strongSelf.transcribeDisposable = nil
-                        if let result = result {
+                        /*if let result = result {
                             strongSelf.transcribedText = .success(EngineAudioTranscriptionResult.Success(id: 0, text: result))
                         } else {
                             strongSelf.transcribedText = .error
@@ -371,7 +378,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         } else {
                             strongSelf.audioTranscriptionState = .collapsed
                         }
-                        strongSelf.requestUpdateLayout(true)
+                        strongSelf.requestUpdateLayout(true)*/
                     })
                 } else {
                     self.transcribeDisposable = (context.engine.messages.transcribeAudio(messageId: message.id)
@@ -380,9 +387,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return
                         }
                         strongSelf.transcribeDisposable = nil
-                        strongSelf.audioTranscriptionState = .expanded
+                        /*strongSelf.audioTranscriptionState = .expanded
                         strongSelf.transcribedText = result
-                        strongSelf.requestUpdateLayout(true)
+                        strongSelf.requestUpdateLayout(true)*/
                     })
                 }
             }
@@ -410,7 +417,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         
         let currentMessage = self.message
-        let transcribedText = self.transcribedText
         let audioTranscriptionState = self.audioTranscriptionState
         
         return { arguments in
@@ -585,7 +591,22 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let descriptionMaxWidth = max(descriptionLayout.size.width, descriptionMeasuringLayout.size.width)
                 let textFont = arguments.presentationData.messageFont
                 let textString: NSAttributedString?
-                if let transcribedText = transcribedText, case .expanded = audioTranscriptionState {
+                var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
+                
+                let transcribedText = transcribedText(message: arguments.message)
+                
+                switch audioTranscriptionState {
+                case .inProgress:
+                    if transcribedText != nil {
+                        updatedAudioTranscriptionState = .expanded
+                    }
+                default:
+                    break
+                }
+                
+                let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
+                
+                if let transcribedText = transcribedText, case .expanded = effectiveAudioTranscriptionState {
                     switch transcribedText {
                     case let .success(success):
                         textString = NSAttributedString(string: success.text, font: textFont, textColor: messageTheme.primaryTextColor)
@@ -794,6 +815,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.descriptionNode.frame = descriptionFrame
                             strongSelf.descriptionMeasuringNode.frame = CGRect(origin: CGPoint(), size: descriptionMeasuringLayout.size)
                             
+                            if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
+                                strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
+                            }
+                            
                             if let consumableContentIcon = consumableContentIcon {
                                 if strongSelf.consumableContentNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.consumableContentNode)
@@ -970,7 +995,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }
                                 
                                 var isTranscriptionInProgress = false
-                                if case .inProgress = audioTranscriptionState {
+                                if case .inProgress = effectiveAudioTranscriptionState {
                                     isTranscriptionInProgress = true
                                 }
                                 
@@ -1009,7 +1034,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                                         component: AnyComponent(AudioTranscriptionButtonComponent(
                                             theme: arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing,
-                                            transcriptionState: audioTranscriptionState,
+                                            transcriptionState: effectiveAudioTranscriptionState,
                                             pressed: {
                                                 guard let strongSelf = self else {
                                                     return

@@ -9,103 +9,79 @@ import AccountContext
 import YuvConversion
 import TelegramCore
 import Postbox
+import AnimationCache
+import LottieAnimationCache
+import MultiAnimationRenderer
+import ShimmerEffect
 
-private final class InlineStickerItemLayer: SimpleLayer {
-    static let queue = Queue()
+public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
+    public static let queue = Queue()
+    
+    public struct Key: Hashable {
+        public var id: MediaId
+        public var index: Int
+        
+        public init(id: MediaId, index: Int) {
+            self.id = id
+            self.index = index
+        }
+    }
     
     private let file: TelegramMediaFile
-    private let source: AnimatedStickerNodeSource
-    private var frameSource: QueueLocalObject<AnimatedStickerDirectFrameSource>?
     private var disposable: Disposable?
     private var fetchDisposable: Disposable?
     
     private var isInHierarchyValue: Bool = false
-    var isVisibleForAnimations: Bool = false {
+    public var isVisibleForAnimations: Bool = false {
         didSet {
-            self.updatePlayback()
+            if self.isVisibleForAnimations != oldValue {
+                self.updatePlayback()
+            }
         }
     }
     private var displayLink: ConstantDisplayLinkAnimator?
     
-    init(context: AccountContext, file: TelegramMediaFile) {
-        self.source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+    public init(context: AccountContext, groupId: String, attemptSynchronousLoad: Bool, file: TelegramMediaFile, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor) {
         self.file = file
         
         super.init()
         
-        let pathPrefix = context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-        let width = Int(24 * UIScreenScale)
-        let height = Int(24 * UIScreenScale)
-        
-        let directDataPath = Atomic<String?>(value: nil)
-        let _ = (self.source.directDataPath(attemptSynchronously: true) |> take(1)).start(next: { result in
-            let _ = directDataPath.swap(result)
-        })
-        
-        if let directDataPath = directDataPath.with({ $0 }), let directData = try? Data(contentsOf: URL(fileURLWithPath: directDataPath), options: .alwaysMapped) {
-            let syncFrameSource = AnimatedStickerDirectFrameSource(queue: .mainQueue(), data: directData, width: width, height: height, cachePathPrefix: pathPrefix, useMetalCache: false, fitzModifier: nil)!
-            
-            if let animationFrame = syncFrameSource.takeFrame(draw: true) {
-                var image: UIImage?
-                
-                autoreleasepool {
-                    image = generateImagePixel(CGSize(width: CGFloat(animationFrame.width), height: CGFloat(animationFrame.height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
-                        var data = animationFrame.data
-                        data.withUnsafeMutableBytes { bytes -> Void in
-                            guard let baseAddress = bytes.baseAddress else {
-                                return
-                            }
-                            switch animationFrame.type {
-                            case .argb:
-                                memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
-                            case .yuva:
-                                if animationFrame.bytesPerRow <= 0 || animationFrame.height <= 0 || animationFrame.width <= 0 || animationFrame.bytesPerRow * animationFrame.height > bytes.count {
-                                    assert(false)
-                                    return
-                                }
-                                decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(animationFrame.width), Int32(animationFrame.height), Int32(contextBytesPerRow))
-                            default:
-                                break
-                            }
-                        }
-                    })
-                }
-                
-                if let image = image {
+        if attemptSynchronousLoad {
+            if !renderer.loadFirstFrameSynchronously(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation) {
+                let size = CGSize(width: 24.0, height: 24.0)
+                if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: size, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor) {
                     self.contents = image.cgImage
                 }
             }
         }
         
-        self.disposable = (self.source.directDataPath(attemptSynchronously: false)
-        |> filter { $0 != nil }
-        |> take(1)
-        |> deliverOn(InlineStickerItemLayer.queue)).start(next: { [weak self] path in
-            guard let directData = try? Data(contentsOf: URL(fileURLWithPath: path!), options: [.mappedRead]) else {
-                return
-            }
-            Queue.mainQueue().async {
-                guard let strongSelf = self else {
+        self.disposable = renderer.add(groupId: groupId, target: self, cache: cache, itemId: file.resource.id.stringRepresentation, fetch: { writer in
+            let source = AnimatedStickerResourceSource(account: context.account, resource: file.resource, fitzModifier: nil, isVideo: false)
+            
+            let dataDisposable = source.directDataPath(attemptSynchronously: false).start(next: { result in
+                guard let result = result else {
                     return
                 }
-                strongSelf.frameSource = QueueLocalObject(queue: InlineStickerItemLayer.queue, generate: {
-                    return AnimatedStickerDirectFrameSource(queue: InlineStickerItemLayer.queue, data: directData, width: width, height: height, cachePathPrefix: pathPrefix, useMetalCache: false, fitzModifier: nil)!
-                })
-                strongSelf.updatePlayback()
+                        
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: result)) else {
+                    writer.finish()
+                    return
+                }
+                let scale = min(2.0, UIScreenScale)
+                cacheLottieAnimation(data: data, width: Int(24 * scale), height: Int(24 * scale), writer: writer)
+            })
+            
+            let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+            
+            return ActionDisposable {
+                dataDisposable.dispose()
+                fetchDisposable.dispose()
             }
         })
-        
-        self.fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
     }
     
-    override init(layer: Any) {
-        guard let layer = layer as? InlineStickerItemLayer else {
-            preconditionFailure()
-        }
-        self.source = layer.source
-        self.file = layer.file
-        
-        super.init(layer: layer)
+    override public init(layer: Any) {
+        preconditionFailure()
     }
     
     required public init?(coder: NSCoder) {
@@ -117,7 +93,7 @@ private final class InlineStickerItemLayer: SimpleLayer {
         self.fetchDisposable?.dispose()
     }
     
-    override func action(forKey event: String) -> CAAction? {
+    override public func action(forKey event: String) -> CAAction? {
         if event == kCAOnOrderIn {
             self.isInHierarchyValue = true
         } else if event == kCAOnOrderOut {
@@ -128,72 +104,17 @@ private final class InlineStickerItemLayer: SimpleLayer {
     }
     
     private func updatePlayback() {
-        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations && self.frameSource != nil
-        if shouldBePlaying != (self.displayLink != nil) {
-            if shouldBePlaying {
-                self.displayLink = ConstantDisplayLinkAnimator(update: { [weak self] in
-                    self?.loadNextFrame()
-                })
-                self.displayLink?.isPaused = false
-            } else {
-                self.displayLink?.invalidate()
-                self.displayLink = nil
-            }
-        }
-    }
-    
-    private var didRequestFrame = false
-    
-    private func loadNextFrame() {
-        guard let frameSource = self.frameSource else {
-            return
-        }
-        self.didRequestFrame = true
-        frameSource.with { [weak self] impl in
-            if let animationFrame = impl.takeFrame(draw: true) {
-                var image: UIImage?
-                
-                autoreleasepool {
-                    image = generateImagePixel(CGSize(width: CGFloat(animationFrame.width), height: CGFloat(animationFrame.height)), scale: 1.0, pixelGenerator: { _, pixelData, contextBytesPerRow in
-                        var data = animationFrame.data
-                        data.withUnsafeMutableBytes { bytes -> Void in
-                            guard let baseAddress = bytes.baseAddress else {
-                                return
-                            }
-                            switch animationFrame.type {
-                            case .argb:
-                                memcpy(pixelData, baseAddress.assumingMemoryBound(to: UInt8.self), bytes.count)
-                            case .yuva:
-                                if animationFrame.bytesPerRow <= 0 || animationFrame.height <= 0 || animationFrame.width <= 0 || animationFrame.bytesPerRow * animationFrame.height > bytes.count {
-                                    assert(false)
-                                    return
-                                }
-                                decodeYUVAToRGBA(baseAddress.assumingMemoryBound(to: UInt8.self), pixelData, Int32(animationFrame.width), Int32(animationFrame.height), Int32(contextBytesPerRow))
-                            default:
-                                break
-                            }
-                        }
-                    })
-                }
-                
-                if let image = image {
-                    Queue.mainQueue().async {
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.contents = image.cgImage
-                    }
-                }
-            }
-        }
+        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
+        
+        self.shouldBeAnimating = shouldBePlaying
     }
 }
 
 public final class EmojiTextAttachmentView: UIView {
     private let contentLayer: InlineStickerItemLayer
     
-    public init(context: AccountContext, file: TelegramMediaFile) {
-        self.contentLayer = InlineStickerItemLayer(context: context, file: file)
+    public init(context: AccountContext, file: TelegramMediaFile, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor) {
+        self.contentLayer = InlineStickerItemLayer(context: context, groupId: "textInputView", attemptSynchronousLoad: true, file: file, cache: cache, renderer: renderer, placeholderColor: placeholderColor)
         
         super.init(frame: CGRect())
         

@@ -316,13 +316,13 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
         self.textInputBackgroundNode.view.addGestureRecognizer(recognizer)
         
-        self.emojiViewProvider = { [weak self] emoji in
+        /*self.emojiViewProvider = { [weak self] emoji in
             guard let strongSelf = self, let file = strongSelf.context.animatedEmojiStickers[emoji]?.first?.file else {
                 return UIView()
             }
             
             return EmojiTextAttachmentView(context: context, file: file)
-        }
+        }*/
         
         self.updateSendButtonEnabled(isCaption || isAttachment, animated: false)
         

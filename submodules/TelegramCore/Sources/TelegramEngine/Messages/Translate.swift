@@ -64,12 +64,14 @@ func _internal_transcribeAudio(postbox: Postbox, network: Network, messageId: Me
             
             return postbox.transaction { transaction -> EngineAudioTranscriptionResult in
                 switch result {
-                case let .transcribedAudio(transcriptionId, text):
+                case let .transcribedAudio(flags, transcriptionId, text):
                     transaction.updateMessage(messageId, update: { currentMessage in
                         let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                         var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
                         
-                        attributes.append(AudioTranscriptionMessageAttribute(id: transcriptionId, text: text))
+                        let isPending = (flags & (1 << 0)) != 0
+                        
+                        attributes.append(AudioTranscriptionMessageAttribute(id: transcriptionId, text: text, isPending: isPending))
                         
                         return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                     })

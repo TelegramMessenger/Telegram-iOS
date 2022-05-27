@@ -374,9 +374,14 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
     return updated
 }
 
-func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?, readStats: MessageReadStats? = nil) -> Signal<ContextController.Items, NoError> {
+func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, messages: [Message], controllerInteraction: ChatControllerInteraction?, selectAll: Bool, interfaceInteraction: ChatPanelInterfaceInteraction?, readStats: MessageReadStats? = nil, messageNode: ChatMessageItemView? = nil) -> Signal<ContextController.Items, NoError> {
     guard let interfaceInteraction = interfaceInteraction, let controllerInteraction = controllerInteraction else {
         return .single(ContextController.Items(content: .list([])))
+    }
+    
+    var hasExpandedAudioTranscription = false
+    if let messageNode = messageNode as? ChatMessageBubbleItemNode {
+        hasExpandedAudioTranscription = messageNode.hasExpandedAudioTranscription()
     }
 
     if messages.count == 1, let _ = messages[0].adAttribute {
@@ -704,7 +709,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         var hasRateTranscription = false
-        if let audioTranscription = audioTranscription {
+        if hasExpandedAudioTranscription, let audioTranscription = audioTranscription {
             hasRateTranscription = true
             actions.insert(.custom(ChatRateTranscriptionContextItem(context: context, message: message, action: { [weak context] value in
                 guard let context = context else {
@@ -812,7 +817,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         for attribute in message.attributes {
-            if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+            if hasExpandedAudioTranscription, let attribute = attribute as? AudioTranscriptionMessageAttribute {
                 if !messageText.isEmpty {
                     messageText.append("\n")
                 }

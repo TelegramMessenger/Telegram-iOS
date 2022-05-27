@@ -43,6 +43,7 @@ public protocol AnimationCacheItemWriter: AnyObject {
 
 public protocol AnimationCache: AnyObject {
     func get(sourceId: String, fetch: @escaping (AnimationCacheItemWriter) -> Disposable) -> Signal<AnimationCacheItem?, NoError>
+    func getSynchronously(sourceId: String) -> AnimationCacheItem?
 }
 
 private func md5Hash(_ string: String) -> String {
@@ -375,6 +376,18 @@ public final class AnimationCacheImpl: AnimationCache {
                 }
             }
         }
+        
+        func getSynchronously(sourceId: String) -> AnimationCacheItem? {
+            let sourceIdPath = itemSubpath(hashString: md5Hash(sourceId))
+            let itemDirectoryPath = "\(self.basePath)/\(sourceIdPath.directory)"
+            let itemPath = "\(itemDirectoryPath)/\(sourceIdPath.fileName)"
+            
+            if FileManager.default.fileExists(atPath: itemPath) {
+                return loadItem(path: itemPath)
+            } else {
+                return nil
+            }
+        }
     }
     
     private let queue: Queue
@@ -402,5 +415,11 @@ public final class AnimationCacheImpl: AnimationCache {
             return disposable
         }
         |> runOn(self.queue)
+    }
+    
+    public func getSynchronously(sourceId: String) -> AnimationCacheItem? {
+        return self.impl.syncWith { impl -> AnimationCacheItem? in
+            return impl.getSynchronously(sourceId: sourceId)
+        }
     }
 }

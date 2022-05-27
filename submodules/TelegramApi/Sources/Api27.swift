@@ -6227,6 +6227,21 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func assignPlayMarketTransaction(purchaseToken: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1336560365)
+                    serializeString(purchaseToken, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.assignPlayMarketTransaction", parameters: [("purchaseToken", String(describing: purchaseToken))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func clearSavedInfo(flags: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-667062079)
@@ -6314,6 +6329,23 @@ public extension Api.functions.payments {
                         var result: Api.payments.SavedInfo?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.payments.SavedInfo
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func requestRecurrentPayment(userId: Int64, recurrentInitCharge: String, invoiceMedia: Api.InputMedia) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1329030023)
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeString(recurrentInitCharge, buffer: buffer, boxed: false)
+                    invoiceMedia.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.requestRecurrentPayment", parameters: [("userId", String(describing: userId)), ("recurrentInitCharge", String(describing: recurrentInitCharge)), ("invoiceMedia", String(describing: invoiceMedia))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })
