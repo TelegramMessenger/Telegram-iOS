@@ -48,3 +48,9 @@ void applyKeyboardAutocorrection(UITextView * _Nonnull textView);
 @property (nonatomic, copy) UIInterfaceOrientationMask (^ _Nullable supportedOrientations)(void);
 
 @end
+
+@interface UIScrollView (FrameRateRangeOverride)
+
+- (void)fixScrollDisplayLink;
+
+@end

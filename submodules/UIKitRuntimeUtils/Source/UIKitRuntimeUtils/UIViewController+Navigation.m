@@ -43,6 +43,7 @@ static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProvid
 static const void *interactiveTransitionGestureRecognizerTestKey = &interactiveTransitionGestureRecognizerTestKey;
 static const void *UIViewControllerHintWillBePresentedInPreviewingContextKey = &UIViewControllerHintWillBePresentedInPreviewingContextKey;
 static const void *disablesInteractiveModalDismissKey = &disablesInteractiveModalDismissKey;
+static const void *forceFullRefreshRateKey = &forceFullRefreshRateKey;
 
 static bool notyfyingShiftState = false;
 
@@ -99,10 +100,37 @@ static bool notyfyingShiftState = false;
 @implementation CADisplayLink (FrameRateRangeOverride)
 
 - (void)_65087dc8_setPreferredFrameRateRange:(CAFrameRateRange)range API_AVAILABLE(ios(15.0)) {
-    float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
-    range = CAFrameRateRangeMake(maxFps, maxFps, maxFps);
+    if ([self associatedObjectForKey:forceFullRefreshRateKey] != nil) {
+        float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
+        range = CAFrameRateRangeMake(maxFps, maxFps, maxFps);
+    }
     
     [self _65087dc8_setPreferredFrameRateRange:range];
+}
+
+@end
+
+@implementation UIScrollView (FrameRateRangeOverride)
+
+- (void)fixScrollDisplayLink {
+    static NSString *scrollHeartbeatKey = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        scrollHeartbeatKey = [NSString stringWithFormat:@"_%@", @"scrollHeartbeat"];
+    });
+    
+    id value = [self valueForKey:scrollHeartbeatKey];
+    if ([value isKindOfClass:[CADisplayLink class]]) {
+        CADisplayLink *displayLink = (CADisplayLink *)value;
+        if ([displayLink associatedObjectForKey:forceFullRefreshRateKey] == nil) {
+            [displayLink setAssociatedObject:@true forKey:forceFullRefreshRateKey];
+            
+            if (@available(iOS 15.0, *)) {
+                float maxFps = [UIScreen mainScreen].maximumFramesPerSecond;
+                [displayLink setPreferredFrameRateRange:CAFrameRateRangeMake(maxFps, maxFps, maxFps)];
+            }
+        }
+    }
 }
 
 @end
