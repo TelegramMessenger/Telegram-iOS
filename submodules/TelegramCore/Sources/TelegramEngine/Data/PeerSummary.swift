@@ -342,5 +342,32 @@ public extension TelegramEngine.EngineData.Item {
                 return view.isContact
             }
         }
+        
+        public struct StickerPack: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = StickerPackCollectionInfo?
+
+            fileprivate var id: EnginePeer.Id
+            public var mapKey: EnginePeer.Id {
+                return self.id
+            }
+
+            public init(id: EnginePeer.Id) {
+                self.id = id
+            }
+
+            var key: PostboxViewKey {
+                return .cachedPeerData(peerId: self.id)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedPeerDataView else {
+                    preconditionFailure()
+                }
+                guard let cachedData = view.cachedPeerData as? CachedChannelData else {
+                    return nil
+                }
+                return cachedData.stickerPack
+            }
+        }
     }
 }

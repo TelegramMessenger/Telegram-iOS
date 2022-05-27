@@ -125,6 +125,34 @@ public extension EngineConfiguration.UserLimits {
     }
 }
 
+public extension EngineConfiguration {
+    struct SearchBots {
+        public var imageBotUsername: String?
+        public var gifBotUsername: String?
+        public var venueBotUsername: String?
+        
+        public init(
+            imageBotUsername: String?,
+            gifBotUsername: String?,
+            venueBotUsername: String?
+        ) {
+            self.imageBotUsername = imageBotUsername
+            self.gifBotUsername = gifBotUsername
+            self.venueBotUsername = venueBotUsername
+        }
+    }
+}
+
+public extension EngineConfiguration.SearchBots {
+    init(_ configuration: SearchBotsConfiguration) {
+        self.init(
+            imageBotUsername: configuration.imageBotUsername,
+            gifBotUsername: configuration.gifBotUsername,
+            venueBotUsername: configuration.venueBotUsername
+        )
+    }
+}
+
 public extension TelegramEngine.EngineData.Item {
     enum Configuration {
         public struct Limits: TelegramEngineDataItem, PostboxViewDataItem {
@@ -192,5 +220,25 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
 
+        public struct SearchBots: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineConfiguration.SearchBots
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.searchBotsConfiguration]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.searchBotsConfiguration]?.get(SearchBotsConfiguration.self) else {
+                    return EngineConfiguration.SearchBots(SearchBotsConfiguration.defaultValue)
+                }
+                return EngineConfiguration.SearchBots(value)
+            }
+        }
     }
 }
