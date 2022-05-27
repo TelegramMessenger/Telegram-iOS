@@ -24,6 +24,7 @@ import AudioWaveformComponent
 import ShimmerEffect
 import ConvertOpusToAAC
 import LocalAudioTranscription
+import TextSelectionNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -62,6 +63,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let messageSelection: Bool?
         let layoutConstants: ChatMessageItemLayoutConstants
         let constrainedSize: CGSize
+        let controllerInteraction: ChatControllerInteraction
         
         init(
             context: AccountContext,
@@ -82,7 +84,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             displayReactions: Bool,
             messageSelection: Bool?,
             layoutConstants: ChatMessageItemLayoutConstants,
-            constrainedSize: CGSize
+            constrainedSize: CGSize,
+            controllerInteraction: ChatControllerInteraction
         ) {
             self.context = context
             self.presentationData = presentationData
@@ -103,6 +106,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.messageSelection = messageSelection
             self.layoutConstants = layoutConstants
             self.constrainedSize = constrainedSize
+            self.controllerInteraction = controllerInteraction
         }
     }
     
@@ -124,6 +128,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var audioTranscriptionButton: ComponentHostView<Empty>?
     private let textNode: TextNode
+    private var textSelectionNode: TextSelectionNode?
+    
+    var updateIsTextSelectionActive: ((Bool) -> Void)?
+    
     let dateAndStatusNode: ChatMessageDateAndStatusNode
     private let consumableContentNode: ASImageNode
     
@@ -179,6 +187,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var context: AccountContext?
     private var message: Message?
+    private var arguments: Arguments?
     private var presentationData: ChatPresentationData?
     private var file: TelegramMediaFile?
     private var progressFrame: CGRect?
@@ -805,6 +814,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             strongSelf.context = arguments.context
                             strongSelf.presentationData = arguments.presentationData
                             strongSelf.message = arguments.message
+                            strongSelf.arguments = arguments
                             strongSelf.file = arguments.file
                             
                             let _ = titleApply()
@@ -862,6 +872,15 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             } else {
                                 if strongSelf.textNode.supernode != nil {
                                     strongSelf.textNode.removeFromSupernode()
+                                }
+                            }
+                            
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != textFrame.size
+                                textSelectionNode.frame = textFrame
+                                textSelectionNode.highlightAreaNode.frame = textFrame
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
                                 }
                             }
                             
@@ -1542,6 +1561,61 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     })
                 })
             })
+        }
+    }
+    
+    func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, let item = self.arguments, /*!item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(),*/ let rootNode = item.controllerInteraction.chatControllerNode() {
+                let selectionColor: UIColor
+                let knobColor: UIColor
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                    selectionColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                } else {
+                    selectionColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
+                }
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
+                    self?.arguments?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: rootNode, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.arguments else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                })
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
+                textSelectionNode.frame = self.textNode.frame
+                textSelectionNode.highlightAreaNode.frame = self.textNode.frame
+            }
+        } else {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                self.updateIsTextSelectionActive?(false)
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
         }
     }
     
