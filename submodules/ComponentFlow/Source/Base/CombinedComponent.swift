@@ -99,7 +99,7 @@ public final class _ConcreteChildComponent<ComponentType: Component>: _AnyChildC
             view = current.view as! ComponentType.View
         } else {
             view = component.makeView()
-            transition = .immediate
+            transition = transition.withAnimation(.none)
         }
 
         let context = view.context(component: component)
@@ -342,7 +342,7 @@ public final class _EnvironmentChildComponentFromMap<EnvironmentType>: _AnyChild
             view = current.view
         } else {
             view = component._makeView()
-            transition = .immediate
+            transition = transition.withAnimation(.none)
         }
 
         let viewContext = view.context(component: component)

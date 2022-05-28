@@ -94,6 +94,7 @@ private class PremiumLimitAnimationComponent: Component {
         private let badgeMaskView: UIView
         private let badgeMaskBackgroundView: UIView
         private let badgeMaskArrowView: UIImageView
+        private let badgeMaskTailView: UIImageView
         private let badgeForeground: SimpleLayer
         private let badgeIcon: UIImageView
         private let badgeCountLabel: RollingLabel
@@ -114,7 +115,6 @@ private class PremiumLimitAnimationComponent: Component {
             
             self.badgeView = UIView()
             self.badgeView.alpha = 0.0
-            self.badgeView.layer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
             
             self.badgeMaskBackgroundView = UIView()
             self.badgeMaskBackgroundView.backgroundColor = .white
@@ -129,9 +129,23 @@ private class PremiumLimitAnimationComponent: Component {
                 try? drawSvgPath(context, path: "M6.4,0.0 C2.9,0.0 0.0,2.84 0.0,6.35 C0.0,9.86 2.9,12.7 6.4,12.7 H9.302 H11.3 C11.7,12.7 12.1,12.87 12.4,13.17 L14.4,15.13 C14.8,15.54 15.5,15.54 15.9,15.13 L17.8,13.17 C18.1,12.87 18.5,12.7 18.9,12.7 H20.9 H23.6 C27.1,12.7 29.9,9.86 29.9,6.35 C29.9,2.84 27.1,0.0 23.6,0.0 Z ")
             })
             
+            self.badgeMaskTailView = UIImageView()
+            self.badgeMaskTailView.isHidden = true
+            
+            
+            let img = generateImage(CGSize(width: 44.0, height: 36.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                context.setFillColor(UIColor.white.cgColor)
+                context.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 44.0, height: 24.0)))
+                context.translateBy(x: 22.0, y: 24.0)
+                try? drawSvgPath(context, path: "M0.0,0.0 H22.0 V4.75736 C22.0,7.43007 18.7686,8.76857 16.8787,6.87868 L11.7574,1.75736 C10.6321,0.632141 9.10602,0.0 7.51472,0.0 H0.0 Z ")
+            })
+            self.badgeMaskTailView.image = img
+            
             self.badgeMaskView = UIView()
             self.badgeMaskView.addSubview(self.badgeMaskBackgroundView)
             self.badgeMaskView.addSubview(self.badgeMaskArrowView)
+            self.badgeMaskView.addSubview(self.badgeMaskTailView)
             self.badgeMaskView.layer.rasterizationScale = UIScreenScale
             self.badgeMaskView.layer.shouldRasterize = true
             self.badgeView.mask = self.badgeMaskView
@@ -254,12 +268,22 @@ private class PremiumLimitAnimationComponent: Component {
             self.badgeMaskBackgroundView.frame = CGRect(origin: .zero, size: CGSize(width: badgeSize.width, height: 48.0))
             self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0), size: CGSize(width: 44.0, height: 12.0))
             
+            self.badgeMaskTailView.frame = CGRect(origin: CGPoint(x: badgeSize.width - 44.0, y: badgeSize.height - 36.0), size: CGSize(width: 44.0, height: 36.0))
+            
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
             if component.badgePosition > 1.0 - .ulpOfOne {
-                let offset = badgeWidth / 2.0 - 16.0
-                self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition - offset, y: 82.0)
-                self.badgeMaskArrowView.frame = self.badgeMaskArrowView.frame.offsetBy(dx: offset - 18.0, dy: 0.0)
+                self.badgeView.layer.anchorPoint = CGPoint(x: 1.0, y: 1.0)
+                
+                self.badgeMaskTailView.isHidden = false
+                self.badgeMaskArrowView.isHidden = true
+                
+                self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition + 3.0, y: 82.0)
             } else {
+                self.badgeView.layer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
+                
+                self.badgeMaskTailView.isHidden = true
+                self.badgeMaskArrowView.isHidden = false
+                
                 self.badgeView.center = CGPoint(x: 3.0 + (availableSize.width - 6.0) * component.badgePosition, y: 82.0)
                 
                 if self.badgeView.frame.maxX > availableSize.width {
@@ -575,6 +599,7 @@ private final class LimitSheetContent: CombinedComponent {
         var initialized = false
         var limits: EngineConfiguration.UserLimits
         var premiumLimits: EngineConfiguration.UserLimits
+        var isPremium = false
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         
@@ -587,13 +612,15 @@ private final class LimitSheetContent: CombinedComponent {
             
             self.disposable = (context.engine.data.get(
                 TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
-                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
+                TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
             ) |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let strongSelf = self {
-                    let (limits, premiumLimits) = result
+                    let (limits, premiumLimits, accountPeer) = result
                     strongSelf.initialized = true
                     strongSelf.limits = limits
                     strongSelf.premiumLimits = premiumLimits
+                    strongSelf.isPremium = accountPeer?.isPremium ?? false
                     strongSelf.updated(transition: .immediate)
                 }
             })
@@ -648,7 +675,7 @@ private final class LimitSheetContent: CombinedComponent {
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
             )
-            
+             
             var titleText = strings.Premium_LimitReached
             let iconName: String
             let badgeText: String
@@ -664,16 +691,16 @@ private final class LimitSheetContent: CombinedComponent {
                     badgeText = "\(component.count)"
                     string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = "\(premiumLimit)"
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
-                case .chatsInFolder:
+                case .chatsPerFolder:
                     let limit = state.limits.maxFolderChatsCount
                     let premiumLimit = state.premiumLimits.maxFolderChatsCount
                     iconName = "Premium/Chat"
                     badgeText = "\(component.count)"
                     string = strings.Premium_MaxChatsInFolderCountText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = "\(premiumLimit)"
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .pins:
                     let limit = state.limits.maxPinnedChatCount
@@ -682,7 +709,7 @@ private final class LimitSheetContent: CombinedComponent {
                     badgeText = "\(component.count)"
                     string = strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
                     defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = "\(premiumLimit)"
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
                     badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
                 case .files:
                     let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
@@ -690,10 +717,27 @@ private final class LimitSheetContent: CombinedComponent {
                     iconName = "Premium/File"
                     badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
                     string = strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
-                    defaultValue = ""
-                    premiumValue = dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
-                    badgePosition = 0.5
+                    defaultValue = component.count == 4 ? dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
+                    premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
+                    badgePosition = component.count == 4 ? 1.0 : 0.5
                     titleText = strings.Premium_FileTooLarge
+                case .accounts:
+                    let limit = 3
+                    let premiumLimit = component.count + 1
+                    iconName = "Premium/Account"
+                    badgeText = "\(component.count)"
+                    string = strings.Premium_MaxAccountsText("\(component.count)").string
+                    defaultValue = component.count > limit ? "\(limit)" : ""
+                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                    if component.count == limit {
+                        badgePosition = 0.5
+                    } else {
+                        badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                    }
+            }
+            var reachedMaximumLimit = badgePosition >= 1.0
+            if case .folders = subject, !state.isPremium {
+                reachedMaximumLimit = false
             }
             
             let title = title.update(
@@ -759,7 +803,7 @@ private final class LimitSheetContent: CombinedComponent {
             
             let button = button.update(
                 component: SolidRoundedButtonComponent(
-                    title: strings.Premium_IncreaseLimit,
+                    title: !reachedMaximumLimit ? strings.Premium_IncreaseLimit : strings.Common_OK,
                     theme: SolidRoundedButtonComponent.Theme(
                         backgroundColor: .black,
                         backgroundColors: [
@@ -774,8 +818,8 @@ private final class LimitSheetContent: CombinedComponent {
                     fontSize: 17.0,
                     height: 50.0,
                     cornerRadius: 10.0,
-                    gloss: true,
-                    iconName: "Premium/X2",
+                    gloss: !reachedMaximumLimit,
+                    iconName: !reachedMaximumLimit ? "Premium/X2" : nil,
                     iconPosition: .right,
                     action: { [weak component] in
                         guard let component = component else {
@@ -890,9 +934,10 @@ private final class LimitSheetComponent: CombinedComponent {
 public class PremiumLimitScreen: ViewControllerComponentContainer {
     public enum Subject {
         case folders
-        case chatsInFolder
+        case chatsPerFolder
         case pins
         case files
+        case accounts
     }
     
     public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, action: @escaping () -> Void) {

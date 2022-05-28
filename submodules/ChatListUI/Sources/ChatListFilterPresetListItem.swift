@@ -200,9 +200,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
             var updatedTheme: PresentationTheme?
             var updateArrowImage: UIImage?
             
-            if currentItem?.presentationData.theme !== item.presentationData.theme {
+            if currentItem?.presentationData.theme !== item.presentationData.theme || currentItem?.isDisabled != item.isDisabled {
                 updatedTheme = item.presentationData.theme
-                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                if item.isDisabled {
+                    updateArrowImage = PresentationResourcesItemList.disclosureLockedImage(item.presentationData.theme)
+                } else {
+                    updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                }
             }
             
             let peerRevealOptions: [ItemListRevealOption]
@@ -381,9 +385,13 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        var rightArrowInset = 0.0
+                        if item.isDisabled == true {
+                            rightArrowInset -= 3.0
+                        }
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width + rightArrowInset + revealOffset, y: floorToScreenPixels((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
-                    strongSelf.arrowNode.isHidden = item.isAllChats || item.isDisabled
+                    strongSelf.arrowNode.isHidden = item.isAllChats
                     
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: 0.0), size: CGSize(width: params.width - params.rightInset - 56.0 - (leftInset + revealOffset + editingOffset), height: layout.contentSize.height))
                     
@@ -452,8 +460,10 @@ private final class ChatListFilterPresetListItemNode: ItemListRevealOptionsItemN
         }
         
         let leftInset: CGFloat = 16.0 + params.leftInset
-        let rightArrowInset: CGFloat = 34.0 + params.rightInset
-        
+        var rightArrowInset: CGFloat = 34.0 + params.rightInset
+        if self.item?.isDisabled == true {
+            rightArrowInset -= 3.0
+        }
         let editingOffset: CGFloat
         if let editableControlNode = self.editableControlNode {
             editingOffset = editableControlNode.bounds.size.width

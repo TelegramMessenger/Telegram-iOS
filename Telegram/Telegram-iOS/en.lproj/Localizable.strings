@@ -7564,6 +7564,7 @@ Sorry for the inconvenience.";
 "Premium.MaxPinsText" = "Sorry, you can't pin more than **%1$@** chats to the top. Unpin some of the currently pinned ones or subscribe to **Telegram Premium** to double the limit to **%2$@** chats.";
 "Premium.MaxFavedStickersTitle" = "The Limit of %@ Stickers Reached";
 "Premium.MaxFavedStickersText" = "An older sticker was replaced with this one. You can [increase the limit]() to %@ stickers.";
+"Premium.MaxAccountsText" = "You have reached the limit of **%@** connected accounts. You can free one place by subscribing to **Telegram Premium**.";
 
 "Premium.Free" = "Free";
 "Premium.Premium" = "Premium";
@@ -7571,7 +7572,7 @@ Sorry for the inconvenience.";
 "Premium.Title" = "Telegram Premium";
 "Premium.Description" = "Go **beyond the limits**, get **exclusive features** and support us by subscribing to **Telegram Premium**.";
 
-"Premium.PersonalTitle" = "%@ is a subscriber of Telegram Premium";
+"Premium.PersonalTitle" = "[%@]() is a subscriber\nof Telegram Premium";
 "Premium.PersonalDescription" = "Owners of **Telegram Premium** accounts have exclusive access to multiple additional features.";
 
 "Premium.SubscribedTitle" = "You are all set!";
@@ -7595,6 +7596,9 @@ Sorry for the inconvenience.";
 "Premium.Reactions" = "Unique Reactions";
 "Premium.ReactionsInfo" = "Additional animated reactions on messages, available only to the Premium subscribers.";
 
+"Premium.ReactionsStandalone" = "Additional Reactions";
+"Premium.ReactionsStandaloneInfo" = "Unlock a wider range of reactions by subscribing to **Telegram Premium**.";
+
 "Premium.Stickers" = "Premium Stickers";
 "Premium.StickersInfo" = "Exclusive enlarged stickers featuring additional effects, updated monthly.";
 
@@ -7613,6 +7617,8 @@ Sorry for the inconvenience.";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
 
 "Premium.Terms" = "By purchasing a Premium subscription, you agree to our [Terms of Service](terms) and [Privacy Policy](privacy).";
+
+"Premium.ChargeInfo" = "Next charge: %1$@ on %2$@. [Cancel](cancel).";
 
 "Premium.MoreAboutPremium" = "More About Premium";
 

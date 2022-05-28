@@ -4695,6 +4695,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         themeEmoticon = nil
                     }
                 }
+                if strongSelf.chatLocation.peerId == strongSelf.context.account.peerId {
+                    themeEmoticon = nil
+                }
                                 
                 var presentationData = presentationData
                 var useDarkAppearance = presentationData.theme.overallDarkAppearance
@@ -11535,12 +11538,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             for item in results {
                                 if let item = item {
                                     if item.fileSize > Int64(premiumLimits.maxUploadFileParts) * 512 * 1024 {
-                                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: strongSelf.presentationData.strings.Premium_FileTooLarge, text: strongSelf.presentationData.strings.Conversation_PremiumUploadFileTooLarge, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        let controller = PremiumLimitScreen(context: strongSelf.context, subject: .files, count: 4, action: {
+                                        })
+                                        strongSelf.push(controller)
                                         return
                                     } else if item.fileSize > Int64(limits.maxUploadFileParts) * 512 * 1024 && !isPremium {
                                         let context = strongSelf.context
                                         var replaceImpl: ((ViewController) -> Void)?
-                                        let controller = PremiumLimitScreen(context: context, subject: .files, count: 0, action: {
+                                        let controller = PremiumLimitScreen(context: context, subject: .files, count: 2, action: {
                                             replaceImpl?(PremiumIntroScreen(context: context, source: .upload))
                                         })
                                         replaceImpl = { [weak controller] c in

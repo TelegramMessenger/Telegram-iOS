@@ -218,6 +218,9 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let positionDelta: Double
     
+    private var previousInteractionTimestamp: Double = 0.0
+    private var timer: SwiftSignalKit.Timer?
+    
     init(context: AccountContext, stickers: [TelegramMediaFile]) {
         self.context = context
         self.stickers = Array(stickers.shuffled().prefix(14))
@@ -249,6 +252,8 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     @objc private func stickerTapped(_ gestureRecognizer: UITapGestureRecognizer) {
+        self.previousInteractionTimestamp = CACurrentMediaTime()
+        
         guard self.animator == nil, self.scrollStartPosition == nil else {
             return
         }
@@ -263,6 +268,24 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func animateIn() {
         self.scrollTo(1, playAnimation: true, duration: 0.5, clockwise: true)
+        
+        if self.timer == nil {
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+            self.timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
+                if let strongSelf = self {
+                    let currentTimestamp = CACurrentMediaTime()
+                    if currentTimestamp > strongSelf.previousInteractionTimestamp + 4.0 {
+                        var nextIndex = strongSelf.currentIndex - 1
+                        if nextIndex < 0 {
+                            nextIndex = strongSelf.stickers.count + nextIndex
+                        }
+                        strongSelf.scrollTo(nextIndex, playAnimation: true, duration: 0.85, clockwise: true)
+                        strongSelf.previousInteractionTimestamp = currentTimestamp
+                    }
+                }
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
+        }
     }
     
     func scrollTo(_ index: Int, playAnimation: Bool, duration: Double, clockwise: Bool? = nil) {
@@ -360,6 +383,9 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             let containerNode = self.itemContainerNodes[i]
             let isCentral = i == index
             itemNode.setCentral(isCentral)
+            if !isCentral {
+                itemNode.setVisible(false)
+            }
             
             if isCentral {
                 containerNode.view.superview?.bringSubviewToFront(containerNode.view)
@@ -372,10 +398,18 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         if self.scrollStartPosition == nil {
             self.scrollStartPosition = (scrollView.contentOffset.y, self.currentPosition)
         }
+        
+        for itemNode in self.itemNodes {
+            itemNode.setCentral(false)
+        }
     }
         
     private let hapticFeedback = HapticFeedback()
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        if scrollView.isTracking {
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+        }
+        
         guard !self.ignoreContentOffsetChange, let (startContentOffset, startPosition) = self.scrollStartPosition else {
             return
         }
@@ -422,6 +456,8 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
+            self.previousInteractionTimestamp = CACurrentMediaTime()
+            
             self.resetScrollPosition()
             
             let delta = self.positionDelta
@@ -431,6 +467,8 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        self.previousInteractionTimestamp = CACurrentMediaTime()
+        
         self.resetScrollPosition()
         self.playSelectedSticker()
     }
@@ -482,8 +520,8 @@ private class StickersCarouselNode: ASDisplayNode, UIScrollViewDelegate {
             let itemFrame = CGRect(origin: CGPoint(x: -size.width - 0.5 * itemSize.width - 30.0 + point.x * areaSize.width * 0.5 - itemSize.width * 0.5, y: size.height * 0.5 + point.y * areaSize.height * 0.5 - itemSize.height * 0.5), size: itemSize)
             containerNode.bounds = CGRect(origin: CGPoint(), size: itemFrame.size)
             containerNode.position = CGPoint(x: itemFrame.midX, y: itemFrame.midY)
-            transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.65)
-            transition.updateAlpha(node: containerNode, alpha: 1.0 - distance * 0.5)
+            transition.updateTransformScale(node: containerNode, scale: 1.0 - distance * 0.75)
+            transition.updateAlpha(node: containerNode, alpha: 1.0 - distance * 0.6)
             
             let isVisible = self.visibility && itemFrame.intersects(bounds)
             itemNode.setVisible(isVisible)

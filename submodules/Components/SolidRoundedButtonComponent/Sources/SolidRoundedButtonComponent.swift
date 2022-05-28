@@ -104,9 +104,7 @@ public final class SolidRoundedButtonComponent: Component {
                     cornerRadius: component.cornerRadius,
                     gloss: component.gloss
                 )
-                button.iconPosition = component.iconPosition
                 button.progressType = .embedded
-                button.icon = component.iconName.flatMap { UIImage(bundleImageName: $0) }
                 self.button = button
                 self.addSubview(button)
                 
@@ -117,6 +115,10 @@ public final class SolidRoundedButtonComponent: Component {
             
             if let button = self.button {
                 button.title = component.title
+                button.iconPosition = component.iconPosition
+                button.icon = component.iconName.flatMap { UIImage(bundleImageName: $0) }
+                button.gloss = component.gloss
+                
                 button.updateTheme(component.theme)
                 let height = button.updateLayout(width: availableSize.width, transition: .immediate)
                 transition.setFrame(view: button, frame: CGRect(origin: CGPoint(), size: CGSize(width: availableSize.width, height: height)), completion: nil)

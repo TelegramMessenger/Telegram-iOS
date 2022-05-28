@@ -130,10 +130,12 @@ private final class GradientBackgroundComponent: Component {
 final class DemoPageEnvironment: Equatable {
     public let isDisplaying: Bool
     public let isCentral: Bool
+    public let position: CGFloat
     
-    public init(isDisplaying: Bool, isCentral: Bool) {
+    public init(isDisplaying: Bool, isCentral: Bool, position: CGFloat) {
         self.isDisplaying = isDisplaying
         self.isCentral = isCentral
+        self.position = position
     }
     
     public static func ==(lhs: DemoPageEnvironment, rhs: DemoPageEnvironment) -> Bool {
@@ -141,6 +143,9 @@ final class DemoPageEnvironment: Equatable {
             return false
         }
         if lhs.isCentral != rhs.isCentral {
+            return false
+        }
+        if lhs.position != rhs.position {
             return false
         }
         return true
@@ -192,8 +197,8 @@ private final class PageComponent<ChildEnvironment: Equatable>: CombinedComponen
             let availableSize = context.availableSize
             let component = context.component
             
-            let sideInset: CGFloat = 16.0 //+ environment.safeInsets.left
-            let textSideInset: CGFloat = 24.0 //+ environment.safeInsets.left
+            let sideInset: CGFloat = 16.0
+            let textSideInset: CGFloat = 24.0
             
             let textColor = component.textColor
             let textFont = Font.regular(17.0)
@@ -223,9 +228,14 @@ private final class PageComponent<ChildEnvironment: Equatable>: CombinedComponen
                 transition: .immediate
             )
             
-            let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
-                return nil
-            })
+            let markdownAttributes = MarkdownAttributes(
+                body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                link: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                linkAttribute: { _ in
+                    return nil
+                }
+            )
             let text = text.update(
                 component: MultilineTextComponent(
                     text: .markdown(text: component.text, attributes: markdownAttributes),
@@ -269,27 +279,41 @@ private final class DemoPagerComponent: Component {
         }
     }
     
-    public let items: [Item]
-    public let index: Int
+    let items: [Item]
+    let index: Int
+    let activeColor: UIColor
+    let inactiveColor: UIColor
     
     public init(
         items: [Item],
-        index: Int = 0
+        index: Int = 0,
+        activeColor: UIColor,
+        inactiveColor: UIColor
     ) {
         self.items = items
         self.index = index
+        self.activeColor = activeColor
+        self.inactiveColor = inactiveColor
     }
     
     public static func ==(lhs: DemoPagerComponent, rhs: DemoPagerComponent) -> Bool {
         if lhs.items != rhs.items {
             return false
         }
+        if !lhs.activeColor.isEqual(rhs.activeColor) {
+            return false
+        }
+        if !lhs.inactiveColor.isEqual(rhs.inactiveColor) {
+            return false
+        }
         return true
     }
     
-    public final class View: UIView, UIScrollViewDelegate {
+    fileprivate final class View: UIView, UIScrollViewDelegate {
         private let scrollView: UIScrollView
         private var itemViews: [AnyHashable: ComponentHostView<DemoPageEnvironment>] = [:]
+        
+        private let pageIndicatorView: ComponentHostView<Empty>
         
         private var component: DemoPagerComponent?
         
@@ -302,11 +326,15 @@ private final class DemoPagerComponent: Component {
             self.scrollView.bounces = false
             self.scrollView.layer.cornerRadius = 10.0
             
+            self.pageIndicatorView = ComponentHostView<Empty>()
+            self.pageIndicatorView.isUserInteractionEnabled = false
+            
             super.init(frame: frame)
             
             self.scrollView.delegate = self
             
             self.addSubview(self.scrollView)
+            self.addSubview(self.pageIndicatorView)
         }
         
         required init?(coder: NSCoder) {
@@ -318,22 +346,10 @@ private final class DemoPagerComponent: Component {
                 return
             }
 
-            for item in component.items {
-                if let itemView = self.itemViews[item.content.id] {
-                    let isDisplaying = itemView.frame.intersects(self.scrollView.bounds)
-                        
-                    let environment = DemoPageEnvironment(isDisplaying: isDisplaying, isCentral: isDisplaying)
-                    let _ = itemView.update(
-                        transition: .immediate,
-                        component: item.content.component,
-                        environment: { environment },
-                        containerSize: self.bounds.size
-                    )
-                }
-            }
+            let _ = self.update(component: component, availableSize: self.bounds.size, transition: .immediate)
         }
         
-        func update(component: DemoPagerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        func update(component: DemoPagerComponent, availableSize: CGSize, transition: Transition) -> CGSize {
             var validIds: [AnyHashable] = []
             
             let firstTime = self.itemViews.isEmpty
@@ -342,14 +358,30 @@ private final class DemoPagerComponent: Component {
             if self.scrollView.contentSize != contentSize {
                 self.scrollView.contentSize = contentSize
             }
-            self.scrollView.frame = CGRect(origin: .zero, size: availableSize)
+            let scrollFrame = CGRect(origin: .zero, size: availableSize)
+            if self.scrollView.frame != scrollFrame {
+                self.scrollView.frame = scrollFrame
+            }
             
             if firstTime {
                 self.scrollView.contentOffset = CGPoint(x: CGFloat(component.index) * availableSize.width, y: 0.0)
             }
+            let viewportCenter = self.scrollView.contentOffset.x + availableSize.width * 0.5
             
             var i = 0
             for item in component.items {
+                let itemFrame = CGRect(origin: CGPoint(x: availableSize.width * CGFloat(i), y: 0.0), size: availableSize)
+                let isDisplaying = itemFrame.intersects(self.scrollView.bounds)
+                                
+                let centerDelta = itemFrame.midX - viewportCenter
+                let position = centerDelta / (availableSize.width * 0.75)
+                
+                i += 1
+                
+                if abs(position) > 1.5 {
+                    continue
+                }
+                
                 validIds.append(item.content.id)
                 
                 let itemView: ComponentHostView<DemoPageEnvironment>
@@ -363,11 +395,8 @@ private final class DemoPagerComponent: Component {
                     self.itemViews[item.content.id] = itemView
                     self.scrollView.addSubview(itemView)
                 }
-                
-                let itemFrame = CGRect(origin: CGPoint(x: availableSize.width * CGFloat(i), y: 0.0), size: availableSize)
-                let isDisplaying = itemFrame.intersects(self.scrollView.bounds)
-                
-                let environment = DemoPageEnvironment(isDisplaying: isDisplaying, isCentral: isDisplaying)
+                                
+                let environment = DemoPageEnvironment(isDisplaying: isDisplaying, isCentral: abs(centerDelta) < CGFloat.ulpOfOne, position: position)
                 let _ = itemView.update(
                     transition: itemTransition,
                     component: item.content.component,
@@ -376,8 +405,6 @@ private final class DemoPagerComponent: Component {
                 )
                 
                 itemView.frame = itemFrame
-                                
-                i += 1
             }
             
             var removeIds: [AnyHashable] = []
@@ -393,6 +420,24 @@ private final class DemoPagerComponent: Component {
                 
             self.component = component
             
+            if component.items.count > 1 {
+                let pageIndicatorComponent = PageIndicatorComponent(
+                    pageCount: component.items.count,
+                    position: self.scrollView.contentOffset.x / (self.scrollView.contentSize.width - availableSize.width),
+                    inactiveColor: component.inactiveColor,
+                    activeColor: component.activeColor
+                )
+                let indicatorSize = self.pageIndicatorView.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        pageIndicatorComponent
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                self.pageIndicatorView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - indicatorSize.width) / 2.0), y: availableSize.height - indicatorSize.height - 11.0), size: indicatorSize)
+            }
+            
             return availableSize
         }
     }
@@ -402,8 +447,11 @@ private final class DemoPagerComponent: Component {
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+        return view.update(component: self, availableSize: availableSize, transition: transition)
     }
+}
+
+public final class DemoAnimateInTransition {
 }
 
 private final class DemoSheetContent: CombinedComponent {
@@ -440,56 +488,63 @@ private final class DemoSheetContent: CombinedComponent {
         private let context: AccountContext
         var cachedCloseImage: UIImage?
         
+        var isPremium: Bool?
         var reactions: [AvailableReactions.Reaction]?
         var stickers: [TelegramMediaFile]?
-        var reactionsDisposable: Disposable?
-        var stickersDisposable: Disposable?
+        var disposable: Disposable?
         
         init(context: AccountContext) {
             self.context = context
             
             super.init()
             
-            self.reactionsDisposable = (self.context.engine.stickers.availableReactions()
-            |> map { reactions -> [AvailableReactions.Reaction] in
-                if let reactions = reactions {
-                    return reactions.reactions.filter { $0.isPremium }
-                } else {
-                    return []
+            let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
+            self.disposable = (combineLatest(
+                queue: Queue.mainQueue(),
+                self.context.engine.stickers.availableReactions(),
+                self.context.account.postbox.combinedView(keys: [stickersKey])
+                |> map { views -> [OrderedItemListEntry]? in
+                    if let view = views.views[stickersKey] as? OrderedItemListView, !view.items.isEmpty {
+                        return view.items
+                    } else {
+                        return nil
+                    }
                 }
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] reactions in
+                |> filter { items in
+                    return items != nil
+                }
+                |> take(1),
+                self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId))
+            )
+            |> map { reactions, items, accountPeer -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?) in
+                if let reactions = reactions {
+                    var result: [TelegramMediaFile] = []
+                    if let items = items {
+                        for item in items {
+                            if let mediaItem = item.contents.get(RecentMediaItem.self) {
+                                result.append(mediaItem.media)
+                            }
+                        }
+                    }
+                    return (reactions.reactions.filter({ $0.isPremium }), result, accountPeer?.isPremium ?? false)
+                } else {
+                    return ([], [], nil)
+                }
+            }).start(next: { [weak self] reactions, stickers, isPremium in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.reactions = reactions
-                strongSelf.updated(transition: .immediate)
-            })
-            
-            self.stickersDisposable = (self.context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [Namespaces.OrderedItemList.PremiumStickers], namespaces: [Namespaces.ItemCollection.CloudDice], aroundIndex: nil, count: 100)
-            |> map { view -> [TelegramMediaFile] in
-                var result: [TelegramMediaFile] = []
-                if let premiumStickers = view.orderedItemListsViews.first {
-                    for i in 0 ..< premiumStickers.items.count {
-                        if let item = premiumStickers.items[i].contents.get(RecentMediaItem.self) {
-                            result.append(item.media)
-                        }
-                    }
-                }
-                return result
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] stickers in
-                guard let strongSelf = self else {
-                    return
-                }
                 strongSelf.stickers = stickers
-                strongSelf.updated(transition: .immediate)
+                strongSelf.isPremium = isPremium
+                if !reactions.isEmpty && !stickers.isEmpty {
+                    strongSelf.updated(transition: Transition(.immediate).withUserData(DemoAnimateInTransition()))
+                }
             })
         }
         
         deinit {
-            self.reactionsDisposable?.dispose()
-            self.stickersDisposable?.dispose()
+            self.disposable?.dispose()
         }
     }
     
@@ -502,7 +557,6 @@ private final class DemoSheetContent: CombinedComponent {
         let background = Child(GradientBackgroundComponent.self)
         let pager = Child(DemoPagerComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
-        let dots = Child(BundleIconComponent.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -532,21 +586,28 @@ private final class DemoSheetContent: CombinedComponent {
             if let image = state.cachedCloseImage {
                 closeImage = image
             } else {
-                closeImage = generateCloseButtonImage(backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.1), foregroundColor: UIColor(rgb: 0xffffff))!
+                closeImage = generateCloseButtonImage(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff))!
                 state.cachedCloseImage = closeImage
+            }
+            
+            var isStandalone = false
+            if case .other = component.source {
+                isStandalone = true
             }
             
             if let reactions = state.reactions, let stickers = state.stickers {
                 let textColor = theme.actionSheet.primaryTextColor
                 
-                let items: [DemoPagerComponent.Item] = [
+                var items: [DemoPagerComponent.Item] = [
                     DemoPagerComponent.Item(
                         AnyComponentWithIdentity(
                             id: PremiumDemoScreen.Subject.moreUpload,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .bottom,
+                                        videoName: "4gb"
                                     )),
                                     title: strings.Premium_UploadSize,
                                     text: strings.Premium_UploadSizeInfo,
@@ -560,8 +621,10 @@ private final class DemoSheetContent: CombinedComponent {
                             id: PremiumDemoScreen.Subject.fasterDownload,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .top,
+                                        videoName: "fastdownload"
                                     )),
                                     title: strings.Premium_FasterSpeed,
                                     text: strings.Premium_FasterSpeedInfo,
@@ -575,8 +638,10 @@ private final class DemoSheetContent: CombinedComponent {
                             id: PremiumDemoScreen.Subject.voiceToText,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .top,
+                                        videoName: "voice"
                                     )),
                                     title: strings.Premium_VoiceToText,
                                     text: strings.Premium_VoiceToTextInfo,
@@ -590,8 +655,10 @@ private final class DemoSheetContent: CombinedComponent {
                             id: PremiumDemoScreen.Subject.noAds,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .bottom,
+                                        videoName: "noads"
                                     )),
                                     title: strings.Premium_NoAds,
                                     text: strings.Premium_NoAdsInfo,
@@ -612,8 +679,8 @@ private final class DemoSheetContent: CombinedComponent {
                                             reactions: reactions
                                         )
                                     ),
-                                    title: strings.Premium_Reactions,
-                                    text: strings.Premium_ReactionsInfo,
+                                    title: isStandalone ? strings.Premium_ReactionsStandalone : strings.Premium_Reactions,
+                                    text: isStandalone ? strings.Premium_ReactionsStandaloneInfo : strings.Premium_ReactionsInfo,
                                     textColor: textColor
                                 )
                             )
@@ -642,8 +709,10 @@ private final class DemoSheetContent: CombinedComponent {
                             id: PremiumDemoScreen.Subject.advancedChatManagement,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .top,
+                                        videoName: "fastdownload"
                                     )),
                                     title: strings.Premium_ChatManagement,
                                     text: strings.Premium_ChatManagementInfo,
@@ -657,8 +726,10 @@ private final class DemoSheetContent: CombinedComponent {
                             id: PremiumDemoScreen.Subject.profileBadge,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .top,
+                                        videoName: "badge"
                                     )),
                                     title: strings.Premium_Badge,
                                     text: strings.Premium_BadgeInfo,
@@ -672,8 +743,10 @@ private final class DemoSheetContent: CombinedComponent {
                             id: PremiumDemoScreen.Subject.animatedUserpics,
                             component: AnyComponent(
                                 PageComponent(
-                                    content: AnyComponent(DemoComponent(
-                                        context: component.context
+                                    content: AnyComponent(PhoneDemoComponent(
+                                        context: component.context,
+                                        position: .top,
+                                        videoName: "badge"
                                     )),
                                     title: strings.Premium_Avatar,
                                     text: strings.Premium_AvatarInfo,
@@ -683,15 +756,26 @@ private final class DemoSheetContent: CombinedComponent {
                         )
                     )
                 ]
-                let index = items.firstIndex(where: { (component.subject as AnyHashable) == $0.content.id }) ?? 0
+                let index: Int
+                switch component.source {
+                    case .intro:
+                        index = items.firstIndex(where: { (component.subject as AnyHashable) == $0.content.id }) ?? 0
+                    case .other:
+                        items = items.filter { item in
+                            return item.content.id == (component.subject as AnyHashable)
+                        }
+                        index = 0
+                }
                 
                 let pager = pager.update(
                     component: DemoPagerComponent(
                         items: items,
-                        index: index
+                        index: index,
+                        activeColor: UIColor(rgb: 0x7169ff),
+                        inactiveColor: theme.list.disclosureArrowColor
                     ),
                     availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.width + 154.0),
-                    transition: .immediate
+                    transition: context.transition
                 )
                 context.add(pager
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: pager.size.height / 2.0))
@@ -700,7 +784,23 @@ private final class DemoSheetContent: CombinedComponent {
             
             let closeButton = closeButton.update(
                 component: Button(
-                    content: AnyComponent(Image(image: closeImage)),
+                    content: AnyComponent(ZStack([
+                        AnyComponentWithIdentity(
+                            id: "background",
+                            component: AnyComponent(
+                                BlurredRectangle(
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.1),
+                                    radius: 15.0
+                                )
+                            )
+                        ),
+                        AnyComponentWithIdentity(
+                            id: "icon",
+                            component: AnyComponent(
+                                Image(image: closeImage)
+                            )
+                        ),
+                    ])),
                     action: { [weak component] in
                         component?.dismiss()
                     }
@@ -713,11 +813,15 @@ private final class DemoSheetContent: CombinedComponent {
             )
                          
             let buttonText: String
-            switch component.source {
-                case let .intro(price):
-                    buttonText = strings.Premium_SubscribeFor(price ?? "–").string
-                case .other:
-                    buttonText = strings.Premium_MoreAboutPremium
+            if state.isPremium == true {
+                buttonText = strings.Common_OK
+            } else {
+                switch component.source {
+                    case let .intro(price):
+                        buttonText = strings.Premium_SubscribeFor(price ?? "–").string
+                    case .other:
+                        buttonText = strings.Premium_MoreAboutPremium
+                }
             }
             
             let button = button.update(
@@ -737,7 +841,7 @@ private final class DemoSheetContent: CombinedComponent {
                     fontSize: 17.0,
                     height: 50.0,
                     cornerRadius: 10.0,
-                    gloss: true,
+                    gloss: state.isPremium != true,
                     iconPosition: .right,
                     action: { [weak component] in
                         guard let component = component else {
@@ -750,21 +854,17 @@ private final class DemoSheetContent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                 transition: context.transition
             )
+        
+            var contentHeight: CGFloat = context.availableSize.width + 154.0
+            if case .other = component.source {
+                contentHeight -= 40.0
+            }
               
-            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: context.availableSize.width + 154.0 + 20.0), size: button.size)
+            let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + 20.0), size: button.size)
             context.add(button
                 .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
             )
-            
-            let dots = dots.update(
-                component: BundleIconComponent(name: "Components/Dots", tintColor: nil),
-                availableSize: CGSize(width: 110.0, height: 20.0),
-                transition: .immediate
-            )
-            context.add(dots
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.minY - dots.size.height - 18.0))
-            )
-          
+        
             let contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
             
             return contentSize
@@ -875,6 +975,12 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
     
     var disposed: () -> Void = {}
     
+    private var didSetReady = false
+    private let _ready = Promise<Bool>()
+    public override var ready: Promise<Bool> {
+        return self._ready
+    }
+        
     public init(context: AccountContext, subject: PremiumDemoScreen.Subject, source: PremiumDemoScreen.Source = .other, action: @escaping () -> Void) {
         super.init(context: context, component: DemoSheetComponent(context: context, subject: subject, source: source, action: action), navigationBarAppearance: .none)
         
@@ -895,6 +1001,19 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         super.viewDidLoad()
         
         self.view.disablesInteractiveModalDismiss = true
+    }
+    
+    public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        if !self.didSetReady {
+            self.didSetReady = true
+            if let view = self.node.hostView.findTaggedView(tag: PhoneDemoComponent.View.Tag()) as? PhoneDemoComponent.View {
+                self._ready.set(view.ready)
+            } else {
+                self._ready.set(.single(true) |> delay(0.1, queue: Queue.mainQueue()))
+            }
+        }
     }
 }
 
