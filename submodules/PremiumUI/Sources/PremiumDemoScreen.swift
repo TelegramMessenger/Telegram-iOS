@@ -935,12 +935,18 @@ private final class DemoSheetComponent: CombinedComponent {
                     environment
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
-                        dismiss: {
-                            animateOut.invoke(Action { _ in
+                        dismiss: { animated in
+                            if animated {
+                                animateOut.invoke(Action { _ in
+                                    if let controller = controller() {
+                                        controller.dismiss(completion: nil)
+                                    }
+                                })
+                            } else {
                                 if let controller = controller() {
                                     controller.dismiss(completion: nil)
                                 }
-                            })
+                            }
                         }
                     )
                 },
